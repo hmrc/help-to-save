@@ -26,16 +26,16 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.Future
 
-@ImplementedBy(classOf[HelpToSaveStubConnector])
-trait HelpToSaveConnector {
+@ImplementedBy(classOf[HelpToSaveStubConnectorImpl])
+trait HelpToSaveStubConnector {
   def checkEligibility(nino: String)(implicit hc: HeaderCarrier): Future[UserDetails]
 }
 
-@Singleton
 /**
   * Implements communication with help-to-save-stub
   */
-class HelpToSaveStubConnector extends HelpToSaveConnector with ServicesConfig {
+@Singleton
+class HelpToSaveStubConnectorImpl extends HelpToSaveStubConnector with ServicesConfig {
 
   private val helpToSaveStubURL: String = baseUrl("help-to-save-stub")
 
