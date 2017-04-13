@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/hmrc/help-to-save-eligibility-check.svg)](https://travis-ci.org/hmrc/help-to-save-eligibility-check) [ ![Download](https://api.bintray.com/packages/hmrc/releases/help-to-save-eligibility-check/images/download.svg) ](https://bintray.com/hmrc/releases/help-to-save-eligibility-check/_latestVersion)
 
-Sits in between the `help-to-save-frontend` project and the `help-to-save-stub`. For development, be sure to start the `help-to-save-stub` service by doing:
+Sits in between the `help-to-save-frontend` project and the `help-to-save-stub`. For local development, be sure to start the `help-to-save-stub` service by doing:
 ```
  sm --start HELP_TO_SAVE_STUB
 ```
