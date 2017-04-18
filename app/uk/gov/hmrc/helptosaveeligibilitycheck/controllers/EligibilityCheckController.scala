@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 class EligibilityCheckController @Inject()(stubConnector: HelpToSaveStubConnector) extends BaseController {
 
 	def eligibilityCheck(nino: String): Action[AnyContent] = Action.async { implicit request =>
-		stubConnector.checkEligibility(nino).map(user ⇒ Ok(Json.toJson(user)))
+		stubConnector.checkEligibility(nino).map(result ⇒ Ok(Json.toJson(result)))
 	}
 
 }
