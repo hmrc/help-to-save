@@ -20,7 +20,7 @@ import com.google.inject.{ImplementedBy, Singleton}
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.helptosaveeligibilitycheck.WSHttp
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.UserDetails
+import uk.gov.hmrc.helptosaveeligibilitycheck.models.{EligibilityResult, UserDetails}
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -28,7 +28,7 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[HelpToSaveStubConnectorImpl])
 trait HelpToSaveStubConnector {
-  def checkEligibility(nino: String)(implicit hc: HeaderCarrier): Future[UserDetails]
+  def checkEligibility(nino: String)(implicit hc: HeaderCarrier): Future[EligibilityResult]
 }
 
 /**
@@ -44,11 +44,11 @@ class HelpToSaveStubConnectorImpl extends HelpToSaveStubConnector with ServicesC
 
   private val http = WSHttp
 
-  override def checkEligibility(nino: String)(implicit hc: HeaderCarrier): Future[UserDetails] =
+  override def checkEligibility(nino: String)(implicit hc: HeaderCarrier): Future[EligibilityResult] =
     http.GET(s"$helpToSaveStubURL/${serviceURL(nino)}").flatMap{
-      _.json.validate[UserDetails] match {
-        case JsSuccess(user, _) ⇒ Future.successful(user)
-        case JsError(_)         ⇒ Future.failed[UserDetails](new Exception("Could not parse user details"))
+      _.json.validate[EligibilityResult] match {
+        case JsSuccess(result, _) ⇒ Future.successful(result)
+        case JsError(_)         ⇒ Future.failed[EligibilityResult](new Exception("Could not parse user details"))
       }
     }
 }
