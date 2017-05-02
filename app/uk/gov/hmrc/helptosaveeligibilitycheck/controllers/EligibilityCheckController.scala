@@ -20,14 +20,14 @@ import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.helptosaveeligibilitycheck.connectors.HelpToSaveStubConnector
+import uk.gov.hmrc.helptosaveeligibilitycheck.models.EligibilityResult
+import uk.gov.hmrc.helptosaveeligibilitycheck.services.EligibilityCheckerService
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 
-class EligibilityCheckController @Inject()(stubConnector: HelpToSaveStubConnector) extends BaseController {
+class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckerService) extends BaseController {
 
 	def eligibilityCheck(nino: String): Action[AnyContent] = Action.async { implicit request =>
-		stubConnector.checkEligibility(nino).map(result ⇒ Ok(Json.toJson(result)))
+		eligibilityCheckService.getEligibility(nino).map(result ⇒ Ok(Json.toJson(EligibilityResult(result))))
 	}
-
 }

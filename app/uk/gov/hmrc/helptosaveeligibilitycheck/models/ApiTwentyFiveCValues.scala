@@ -18,10 +18,8 @@ package uk.gov.hmrc.helptosaveeligibilitycheck.models
 
 import play.api.libs.json.{Format, Json}
 
-case class Email(email: String) extends AnyVal
+case class ApiTwentyFiveCValues(nino: String, awards: List[Award])
 
-object Email {
-  implicit val emailFormat: Format[Email] = Json.format[Email]
+object ApiTwentyFiveCValues {
+  implicit val testFormat: Format[ApiTwentyFiveCValues] = Json.format[ApiTwentyFiveCValues]
 }
-
-case class EmailException(id: String, errors: String) extends Exception(s"Could not find email in the user details for id: $id, errors: $errors ")

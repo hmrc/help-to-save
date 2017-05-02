@@ -16,18 +16,13 @@
 
 package uk.gov.hmrc.helptosaveeligibilitycheck.models
 
-import play.api.libs.json.{Format, JsResult, JsValue, Json}
+import play.api.libs.json.{Format, Json}
 
-case class EligibilityResult(value: Option[UserDetails]) extends AnyVal
+/**
+  * Created by colm on 02/05/17.
+  */
+case class EligibilityResult(eligible: Boolean)
 
-object EligibilityResult {
-  implicit val format: Format[EligibilityResult] = new Format[EligibilityResult]{
-    implicit val optionUserFormat: Format[Option[UserDetails]] = Format.optionWithNull[UserDetails]
-
-    override def writes(o: EligibilityResult): JsValue =
-      Json.toJson(o.value)
-
-    override def reads(json: JsValue): JsResult[EligibilityResult] =
-      Json.fromJson[Option[UserDetails]](json).map(new EligibilityResult(_))
-  }
+object EligibilityResult{
+  implicit val eligibilityResultFormat: Format[EligibilityResult] = Json.format[EligibilityResult]
 }
