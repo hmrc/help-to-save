@@ -1,0 +1,3 @@
+# microservice specific routes
+
+GET        /eligibilitycheck/:nino      @uk.gov.hmrc.helptosaveeligibilitycheck.controllers.EligibilityCheckController.eligibilityCheck(nino)
