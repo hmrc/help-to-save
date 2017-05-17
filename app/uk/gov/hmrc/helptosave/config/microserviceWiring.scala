@@ -18,6 +18,7 @@ package uk.gov.hmrc.helptosave
 
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.play.audit.http.HttpAuditing
 import uk.gov.hmrc.play.auth.microservice.connectors.AuthConnector
 import uk.gov.hmrc.play.config.{AppName, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.http.hooks.HttpHook
@@ -33,4 +34,11 @@ object MicroserviceAuditConnector extends AuditConnector with RunMode {
 
 object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
   override val authBaseUrl = baseUrl("auth")
+}
+
+object WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing with ServicesConfig {
+  override val appName = getString("appName")
+  override val wsProxyServer = WSProxyConfiguration(s"proxy")
+  override val hooks = Seq(AuditingHook)
+  override val auditConnector = MicroserviceAuditConnector
 }

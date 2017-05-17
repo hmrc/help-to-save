@@ -24,12 +24,13 @@ import com.google.inject.ImplementedBy
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Format, JsError, JsSuccess, Json}
-import uk.gov.hmrc.helptosave.WSHttp
+import uk.gov.hmrc.helptosave.WSHttpProxy
 import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo
+import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.ws.WSPost
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.http.ws.WSProxy
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,6 +51,7 @@ object NSIConnector {
 
 }
 
+
 @Singleton
 class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
@@ -62,11 +64,11 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
     BaseEncoding.base64().encode((userName + ":" + password).getBytes(Charsets.UTF_8))
   }
 
-  val http: WSPost = WSHttp
+  val httpProxy: HttpPost with WSProxy = WSHttpProxy
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
-    Logger.debug("We are posted to NSI " + url + " with data " + userInfo)
-    http.POST[NSIUserInfo, HttpResponse](url, userInfo,
+    Logger.debug(s"We are trying to create a account for ${userInfo.emailAddress}")
+    httpProxy.POST[NSIUserInfo, HttpResponse](url, userInfo,
       headers = Seq(("Authorization", encodedAuthorisation))).map { response =>
       response.status match {
         case Status.CREATED ⇒
@@ -76,11 +78,11 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
           Logger.error("We have failed to make an account due to a bad request")
           Json.fromJson[SubmissionFailure](response.json) match {
             case JsSuccess(failure, _) ⇒ failure
-            case e: JsError ⇒ SubmissionFailure(None, s"Could not create NSI account errors", e.errors.toString())
+            case e: JsError ⇒ SubmissionFailure(None, s"Could not create NSI account errors", e.prettyPrint())
           }
         case other ⇒
-          Logger.warn("Something went wrong nsi ")
-          SubmissionFailure(None, s"Bad Status", other.toString)
+          Logger.warn(s"Something went wrong nsi ${userInfo.emailAddress}")
+          SubmissionFailure(None, "Something unexpected happened", other.toString)
       }
     }
   }
