@@ -14,12 +14,25 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.models
+package uk.gov.hmrc.helptosave.models
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
+import cats.Show
 import play.api.libs.json.{Format, Json}
 
-case class ApiTwentyFiveCValues(nino: String, awards: List[Award])
+/** Details of the user obtained from HMRC services */
+case class UserInfo(forename: String,
+                    surname: String,
+                    NINO: String,
+                    dateOfBirth: LocalDate,
+                    email: String,
+                    address: Address)
 
-object ApiTwentyFiveCValues {
-  implicit val testFormat: Format[ApiTwentyFiveCValues] = Json.format[ApiTwentyFiveCValues]
+object UserInfo {
+
+  implicit val localDateShow: Show[LocalDate] = Show.show(date ⇒ date.format(DateTimeFormatter.ofPattern("dd/MM/YYYY")))
+
+  implicit val userDetailsFormat: Format[UserInfo] = Json.format[UserInfo]
 }

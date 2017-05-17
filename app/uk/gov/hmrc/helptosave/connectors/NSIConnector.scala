@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.connectors
+package uk.gov.hmrc.helptosave.connectors
 
 import javax.inject.Singleton
 
@@ -24,9 +24,9 @@ import com.google.inject.ImplementedBy
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Format, JsError, JsSuccess, Json}
-import uk.gov.hmrc.helptosaveeligibilitycheck.WSHttp
-import uk.gov.hmrc.helptosaveeligibilitycheck.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.NSIUserInfo
+import uk.gov.hmrc.helptosave.WSHttp
+import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
+import uk.gov.hmrc.helptosave.models.NSIUserInfo
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.ws.WSPost
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}

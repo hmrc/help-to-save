@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.connectors
+package uk.gov.hmrc.helptosave.connectors
 
 import java.time.LocalDate
 
@@ -23,8 +23,8 @@ import com.google.common.io.BaseEncoding
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
-import uk.gov.hmrc.helptosaveeligibilitycheck.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.{Address, NSIUserInfo, UserInfo}
+import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
+import uk.gov.hmrc.helptosave.models.{Address, NSIUserInfo, UserInfo}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpReads, HttpResponse}
 import uk.gov.hmrc.play.http.ws.WSPost
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}

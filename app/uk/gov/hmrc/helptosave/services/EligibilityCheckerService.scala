@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.services
+package uk.gov.hmrc.helptosave.services
 
 import com.google.inject.{Inject, Singleton}
 import org.joda.time.LocalDate
-import uk.gov.hmrc.helptosaveeligibilitycheck.connectors.ApiTwentyFiveCConnector
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.AwAwardStatus.{Finalised, Provisional}
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.Award
+import uk.gov.hmrc.helptosave.connectors.ApiTwentyFiveCConnector
+import uk.gov.hmrc.helptosave.models.AwAwardStatus.{Finalised, Provisional}
+import uk.gov.hmrc.helptosave.models.Award
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global

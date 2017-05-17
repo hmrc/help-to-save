@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck
+package uk.gov.hmrc.helptosave
 
 import com.typesafe.config.Config
 import play.api.{Application, Configuration, Play}

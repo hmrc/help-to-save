@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.service
+package uk.gov.hmrc.helptosave.service
 
 import org.joda.time.LocalDate
 import org.scalamock.scalatest.MockFactory
-import uk.gov.hmrc.helptosaveeligibilitycheck.connectors.{ApiTwentyFiveCConnector, ApiTwentyFiveCConnectorImpl}
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.{AwAwardStatus, Award}
-import uk.gov.hmrc.helptosaveeligibilitycheck.services.EligibilityCheckerService
+import uk.gov.hmrc.helptosave.connectors.{ApiTwentyFiveCConnector, ApiTwentyFiveCConnectorImpl}
+import uk.gov.hmrc.helptosave.models.{AwAwardStatus, Award}
+import uk.gov.hmrc.helptosave.services.EligibilityCheckerService
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.Await

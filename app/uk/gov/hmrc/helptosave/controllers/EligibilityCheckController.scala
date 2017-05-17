@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.controllers
+package uk.gov.hmrc.helptosave.controllers
 
 import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.EligibilityResult
-import uk.gov.hmrc.helptosaveeligibilitycheck.services.EligibilityCheckerService
+import uk.gov.hmrc.helptosave.models.EligibilityResult
+import uk.gov.hmrc.helptosave.services.EligibilityCheckerService
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 

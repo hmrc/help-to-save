@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.connectors
+package uk.gov.hmrc.helptosave.connectors
 
 import com.google.inject.{ImplementedBy, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsError, JsSuccess}
-import uk.gov.hmrc.helptosaveeligibilitycheck.WSHttp
-import uk.gov.hmrc.helptosaveeligibilitycheck.models._
+import uk.gov.hmrc.helptosave.WSHttp
+import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 

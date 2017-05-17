@@ -4,7 +4,7 @@ import sbt._
 
 object MicroServiceBuild extends Build with MicroService {
 
-  val appName = "help-to-save-eligibility-check"
+  val appName = "help-to-save"
 
   override lazy val appDependencies: Seq[ModuleID] = compile ++ test()
 

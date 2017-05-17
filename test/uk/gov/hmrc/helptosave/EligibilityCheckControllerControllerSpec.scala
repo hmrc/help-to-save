@@ -14,21 +14,28 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.models
+package uk.gov.hmrc.helptosave.controllers
 
-import play.api.libs.json.{Format, Json}
+import play.api.http.Status
+import play.api.test.FakeRequest
+import play.api.http.Status
+import play.api.test.FakeRequest
+import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.play.test.WithFakeApplication
+import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 
-case class Address(line1: Option[String],
-                   line2: Option[String],
-                   line3: Option[String],
-                   line4: Option[String],
-                   line5: Option[String],
-                   postcode: Option[String],
-                   country: Option[String])
+class EligibilityCheckControllerControllerSpec extends UnitSpec with WithFakeApplication{
 
-object Address {
+  val fakeRequest = FakeRequest("GET", "/")
 
-  implicit val addressFormat: Format[Address] = Json.format[Address]
+
+  "GET /" should {
+    "return 200" in {
+//      val result = EligibilityCheckController$.hello()(fakeRequest)
+//      status(result) shouldBe Status.OK
+    }
+  }
+
 
 }

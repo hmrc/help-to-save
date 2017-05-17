@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.models
+package uk.gov.hmrc.helptosave.models
 
 
 import java.time.LocalDate

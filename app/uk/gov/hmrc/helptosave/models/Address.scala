@@ -14,25 +14,21 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.models
+package uk.gov.hmrc.helptosave.models
 
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
-import cats.Show
 import play.api.libs.json.{Format, Json}
 
-/** Details of the user obtained from HMRC services */
-case class UserInfo(forename: String,
-                    surname: String,
-                    NINO: String,
-                    dateOfBirth: LocalDate,
-                    email: String,
-                    address: Address)
 
-object UserInfo {
+case class Address(line1: Option[String],
+                   line2: Option[String],
+                   line3: Option[String],
+                   line4: Option[String],
+                   line5: Option[String],
+                   postcode: Option[String],
+                   country: Option[String])
 
-  implicit val localDateShow: Show[LocalDate] = Show.show(date ⇒ date.format(DateTimeFormatter.ofPattern("dd/MM/YYYY")))
+object Address {
 
-  implicit val userDetailsFormat: Format[UserInfo] = Json.format[UserInfo]
+  implicit val addressFormat: Format[Address] = Json.format[Address]
+
 }

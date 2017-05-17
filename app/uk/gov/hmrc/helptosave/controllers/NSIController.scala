@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosaveeligibilitycheck.controllers
+package uk.gov.hmrc.helptosave.controllers
 
 import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.helptosaveeligibilitycheck.connectors.NSIConnector
-import uk.gov.hmrc.helptosaveeligibilitycheck.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
-import uk.gov.hmrc.helptosaveeligibilitycheck.models.{NSIUserInfo, UserInfo}
+import uk.gov.hmrc.helptosave.connectors.NSIConnector
+import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
+import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UserInfo}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
