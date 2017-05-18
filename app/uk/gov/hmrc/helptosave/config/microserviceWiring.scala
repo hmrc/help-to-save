@@ -41,10 +41,10 @@ object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
 }
 
 class WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing with ServicesConfig {
-  override def appName = getString("appName")
-  override def wsProxyServer = WSProxyConfiguration(s"proxy")
+  override lazy val appName = getString("appName")
+  override lazy val wsProxyServer = WSProxyConfiguration(s"proxy")
   override val hooks = Seq(AuditingHook)
-  override def auditConnector = MicroserviceAuditConnector
+  override lazy val auditConnector = MicroserviceAuditConnector
 
   /**
     * Returns a [[Future[HttpResponse]] without throwing exceptions if the status us not `2xx`. Needed
