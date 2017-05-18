@@ -53,8 +53,8 @@ class NSIController @Inject()(nsiConnector: NSIConnector) extends BaseController
                 case SubmissionSuccess ⇒
                   Logger.debug("We have created an account on NSI ")
                   Future.successful(Created)
-                case SubmissionFailure(_, em, ed) ⇒
-                  Logger.error(s"We have failure to create an account on nsi because $em and $ed")
+                case SubmissionFailure(_, message, detail) ⇒
+                  Logger.error(s"We have failure to create an account on nsi (message - $message, details - $detail")
                   Future.successful(BadRequest)
               }
             }

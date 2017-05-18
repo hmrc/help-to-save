@@ -68,7 +68,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
     Logger.debug(s"We are trying to create a account for ${userInfo.NINO}")
-    httpProxy.post(url, userInfo, headers = Seq(("Authorization", encodedAuthorisation)))
+    httpProxy.post(url, userInfo, headers = Seq(("Authorization1", encodedAuthorisation)))
       .map { response ⇒
         response.status match {
           case Status.CREATED ⇒

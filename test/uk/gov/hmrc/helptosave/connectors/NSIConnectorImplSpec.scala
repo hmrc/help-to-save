@@ -26,7 +26,7 @@ import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.helptosave.WSHttpProxy
 import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
 import uk.gov.hmrc.helptosave.models.{Address, NSIUserInfo}
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpReads, HttpResponse}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.duration._
@@ -80,7 +80,7 @@ class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFa
     (mockHTTPProxy.post(
       _: String, _: I, _: Seq[(String, String)]
     )(_: Writes[I], _: HeaderCarrier))
-      .expects(url, body, Seq(("Authorization", encodedAuthorisation)), *, *)
+      .expects(url, body, Seq(("Authorization1", encodedAuthorisation)), *, *)
       .returning(Future.successful(result))
 
   def isFailure(result: SubmissionResult): Boolean = result match {
