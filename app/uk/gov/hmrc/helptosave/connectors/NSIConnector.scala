@@ -82,7 +82,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
         Logger.error("We have failed to make an account due to a bad request " + e.message)
         SubmissionFailure(None, "We have failed to make an account due to a bad request ", e.message)
       case e ⇒
-        Logger.error("We have failed to make an account due to some error " + e.message)
+        Logger.error("We have failed to make an account  " + e.getMessage)
         SubmissionFailure(None, "We have failed to make an account due to a bad request ", e.getMessage)
     }
   }
