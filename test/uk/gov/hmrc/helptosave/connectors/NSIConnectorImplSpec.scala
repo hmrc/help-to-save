@@ -24,7 +24,7 @@ import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.helptosave.WSHttpProxy
-import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
+import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
 import uk.gov.hmrc.helptosave.models.{Address, NSIUserInfo}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -83,11 +83,16 @@ class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFa
       .expects(url, body, Seq(("Authorization", encodedAuthorisation)), *, *)
       .returning(Future.successful(result))
 
+  def isFailure(result: SubmissionResult): Boolean = result match {
+    case SubmissionSuccess ⇒ false
+    case _: SubmissionFailure ⇒ true
+  }
+
   "the createAccount Method" must {
     "Return a SubmissionSuccess when the status is Created" in {
       mockCreateAccount(nsiUserInfoValid)(HttpResponse(Status.CREATED))
       val result = testNSAndIConnectorImpl.createAccount(nsiUserInfoValid)
-      Await.result(result, 3.seconds) shouldBe SubmissionSuccess
+      isFailure(Await.result(result, 3.seconds)) shouldBe false
     }
 
     "Return a SubmissionFailure when the status is BAD_REQUEST" in {
@@ -95,14 +100,15 @@ class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFa
       mockCreateAccount(nsiUserInfoValid)(HttpResponse(Status.BAD_REQUEST,
         Some(Json.toJson(submissionFailure))))
       val result = testNSAndIConnectorImpl.createAccount(nsiUserInfoValid)
-      Await.result(result, 3.seconds) shouldBe submissionFailure
+      isFailure(Await.result(result, 3.seconds)) shouldBe true
     }
 
+
+
     "Return a SubmissionFailure when the status is anything else" in {
-      val submissionFailure = SubmissionFailure(None, s"Something unexpected happened", Status.BAD_GATEWAY.toString)
       mockCreateAccount(nsiUserInfoValid)(HttpResponse(Status.BAD_GATEWAY))
       val result = testNSAndIConnectorImpl.createAccount(nsiUserInfoValid)
-      Await.result(result, 3.seconds) shouldBe submissionFailure
+      isFailure(Await.result(result, 3.seconds)) shouldBe true
     }
   }
 
