@@ -80,7 +80,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
           case other ⇒
             Logger.warn(s"Something went wrong nsi ${userInfo.NINO}")
-            SubmissionFailure(None, s"Something unexpected happened: ${response.body}", other.toString)
+            SubmissionFailure(None, s"Something unexpected happened; response body: ${response.body}", other.toString)
         }
       }
   }
@@ -95,7 +95,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
             submissionFailure
 
           case e: JsError ⇒
-            SubmissionFailure(None, s"Could not create NSI account errors: ${response.body}", e.prettyPrint())
+            SubmissionFailure(None, s"Could not create NSI account errors; response body: ${response.body}", e.prettyPrint())
         }
 
       case Failure(error) ⇒
