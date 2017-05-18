@@ -32,6 +32,7 @@ import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 @ImplementedBy(classOf[NSIConnectorImpl])
 trait NSIConnector {
@@ -67,22 +68,40 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
     Logger.debug(s"We are trying to create a account for ${userInfo.NINO}")
-    httpProxy.post(url, userInfo,
-      headers = Seq(("Authorization", encodedAuthorisation))).map { response =>
-      response.status match {
-        case Status.CREATED ⇒
-          Logger.debug("We have successfully created a NSI account")
-          SubmissionSuccess
-        case Status.BAD_REQUEST ⇒
-          Logger.error("We have failed to make an account due to a bad request")
-          Json.fromJson[SubmissionFailure](response.json) match {
-            case JsSuccess(failure, _) ⇒ failure
-            case e: JsError ⇒ SubmissionFailure(None, s"Could not create NSI account errors", e.prettyPrint())
-          }
-        case other ⇒
-          Logger.warn(s"Something went wrong nsi ${userInfo.emailAddress}")
-          SubmissionFailure(None, "Something unexpected happened", other.toString)
+    httpProxy.post(url, userInfo, headers = Seq(("Authorization", encodedAuthorisation)))
+      .map { response ⇒
+        response.status match {
+          case Status.CREATED ⇒
+            Logger.debug("We have successfully created a NSI account")
+            SubmissionSuccess
+
+          case Status.BAD_REQUEST ⇒
+            handleBadRequestResponse(response)
+
+          case other ⇒
+            Logger.warn(s"Something went wrong nsi ${userInfo.NINO}")
+            SubmissionFailure(None, s"Something unexpected happened: ${response.body}", other.toString)
+        }
       }
+  }
+
+
+  private def handleBadRequestResponse(response: HttpResponse): SubmissionFailure = {
+    Logger.error("We have failed to make an account due to a bad request")
+    Try(response.json) match {
+      case Success(jsValue) ⇒
+        Json.fromJson[SubmissionFailure](jsValue) match {
+          case JsSuccess(submissionFailure, _) ⇒
+            submissionFailure
+
+          case e: JsError ⇒
+            SubmissionFailure(None, s"Could not create NSI account errors: ${response.body}", e.prettyPrint())
+        }
+
+      case Failure(error) ⇒
+        SubmissionFailure(None, s"Could not read submission failure JSON response: ${response.body}", error.getMessage)
+
     }
+
   }
 }
