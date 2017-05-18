@@ -23,10 +23,10 @@ import com.google.common.io.BaseEncoding
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
+import uk.gov.hmrc.helptosave.WSHttpProxy
 import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
-import uk.gov.hmrc.helptosave.models.{Address, NSIUserInfo, UserInfo}
-import uk.gov.hmrc.play.http.ws.{WSHttp, WSProxy}
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpReads, HttpResponse}
+import uk.gov.hmrc.helptosave.models.{Address, NSIUserInfo}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.duration._
@@ -34,9 +34,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFactory {
 
-  trait WSTest extends WSHttp with WSProxy
-
-  lazy val mockHTTPProxy = mock[WSTest]
+  lazy val mockHTTPProxy = mock[WSHttpProxy]
 
   val (forename, surname) = "Tyrion" → "Lannister"
   val dateOfBirth = LocalDate.ofEpochDay(0L)
@@ -79,10 +77,10 @@ class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFa
   val url = s"$baseUrl/$nsiUrlEnd"
 
   def mockCreateAccount[I](body: I)(result: HttpResponse): Unit =
-    (mockHTTPProxy.POST[I, HttpResponse](
+    (mockHTTPProxy.post(
       _: String, _: I, _: Seq[(String, String)]
-    )(_: Writes[I], _: HttpReads[HttpResponse], _: HeaderCarrier))
-      .expects(url, body, Seq(("Authorization", encodedAuthorisation)), *, *, *)
+    )(_: Writes[I], _: HeaderCarrier))
+      .expects(url, body, Seq(("Authorization", encodedAuthorisation)), *, *)
       .returning(Future.successful(result))
 
   "the createAccount Method" must {

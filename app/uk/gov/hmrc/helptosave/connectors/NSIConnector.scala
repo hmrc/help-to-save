@@ -23,13 +23,13 @@ import com.google.common.io.BaseEncoding
 import com.google.inject.ImplementedBy
 import play.api.Logger
 import play.api.http.Status
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, JsError, JsSuccess, Json}
 import uk.gov.hmrc.helptosave.WSHttpProxy
 import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo
+import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http._
-import uk.gov.hmrc.play.http.ws.WSProxy
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -63,27 +63,26 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
     BaseEncoding.base64().encode((userName + ":" + password).getBytes(Charsets.UTF_8))
   }
 
-  val httpProxy: HttpPost with WSProxy = WSHttpProxy
+  val httpProxy = new WSHttpProxy
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
     Logger.debug(s"We are trying to create a account for ${userInfo.NINO}")
-    httpProxy.POST[NSIUserInfo, HttpResponse](url, userInfo,
+    httpProxy.post(url, userInfo,
       headers = Seq(("Authorization", encodedAuthorisation))).map { response =>
       response.status match {
         case Status.CREATED ⇒
           Logger.debug("We have successfully created a NSI account")
           SubmissionSuccess
+        case Status.BAD_REQUEST ⇒
+          Logger.error("We have failed to make an account due to a bad request")
+          Json.fromJson[SubmissionFailure](response.json) match {
+            case JsSuccess(failure, _) ⇒ failure
+            case e: JsError ⇒ SubmissionFailure(None, s"Could not create NSI account errors", e.prettyPrint())
+          }
         case other ⇒
-          Logger.warn(s"Something went wrong nsi ${userInfo.NINO}")
+          Logger.warn(s"Something went wrong nsi ${userInfo.emailAddress}")
           SubmissionFailure(None, "Something unexpected happened", other.toString)
       }
-    }.recover {
-      case e: BadRequestException ⇒
-        Logger.error("We have failed to make an account due to a bad request " + e.message)
-        SubmissionFailure(None, "We have failed to make an account due to a bad request ", e.message)
-      case e ⇒
-        Logger.error("We have failed to make an account  " + e.getMessage)
-        SubmissionFailure(None, "We have failed to make an account due to a bad request ", e.getMessage)
     }
   }
 }
