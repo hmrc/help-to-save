@@ -29,8 +29,7 @@ import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, Submis
 import uk.gov.hmrc.helptosave.models.NSIUserInfo
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.ws.WSProxy
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost, HttpResponse}
+import uk.gov.hmrc.play.http._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -64,11 +63,11 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
     BaseEncoding.base64().encode((userName + ":" + password).getBytes(Charsets.UTF_8))
   }
 
-  val httpProxy: HttpPost with WSProxy = WSHttpProxy
+  val httpProxy = new WSHttpProxy
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
-    Logger.debug(s"We are trying to create a account for ${userInfo.emailAddress}")
-    httpProxy.POST[NSIUserInfo, HttpResponse](url, userInfo,
+    Logger.debug(s"We are trying to create a account for ${userInfo.NINO}")
+    httpProxy.post(url, userInfo,
       headers = Seq(("Authorization", encodedAuthorisation))).map { response =>
       response.status match {
         case Status.CREATED ⇒
