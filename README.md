@@ -17,7 +17,7 @@ The `help-to-save` service will run on port 7001 when started by the service man
  
  For example:
  ```
- /eligibility-check/nino=NINO&userDetailsURI=http%3A%2F%2Fuser-details%2Fid%2F2390uj%23few3r%2B
+ /eligibility-check?nino=NINO&userDetailsURI=http%3A%2F%2Fuser-details%2Fid%2F2390uj%23few3r%2B
  ```
  If eligible, expect a `200` response with JSON describing the user. If not eligible expect a `200`
 response with an empty body.
