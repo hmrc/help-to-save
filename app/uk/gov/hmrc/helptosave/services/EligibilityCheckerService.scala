@@ -16,43 +16,38 @@
 
 package uk.gov.hmrc.helptosave.services
 
+import cats.instances.future._
 import com.google.inject.{Inject, Singleton}
 import org.joda.time.LocalDate
 import uk.gov.hmrc.helptosave.connectors.ApiTwentyFiveCConnector
 import uk.gov.hmrc.helptosave.models.AwAwardStatus.{Finalised, Provisional}
 import uk.gov.hmrc.helptosave.models.Award
+import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class EligibilityCheckerService @Inject()(apiTwentyFiveCConnector: ApiTwentyFiveCConnector) {
 
-  private def performEligibilityChecks(award: Award): Boolean = {
-    award match {
-      case Award(Provisional, _, _, householdIncome, true, _) if householdIncome > 0  => true
-      case Award(Finalised, _, _, householdIncome, true, _) if householdIncome > 0  => true
-      case _ => false
-    }
+  def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Boolean] =
+    apiTwentyFiveCConnector.getAwards(nino).map(awards ⇒ checkEligibilityForHelpToSave(awards, LocalDate.now()))
+
+  private def checkEligibilityForHelpToSave(awards: List[Award], today: LocalDate): Boolean = {
+    val validAwards =  awards.filter(award ⇒ isEndDateTodayOrAfter(award.av_end_date, today))
+    validAwards.exists(impliesEligible)
   }
 
-
-  private def getValidAwardsDate(awards: List[Award], localDateToday: LocalDate): List[Award] = {
-    def isEndDateTodayOrAfter(endDate: LocalDate, todaysDate: LocalDate): Boolean = {
-      endDate.isAfter(todaysDate) || endDate.isEqual(todaysDate)
-    }
-
-    awards.filter(award => isEndDateTodayOrAfter(award.av_end_date, localDateToday))
+  private def impliesEligible(award: Award): Boolean = award match {
+    case Award(Provisional, _, _, householdIncome, true, _) if householdIncome > 0  ⇒ true
+    case Award(Finalised, _, _, householdIncome, true, _) if householdIncome > 0  ⇒ true
+    case _ ⇒ false
   }
 
-  private def checkEligibilityForHelpToSave(awards: List[Award], todaysDate: LocalDate): Boolean = {
-    val validAwards = getValidAwardsDate(awards, todaysDate)
-    if (validAwards.isEmpty) false
-    else validAwards.exists(performEligibilityChecks)
-  }
+  private def isEndDateTodayOrAfter(endDate: LocalDate, today: LocalDate): Boolean =
+    endDate.isAfter(today) || endDate.isEqual(today)
 
-   def getEligibility(nino: String)(implicit hc: HeaderCarrier): Future[Boolean] =
-    apiTwentyFiveCConnector.getAwards(nino).map(awards => checkEligibilityForHelpToSave(awards, LocalDate.now()))
+
+
 }
 

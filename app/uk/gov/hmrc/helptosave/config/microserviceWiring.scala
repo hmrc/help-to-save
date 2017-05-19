@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave
 
 import play.api.libs.json.Writes
+import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, POST ⇒ POST_VERB}
 import uk.gov.hmrc.play.audit.http.HttpAuditing
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -28,9 +29,6 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.Future
 
-object WSHttp extends WSGet with WSPut with WSPost with WSDelete with WSPatch with AppName {
-  override val hooks: Seq[HttpHook] = NoneRequired
-}
 
 object MicroserviceAuditConnector extends AuditConnector with RunMode {
   override lazy val auditingConfig = LoadAuditingConfig(s"auditing")
@@ -38,6 +36,22 @@ object MicroserviceAuditConnector extends AuditConnector with RunMode {
 
 object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
   override val authBaseUrl = baseUrl("auth")
+}
+
+
+object WSHttp extends WSGet with WSPut with WSPost with WSDelete with WSPatch with AppName {
+  override val hooks: Seq[HttpHook] = NoneRequired
+
+  /**
+    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status us not `2xx`. Needed
+    * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
+    */
+  def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url){
+    val httpResponse = doGet(url)
+    executeHooks(url, GET_VERB, None, httpResponse)
+    httpResponse
+  }
+
 }
 
 class WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing with ServicesConfig {
@@ -50,7 +64,13 @@ class WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing wit
     * Returns a [[Future[HttpResponse]] without throwing exceptions if the status us not `2xx`. Needed
     * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
     */
-  def post[A](url: String, body: A, headers: Seq[(String,String)])(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] =
-    doPost(url, body, headers)
+  def post[A](url: String,
+              body: A,
+              headers: Seq[(String,String)]
+             )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] = withTracing(POST_VERB, url){
+    val httpResponse = doPost(url, body, headers)
+    executeHooks(url, POST_VERB, None, httpResponse)
+    httpResponse
+  }
 }
 

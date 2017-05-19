@@ -18,14 +18,16 @@ package uk.gov.hmrc.helptosave.service
 
 import org.joda.time.LocalDate
 import org.scalamock.scalatest.MockFactory
-import uk.gov.hmrc.helptosave.connectors.{ApiTwentyFiveCConnector, ApiTwentyFiveCConnectorImpl}
+import uk.gov.hmrc.helptosave.connectors.ApiTwentyFiveCConnector
 import uk.gov.hmrc.helptosave.models.{AwAwardStatus, Award}
 import uk.gov.hmrc.helptosave.services.EligibilityCheckerService
+import uk.gov.hmrc.helptosave.util.Result
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
-import scala.concurrent.Await
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.concurrent.Future
 
 class EligibilityCheckerServiceSpec
   extends UnitSpec with MockFactory{
@@ -39,40 +41,43 @@ class EligibilityCheckerServiceSpec
   val fakeNino =  "WM123456C"
 
   def mockEligibilityResult(nino: String)(result: List[Award]): Unit = {
-    (mockEligibilityConnector.getAwards(_: String)(_: HeaderCarrier))
-      .expects(nino, *)
-      .returning(Future.successful(result))}
+    (mockEligibilityConnector.getAwards(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(nino, *, *)
+      .returning(Result(Future.successful(result)))}
+
+  def isEligible(result: Result[Boolean]): Boolean =
+    Await.result(result.value, 3.seconds).fold(_ ⇒ false, identity)
 
   "EligibilityCheckerService getValidAwardsDate"
   "return true valid awards " in {
     mockEligibilityResult(fakeNino)(List(validAward))
     val result = checkerService.getEligibility(fakeNino)
-    Await.result(result, 3 seconds) shouldBe true
+    isEligible(result) shouldBe true
   }
   "return true if  av_end_date is today " in {
     mockEligibilityResult(fakeNino)(List(validAward.copy(av_end_date = LocalDate.now())))
     val result = checkerService.getEligibility(fakeNino)
-    Await.result(result, 3 seconds) shouldBe true
+    isEligible(result) shouldBe true
   }
   "return false is there is no awards that have an av_end_date that is not today or tommoro" in {
     mockEligibilityResult(fakeNino)(List(validAward.copy(av_end_date = LocalDate.now().minusDays(1))))
     val result = checkerService.getEligibility(fakeNino)
-    Await.result(result, 3 seconds) shouldBe false
+    isEligible(result) shouldBe false
   }
   "return false if aw_award_status is not Provisional or Finalised" in {
     mockEligibilityResult(fakeNino)(List(validAward.copy(aw_award_status = AwAwardStatus.Deleted)))
     val result = checkerService.getEligibility(fakeNino)
-    Await.result(result, 3 seconds) shouldBe false
+    isEligible(result) shouldBe false
   }
   "return false if ae_etc1_wtc_entitlement is not true" in {
     mockEligibilityResult(fakeNino)(List(validAward.copy(ae_etc1_wtc_entitlement = false)))
     val result = checkerService.getEligibility(fakeNino)
-    Await.result(result, 3 seconds) shouldBe false
+    isEligible(result) shouldBe false
   }
   "return false if house hold income is less then zero " in {
     mockEligibilityResult(fakeNino)(List(validAward.copy(av_total_taper_household_award = -5)))
     val result = checkerService.getEligibility(fakeNino)
-    Await.result(result, 3 seconds) shouldBe false
+    isEligible(result) shouldBe false
   }
 }
 

@@ -31,21 +31,22 @@ import scala.util.matching.Regex
 /**
   * The user information required by NS&I to create an account.
   */
-case class NSIUserInfo(forename: String,
-                       surname: String,
-                       birthdate: LocalDate,
-                       address1: String,
-                       address2: String,
-                       address3: Option[String],
-                       address4: Option[String],
-                       address5: Option[String],
-                       postcode: String,
-                       countryCode: Option[String],
-                       NINO: String,
-                       communicationPreference: String,
-                       phoneNumber: Option[String],
-                       emailAddress: String,
-                       registrationChannel: String)
+case class NSIUserInfo private[models] (
+                                         forename: String,
+                                         surname: String,
+                                         birthdate: LocalDate,
+                                         address1: String,
+                                         address2: String,
+                                         address3: Option[String],
+                                         address4: Option[String],
+                                         address5: Option[String],
+                                         postcode: String,
+                                         countryCode: Option[String],
+                                         NINO: String,
+                                         communicationPreference: String,
+                                         phoneNumber: Option[String],
+                                         emailAddress: String,
+                                         registrationChannel: String)
 
 object NSIUserInfo {
 

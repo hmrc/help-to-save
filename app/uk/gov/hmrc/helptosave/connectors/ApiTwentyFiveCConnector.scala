@@ -16,19 +16,21 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
+import cats.instances.future._
+import cats.syntax.either._
 import com.google.inject.{ImplementedBy, Singleton}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsError, JsSuccess}
 import uk.gov.hmrc.helptosave.WSHttp
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.util.Result
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[ApiTwentyFiveCConnectorImpl])
 trait ApiTwentyFiveCConnector {
-  def getAwards(nino: String)(implicit hc: HeaderCarrier): Future[List[Award]]
+  def getAwards(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[List[Award]]
 }
 
 /**
@@ -43,11 +45,8 @@ class ApiTwentyFiveCConnectorImpl extends ServicesConfig  with ApiTwentyFiveCCon
 
   private val http = WSHttp
 
-  def getAwards(nino: String)(implicit hc: HeaderCarrier): Future[List[Award]] =
-    http.GET(s"$helpToSaveStubURL/${serviceURL(nino)}").flatMap {
-      _.json.validate[ApiTwentyFiveCValues] match {
-        case JsSuccess(result, _) ⇒ Future.successful(result.awards)
-        case JsError(e) ⇒ Future.failed[List[Award]](new Exception("Could not parse awards " + e.head))
-      }
+  def getAwards(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[List[Award]] =
+    Result(http.get(s"$helpToSaveStubURL/${serviceURL(nino)}")).subflatMap{ response ⇒
+      response.parseJson[ApiTwentyFiveCValues].map(_.awards)
     }
 }

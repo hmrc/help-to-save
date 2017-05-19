@@ -36,24 +36,23 @@ import scala.util.{Failure, Success, Try}
 
 @ImplementedBy(classOf[NSIConnectorImpl])
 trait NSIConnector {
-  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult]
+  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[Either[SubmissionFailure,SubmissionSuccess]]
 }
 
 object NSIConnector {
 
   sealed trait SubmissionResult
 
-  case object SubmissionSuccess extends SubmissionResult
+  case class SubmissionSuccess() extends SubmissionResult
 
-  case class SubmissionFailure(errorMessageId: Option[String], errorMessage: String, errorDetail: String) extends SubmissionResult
-
-  implicit val submissionFailureFormat: Format[SubmissionFailure] = Json.format[SubmissionFailure]
+  case class SubmissionFailure(message: String) extends SubmissionResult
 
 }
 
-
 @Singleton
 class NSIConnectorImpl extends NSIConnector with ServicesConfig {
+
+  import uk.gov.hmrc.helptosave.connectors.NSIConnectorImpl._
 
   val nsiUrl: String = baseUrl("nsi")
   val nsiUrlEnd: String = getString("microservice.services.nsi.url")
@@ -66,42 +65,50 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   val httpProxy = new WSHttpProxy
 
-  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[SubmissionResult] = {
-    Logger.debug(s"We are trying to create a account for ${userInfo.NINO}")
+  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[Either[SubmissionFailure,SubmissionSuccess]] = {
+    Logger.debug(s"About to create a account for ${userInfo.NINO}")
     httpProxy.post(url, userInfo, headers = Seq(("Authorization1", encodedAuthorisation)))
       .map { response ⇒
         response.status match {
           case Status.CREATED ⇒
-            Logger.debug("We have successfully created a NSI account")
-            SubmissionSuccess
+            Logger.debug(s"Successfully created a NSI account for ${userInfo.NINO}")
+            Right(SubmissionSuccess())
 
           case Status.BAD_REQUEST ⇒
-            handleBadRequestResponse(response)
+            Logger.error("We have failed to make an account due to a bad request")
+            Left(SubmissionFailure(getBadRequestError(response)))
 
           case other ⇒
-            Logger.warn(s"Something went wrong nsi ${userInfo.NINO}")
-            SubmissionFailure(None, s"Something unexpected happened; response body: ${response.body}", other.toString)
+            Logger.warn(s"Create account call for ${userInfo.NINO} to NSI came back with status $other")
+            Left(SubmissionFailure(s"Create account call to NSI came back with status $other. Respone body was: ${response.body}"))
         }
       }
   }
 
-
-  private def handleBadRequestResponse(response: HttpResponse): SubmissionFailure = {
-    Logger.error("We have failed to make an account due to a bad request")
+  private def getBadRequestError(response: HttpResponse): String = {
     Try(response.json) match {
       case Success(jsValue) ⇒
-        Json.fromJson[SubmissionFailure](jsValue) match {
-          case JsSuccess(submissionFailure, _) ⇒
-            submissionFailure
+        Json.fromJson[NSISubmissionFailure](jsValue) match {
+          case JsSuccess(f, _) ⇒
+            s"Bad create account request made to NSI: [id: ${f.errorMessageId}, " +
+              s" message: ${f.errorMessage}, details: ${f.errorDetail}]"
 
           case e: JsError ⇒
-            SubmissionFailure(None, s"Could not create NSI account errors; response body: ${response.body}", e.prettyPrint())
+            "Bad create account request made to NSI but could not parse NSI error " +
+              s"response: ${e.prettyPrint()}. Response body was ${response.body}"
         }
 
-      case Failure(error) ⇒
-        SubmissionFailure(None, s"Could not read submission failure JSON response: ${response.body}", error.getMessage)
+      case Failure(_) ⇒
+        s"Bad create account request made to NSI but response did not contain JSON. Response body was ${response.body}"
 
     }
-
   }
+}
+
+object NSIConnectorImpl {
+  private[connectors] case class NSISubmissionFailure(errorMessageId: String,
+                                                      errorMessage: String,
+                                                      errorDetail: String) extends SubmissionResult
+
+  private[connectors] implicit val nsiSubmissionFailureFormat: Format[NSISubmissionFailure] = Json.format[NSISubmissionFailure]
 }

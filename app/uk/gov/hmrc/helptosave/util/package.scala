@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.models
+package uk.gov.hmrc.helptosave
 
-import play.api.libs.json.{Format, Json}
+import cats.instances.future._
+import cats.data.EitherT
 
-/**
-  * Created by colm on 02/05/17.
-  */
-case class EligibilityResult(eligible: Boolean)
+import scala.concurrent.{ExecutionContext, Future}
 
-object EligibilityResult{
-  implicit val eligibilityResultFormat: Format[EligibilityResult] = Json.format[EligibilityResult]
+package object util {
+
+  type NINO = String
+
+  type Result[A] = EitherT[Future, String, A]
+
+  object Result {
+    def apply[A](a: Future[A])(implicit ec: ExecutionContext): Result[A] =
+      EitherT.right[Future,String,A](a)
+  }
+
 }

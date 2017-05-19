@@ -19,47 +19,50 @@ package uk.gov.hmrc.helptosave.controllers
 import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsError, JsSuccess, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.{JsError, JsSuccess}
+import play.api.mvc.{Action, AnyContent, Result ⇒ PlayResult}
 import uk.gov.hmrc.helptosave.connectors.NSIConnector
-import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionSuccess}
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UserInfo}
+import uk.gov.hmrc.helptosave.util.JsErrorOps._
+import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
 
 class NSIController @Inject()(nsiConnector: NSIConnector) extends BaseController {
 
+  implicit def toFuture(result: PlayResult): Future[PlayResult] = Future.successful(result)
+
   def createAccount: Action[AnyContent] = Action.async { implicit request =>
     request.body.asJson.map(_.validate[UserInfo]) match {
       case None ⇒
-        Logger.error("We have failed to create an account due to having No Json ")
-        Future.successful(BadRequest(
-          Json.toJson(SubmissionFailure(None, "No json", ""))))
+        Logger.error("Create account failed - no JSON found in request")
+        BadRequest("No JSON found in request")
+
       case Some(er: JsError) ⇒
-        Logger.error("We have failed to create an account due to invalid Json " + er.toString)
-        Future.successful(BadRequest(
-          Json.toJson(SubmissionFailure(None, "Invalid Json", er.errors.toString()))))
-      case Some(JsSuccess(createAccount, _)) ⇒
-        NSIUserInfo(createAccount).fold(
-          errors ⇒ {
-            Logger.info("We have failed to create an account due to invalid user details " + errors)
-            Future.successful(BadRequest(
-              Json.toJson(SubmissionFailure(None, "Invalid user details", errors.toList.mkString(",")))))
-          },
-          nSIUserInfo ⇒ {
-            nsiConnector.createAccount(nSIUserInfo).flatMap {
-              _ match {
-                case SubmissionSuccess ⇒
-                  Logger.debug("We have created an account on NSI ")
-                  Future.successful(Created)
-                case SubmissionFailure(_, message, detail) ⇒
-                  Logger.error(s"We have failure to create an account on nsi (message - $message, details - $detail")
-                  Future.successful(BadRequest)
-              }
-            }
-          }
-        )
+        Logger.error("Create account failed - could not parse JSON in request: " + er.prettyPrint())
+        BadRequest(er.prettyPrint())
+
+      case Some(JsSuccess(userInfo, _)) ⇒
+       createAccount(userInfo)
     }
+  }
+
+  private def createAccount(userInfo: UserInfo)(implicit hc: HeaderCarrier): Future[PlayResult] = {
+    NSIUserInfo(userInfo).fold(
+      // NSI validation checks have failed in this case
+      errors ⇒ {
+        Logger.info("Create an account - invalid user details: " + errors.toList.mkString(", "))
+        BadRequest(errors.toList.mkString(", "))
+      },
+      nSIUserInfo ⇒ nsiConnector.createAccount(nSIUserInfo).map(_.fold[PlayResult](
+        // NSI have come back with a response indicating the creation failed
+        {error ⇒
+          Logger.error(s"Error creating account with NSI: ${error.message}")
+          InternalServerError("")
+        },
+        _ ⇒ Created("")
+      ))
+    )
   }
 }

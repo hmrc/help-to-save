@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.time.LocalDate
-
 import com.google.common.base.Charsets
 import com.google.common.io.BaseEncoding
 import org.scalamock.scalatest.MockFactory
@@ -25,8 +23,9 @@ import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.helptosave.WSHttpProxy
 import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
-import uk.gov.hmrc.helptosave.models.{Address, NSIUserInfo}
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpReads, HttpResponse}
+import uk.gov.hmrc.helptosave.connectors.NSIConnectorImpl.NSISubmissionFailure
+import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.duration._
@@ -35,25 +34,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFactory {
 
   lazy val mockHTTPProxy = mock[WSHttpProxy]
-
-  val (forename, surname) = "Tyrion" → "Lannister"
-  val dateOfBirth = LocalDate.ofEpochDay(0L)
-  val addressLine1 = "Casterly Rock"
-  val addressLine2 = "The Westerlands"
-  val addressLine3 = "Westeros"
-  val postcode = "BA148FY"
-  val country = "GB"
-  val address = Address(Some(addressLine1), Some(addressLine2), Some(addressLine3),
-    None, None, Some(postcode), Some(country))
-
-  val nino = "WM123456C"
-  val email = "tyrion_lannister@gmail.com"
-
-
-  val nsiUserInfoValid = NSIUserInfo(
-    forename, surname, dateOfBirth, addressLine1, addressLine2, Some(addressLine3),
-    None, None, postcode, Some(country), nino, "02", None, email, "online")
-
+  
   lazy val testNSAndIConnectorImpl = new NSIConnectorImpl {
     override val httpProxy = mockHTTPProxy
   }
@@ -83,32 +64,28 @@ class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFa
       .expects(url, body, Seq(("Authorization1", encodedAuthorisation)), *, *)
       .returning(Future.successful(result))
 
-  def isFailure(result: SubmissionResult): Boolean = result match {
-    case SubmissionSuccess ⇒ false
-    case _: SubmissionFailure ⇒ true
-  }
 
   "the createAccount Method" must {
     "Return a SubmissionSuccess when the status is Created" in {
-      mockCreateAccount(nsiUserInfoValid)(HttpResponse(Status.CREATED))
-      val result = testNSAndIConnectorImpl.createAccount(nsiUserInfoValid)
-      isFailure(Await.result(result, 3.seconds)) shouldBe false
+      mockCreateAccount(validNSIUserInfo)(HttpResponse(Status.CREATED))
+      val result = testNSAndIConnectorImpl.createAccount(validNSIUserInfo)
+      Await.result(result, 3.seconds).isRight shouldBe true
     }
 
     "Return a SubmissionFailure when the status is BAD_REQUEST" in {
-      val submissionFailure = SubmissionFailure(None, "I am a error message", "I am a errorDetail")
-      mockCreateAccount(nsiUserInfoValid)(HttpResponse(Status.BAD_REQUEST,
+      val submissionFailure = NSISubmissionFailure("id", "message", "detail")
+      mockCreateAccount(validNSIUserInfo)(HttpResponse(Status.BAD_REQUEST,
         Some(Json.toJson(submissionFailure))))
-      val result = testNSAndIConnectorImpl.createAccount(nsiUserInfoValid)
-      isFailure(Await.result(result, 3.seconds)) shouldBe true
+      val result = testNSAndIConnectorImpl.createAccount(validNSIUserInfo)
+      Await.result(result, 3.seconds).isLeft shouldBe true
     }
 
 
 
     "Return a SubmissionFailure when the status is anything else" in {
-      mockCreateAccount(nsiUserInfoValid)(HttpResponse(Status.BAD_GATEWAY))
-      val result = testNSAndIConnectorImpl.createAccount(nsiUserInfoValid)
-      isFailure(Await.result(result, 3.seconds)) shouldBe true
+      mockCreateAccount(validNSIUserInfo)(HttpResponse(Status.BAD_GATEWAY))
+      val result = testNSAndIConnectorImpl.createAccount(validNSIUserInfo)
+      Await.result(result, 3.seconds).isLeft shouldBe true
     }
   }
 
