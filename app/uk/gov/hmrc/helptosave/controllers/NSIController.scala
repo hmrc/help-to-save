@@ -52,7 +52,7 @@ class NSIController @Inject()(nsiConnector: NSIConnector) extends BaseController
     NSIUserInfo(userInfo).fold(
       // NSI validation checks have failed in this case
       errors ⇒ {
-        Logger.info("Create an account - invalid user details: " + errors.toList.mkString(", "))
+        Logger.info(s"Create an account - invalid user details: ${errors.toList.mkString(", ")}")
         BadRequest(errors.toList.mkString(", "))
       },
       nSIUserInfo ⇒ nsiConnector.createAccount(nSIUserInfo).map(_.fold[PlayResult](

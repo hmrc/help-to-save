@@ -46,7 +46,10 @@ class ApiTwentyFiveCConnectorImpl extends ServicesConfig  with ApiTwentyFiveCCon
   private val http = WSHttp
 
   def getAwards(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[List[Award]] =
-    Result(http.get(s"$helpToSaveStubURL/${serviceURL(nino)}")).subflatMap{ response ⇒
-      response.parseJson[ApiTwentyFiveCValues].map(_.awards)
-    }
+    Result(http.get(s"$helpToSaveStubURL/${serviceURL(nino)}"))
+      // subflatMap into the EitherT so we can conveniently return an Either rather than being
+      // forced to return an EitherT in the body
+      .subflatMap{ response ⇒
+        response.parseJson[ApiTwentyFiveCValues].map(_.awards)
+      }
 }

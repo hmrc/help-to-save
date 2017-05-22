@@ -47,11 +47,11 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
 			}
 
 		result.fold(
-			{ error ⇒
+			error ⇒ {
 				Logger.error(s"Could not perform eligibility check: $error")
 				InternalServerError(error)
-			}, userInfo ⇒
-				Ok(Json.toJson(EligibilityCheckResult(userInfo)))
+			},
+			userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(userInfo)))
 		)
 	}
 

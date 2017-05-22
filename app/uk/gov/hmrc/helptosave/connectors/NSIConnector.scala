@@ -80,7 +80,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
           case other ⇒
             Logger.warn(s"Create account call for ${userInfo.NINO} to NSI came back with status $other")
-            Left(SubmissionFailure(s"Create account call to NSI came back with status $other. Respone body was: ${response.body}"))
+            Left(SubmissionFailure(s"Create account call to NSI came back with status $other. Response body was: ${response.body}"))
         }
       }
   }

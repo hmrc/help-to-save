@@ -43,7 +43,7 @@ object WSHttp extends WSGet with WSPut with WSPost with WSDelete with WSPatch wi
   override val hooks: Seq[HttpHook] = NoneRequired
 
   /**
-    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status us not `2xx`. Needed
+    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
     * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
     */
   def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url){
@@ -61,7 +61,7 @@ class WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing wit
   override lazy val auditConnector = MicroserviceAuditConnector
 
   /**
-    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status us not `2xx`. Needed
+    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
     * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
     */
   def post[A](url: String,

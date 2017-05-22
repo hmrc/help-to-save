@@ -22,7 +22,6 @@ import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.helptosave.WSHttpProxy
-import uk.gov.hmrc.helptosave.connectors.NSIConnector.{SubmissionFailure, SubmissionResult, SubmissionSuccess}
 import uk.gov.hmrc.helptosave.connectors.NSIConnectorImpl.NSISubmissionFailure
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}

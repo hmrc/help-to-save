@@ -90,15 +90,7 @@ class NSIControllerSpec extends WordSpec with Matchers with MockFactory {
           val result = controller.createAccount()(request)
           status(result) shouldBe 201
         }
-
       }
-
-
     }
-
-
   }
-
-
-
 }
