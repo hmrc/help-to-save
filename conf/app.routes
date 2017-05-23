@@ -1,4 +1,4 @@
 # microservice specific routes
 
-GET         /eligibilitycheck        @uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck(nino: String, userDetailsURI: String)
+GET         /eligibility-check       @uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck(nino: String, userDetailsURI: String)
 POST        /create-an-account       @uk.gov.hmrc.helptosave.controllers.NSIController.createAccount
