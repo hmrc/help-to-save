@@ -24,6 +24,6 @@ import play.api.libs.json.{Format, Json}
   */
 case class EligibilityCheckResult(result: Option[UserInfo])
 
-object EligibilityCheckResult{
+object EligibilityCheckResult {
   implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = Json.format[EligibilityCheckResult]
 }

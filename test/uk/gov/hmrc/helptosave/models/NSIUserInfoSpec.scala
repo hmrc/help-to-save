@@ -64,8 +64,8 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
           NSIUserInfo(validUserInfo.copy(forename = "Tyr&ion")).isValid shouldBe true
           NSIUserInfo(validUserInfo.copy(forename = "Tyr-ion")).isValid shouldBe true
 
-          forAll(Gen.oneOf(specialCharacters)){ c: Char ⇒
-            whenever(c != '&' && c != '-'){
+          forAll(Gen.oneOf(specialCharacters)) { c: Char ⇒
+            whenever(c != '&' && c != '-') {
               NSIUserInfo(validUserInfo.copy(forename = s"Tyr${c}ion")).isInvalid shouldBe true
             }
           }
@@ -86,11 +86,11 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
         }
 
         "are longer than 26 characters" in {
-          forAll(Gen.alphaStr.map(_.take(26)).filter(_.nonEmpty)){ s ⇒
+          forAll(Gen.alphaStr.map(_.take(26)).filter(_.nonEmpty)) { s ⇒
             NSIUserInfo(validUserInfo.copy(forename = s)).isValid shouldBe true
           }
 
-          forAll(Gen.alphaStr.filter(s ⇒ s.length > 26)){ s ⇒
+          forAll(Gen.alphaStr.filter(s ⇒ s.length > 26)) { s ⇒
             NSIUserInfo(validUserInfo.copy(forename = s)).isInvalid shouldBe true
           }
         }
@@ -102,7 +102,7 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
       "mark as invalid surnames" which {
 
         "do not have at least two characters" in {
-          forAll{ c: Char ⇒
+          forAll { c: Char ⇒
             NSIUserInfo(validUserInfo.copy(surname = c.toString)).isInvalid shouldBe true
           }
         }
@@ -119,8 +119,8 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
           NSIUserInfo(validUserInfo.copy(surname = "Lann&ister")).isValid shouldBe true
           NSIUserInfo(validUserInfo.copy(surname = "Lann-ister")).isValid shouldBe true
 
-          forAll(Gen.oneOf(specialCharacters)){ c: Char ⇒
-            whenever(c != '&' && c != '-'){
+          forAll(Gen.oneOf(specialCharacters)) { c: Char ⇒
+            whenever(c != '&' && c != '-') {
               NSIUserInfo(validUserInfo.copy(surname = s"Lann${c}ister")).isInvalid shouldBe true
             }
           }
@@ -146,11 +146,11 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
         }
 
         "are longer than 300 characters" in {
-          forAll(Gen.alphaStr.map(_.take(300)).filter(_.length > 1)){ s ⇒
+          forAll(Gen.alphaStr.map(_.take(300)).filter(_.length > 1)) { s ⇒
             NSIUserInfo(validUserInfo.copy(surname = s)).isValid shouldBe true
           }
 
-          forAll(Gen.alphaStr.map(s ⇒ s + s).filter(s ⇒ s.length > 300)){ s ⇒
+          forAll(Gen.alphaStr.map(s ⇒ s + s).filter(s ⇒ s.length > 300)) { s ⇒
             NSIUserInfo(validUserInfo.copy(surname = s)).isInvalid shouldBe true
           }
         }
@@ -162,14 +162,14 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
       "mark as invalid date of births" which {
 
         "are before 1st January 1800" in {
-          forAll(Gen.choose(1L, 1000L)){ d ⇒
+          forAll(Gen.choose(1L, 1000L)) { d ⇒
             // 1st Jan 1880 is 62,091 days before Epoch
             NSIUserInfo(validUserInfo.copy(dateOfBirth = LocalDate.ofEpochDay(-62091 - d))).isInvalid shouldBe true
           }
         }
 
         "are in the future" in {
-          forAll(Gen.choose(1L, 1000L)){ d ⇒
+          forAll(Gen.choose(1L, 1000L)) { d ⇒
             NSIUserInfo(validUserInfo.copy(dateOfBirth = LocalDate.now().plusDays(d))).isInvalid shouldBe true
           }
         }
@@ -294,7 +294,7 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
             "BFPO0000"
           )
 
-          postcodes.foreach{ p ⇒
+          postcodes.foreach { p ⇒
             NSIUserInfo(validUserInfo.copy(address = address.copy(postcode = Some(p)))).isValid shouldBe true
           }
         }
@@ -310,7 +310,7 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
           NSIUserInfo(validUserInfo.copy(address = address.copy(country = None))).isValid shouldBe true
 
           // two letters should be allowed
-          forAll{ (c1: Char, c2: Char) ⇒
+          forAll { (c1: Char, c2: Char) ⇒
             val code = c1.toString + c2.toString
             NSIUserInfo(validUserInfo.copy(address = address.copy(country = Some(code)))).isValid shouldBe true
           }
@@ -354,12 +354,12 @@ class NSIUserInfoSpec extends WordSpec with Matchers with GeneratorDrivenPropert
 
         "are invalid" in {
           val generator = new Generator()
-          forAll(Gen.function0(generator.nextNino.nino)){ nino ⇒
+          forAll(Gen.function0(generator.nextNino.nino)) { nino ⇒
             NSIUserInfo(validUserInfo.copy(NINO = nino())).isValid shouldBe true
           }
 
-          forAll{ s: String ⇒
-            whenever(!Nino.isValid(s)){
+          forAll { s: String ⇒
+            whenever(!Nino.isValid(s)) {
               NSIUserInfo(validUserInfo.copy(NINO = s)).isInvalid shouldBe true
             }
           }

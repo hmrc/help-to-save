@@ -50,8 +50,8 @@ object UserDetailsConnector {
 class UserDetailsConnectorImpl extends UserDetailsConnector with ServicesConfig {
 
   override def getUserDetails(userDetailsUri: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UserDetailsResponse] =
-    Result(WSHttp.get(userDetailsUri)).subflatMap{ response ⇒
-      if(response.status == 200){
+    Result(WSHttp.get(userDetailsUri)).subflatMap { response ⇒
+      if (response.status == 200) {
         response.parseJson[UserDetailsResponse]
       } else {
         Left(s"User details response came back with status ${response.status}. Response body was ${response.body}")

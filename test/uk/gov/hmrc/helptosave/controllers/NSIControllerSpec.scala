@@ -32,12 +32,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class NSIControllerSpec extends WordSpec with Matchers with MockFactory {
 
   case class UnrelatedJson(a: Int, b: String)
+
   implicit val reads: Writes[UnrelatedJson] = Json.writes[UnrelatedJson]
 
   val connector = mock[NSIConnector]
 
 
-  def mockConnector(userInfo: NSIUserInfo)(result: Either[SubmissionFailure,SubmissionSuccess]) =
+  def mockConnector(userInfo: NSIUserInfo)(result: Either[SubmissionFailure, SubmissionSuccess]) =
     (connector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
       .expects(userInfo, *, *)
       .returning(Future.successful(result))

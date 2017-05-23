@@ -33,26 +33,26 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckerService,
-																					 userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
+                                           userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
 
-	def eligibilityCheck(nino: NINO, userDetailsURI: String): Action[AnyContent] = Action.async { implicit request ⇒
-		val result: Result[Option[UserInfo]] =
-			eligibilityCheckService.getEligibility(nino).flatMap{ isEligible ⇒
-				if(isEligible){
-					val urlDecoded = URLDecoder.decode(userDetailsURI, "UTF-8")
-					userInfoService.getUserInfo(urlDecoded, nino).map(Some(_): Option[UserInfo])
-				} else {
-					EitherT.pure[Future,String,Option[UserInfo]](None)
-				}
-			}
+  def eligibilityCheck(nino: NINO, userDetailsURI: String): Action[AnyContent] = Action.async { implicit request ⇒
+    val result: Result[Option[UserInfo]] =
+      eligibilityCheckService.getEligibility(nino).flatMap { isEligible ⇒
+        if (isEligible) {
+          val urlDecoded = URLDecoder.decode(userDetailsURI, "UTF-8")
+          userInfoService.getUserInfo(urlDecoded, nino).map(Some(_): Option[UserInfo])
+        } else {
+          EitherT.pure[Future, String, Option[UserInfo]](None)
+        }
+      }
 
-		result.fold(
-			error ⇒ {
-				Logger.error(s"Could not perform eligibility check: $error")
-				InternalServerError(error)
-			},
-			userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(userInfo)))
-		)
-	}
+    result.fold(
+      error ⇒ {
+        Logger.error(s"Could not perform eligibility check: $error")
+        InternalServerError(error)
+      },
+      userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(userInfo)))
+    )
+  }
 
 }

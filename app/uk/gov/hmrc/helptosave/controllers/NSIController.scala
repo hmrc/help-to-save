@@ -44,7 +44,7 @@ class NSIController @Inject()(nsiConnector: NSIConnector) extends BaseController
         BadRequest(er.prettyPrint())
 
       case Some(JsSuccess(userInfo, _)) ⇒
-       createAccount(userInfo)
+        createAccount(userInfo)
     }
   }
 
@@ -57,7 +57,7 @@ class NSIController @Inject()(nsiConnector: NSIConnector) extends BaseController
       },
       nSIUserInfo ⇒ nsiConnector.createAccount(nSIUserInfo).map(_.fold[PlayResult](
         // NSI have come back with a response indicating the creation failed
-        {error ⇒
+        { error ⇒
           Logger.error(s"Error creating account with NSI: ${error.message}")
           InternalServerError("")
         },

@@ -48,9 +48,9 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers with MockF
     def mockEligibilityCheckerService(nino: NINO)(result: Option[Boolean]): Unit =
       (eligibilityCheckService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
-        .returning{
+        .returning {
           result.fold(
-            EitherT.left[Future,String,Boolean](Future.successful("mocking failed eligibility check"))
+            EitherT.left[Future, String, Boolean](Future.successful("mocking failed eligibility check"))
           )(eligible ⇒
             Result(Future.successful(eligible))
           )
@@ -59,9 +59,9 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers with MockF
     def mockUserInfoService(nino: NINO, userDetailsURI: String)(userInfo: Option[UserInfo]): Unit =
       (userInfoService.getUserInfo(_: String, _: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(userDetailsURI, nino, *, *)
-        .returning{
+        .returning {
           userInfo.fold(
-            EitherT.left[Future,String,UserInfo](Future.successful("mocking failed user info"))
+            EitherT.left[Future, String, UserInfo](Future.successful("mocking failed user info"))
           )(info ⇒
             Result(Future.successful(info))
           )
@@ -78,21 +78,21 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers with MockF
       val userDetailsURI = "uri"
       val userDetails = randomUserDetails()
 
-      "ask the EligibilityCheckerService if the user is eligible" in  new TestApparatus{
+      "ask the EligibilityCheckerService if the user is eligible" in new TestApparatus {
         mockEligibilityCheckerService(nino)(Some(true))
         doRequest(nino, userDetailsURI, controller)
       }
 
-      "ask the UserInfoService for user info if the user is eligible" in  new TestApparatus{
-        inSequence{
+      "ask the UserInfoService for user info if the user is eligible" in new TestApparatus {
+        inSequence {
           mockEligibilityCheckerService(nino)(Some(true))
           mockUserInfoService(nino, userDetailsURI)(Some(userDetails))
         }
         Await.result(doRequest(nino, userDetailsURI, controller), 3.seconds)
       }
 
-      "return the user details once it retrieves them" in new TestApparatus{
-        inSequence{
+      "return the user details once it retrieves them" in new TestApparatus {
+        inSequence {
           mockEligibilityCheckerService(nino)(Some(true))
           mockUserInfoService(nino, userDetailsURI)(Some(userDetails))
         }
@@ -103,7 +103,7 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers with MockF
       }
 
       "not ask the UserInfoService for user info if the user is ineligible" in new TestApparatus {
-        inSequence{
+        inSequence {
           mockEligibilityCheckerService(nino)(Some(false))
         }
 
@@ -113,8 +113,8 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers with MockF
           EligibilityCheckResult(None)
       }
 
-      "return with a status 500 if the eligibililty check service fails" in new TestApparatus{
-        inSequence{
+      "return with a status 500 if the eligibililty check service fails" in new TestApparatus {
+        inSequence {
           mockEligibilityCheckerService(nino)(None)
         }
 
@@ -122,8 +122,8 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers with MockF
         status(result) shouldBe 500
       }
 
-      "return with a status 500 if the user info service fails" in new TestApparatus{
-        inSequence{
+      "return with a status 500 if the user info service fails" in new TestApparatus {
+        inSequence {
           mockEligibilityCheckerService(nino)(Some(true))
           mockUserInfoService(nino, userDetailsURI)(None)
         }

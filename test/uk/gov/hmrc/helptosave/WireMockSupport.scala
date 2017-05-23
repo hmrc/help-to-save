@@ -23,7 +23,8 @@ import org.scalatest.{BeforeAndAfterAll, Suite}
 
 trait WireMockSupport extends Suite with BeforeAndAfterAll {
 
-  def wireMockPort:Int
+  def wireMockPort: Int
+
   private val wireMockHost = "localhost"
 
   private val wmConfig = wireMockConfig().port(wireMockPort)

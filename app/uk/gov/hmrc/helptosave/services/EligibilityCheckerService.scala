@@ -34,19 +34,18 @@ class EligibilityCheckerService @Inject()(apiTwentyFiveCConnector: ApiTwentyFive
     apiTwentyFiveCConnector.getAwards(nino).map(awards ⇒ checkEligibilityForHelpToSave(awards, LocalDate.now()))
 
   private def checkEligibilityForHelpToSave(awards: List[Award], today: LocalDate): Boolean = {
-    val validAwards =  awards.filter(award ⇒ isEndDateTodayOrAfter(award.av_end_date, today))
+    val validAwards = awards.filter(award ⇒ isEndDateTodayOrAfter(award.av_end_date, today))
     validAwards.exists(impliesEligible)
   }
 
   private def impliesEligible(award: Award): Boolean = award match {
-    case Award(Provisional, _, _, householdIncome, true, _) if householdIncome > 0  ⇒ true
-    case Award(Finalised, _, _, householdIncome, true, _) if householdIncome > 0  ⇒ true
+    case Award(Provisional, _, _, householdIncome, true, _) if householdIncome > 0 ⇒ true
+    case Award(Finalised, _, _, householdIncome, true, _) if householdIncome > 0 ⇒ true
     case _ ⇒ false
   }
 
   private def isEndDateTodayOrAfter(endDate: LocalDate, today: LocalDate): Boolean =
     endDate.isAfter(today) || endDate.isEqual(today)
-
 
 
 }

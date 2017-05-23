@@ -31,7 +31,7 @@ object HttpResponseOps {
 
 class HttpResponseOps(val response: HttpResponse) extends AnyVal {
 
-  def parseJson[A](implicit reads: Reads[A]): Either[String,A] =
+  def parseJson[A](implicit reads: Reads[A]): Either[String, A] =
     Try(response.json).fold(
       error ⇒
         // response.json failed in this case - there was no JSON in the response

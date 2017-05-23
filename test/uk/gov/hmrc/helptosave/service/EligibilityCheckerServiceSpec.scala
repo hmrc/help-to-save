@@ -30,20 +30,21 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class EligibilityCheckerServiceSpec
-  extends UnitSpec with MockFactory{
+  extends UnitSpec with MockFactory {
 
-  implicit  val hc: HeaderCarrier = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val mockEligibilityConnector = mock[ApiTwentyFiveCConnector]
   val checkerService = new EligibilityCheckerService(mockEligibilityConnector)
   val todayDate = LocalDate.parse("2017-08-24")
   val validAward = Award(AwAwardStatus.Provisional, LocalDate.parse("2014-04-17"), LocalDate.parse("2014-10-03"), 6000, true, LocalDate.now().plusDays(1))
-  val fakeNino =  "WM123456C"
+  val fakeNino = "WM123456C"
 
   def mockEligibilityResult(nino: String)(result: List[Award]): Unit = {
     (mockEligibilityConnector.getAwards(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
-      .returning(Result(Future.successful(result)))}
+      .returning(Result(Future.successful(result)))
+  }
 
   def isEligible(result: Result[Boolean]): Boolean =
     Await.result(result.value, 3.seconds).fold(_ ⇒ false, identity)

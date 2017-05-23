@@ -23,7 +23,7 @@ import org.scalacheck.{Arbitrary, Gen}
 package object models {
 
   implicit val addressArb =
-    Arbitrary(for{
+    Arbitrary(for {
       line1 ← Gen.alphaNumStr
       line2 ← Gen.alphaNumStr
       line3 ← Gen.alphaNumStr
@@ -35,11 +35,11 @@ package object models {
       Some(postcode), Some(country)))
 
   implicit val userDetailsArb =
-    Arbitrary(for{
+    Arbitrary(for {
       name ← Gen.alphaStr
       surname ← Gen.alphaStr
       nino ← Gen.alphaNumStr
-      dob ← Gen.choose(0L,100L).map(LocalDate.ofEpochDay)
+      dob ← Gen.choose(0L, 100L).map(LocalDate.ofEpochDay)
       email ← Gen.alphaNumStr
       address ← addressArb.arbitrary
     } yield UserInfo(name, surname, nino, dob, email, address))

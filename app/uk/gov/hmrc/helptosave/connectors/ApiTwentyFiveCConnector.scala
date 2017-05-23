@@ -37,7 +37,7 @@ trait ApiTwentyFiveCConnector {
   * Implements communication with help-to-save-stub
   */
 @Singleton
-class ApiTwentyFiveCConnectorImpl extends ServicesConfig  with ApiTwentyFiveCConnector{
+class ApiTwentyFiveCConnectorImpl extends ServicesConfig with ApiTwentyFiveCConnector {
 
   private val helpToSaveStubURL: String = baseUrl("help-to-save-stub")
 
@@ -49,7 +49,7 @@ class ApiTwentyFiveCConnectorImpl extends ServicesConfig  with ApiTwentyFiveCCon
     Result(http.get(s"$helpToSaveStubURL/${serviceURL(nino)}"))
       // subflatMap into the EitherT so we can conveniently return an Either rather than being
       // forced to return an EitherT in the body
-      .subflatMap{ response ⇒
-        response.parseJson[ApiTwentyFiveCValues].map(_.awards)
-      }
+      .subflatMap { response ⇒
+      response.parseJson[ApiTwentyFiveCValues].map(_.awards)
+    }
 }

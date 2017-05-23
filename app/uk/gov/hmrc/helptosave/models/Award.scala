@@ -27,10 +27,11 @@ case class Award(aw_award_status: AwAwardStatus,
                  av_end_date: LocalDate)
 
 object Award {
-  implicit val booleanFormat =   new Format[Boolean] {
-    override def writes(o: Boolean): JsValue =  {
-      if(o) JsString("Y") else JsString("N")
+  implicit val booleanFormat = new Format[Boolean] {
+    override def writes(o: Boolean): JsValue = {
+      if (o) JsString("Y") else JsString("N")
     }
+
     override def reads(json: JsValue): JsResult[Boolean] = json match {
       case JsString(s) ⇒
         s.toLowerCase.trim match {

@@ -68,7 +68,7 @@ class CitizenDetailsConnectorImpl extends CitizenDetailsConnector with ServicesC
 
   override def getDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[CitizenDetailsResponse] =
     Result(WSHttp.get(citizenDetailsURI(nino))).subflatMap(response ⇒
-      if(response.status == 200){
+      if (response.status == 200) {
         response.parseJson[CitizenDetailsResponse]
       } else {
         Left(s"Citizen details response came back with status ${response.status}. Response body was ${response.body}")

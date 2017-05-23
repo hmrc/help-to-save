@@ -29,7 +29,7 @@ package object util {
 
   object Result {
     def apply[A](a: Future[A])(implicit ec: ExecutionContext): Result[A] =
-      EitherT.right[Future,String,A](a)
+      EitherT.right[Future, String, A](a)
   }
 
 }

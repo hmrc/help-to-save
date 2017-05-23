@@ -32,13 +32,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 class UserInfoService @Inject()(userDetailsConnector: UserDetailsConnector,
-                                citizenDetailsConnector: CitizenDetailsConnector){
+                                citizenDetailsConnector: CitizenDetailsConnector) {
 
   def getUserInfo(userDetailsUri: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UserInfo] =
     for {
-      userDetails    ← userDetailsConnector.getUserDetails(userDetailsUri)
+      userDetails ← userDetailsConnector.getUserDetails(userDetailsUri)
       citizenDetails ← citizenDetailsConnector.getDetails(nino)
-      userInfo       ← EitherT.fromEither[Future](toUserInfo(userDetails, citizenDetails, nino).toEither).leftMap(
+      userInfo ← EitherT.fromEither[Future](toUserInfo(userDetails, citizenDetails, nino).toEither).leftMap(
         errors ⇒ s"Could not create user info: ${errors.toList.mkString(",")}")
     } yield userInfo
 

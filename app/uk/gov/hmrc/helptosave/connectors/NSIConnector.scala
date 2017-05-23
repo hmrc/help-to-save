@@ -36,7 +36,7 @@ import scala.util.{Failure, Success, Try}
 
 @ImplementedBy(classOf[NSIConnectorImpl])
 trait NSIConnector {
-  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[Either[SubmissionFailure,SubmissionSuccess]]
+  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[Either[SubmissionFailure, SubmissionSuccess]]
 }
 
 object NSIConnector {
@@ -65,7 +65,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 
   val httpProxy = new WSHttpProxy
 
-  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[Either[SubmissionFailure,SubmissionSuccess]] = {
+  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ex: ExecutionContext): Future[Either[SubmissionFailure, SubmissionSuccess]] = {
     Logger.debug(s"About to create a account for ${userInfo.NINO}")
     httpProxy.post(url, userInfo, headers = Seq(("Authorization1", encodedAuthorisation)))
       .map { response ⇒
@@ -106,6 +106,7 @@ class NSIConnectorImpl extends NSIConnector with ServicesConfig {
 }
 
 object NSIConnectorImpl {
+
   private[connectors] case class NSISubmissionFailure(errorMessageId: String,
                                                       errorMessage: String,
                                                       errorDetail: String) extends SubmissionResult

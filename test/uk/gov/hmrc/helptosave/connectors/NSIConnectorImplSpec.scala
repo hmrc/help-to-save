@@ -33,7 +33,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFactory {
 
   lazy val mockHTTPProxy = mock[WSHttpProxy]
-  
+
   lazy val testNSAndIConnectorImpl = new NSIConnectorImpl {
     override val httpProxy = mockHTTPProxy
   }
@@ -78,7 +78,6 @@ class NSIConnectorImplSpec extends UnitSpec with WithFakeApplication with MockFa
       val result = testNSAndIConnectorImpl.createAccount(validNSIUserInfo)
       Await.result(result, 3.seconds).isLeft shouldBe true
     }
-
 
 
     "Return a SubmissionFailure when the status is anything else" in {
