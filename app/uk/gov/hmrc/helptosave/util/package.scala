@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.util
+package uk.gov.hmrc.helptosave
 
-import play.api.libs.json.JsError
+import cats.instances.future._
+import cats.data.EitherT
 
-object JsErrorOps {
+import scala.concurrent.{ExecutionContext, Future}
 
-  implicit def jsErrorOps(error: JsError): JsErrorOps = new JsErrorOps(error)
+package object util {
 
-}
+  type NINO = String
 
-class JsErrorOps(val error: JsError) extends AnyVal {
+  type Result[A] = EitherT[Future, String, A]
 
-  /**
-    * Create a legible string describing the error suitable for debugging purposes
-    */
-  def prettyPrint(): String = error.errors.map { case (jsPath, validationErrors) ⇒
-    jsPath.toString + ": [" + validationErrors.map(_.message).mkString(",") + "]"
-  }.mkString("; ")
+  object Result {
+    def apply[A](a: Future[A])(implicit ec: ExecutionContext): Result[A] =
+      EitherT.right[Future, String, A](a)
+  }
 
 }

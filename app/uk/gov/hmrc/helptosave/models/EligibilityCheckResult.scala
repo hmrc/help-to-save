@@ -14,23 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.util
+package uk.gov.hmrc.helptosave.models
 
-import play.api.libs.json.JsError
+import play.api.libs.json.{Format, Json}
 
-object JsErrorOps {
+/**
+  * The result of performing an eligibility check. If the user is eligible
+  * return their details, otherwise return [[None]]
+  */
+case class EligibilityCheckResult(result: Option[UserInfo])
 
-  implicit def jsErrorOps(error: JsError): JsErrorOps = new JsErrorOps(error)
-
-}
-
-class JsErrorOps(val error: JsError) extends AnyVal {
-
-  /**
-    * Create a legible string describing the error suitable for debugging purposes
-    */
-  def prettyPrint(): String = error.errors.map { case (jsPath, validationErrors) ⇒
-    jsPath.toString + ": [" + validationErrors.map(_.message).mkString(",") + "]"
-  }.mkString("; ")
-
+object EligibilityCheckResult {
+  implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = Json.format[EligibilityCheckResult]
 }

@@ -23,6 +23,7 @@ sealed trait ContactPreference
 object ContactPreference {
 
   case object Email extends ContactPreference
+
   case object SMS extends ContactPreference
 
   implicit val contactPreferenceFormat: Format[ContactPreference] = new Format[ContactPreference] {
@@ -30,7 +31,8 @@ object ContactPreference {
       case ContactPreference.Email ⇒ JsString("email")
       case ContactPreference.SMS ⇒ JsString("sms")
     }
-    def reads(o : JsValue) : JsResult[ContactPreference] = o match {
+
+    def reads(o: JsValue): JsResult[ContactPreference] = o match {
       case JsString(s) ⇒
         s.toLowerCase.trim match {
           case "email" ⇒ JsSuccess(ContactPreference.Email)

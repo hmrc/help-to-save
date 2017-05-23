@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.models
+package uk.gov.hmrc.helptosave.util
 
-import play.api.libs.json.{Format, Json}
+import scala.util.{Failure, Success, Try}
 
-/**
-  * Created by colm on 02/05/17.
-  */
-case class EligibilityResult(eligible: Boolean)
+object TryOps {
+  implicit def foldOps[A](t: Try[A]): TryOps[A] = new TryOps[A](t)
+}
 
-object EligibilityResult{
-  implicit val eligibilityResultFormat: Format[EligibilityResult] = Json.format[EligibilityResult]
+class TryOps[A](val t: Try[A]) extends AnyVal {
+
+  def fold[B](f: Throwable ⇒ B, g: A ⇒ B): B = t match {
+    case Failure(e) ⇒ f(e)
+    case Success(s) ⇒ g(s)
+  }
+
 }
