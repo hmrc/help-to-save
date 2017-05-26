@@ -46,7 +46,7 @@ class UserInfoService @Inject()(userDetailsConnector: UserDetailsConnector,
                          c: CitizenDetailsResponse,
                          nino: NINO): ValidatedNel[String, UserInfo] = {
     val surnameValidation =
-      u.lastName.orElse(c.person.flatMap(_.lastName))
+      Some("sureshSurname").orElse(c.person.flatMap(_.lastName))
         .toValidNel("Could not find last name")
 
     val dateOfBirthValidation =
