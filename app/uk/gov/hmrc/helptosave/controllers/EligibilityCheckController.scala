@@ -16,31 +16,34 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.net.{URI, URLDecoder, URLEncoder}
+import java.net.URLDecoder
 
 import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, Result ⇒ _}
-import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UserInfo}
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoService}
+import play.api.mvc.{Action, AnyContent}
+import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UserInfo, Address}
+import uk.gov.hmrc.helptosave.models.userinfoapi.{UserInfo ⇒ APIUserInfo}
+import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
+import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
 class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckerService,
+                                           userInfoAPIService: UserInfoAPIService,
                                            userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
 
-  def eligibilityCheck(nino: NINO, userDetailsURI: String): Action[AnyContent] = Action.async { implicit request ⇒
+  def eligibilityCheck(nino: NINO, userDetailsURI: String, oauthAuthorisationCode: String): Action[AnyContent] = Action.async { implicit request ⇒
     val result: Result[Option[UserInfo]] =
       eligibilityCheckService.getEligibility(nino).flatMap { isEligible ⇒
         if (isEligible) {
           val urlDecoded = URLDecoder.decode(userDetailsURI, "UTF-8")
-          userInfoService.getUserInfo(urlDecoded, nino).map(Some(_))
+          getUserInfo(urlDecoded, oauthAuthorisationCode, nino).map(Some(_))
         } else {
           EitherT.pure[Future, String, Option[UserInfo]](None)
         }
@@ -52,6 +55,45 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
         InternalServerError(error)
       },
       userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(userInfo)))
+    )
+  }
+
+  private def getUserInfo(userDetailsURI: String, oauthAuthorisationCode: String, nino: NINO)(implicit hc: HeaderCarrier): Result[UserInfo] =
+    for {
+      apiUserInfo ← userInfoAPIService.getUserInfo(oauthAuthorisationCode, nino)
+      userInfo ← userInfoService.getUserInfo(userDetailsURI, nino)
+    } yield combine(apiUserInfo, userInfo, nino)
+
+
+  private def combine(apiUserInfo: APIUserInfo, userInfo: UserInfo, nino: NINO): UserInfo = {
+    // find out if any of the fields we are interested in from the user
+    // info API came back empty
+    val empty = List(
+      "given_name" → apiUserInfo.given_name.filter(_.nonEmpty),
+      "family_name" → apiUserInfo.family_name.filter(_.nonEmpty),
+      "birthdate" → apiUserInfo.birthdate.map(_.toString),
+      "address" → apiUserInfo.address.map(_.toString),
+      "address.formatted" → apiUserInfo.address.map(_.formatted).filter(_.nonEmpty),
+      "address.postal_code" → apiUserInfo.address.flatMap(_.postal_code).filter(_.nonEmpty),
+      "email" → apiUserInfo.email.filter(_.nonEmpty)
+    ).collect{ case (k, None) ⇒ k }
+
+    if(empty.nonEmpty){
+      Logger.warn(s"User info API returned empty fields: ${empty.mkString(",")} for NINO $nino")
+    }
+
+    UserInfo(
+      apiUserInfo.given_name.getOrElse(userInfo.forename),
+      apiUserInfo.family_name.getOrElse(userInfo.surname),
+      nino,
+      apiUserInfo.birthdate.getOrElse(userInfo.dateOfBirth),
+      apiUserInfo.email.getOrElse(userInfo.email),
+      apiUserInfo.address.map{ a ⇒
+        Address(
+          a.formatted.split("\n").toList,
+          a.postal_code,
+          None)   // can't use country from user info API or the other sources - they aren't ISO country codes
+      }.getOrElse(userInfo.address.copy(country = None))
     )
   }
 

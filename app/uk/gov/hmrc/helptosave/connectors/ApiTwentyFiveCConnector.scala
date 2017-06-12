@@ -43,7 +43,7 @@ class ApiTwentyFiveCConnectorImpl extends ServicesConfig with ApiTwentyFiveCConn
 
   private def serviceURL(nino: String) = s"help-to-save-stub/edh/wtc/$nino"
 
-  private val http = WSHttp
+  private val http = new WSHttp
 
   def getAwards(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[List[Award]] =
     Result(http.get(s"$helpToSaveStubURL/${serviceURL(nino)}"))

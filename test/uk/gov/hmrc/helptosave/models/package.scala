@@ -19,22 +19,22 @@ package uk.gov.hmrc.helptosave
 import java.time.LocalDate
 
 import org.scalacheck.{Arbitrary, Gen}
+import uk.gov.hmrc.helptosave.models.UserInfo
+import uk.gov.hmrc.helptosave.models.userinfoapi.{UserInfo ⇒ APIUSerInfo}
+
+import scala.reflect.ClassTag
+import scala.reflect._
 
 package object models {
 
-  implicit val addressArb =
+  implicit val addressArb: Arbitrary[Address] =
     Arbitrary(for {
-      line1 ← Gen.alphaNumStr
-      line2 ← Gen.alphaNumStr
-      line3 ← Gen.alphaNumStr
-      line4 ← Gen.alphaNumStr
-      line5 ← Gen.alphaNumStr
+      lines ← Gen.listOf(Gen.alphaNumStr)
       postcode ← Gen.alphaNumStr
       country ← Gen.alphaStr
-    } yield Address(Some(line1), Some(line2), Some(line3), Some(line4), Some(line5),
-      Some(postcode), Some(country)))
+    } yield Address(lines, Some(postcode), Some(country)))
 
-  implicit val userDetailsArb =
+  implicit val userInfoArb: Arbitrary[UserInfo] =
     Arbitrary(for {
       name ← Gen.alphaStr
       surname ← Gen.alphaStr
@@ -44,7 +44,41 @@ package object models {
       address ← addressArb.arbitrary
     } yield UserInfo(name, surname, nino, dob, email, address))
 
-  def randomUserDetails(): UserInfo =
-    userDetailsArb.arbitrary.sample.getOrElse(sys.error("Could not generate user info"))
 
+  implicit val enrolmentIdentifierArb: Arbitrary[APIUSerInfo.EnrolmentIdentifier] =
+    Arbitrary(for {
+      key ← Gen.identifier
+      value ← Gen.identifier
+    } yield APIUSerInfo.EnrolmentIdentifier(key, value))
+
+
+  implicit val enrolmentArb: Arbitrary[APIUSerInfo.Enrolment] =
+    Arbitrary(for {
+      key ← Gen.identifier
+      ids ← Gen.listOf(enrolmentIdentifierArb.arbitrary)
+      state ← Gen.alphaNumStr
+    } yield APIUSerInfo.Enrolment(key, ids, state))
+
+  implicit val apiUserInfoArb: Arbitrary[APIUSerInfo] =
+    Arbitrary(for {
+      name ← Gen.option(Gen.identifier)
+      middleName ← Gen.option(Gen.identifier)
+      surname ← Gen.option(Gen.identifier)
+      address ← Gen.option(addressArb.arbitrary)
+      dob ← Gen.option(Gen.choose(0L, 100L).map(LocalDate.ofEpochDay))
+      nino ← Gen.option(Gen.identifier)
+      enrolments ← Gen.option(Gen.listOf(enrolmentArb.arbitrary))
+      email ← Gen.option(Gen.identifier).map(_.map(_ + "@example.com"))
+    } yield APIUSerInfo(name, surname, middleName,
+      address.map( a ⇒ APIUSerInfo.Address(a.lines.mkString("\n"), a.postcode, a.country)),
+      dob, nino, enrolments, email)
+    )
+
+
+  def sample[A: ClassTag](a: Arbitrary[A]): A = a.arbitrary.sample.getOrElse(
+    sys.error(s"Could not generate ${classTag[A].getClass.getSimpleName}"))
+
+  def randomAPIUserInfo(): APIUSerInfo = sample(apiUserInfoArb)
+
+  def randomUserInfo(): UserInfo = sample(userInfoArb)
 }

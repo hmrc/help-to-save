@@ -48,12 +48,21 @@ object CitizenDetailsConnector {
                                   lastName: Option[String],
                                   dateOfBirth: Option[LocalDate])
 
+  case class CitizenDetailsAddress(line1: Option[String],
+                     line2: Option[String],
+                     line3: Option[String],
+                     line4: Option[String],
+                     line5: Option[String],
+                     postcode: Option[String],
+                     country: Option[String])
 
-  case class CitizenDetailsResponse(person: Option[CitizenDetailsPerson], address: Option[Address])
+
+
+  case class CitizenDetailsResponse(person: Option[CitizenDetailsPerson], address: Option[CitizenDetailsAddress])
 
   implicit val personReads: Reads[CitizenDetailsPerson] = Json.reads[CitizenDetailsPerson]
 
-  implicit val addressReads: Reads[Address] = Json.reads[Address]
+  implicit val addressReads: Reads[CitizenDetailsAddress] = Json.reads[CitizenDetailsAddress]
 
   implicit val citizenDetailsResponseReads: Reads[CitizenDetailsResponse] = Json.reads[CitizenDetailsResponse]
 
@@ -66,8 +75,9 @@ class CitizenDetailsConnectorImpl extends CitizenDetailsConnector with ServicesC
 
   private def citizenDetailsURI(nino: NINO): String = s"$citizenDetailsBaseURL/citizen-details/$nino/designatory-details"
 
+  val http = new WSHttp
   override def getDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[CitizenDetailsResponse] =
-    Result(WSHttp.get(citizenDetailsURI(nino))).subflatMap(response ⇒
+    Result(http.get(citizenDetailsURI(nino))).subflatMap(response ⇒
       if (response.status == 200) {
         response.parseJson[CitizenDetailsResponse]
       } else {
