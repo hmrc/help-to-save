@@ -25,7 +25,7 @@ import play.api.libs.json.{Format, Json}
 /** Details of the user obtained from HMRC services */
 case class UserInfo(forename: String,
                     surname: String,
-                    NINO: String,
+                    nino: String,
                     dateOfBirth: LocalDate,
                     email: String,
                     address: Address)
