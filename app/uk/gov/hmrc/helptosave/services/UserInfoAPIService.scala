@@ -22,7 +22,7 @@ import com.google.inject.Inject
 import play.api.Logger
 import uk.gov.hmrc.helptosave.connectors.{OAuthConnector, UserInfoAPIConnector}
 import uk.gov.hmrc.helptosave.connectors.UserInfoAPIConnector.{TokenExpiredError, UnknownError}
-import uk.gov.hmrc.helptosave.models.userinfoapi.{OAuthTokens, UserInfo}
+import uk.gov.hmrc.helptosave.models.userinfoapi.{OAuthTokens, APIUserInfo}
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class UserInfoAPIService @Inject()(userInfoAPIConnector: UserInfoAPIConnector,
                                    oAuthConnector: OAuthConnector) {
 
-  def getUserInfo(authorisationCode: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UserInfo] = for{
+  def getUserInfo(authorisationCode: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[APIUserInfo] = for{
     tokens ← oAuthConnector.getToken(authorisationCode)
     userInfo ← getUserInfoWithRetry(tokens, nino)
   } yield userInfo
@@ -40,8 +40,8 @@ class UserInfoAPIService @Inject()(userInfoAPIConnector: UserInfoAPIConnector,
     * Uses the `userInfoAPIConnector` to get the user info. If the token used has expired
     * refresh the token and try again.
     */
-  private def getUserInfoWithRetry(tokens: OAuthTokens, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UserInfo] = {
-    val result: Future[Either[String, UserInfo]] = userInfoAPIConnector.getUserInfo(tokens).fold(
+  private def getUserInfoWithRetry(tokens: OAuthTokens, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[APIUserInfo] = {
+    val result: Future[Either[String, APIUserInfo]] = userInfoAPIConnector.getUserInfo(tokens).fold(
       {
         case TokenExpiredError     ⇒
           Logger.info(s"Access token for user info API has expired - refreshing token (nino: $nino)")
@@ -55,7 +55,7 @@ class UserInfoAPIService @Inject()(userInfoAPIConnector: UserInfoAPIConnector,
     EitherT(result)
   }
 
-  private def refreshTokensAndRetry(tokens: OAuthTokens)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UserInfo] =
+  private def refreshTokensAndRetry(tokens: OAuthTokens)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[APIUserInfo] =
     for {
       newTokens ← oAuthConnector.refreshToken(tokens.refreshToken)
       userInfo ← userInfoAPIConnector.getUserInfo(newTokens).leftMap{

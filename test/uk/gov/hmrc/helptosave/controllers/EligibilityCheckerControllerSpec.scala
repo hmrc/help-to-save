@@ -26,7 +26,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.mvc.{Result ⇒ PlayResult}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.models.userinfoapi.{UserInfo ⇒ APIUserInfo}
+import uk.gov.hmrc.helptosave.models.userinfoapi.{APIUserInfo ⇒ APIUserInfo}
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.play.http.HeaderCarrier

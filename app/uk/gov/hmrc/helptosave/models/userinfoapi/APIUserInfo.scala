@@ -18,19 +18,19 @@ package uk.gov.hmrc.helptosave.models.userinfoapi
 
 import java.time.LocalDate
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.helptosave.models.userinfoapi.UserInfo.{Address, Enrolment}
+import uk.gov.hmrc.helptosave.models.userinfoapi.APIUserInfo.{Address, Enrolment}
 
 /**
   * The user info in the format returned by the user info API
   */
-case class UserInfo(given_name: Option[String],
-                    family_name: Option[String],
-                    middle_name: Option[String],
-                    address: Option[Address],
-                    birthdate: Option[LocalDate],
-                    uk_gov_nino: Option[String],
-                    hmrc_enrolments: Option[Seq[Enrolment]],
-                    email: Option[String]){
+case class APIUserInfo(given_name: Option[String],
+                       family_name: Option[String],
+                       middle_name: Option[String],
+                       address: Option[Address],
+                       birthdate: Option[LocalDate],
+                       uk_gov_nino: Option[String],
+                       hmrc_enrolments: Option[Seq[Enrolment]],
+                       email: Option[String]){
 
   def isEmpty: Boolean =
     given_name.isEmpty &&
@@ -44,7 +44,7 @@ case class UserInfo(given_name: Option[String],
 }
 
 
-object UserInfo{
+object APIUserInfo{
 
   case class Address(formatted: String,
                      postal_code: Option[String],
@@ -59,6 +59,6 @@ object UserInfo{
   implicit val addressFormat: Format[Address] = Json.format[Address]
   implicit val enrolmentIdentifierFormat: Format[EnrolmentIdentifier] = Json.format[EnrolmentIdentifier]
   implicit val enrolmentFormat: Format[Enrolment] = Json.format[Enrolment]
-  implicit val userInfoFormat: Format[UserInfo] = Json.format[UserInfo]
+  implicit val userInfoFormat: Format[APIUserInfo] = Json.format[APIUserInfo]
 
 }

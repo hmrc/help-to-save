@@ -20,7 +20,7 @@ import java.time.LocalDate
 
 import org.scalacheck.{Arbitrary, Gen}
 import uk.gov.hmrc.helptosave.models.UserInfo
-import uk.gov.hmrc.helptosave.models.userinfoapi.{UserInfo ⇒ APIUSerInfo}
+import uk.gov.hmrc.helptosave.models.userinfoapi.{APIUserInfo ⇒ APIUSerInfo}
 
 import scala.reflect.ClassTag
 import scala.reflect._

@@ -25,7 +25,7 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UserInfo, Address}
-import uk.gov.hmrc.helptosave.models.userinfoapi.{UserInfo ⇒ APIUserInfo}
+import uk.gov.hmrc.helptosave.models.userinfoapi.APIUserInfo
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
