@@ -40,7 +40,7 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
       eligibilityCheckService.getEligibility(nino).flatMap { isEligible ⇒
         if (isEligible) {
           val urlDecoded = URLDecoder.decode(userDetailsURI, "UTF-8")
-          userInfoService.getUserInfo(urlDecoded, nino).map(Some(_): Option[UserInfo])
+          userInfoService.getUserInfo(urlDecoded, nino).map(Some(_))
         } else {
           EitherT.pure[Future, String, Option[UserInfo]](None)
         }
@@ -56,3 +56,5 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
   }
 
 }
+
+
