@@ -24,10 +24,10 @@ import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.auth.microservice.connectors.AuthConnector
 import uk.gov.hmrc.play.config.{AppName, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.http.hooks.HttpHook
-import uk.gov.hmrc.play.http.ws._
+import uk.gov.hmrc.play.http.ws.{WSHttp ⇒ _, _}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 object MicroserviceAuditConnector extends AuditConnector with RunMode {
@@ -39,26 +39,19 @@ object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
 }
 
 
-object WSHttp extends WSGet with WSPut with WSPost with WSDelete with WSPatch with AppName {
+class WSHttp extends WSGet with WSPut with WSPost with WSDelete with WSPatch with AppName {
   override val hooks: Seq[HttpHook] = NoneRequired
 
   /**
     * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
     * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
     */
-  def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url) {
-    val httpResponse = doGet(url)
+  def get(url: String, headers: Map[String,String] = Map.empty[String,String])(
+           implicit rhc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = withTracing(GET_VERB, url) {
+    val httpResponse = buildRequest(url).withHeaders(headers.toSeq: _*).get().map(new WSHttpResponse(_))
     executeHooks(url, GET_VERB, None, httpResponse)
     httpResponse
   }
-
-}
-
-class WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing with ServicesConfig {
-  override lazy val appName = getString("appName")
-  override lazy val wsProxyServer = WSProxyConfiguration(s"proxy")
-  override val hooks = Seq(AuditingHook)
-  override lazy val auditConnector = MicroserviceAuditConnector
 
   /**
     * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
@@ -72,5 +65,19 @@ class WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing wit
     executeHooks(url, POST_VERB, None, httpResponse)
     httpResponse
   }
+
+  def postForm(url: String, body: Map[String,Seq[String]])(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+    val httpResponse = doFormPost(url, body)
+    executeHooks(url, POST_VERB, None, httpResponse)
+    httpResponse
+  }
+
+}
+
+class WSHttpProxy extends WSHttp with WSProxy with RunMode with HttpAuditing with ServicesConfig {
+  override lazy val appName = getString("appName")
+  override lazy val wsProxyServer = WSProxyConfiguration(s"proxy")
+  override val hooks = Seq(AuditingHook)
+  override lazy val auditConnector = MicroserviceAuditConnector
 }
 

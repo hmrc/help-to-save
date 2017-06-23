@@ -24,7 +24,7 @@ import com.google.inject.Inject
 import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.CitizenDetailsResponse
 import uk.gov.hmrc.helptosave.connectors.{CitizenDetailsConnector, UserDetailsConnector}
 import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsResponse
-import uk.gov.hmrc.helptosave.models.UserInfo
+import uk.gov.hmrc.helptosave.models.{Address, UserInfo}
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -59,7 +59,7 @@ class UserInfoService @Inject()(userDetailsConnector: UserDetailsConnector,
 
     (surnameValidation |@| dateOfBirthValidation |@| emailValidation |@| addressValidation)
       .map((surname, dateOfBirth, email, address) ⇒
-        UserInfo(u.name, surname, nino, dateOfBirth, email, address)
+        UserInfo(u.name, surname, nino, dateOfBirth, email, Address(address))
       )
   }
 
