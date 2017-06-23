@@ -26,7 +26,7 @@ import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.WSHttp
 import uk.gov.hmrc.helptosave.connectors.OAuthConnectorImpl.{Client, OAuthResponse, OAuthTokenConfiguration}
-import uk.gov.hmrc.helptosave.models.userinfoapi.OAuthTokens
+import uk.gov.hmrc.helptosave.models.OAuthTokens
 import uk.gov.hmrc.helptosave.util.Result
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 

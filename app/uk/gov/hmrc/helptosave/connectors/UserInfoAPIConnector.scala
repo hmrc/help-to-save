@@ -23,7 +23,7 @@ import play.api.http.Status
 import play.api.libs.json.{Format, JsError, JsSuccess, Json}
 import uk.gov.hmrc.helptosave.WSHttp
 import uk.gov.hmrc.helptosave.connectors.UserInfoAPIConnector.{APIError, TokenExpiredError, UnknownError}
-import uk.gov.hmrc.helptosave.models.userinfoapi.{OAuthTokens, APIUserInfo}
+import uk.gov.hmrc.helptosave.models.{OAuthTokens, OpenIDConnectUserInfo}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
 @ImplementedBy(classOf[UserInfoAPIConnectorImpl])
 trait UserInfoAPIConnector {
 
-  def getUserInfo(input: OAuthTokens)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,APIError,APIUserInfo]
+  def getUserInfo(input: OAuthTokens)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,APIError,OpenIDConnectUserInfo]
 
 }
 
@@ -62,10 +62,10 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
 
   val http: WSHttp = new WSHttp
 
-  def getUserInfo(input: OAuthTokens)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,APIError,APIUserInfo] = {
+  def getUserInfo(input: OAuthTokens)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,APIError,OpenIDConnectUserInfo] = {
     val headers = acceptHeader.updated("Authorization", s"Bearer ${input.accessToken}")
 
-    EitherT[Future,APIError,APIUserInfo](http.get(url, headers)(hc, ec).map{ response ⇒
+    EitherT[Future,APIError,OpenIDConnectUserInfo](http.get(url, headers)(hc, ec).map{ response ⇒
       response.status match {
         case Status.OK ⇒
           handleOKResponse(response)
@@ -80,8 +80,8 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
     })
   }
 
-  private def handleOKResponse(response: HttpResponse): Either[APIError,APIUserInfo] =
-    Try(response.json).map(_.validate[APIUserInfo]) match {
+  private def handleOKResponse(response: HttpResponse): Either[APIError,OpenIDConnectUserInfo] =
+    Try(response.json).map(_.validate[OpenIDConnectUserInfo]) match {
       case Success(JsSuccess(userInfo, _)) ⇒
         Right(userInfo)
       case Success(error: JsError) ⇒
@@ -90,7 +90,7 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
         failure(s"Response from user info API was not JSON. Response body was ${response.body}")
     }
 
-  private def handleUnauthorisedResponse(response: HttpResponse): Either[APIError,APIUserInfo] = {
+  private def handleUnauthorisedResponse(response: HttpResponse): Either[APIError,OpenIDConnectUserInfo] = {
     val errorString = s"Call to user info API came back with status ${Status.UNAUTHORIZED} (unauthorised)"
 
     Try(response.json).map(_.validate[Error]) match {
@@ -109,7 +109,7 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
     }
   }
 
-  private def failure(message: String): Either[APIError,APIUserInfo] = Left(UnknownError(message))
+  private def failure(message: String): Either[APIError,OpenIDConnectUserInfo] = Left(UnknownError(message))
 
 }
 

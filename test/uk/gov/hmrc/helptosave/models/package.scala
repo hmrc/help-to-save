@@ -19,8 +19,6 @@ package uk.gov.hmrc.helptosave
 import java.time.LocalDate
 
 import org.scalacheck.{Arbitrary, Gen}
-import uk.gov.hmrc.helptosave.models.UserInfo
-import uk.gov.hmrc.helptosave.models.userinfoapi.{APIUserInfo ⇒ APIUSerInfo}
 
 import scala.reflect.ClassTag
 import scala.reflect._
@@ -45,21 +43,21 @@ package object models {
     } yield UserInfo(name, surname, nino, dob, email, address))
 
 
-  implicit val enrolmentIdentifierArb: Arbitrary[APIUSerInfo.EnrolmentIdentifier] =
+  implicit val enrolmentIdentifierArb: Arbitrary[OpenIDConnectUserInfo.EnrolmentIdentifier] =
     Arbitrary(for {
       key ← Gen.identifier
       value ← Gen.identifier
-    } yield APIUSerInfo.EnrolmentIdentifier(key, value))
+    } yield OpenIDConnectUserInfo.EnrolmentIdentifier(key, value))
 
 
-  implicit val enrolmentArb: Arbitrary[APIUSerInfo.Enrolment] =
+  implicit val enrolmentArb: Arbitrary[OpenIDConnectUserInfo.Enrolment] =
     Arbitrary(for {
       key ← Gen.identifier
       ids ← Gen.listOf(enrolmentIdentifierArb.arbitrary)
       state ← Gen.alphaNumStr
-    } yield APIUSerInfo.Enrolment(key, ids, state))
+    } yield OpenIDConnectUserInfo.Enrolment(key, ids, state))
 
-  implicit val apiUserInfoArb: Arbitrary[APIUSerInfo] =
+  implicit val apiUserInfoArb: Arbitrary[OpenIDConnectUserInfo] =
     Arbitrary(for {
       name ← Gen.option(Gen.identifier)
       middleName ← Gen.option(Gen.identifier)
@@ -69,8 +67,8 @@ package object models {
       nino ← Gen.option(Gen.identifier)
       enrolments ← Gen.option(Gen.listOf(enrolmentArb.arbitrary))
       email ← Gen.option(Gen.identifier).map(_.map(_ + "@example.com"))
-    } yield APIUSerInfo(name, surname, middleName,
-      address.map( a ⇒ APIUSerInfo.Address(a.lines.mkString("\n"), a.postcode, a.country)),
+    } yield OpenIDConnectUserInfo(name, surname, middleName,
+      address.map( a ⇒ OpenIDConnectUserInfo.Address(a.lines.mkString("\n"), a.postcode, a.country)),
       dob, nino, enrolments, email)
     )
 
@@ -78,7 +76,7 @@ package object models {
   def sample[A: ClassTag](a: Arbitrary[A]): A = a.arbitrary.sample.getOrElse(
     sys.error(s"Could not generate ${classTag[A].getClass.getSimpleName}"))
 
-  def randomAPIUserInfo(): APIUSerInfo = sample(apiUserInfoArb)
+  def randomAPIUserInfo(): OpenIDConnectUserInfo = sample(apiUserInfoArb)
 
   def randomUserInfo(): UserInfo = sample(userInfoArb)
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.models.userinfoapi
+package uk.gov.hmrc.helptosave.models
 
 /**
   * Tokens necessary to access an HMRC API

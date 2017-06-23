@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.models.userinfoapi
+package uk.gov.hmrc.helptosave.models
 
 import java.time.LocalDate
+
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.helptosave.models.userinfoapi.APIUserInfo.{Address, Enrolment}
+import uk.gov.hmrc.helptosave.models.OpenIDConnectUserInfo._
 
 /**
   * The user info in the format returned by the user info API
   */
-case class APIUserInfo(given_name: Option[String],
-                       family_name: Option[String],
-                       middle_name: Option[String],
-                       address: Option[Address],
-                       birthdate: Option[LocalDate],
-                       uk_gov_nino: Option[String],
-                       hmrc_enrolments: Option[Seq[Enrolment]],
-                       email: Option[String]){
+case class OpenIDConnectUserInfo(given_name: Option[String],
+                                 family_name: Option[String],
+                                 middle_name: Option[String],
+                                 address: Option[OpenIDConnectUserInfo.Address],
+                                 birthdate: Option[LocalDate],
+                                 uk_gov_nino: Option[String],
+                                 hmrc_enrolments: Option[Seq[Enrolment]],
+                                 email: Option[String]){
 
   def isEmpty: Boolean =
     given_name.isEmpty &&
@@ -44,7 +45,7 @@ case class APIUserInfo(given_name: Option[String],
 }
 
 
-object APIUserInfo{
+object OpenIDConnectUserInfo{
 
   case class Address(formatted: String,
                      postal_code: Option[String],
@@ -59,6 +60,6 @@ object APIUserInfo{
   implicit val addressFormat: Format[Address] = Json.format[Address]
   implicit val enrolmentIdentifierFormat: Format[EnrolmentIdentifier] = Json.format[EnrolmentIdentifier]
   implicit val enrolmentFormat: Format[Enrolment] = Json.format[Enrolment]
-  implicit val userInfoFormat: Format[APIUserInfo] = Json.format[APIUserInfo]
+  implicit val userInfoFormat: Format[OpenIDConnectUserInfo] = Json.format[OpenIDConnectUserInfo]
 
 }

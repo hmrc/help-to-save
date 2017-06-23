@@ -21,7 +21,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, WordSpec}
 import uk.gov.hmrc.helptosave.connectors.{OAuthConnector, UserInfoAPIConnector}
 import uk.gov.hmrc.helptosave.connectors.UserInfoAPIConnector._
-import uk.gov.hmrc.helptosave.models.userinfoapi.{OAuthTokens, APIUserInfo}
+import uk.gov.hmrc.helptosave.models.{OAuthTokens, OpenIDConnectUserInfo}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -42,7 +42,7 @@ class UserInfoAPIServiceSpec extends WordSpec with Matchers with MockFactory {
 
     val service = new UserInfoAPIService(userInfoAPIConnector, oauthConnector)
 
-    def mockGetUserInfo(tokens: OAuthTokens)(response: Either[APIError, APIUserInfo]): Unit =
+    def mockGetUserInfo(tokens: OAuthTokens)(response: Either[APIError, OpenIDConnectUserInfo]): Unit =
       (userInfoAPIConnector.getUserInfo(_: OAuthTokens)(_: HeaderCarrier, _: ExecutionContext))
         .expects(tokens, *, *)
         .returning(EitherT(Future.successful(response)))
@@ -57,7 +57,7 @@ class UserInfoAPIServiceSpec extends WordSpec with Matchers with MockFactory {
         .expects(tokens.refreshToken, *, *)
         .returning(EitherT(Future.successful(response)))
 
-    def getUserInfo(authorisationCode: String, waitTime: FiniteDuration = 5.seconds): Either[String, APIUserInfo] =
+    def getUserInfo(authorisationCode: String, waitTime: FiniteDuration = 5.seconds): Either[String, OpenIDConnectUserInfo] =
       Await.result(service.getUserInfo(authorisationCode, nino).value, waitTime)
 
   }
@@ -71,7 +71,7 @@ class UserInfoAPIServiceSpec extends WordSpec with Matchers with MockFactory {
 
     val error = "error"
 
-    val userInfo = APIUserInfo(Some("Joe"), Some("Bloggs"), None, None, None, None, None, None)
+    val userInfo = OpenIDConnectUserInfo(Some("Joe"), Some("Bloggs"), None, None, None, None, None, None)
 
     "getting user info" must {
 

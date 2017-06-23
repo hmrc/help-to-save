@@ -24,8 +24,7 @@ import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UserInfo, Address}
-import uk.gov.hmrc.helptosave.models.userinfoapi.APIUserInfo
+import uk.gov.hmrc.helptosave.models.{Address, EligibilityCheckResult, OpenIDConnectUserInfo, UserInfo}
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -65,7 +64,7 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
     } yield combine(apiUserInfo, userInfo, nino)
 
 
-  private def combine(apiUserInfo: APIUserInfo, userInfo: UserInfo, nino: NINO): UserInfo = {
+  private def combine(apiUserInfo: OpenIDConnectUserInfo, userInfo: UserInfo, nino: NINO): UserInfo = {
     // find out if any of the fields we are interested in from the user
     // info API came back empty
     val empty = List(

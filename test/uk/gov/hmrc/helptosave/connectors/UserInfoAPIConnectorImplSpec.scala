@@ -26,8 +26,7 @@ import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.WSHttp
 import uk.gov.hmrc.helptosave.connectors.UserInfoAPIConnector.{APIError, TokenExpiredError, UnknownError}
-import uk.gov.hmrc.helptosave.models.userinfoapi.{OAuthTokens, APIUserInfo}
-import uk.gov.hmrc.helptosave.models.userinfoapi.APIUserInfo.Address
+import uk.gov.hmrc.helptosave.models.{OAuthTokens, OpenIDConnectUserInfo}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -65,10 +64,10 @@ class UserInfoAPIConnectorImplSpec extends Matchers with WordSpecLike with MockF
     mockGet(tokens, Left(error))
 
 
-  def doRequest(): Either[APIError,APIUserInfo] =
+  def doRequest(): Either[APIError,OpenIDConnectUserInfo] =
     Await.result(connector.getUserInfo(tokens).value, 5.seconds)
 
-  def isUnknownError(result: Either[APIError,APIUserInfo]): Boolean = result.fold(
+  def isUnknownError(result: Either[APIError,OpenIDConnectUserInfo]): Boolean = result.fold(
     _ match {
       case TokenExpiredError ⇒ false
       case UnknownError(_) => true
@@ -83,9 +82,9 @@ class UserInfoAPIConnectorImplSpec extends Matchers with WordSpecLike with MockF
       "the response comes back with an OK status" must {
 
         "return the user info contained in the JSON response" in {
-          val userInfo = APIUserInfo(
+          val userInfo = OpenIDConnectUserInfo(
             Some("Bob"), Some("Bobby"), Some("Bobber"),
-            Some(Address("1 the Street\nThe Place", Some("ABC123"), Some("GB"))),
+            Some(OpenIDConnectUserInfo.Address("1 the Street\nThe Place", Some("ABC123"), Some("GB"))),
             Some(LocalDate.now()), Some("nino"), None, Some("email@abc.com"))
 
           mockGet(tokens, HttpResponse(Status.OK, Some(Json.toJson(userInfo))))

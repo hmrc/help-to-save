@@ -26,7 +26,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.mvc.{Result ⇒ PlayResult}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.models.userinfoapi.{APIUserInfo ⇒ APIUserInfo}
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -60,7 +59,7 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers  with Mock
           EitherT.fromOption[Future](userInfo, "mocking failed user info")
         }
 
-    def mockUserInfoAPIService(authorisationCode: String, nino: String)(result: Option[APIUserInfo]): Unit =
+    def mockUserInfoAPIService(authorisationCode: String, nino: String)(result: Option[OpenIDConnectUserInfo]): Unit =
       (userInfoAPIService.getUserInfo(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(authorisationCode, nino, *, *)
       .returning(EitherT.fromOption[Future](result, "Oh no!"))
@@ -103,7 +102,7 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers  with Mock
       }
 
       "return the user details once it retrieves them" in new TestApparatus {
-        forAll{ apiUserInfo: APIUserInfo ⇒
+        forAll{ apiUserInfo: OpenIDConnectUserInfo ⇒
           inSequence {
             mockEligibilityCheckerService(nino)(Some(true))
             mockUserInfoAPIService(oauthAuthorisationCode, nino)(Some(apiUserInfo))
@@ -120,7 +119,7 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers  with Mock
           val checkResult = jsValue.get.result.get
 
           // test that the APIUserInfo field is favored over the corresponding UserInfo field
-          def test[T](field: T)(extractor: APIUserInfo ⇒ Option[T], backup: UserInfo ⇒ T): Unit =
+          def test[T](field: T)(extractor: OpenIDConnectUserInfo ⇒ Option[T], backup: UserInfo ⇒ T): Unit =
             field shouldBe extractor(apiUserInfo).getOrElse(backup(userDetails))
 
           test(checkResult.forename)(_.given_name, _.forename)
