@@ -21,7 +21,7 @@ import java.time.LocalDate
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Singleton}
 import play.api.libs.json.{Json, Reads}
-import uk.gov.hmrc.helptosave.WSHttp
+import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.CitizenDetailsResponse
 import uk.gov.hmrc.helptosave.models.Address
 import uk.gov.hmrc.helptosave.util.{NINO, Result}

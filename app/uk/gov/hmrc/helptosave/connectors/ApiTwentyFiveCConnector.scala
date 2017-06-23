@@ -16,17 +16,19 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
+import cats.data.EitherT
 import cats.instances.future._
 import cats.syntax.either._
-import com.google.inject.{ImplementedBy, Singleton}
-import uk.gov.hmrc.helptosave.WSHttp
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.Configuration
+import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.util.Result
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[ApiTwentyFiveCConnectorImpl])
 trait ApiTwentyFiveCConnector {
@@ -37,19 +39,19 @@ trait ApiTwentyFiveCConnector {
   * Implements communication with help-to-save-stub
   */
 @Singleton
-class ApiTwentyFiveCConnectorImpl extends ServicesConfig with ApiTwentyFiveCConnector {
+class ApiTwentyFiveCConnectorImpl @Inject()(configuration: Configuration) extends ApiTwentyFiveCConnector with ServicesConfig{
 
-  private val helpToSaveStubURL: String = baseUrl("help-to-save-stub")
+  lazy val helpToSaveStubURL: String = baseUrl("help-to-save-stub")
 
-  private def serviceURL(nino: String) = s"help-to-save-stub/edh/wtc/$nino"
+  def serviceURL(nino: String) = s"help-to-save-stub/edh/wtc/$nino"
 
-  private val http = new WSHttp
+  val http = new WSHttp
 
   def getAwards(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[List[Award]] =
-    Result(http.get(s"$helpToSaveStubURL/${serviceURL(nino)}"))
-      // subflatMap into the EitherT so we can conveniently return an Either rather than being
-      // forced to return an EitherT in the body
-      .subflatMap { response ⇒
-      response.parseJson[ApiTwentyFiveCValues].map(_.awards)
-    }
+    EitherT[Future,String,List[Award]](http.get(s"$helpToSaveStubURL/${serviceURL(nino)}").map{
+      _.parseJson[ApiTwentyFiveCValues].map(_.awards)
+    }.recover{
+      case e ⇒
+        Left(s"Error encountered when calling API-25: ${e.getMessage}")
+    })
 }

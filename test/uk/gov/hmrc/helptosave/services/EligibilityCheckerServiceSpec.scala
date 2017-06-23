@@ -48,36 +48,37 @@ class EligibilityCheckerServiceSpec
   def isEligible(result: Result[Boolean]): Boolean =
     Await.result(result.value, 3.seconds).fold(_ ⇒ false, identity)
 
-  "EligibilityCheckerService getValidAwardsDate"
-  "return true valid awards " in {
-    mockEligibilityResult(fakeNino)(List(validAward))
-    val result = checkerService.getEligibility(fakeNino)
-    isEligible(result) shouldBe true
-  }
-  "return true if  av_end_date is today " in {
-    mockEligibilityResult(fakeNino)(List(validAward.copy(av_end_date = LocalDate.now())))
-    val result = checkerService.getEligibility(fakeNino)
-    isEligible(result) shouldBe true
-  }
-  "return false is there is no awards that have an av_end_date that is not today or tommoro" in {
-    mockEligibilityResult(fakeNino)(List(validAward.copy(av_end_date = LocalDate.now().minusDays(1))))
-    val result = checkerService.getEligibility(fakeNino)
-    isEligible(result) shouldBe false
-  }
-  "return false if aw_award_status is not Provisional or Finalised" in {
-    mockEligibilityResult(fakeNino)(List(validAward.copy(aw_award_status = AwAwardStatus.Deleted)))
-    val result = checkerService.getEligibility(fakeNino)
-    isEligible(result) shouldBe false
-  }
-  "return false if ae_etc1_wtc_entitlement is not true" in {
-    mockEligibilityResult(fakeNino)(List(validAward.copy(ae_etc1_wtc_entitlement = false)))
-    val result = checkerService.getEligibility(fakeNino)
-    isEligible(result) shouldBe false
-  }
-  "return false if house hold income is less then zero " in {
-    mockEligibilityResult(fakeNino)(List(validAward.copy(av_total_taper_household_award = -5)))
-    val result = checkerService.getEligibility(fakeNino)
-    isEligible(result) shouldBe false
+  "EligibilityCheckerService getValidAwardsDate" must {
+    "return true valid awards " in {
+      mockEligibilityResult(fakeNino)(List(validAward))
+      val result = checkerService.getEligibility(fakeNino)
+      isEligible(result) shouldBe true
+    }
+    "return true if  av_end_date is today " in {
+      mockEligibilityResult(fakeNino)(List(validAward.copy(av_end_date = LocalDate.now())))
+      val result = checkerService.getEligibility(fakeNino)
+      isEligible(result) shouldBe true
+    }
+    "return false is there is no awards that have an av_end_date that is not today or tommoro" in {
+      mockEligibilityResult(fakeNino)(List(validAward.copy(av_end_date = LocalDate.now().minusDays(1))))
+      val result = checkerService.getEligibility(fakeNino)
+      isEligible(result) shouldBe false
+    }
+    "return false if aw_award_status is not Provisional or Finalised" in {
+      mockEligibilityResult(fakeNino)(List(validAward.copy(aw_award_status = AwAwardStatus.Deleted)))
+      val result = checkerService.getEligibility(fakeNino)
+      isEligible(result) shouldBe false
+    }
+    "return false if ae_etc1_wtc_entitlement is not true" in {
+      mockEligibilityResult(fakeNino)(List(validAward.copy(ae_etc1_wtc_entitlement = false)))
+      val result = checkerService.getEligibility(fakeNino)
+      isEligible(result) shouldBe false
+    }
+    "return false if house hold income is less then zero " in {
+      mockEligibilityResult(fakeNino)(List(validAward.copy(av_total_taper_household_award = -5)))
+      val result = checkerService.getEligibility(fakeNino)
+      isEligible(result) shouldBe false
+    }
   }
 }
 
