@@ -18,11 +18,11 @@ package uk.gov.hmrc.helptosave.connectors
 
 import org.joda.time.LocalDate
 import org.scalatest._
-import org.scalamock.scalatest.MockFactory
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models.{ApiTwentyFiveCValues, AwAwardStatus, Award}
 import uk.gov.hmrc.helptosave.util.NINO
+import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.WithFakeApplication
 
@@ -30,23 +30,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
-class ApiTwentyFiveCConnectorSpec extends WordSpec with WithFakeApplication with Matchers with MockFactory {
+class ApiTwentyFiveCConnectorSpec extends WordSpec with WithFakeApplication with Matchers with TestSupport {
 
-  implicit val hc = HeaderCarrier()
-
-  val mockHttp = mock[WSHttp]
 
   def mockGet(url: String)(response: HttpResponse) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
       .expects(url, Map.empty[String, String], *, *)
       .returning(Future.successful(response))
 
-
   lazy val connector = new ApiTwentyFiveCConnectorImpl {
     override val helpToSaveStubURL = "url"
-
     override def serviceURL(nino: String) = nino
-
     override val http = mockHttp
   }
 
@@ -55,12 +49,9 @@ class ApiTwentyFiveCConnectorSpec extends WordSpec with WithFakeApplication with
 
   "getAwards" must {
 
-    val nino = "nino"
     val url = s"url/$nino"
 
-
     "return awards when there are awards to return" in {
-      val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
       val expected = Award(AwAwardStatus.Open, date, date, 3, true, date)
       val response = ApiTwentyFiveCValues(nino, List(expected))
 
@@ -77,7 +68,6 @@ class ApiTwentyFiveCConnectorSpec extends WordSpec with WithFakeApplication with
       }
 
       "there is an error calling the API" in {
-        // mock a failed future
         val error = new Exception("Oh no!")
         testFailure(
           (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
@@ -106,4 +96,3 @@ class ApiTwentyFiveCConnectorSpec extends WordSpec with WithFakeApplication with
     }
   }
 }
-

@@ -16,28 +16,21 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.time.LocalDate
-
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, WordSpec}
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsResponse
 import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-class UserDetailsConnectorSpec extends WordSpec with WithFakeApplication with Matchers with MockFactory{
-
-  implicit val hc = HeaderCarrier()
-
-  val mockHttp = mock[WSHttp]
+class UserDetailsConnectorSpec extends WordSpec with WithFakeApplication with Matchers with TestSupport {
 
   def mockGet(userDetailsUri: String)(response: HttpResponse) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
@@ -46,7 +39,6 @@ class UserDetailsConnectorSpec extends WordSpec with WithFakeApplication with Ma
 
 
   lazy val connector = new UserDetailsConnectorImpl {
-
     override val http = mockHttp
   }
 
@@ -59,8 +51,7 @@ class UserDetailsConnectorSpec extends WordSpec with WithFakeApplication with Ma
     lazy val userDetailsUri = "url"
 
     "return user details when there are user details to return" in {
-      val date = LocalDate.of(1999, 6, 1) // scalastyle:ignore magic.number
-      val expected = UserDetailsResponse("name", Some("lastname"), Some("email"), Some(date))
+      val expected = UserDetailsResponse("name", Some("lastname"), Some("email"), Some(javadate))
       mockGet(userDetailsUri)(HttpResponse(200, Some(Json.toJson(expected))))
 
       getUserDetails(userDetailsUri) shouldBe Right(expected)
@@ -87,11 +78,6 @@ class UserDetailsConnectorSpec extends WordSpec with WithFakeApplication with Ma
           mockGet(userDetailsUri)(HttpResponse(200, responseString = Some("hello")))//scalastyle:ignore magic.number
         )
       }
-
-
-
     }
-
-
   }
 }

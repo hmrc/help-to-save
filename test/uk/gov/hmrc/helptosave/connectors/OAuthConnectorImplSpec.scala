@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import com.typesafe.config.ConfigFactory
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{Matchers, WordSpec}
 import play.api.Configuration
@@ -28,19 +27,16 @@ import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.OAuthConnectorImpl.{Client, OAuthResponse, OAuthTokenConfiguration}
 import uk.gov.hmrc.helptosave.models.OAuthTokens
 import uk.gov.hmrc.helptosave.util.Result
+import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class OAuthConnectorImplSpec extends WordSpec with Matchers with MockFactory with GeneratorDrivenPropertyChecks {
-
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+class OAuthConnectorImplSpec extends WordSpec with Matchers with TestSupport with GeneratorDrivenPropertyChecks {
 
   val oauthConfig = OAuthTokenConfiguration("url", Client("id", "secret"), "callback")
-
-  val mockHttp = mock[WSHttp]
 
   val url = "url"
   val clientID = "id"

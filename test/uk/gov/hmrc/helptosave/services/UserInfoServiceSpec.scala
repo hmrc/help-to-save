@@ -20,22 +20,20 @@ import java.time.LocalDate
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, WordSpec}
 import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.{CitizenDetailsPerson, CitizenDetailsResponse}
 import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsResponse
 import uk.gov.hmrc.helptosave.connectors.{CitizenDetailsConnector, UserDetailsConnector}
 import uk.gov.hmrc.helptosave.models.{Address, UserInfo}
 import uk.gov.hmrc.helptosave.util.NINO
+import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class UserInfoServiceSpec extends WordSpec with Matchers with MockFactory {
-
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+class UserInfoServiceSpec extends WordSpec with Matchers with TestSupport {
 
   val userDetailsConnector = mock[UserDetailsConnector]
   val citizenDetailsConnector = mock[CitizenDetailsConnector]
@@ -59,7 +57,6 @@ class UserInfoServiceSpec extends WordSpec with Matchers with MockFactory {
   "The UserInfoService" when {
 
     val userDetailsURI = "uri"
-    val nino = "nino"
 
     object UserDetails {
       val name = "name1"
