@@ -31,18 +31,7 @@ case class OpenIDConnectUserInfo(given_name: Option[String],
                                  birthdate: Option[LocalDate],
                                  uk_gov_nino: Option[String],
                                  hmrc_enrolments: Option[Seq[Enrolment]],
-                                 email: Option[String]){
-
-  def isEmpty: Boolean =
-    given_name.isEmpty &&
-      family_name.isEmpty &&
-      middle_name.isEmpty &&
-      address.isEmpty &&
-      birthdate.isEmpty &&
-      uk_gov_nino.isEmpty &&
-      hmrc_enrolments.isEmpty &&
-      email.isEmpty
-}
+                                 email: Option[String])
 
 
 object OpenIDConnectUserInfo{

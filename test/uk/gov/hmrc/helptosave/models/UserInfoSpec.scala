@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.utils
+package uk.gov.hmrc.helptosave.models
 
-import org.joda.time.LocalDate
-import org.scalamock.scalatest.MockFactory
-import uk.gov.hmrc.helptosave.config.WSHttp
-import uk.gov.hmrc.play.http.HeaderCarrier
+import java.time.LocalDate
 
-trait TestSupport extends MockFactory {
+import org.scalatest.{Matchers, WordSpec}
+import play.api.libs.json.{Json, JsSuccess}
 
-  implicit val hc = HeaderCarrier()
-  val mockHttp = mock[WSHttp]
+class UserInfoSpec extends WordSpec with Matchers {
 
-  val nino = "nino"
+  "UserInfo" must {
 
-  val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
+    "have a valid JSON format instance" in {
+      val date = LocalDate.of(2000, 1, 1)
+      val userInfo = UserInfo("nane", "surname", "nino", date, "email",
+        Address(List("address"), Some("postcode"), Some("Country")))
 
-  val javadate = java.time.LocalDate.of(2017, 6, 12)// scalastyle:ignore magic.number
-
+      val jsValue = Json.toJson(userInfo)
+      Json.fromJson[UserInfo](jsValue) shouldBe JsSuccess(userInfo)
+    }
+  }
 }
-

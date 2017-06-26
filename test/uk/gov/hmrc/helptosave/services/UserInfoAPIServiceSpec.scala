@@ -32,7 +32,6 @@ class UserInfoAPIServiceSpec extends WordSpec with Matchers with TestSupport {
 
 
   class TestApparatus {
-    implicit val hc = HeaderCarrier()
 
     val nino = "NINO"
 

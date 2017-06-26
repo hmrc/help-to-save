@@ -17,9 +17,6 @@
 package uk.gov.hmrc.helptosave.models
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
-import cats.Show
 import play.api.libs.json.{Format, Json}
 
 /** Details of the user obtained from HMRC services */
@@ -32,7 +29,7 @@ case class UserInfo(forename: String,
 
 object UserInfo {
 
-  implicit val localDateShow: Show[LocalDate] = Show.show(date ⇒ date.format(DateTimeFormatter.ofPattern("dd/MM/YYYY")))
-
-  implicit val userDetailsFormat: Format[UserInfo] = Json.format[UserInfo]
+ implicit val userDetailsFormat: Format[UserInfo] = Json.format[UserInfo]
 }
+
+
