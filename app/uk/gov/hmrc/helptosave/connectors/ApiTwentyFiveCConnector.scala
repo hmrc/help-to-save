@@ -39,15 +39,15 @@ trait ApiTwentyFiveCConnector {
   * Implements communication with help-to-save-stub
   */
 @Singleton
-class ApiTwentyFiveCConnectorImpl @Inject()(configuration: Configuration) extends ApiTwentyFiveCConnector with ServicesConfig{
+class ApiTwentyFiveCConnectorImpl extends ApiTwentyFiveCConnector with ServicesConfig{
 
-  lazy val helpToSaveStubURL: String = baseUrl("help-to-save-stub")
+  val helpToSaveStubURL: String = baseUrl("help-to-save-stub")
 
   def serviceURL(nino: String) = s"help-to-save-stub/edh/wtc/$nino"
 
   val http = new WSHttp
 
-  def getAwards(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[List[Award]] =
+  override def getAwards(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[List[Award]] =
     EitherT[Future,String,List[Award]](http.get(s"$helpToSaveStubURL/${serviceURL(nino)}").map{
       _.parseJson[ApiTwentyFiveCValues].map(_.awards)
     }.recover{

@@ -18,18 +18,19 @@ package uk.gov.hmrc.helptosave.connectors
 
 import java.time.LocalDate
 
+import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Singleton}
-import play.api.libs.json.{Json, Reads}
+import play.api.Logger
+import play.api.libs.json.{Format, Json, Reads}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsResponse
 import uk.gov.hmrc.helptosave.util.Result
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[UserDetailsConnectorImpl])
 trait UserDetailsConnector {
@@ -44,6 +45,7 @@ object UserDetailsConnector {
                                  dateOfBirth: Option[LocalDate])
 
   implicit val userDetailsResponseReads: Reads[UserDetailsResponse] = Json.reads[UserDetailsResponse]
+  implicit val userDetailsFormat: Format[UserDetailsResponse] = Json.format[UserDetailsResponse]
 }
 
 @Singleton
@@ -52,15 +54,15 @@ class UserDetailsConnectorImpl extends UserDetailsConnector with ServicesConfig 
   val http = new WSHttp
 
   override def getUserDetails(userDetailsUri: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UserDetailsResponse] =
-    Result(http.get(userDetailsUri)).subflatMap { response ⇒
+    EitherT[Future,String,UserDetailsResponse](http.get(userDetailsUri).map{ response ⇒
       if (response.status == 200) {
         response.parseJson[UserDetailsResponse]
       } else {
         Left(s"User details response came back with status ${response.status}. Response body was ${response.body}")
       }
-    }
+    }.recover{
+      case e ⇒
+        Left(s"Error calling the user detials service: ${e.getMessage}")
+    })
 
 }
-
-
-

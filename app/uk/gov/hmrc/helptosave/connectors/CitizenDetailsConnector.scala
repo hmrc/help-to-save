@@ -18,9 +18,10 @@ package uk.gov.hmrc.helptosave.connectors
 
 import java.time.LocalDate
 
+import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Singleton}
-import play.api.libs.json.{Json, Reads}
+import play.api.libs.json.{Format, Json, Reads}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.CitizenDetailsResponse
 import uk.gov.hmrc.helptosave.models.Address
@@ -29,7 +30,7 @@ import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 
 /**
@@ -49,12 +50,12 @@ object CitizenDetailsConnector {
                                   dateOfBirth: Option[LocalDate])
 
   case class CitizenDetailsAddress(line1: Option[String],
-                     line2: Option[String],
-                     line3: Option[String],
-                     line4: Option[String],
-                     line5: Option[String],
-                     postcode: Option[String],
-                     country: Option[String])
+                                   line2: Option[String],
+                                   line3: Option[String],
+                                   line4: Option[String],
+                                   line5: Option[String],
+                                   postcode: Option[String],
+                                   country: Option[String])
 
 
 
@@ -66,22 +67,33 @@ object CitizenDetailsConnector {
 
   implicit val citizenDetailsResponseReads: Reads[CitizenDetailsResponse] = Json.reads[CitizenDetailsResponse]
 
+  implicit val addressFormat: Format[CitizenDetailsAddress] = Json.format[CitizenDetailsAddress]
+
+  implicit val personFormat: Format[CitizenDetailsPerson] = Json.format[CitizenDetailsPerson]
+
+  implicit val citizenDetailsResponseFormat: Format[CitizenDetailsResponse] = Json.format[CitizenDetailsResponse]
 }
 
 @Singleton
 class CitizenDetailsConnectorImpl extends CitizenDetailsConnector with ServicesConfig {
 
-  private val citizenDetailsBaseURL: String = baseUrl("citizen-details")
+  val citizenDetailsBaseURL: String = baseUrl("citizen-details")
 
-  private def citizenDetailsURI(nino: NINO): String = s"$citizenDetailsBaseURL/citizen-details/$nino/designatory-details"
+  def citizenDetailsURI(nino: NINO): String = s"$citizenDetailsBaseURL/citizen-details/$nino/designatory-details"
 
   val http = new WSHttp
+
   override def getDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[CitizenDetailsResponse] =
-    Result(http.get(citizenDetailsURI(nino))).subflatMap(response ⇒
-      if (response.status == 200) {
-        response.parseJson[CitizenDetailsResponse]
-      } else {
-        Left(s"Citizen details response came back with status ${response.status}. Response body was ${response.body}")
+    EitherT[Future,String,CitizenDetailsResponse](
+      http.get(citizenDetailsURI(nino)).map(response ⇒
+        if (response.status == 200) {
+          response.parseJson[CitizenDetailsResponse]
+        } else {
+          Left(s"Citizen details response came back with status ${response.status}. Response body was ${response.body}")
+        }
+      ).recover{
+        case e ⇒ Left(s"Error calling citizen details service: ${e.getMessage}")
       }
     )
 }
+
