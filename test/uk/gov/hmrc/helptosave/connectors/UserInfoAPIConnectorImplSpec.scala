@@ -38,14 +38,18 @@ class UserInfoAPIConnectorImplSpec extends Matchers with WordSpecLike with MockF
   implicit val hc = HeaderCarrier()
 
   val url = "url"
-  val config = Configuration("api.user-info.url" → url)
+  val authorisationHeaderKey = "auth"
+  val config = Configuration(
+    "api.user-info.url" → url,
+    "api.user-info.authorisation-header-key" → authorisationHeaderKey
+  )
   val mockHttp = mock[WSHttp]
 
   val tokens = OAuthTokens("access", "refresh")
 
   def expectedHeaders(tokens: OAuthTokens): Map[String,String] = Map(
     "Accept" → "application/vnd.hmrc.1.0+json",
-    "Authorization" → s"Bearer ${tokens.accessToken}"
+    authorisationHeaderKey → s"Bearer ${tokens.accessToken}"
   )
 
   val connector = new UserInfoAPIConnectorImpl(config, ec){

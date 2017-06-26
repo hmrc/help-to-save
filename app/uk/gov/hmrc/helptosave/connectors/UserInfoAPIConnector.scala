@@ -56,14 +56,18 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
 
   import UserInfoAPIConnectorImpl._
 
-  val url: String = configuration.underlying.getString("api.user-info.url")
+  private val config = configuration.underlying.getConfig("api.user-info")
+
+  val url: String = config.getString("url")
 
   val acceptHeader: Map[String,String] = Map("Accept" → "application/vnd.hmrc.1.0+json")
+
+  val authorisationHeaderKey: String = config.getString("authorisation-header-key")
 
   val http: WSHttp = new WSHttp
 
   def getUserInfo(input: OAuthTokens)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,APIError,OpenIDConnectUserInfo] = {
-    val headers = acceptHeader.updated("Authorization", s"Bearer ${input.accessToken}")
+    val headers = acceptHeader.updated(authorisationHeaderKey, s"Bearer ${input.accessToken}")
 
     EitherT[Future,APIError,OpenIDConnectUserInfo](http.get(url, headers)(hc, ec).map{ response ⇒
       response.status match {
