@@ -51,7 +51,7 @@ class CitizenDetailsConnectorSpec extends TestSupport with WithFakeApplication {
     lazy val url = connector.citizenDetailsURI(nino)
 
     "return details when there are details to return" in {
-      val person = CitizenDetailsPerson(Some("fname"), Some("lname"), Option(randomDate()))
+      val person = CitizenDetailsPerson(Some("fname"), Some("lname"), Some(randomDate()))
       val address = CitizenDetailsAddress(Some("line1"), Some("line2"), Some("line3"), None, None, None, None)
       val expected = CitizenDetailsResponse(Some(person), Some(address))
       mockGet(url)(HttpResponse(200, Some(Json.toJson(expected))))
