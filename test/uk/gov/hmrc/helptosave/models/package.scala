@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.helptosave
 
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 
+import cats.Show
 import org.scalacheck.{Arbitrary, Gen}
 
 import scala.reflect.ClassTag
 import scala.reflect._
+import scala.util.Try
 
 package object models {
 
@@ -73,10 +76,13 @@ package object models {
     )
 
 
+
+
   def sample[A: ClassTag](a: Arbitrary[A]): A = a.arbitrary.sample.getOrElse(
     sys.error(s"Could not generate ${classTag[A].getClass.getSimpleName}"))
 
   def randomAPIUserInfo(): OpenIDConnectUserInfo = sample(apiUserInfoArb)
 
   def randomUserInfo(): UserInfo = sample(userInfoArb)
+
 }

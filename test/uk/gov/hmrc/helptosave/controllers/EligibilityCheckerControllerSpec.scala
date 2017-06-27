@@ -18,9 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{Matchers, WordSpec}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -28,13 +26,13 @@ import play.api.mvc.{Result ⇒ PlayResult}
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.NINO
+import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class EligibilityCheckerControllerSpec extends WordSpec with Matchers  with MockFactory with GeneratorDrivenPropertyChecks {
+class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
   class TestApparatus {
     val eligibilityCheckService = mock[EligibilityCheckerService]
@@ -71,10 +69,10 @@ class EligibilityCheckerControllerSpec extends WordSpec with Matchers  with Mock
 
     "handling requests to perform eligibility checks" must {
 
-      val nino = "nino"
       val userDetailsURI = "uri"
       val oauthAuthorisationCode = "authorisation-code"
       val userDetails = randomUserInfo()
+      val nino = randomNINO()
 
       def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 

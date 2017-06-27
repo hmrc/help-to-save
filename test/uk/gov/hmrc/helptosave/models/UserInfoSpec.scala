@@ -17,19 +17,20 @@
 package uk.gov.hmrc.helptosave.models
 
 import java.time.LocalDate
-import play.api.libs.json.{Format, Json}
 
-/** Details of the user obtained from HMRC services */
-case class UserInfo(forename: String,
-                    surname: String,
-                    nino: String,
-                    dateOfBirth: LocalDate,
-                    email: String,
-                    address: Address)
+import play.api.libs.json.{JsSuccess, Json}
+import uk.gov.hmrc.helptosave.utils.TestSupport
 
-object UserInfo {
+class UserInfoSpec extends TestSupport {
 
- implicit val userDetailsFormat: Format[UserInfo] = Json.format[UserInfo]
+  "UserInfo" must {
+
+    "have a valid JSON format instance" in {
+      val userInfo = UserInfo("nane", "surname", "nino", randomDate(), "email",
+        Address(List("address"), Some("postcode"), Some("Country")))
+
+      val jsValue = Json.toJson(userInfo)
+      Json.fromJson[UserInfo](jsValue) shouldBe JsSuccess(userInfo)
+    }
+  }
 }
-
-

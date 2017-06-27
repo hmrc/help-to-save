@@ -22,7 +22,7 @@ import configs.syntax._
 import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json.{Format, JsError, JsSuccess, Json}
-import uk.gov.hmrc.helptosave.WSHttp
+import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models.OAuthTokens
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Result

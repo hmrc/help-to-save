@@ -17,24 +17,20 @@
 package uk.gov.hmrc.helptosave.services
 
 import cats.data.EitherT
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.{Matchers, WordSpec}
 import uk.gov.hmrc.helptosave.connectors.{OAuthConnector, UserInfoAPIConnector}
 import uk.gov.hmrc.helptosave.connectors.UserInfoAPIConnector._
 import uk.gov.hmrc.helptosave.models.{OAuthTokens, OpenIDConnectUserInfo}
+import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class UserInfoAPIServiceSpec extends WordSpec with Matchers with MockFactory {
-
+class UserInfoAPIServiceSpec extends TestSupport {
 
   class TestApparatus {
-    implicit val hc = HeaderCarrier()
 
-    val nino = "NINO"
+    val nino = randomNINO()
 
     val userInfoAPIConnector = mock[UserInfoAPIConnector]
 

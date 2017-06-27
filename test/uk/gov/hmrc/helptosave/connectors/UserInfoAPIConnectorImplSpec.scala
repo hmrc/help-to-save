@@ -18,24 +18,19 @@ package uk.gov.hmrc.helptosave.connectors
 
 import java.time.LocalDate
 
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{Matchers, WordSpecLike}
 import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.WSHttp
 import uk.gov.hmrc.helptosave.connectors.UserInfoAPIConnector.{APIError, TokenExpiredError, UnknownError}
 import uk.gov.hmrc.helptosave.models.{OAuthTokens, OpenIDConnectUserInfo}
+import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.ExecutionContext.Implicits.{global ⇒ ec}
 import scala.concurrent.duration._
 
-class UserInfoAPIConnectorImplSpec extends Matchers with WordSpecLike with MockFactory with GeneratorDrivenPropertyChecks {
-
-  implicit val hc = HeaderCarrier()
+class UserInfoAPIConnectorImplSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
   val url = "url"
   val authorisationHeaderKey = "auth"
@@ -43,7 +38,6 @@ class UserInfoAPIConnectorImplSpec extends Matchers with WordSpecLike with MockF
     "api.user-info.url" → url,
     "api.user-info.authorisation-header-key" → authorisationHeaderKey
   )
-  val mockHttp = mock[WSHttp]
 
   val tokens = OAuthTokens("access", "refresh")
 

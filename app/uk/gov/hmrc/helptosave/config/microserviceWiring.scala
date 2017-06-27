@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave
+package uk.gov.hmrc.helptosave.config
 
 import play.api.libs.json.Writes
 import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, POST ⇒ POST_VERB}
