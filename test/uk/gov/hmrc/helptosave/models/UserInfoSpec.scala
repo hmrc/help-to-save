@@ -18,16 +18,15 @@ package uk.gov.hmrc.helptosave.models
 
 import java.time.LocalDate
 
-import org.scalatest.{Matchers, WordSpec}
-import play.api.libs.json.{Json, JsSuccess}
+import play.api.libs.json.{JsSuccess, Json}
+import uk.gov.hmrc.helptosave.utils.TestSupport
 
-class UserInfoSpec extends WordSpec with Matchers {
+class UserInfoSpec extends TestSupport {
 
   "UserInfo" must {
 
     "have a valid JSON format instance" in {
-      val date = LocalDate.of(2000, 1, 1)
-      val userInfo = UserInfo("nane", "surname", "nino", date, "email",
+      val userInfo = UserInfo("nane", "surname", "nino", randomDate(), "email",
         Address(List("address"), Some("postcode"), Some("Country")))
 
       val jsValue = Json.toJson(userInfo)

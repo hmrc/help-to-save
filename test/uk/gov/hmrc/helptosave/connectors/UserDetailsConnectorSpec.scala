@@ -16,21 +16,16 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import org.scalatest.{Matchers, WordSpec}
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsResponse
-import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
-
-class UserDetailsConnectorSpec extends WordSpec with WithFakeApplication with Matchers with TestSupport {
+class UserDetailsConnectorSpec extends TestSupport with WithFakeApplication {
 
   def mockGet(userDetailsUri: String)(response: HttpResponse) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
@@ -51,8 +46,8 @@ class UserDetailsConnectorSpec extends WordSpec with WithFakeApplication with Ma
     lazy val userDetailsUri = "url"
 
     "return user details when there are user details to return" in {
-      val expected = UserDetailsResponse("name", Some("lastname"), Some("email"), Some(javadate))
-      mockGet(userDetailsUri)(HttpResponse(200, Some(Json.toJson(expected))))
+      val expected = UserDetailsResponse("name", Some("lastname"), Some("email"), Some(randomDate()))
+      mockGet(userDetailsUri)(HttpResponse(200, Some(Json.toJson(expected))))// scalastyle:ignore magic.number
 
       getUserDetails(userDetailsUri) shouldBe Right(expected)
     }

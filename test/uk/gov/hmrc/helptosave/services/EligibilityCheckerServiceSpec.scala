@@ -22,18 +22,14 @@ import uk.gov.hmrc.helptosave.models.{AwAwardStatus, Award}
 import uk.gov.hmrc.helptosave.util.Result
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class EligibilityCheckerServiceSpec
-  extends UnitSpec with TestSupport {
+class EligibilityCheckerServiceSpec extends TestSupport {
 
   val mockEligibilityConnector = mock[ApiTwentyFiveCConnector]
   val checkerService = new EligibilityCheckerService(mockEligibilityConnector)
-  val todayDate = LocalDate.parse("2017-08-24")
   val validAward = Award(AwAwardStatus.Provisional, LocalDate.parse("2014-04-17"), LocalDate.parse("2014-10-03"), 6000, true, LocalDate.now().plusDays(1))
   val fakeNino = "WM123456C"
 

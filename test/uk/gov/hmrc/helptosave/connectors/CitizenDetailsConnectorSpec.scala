@@ -16,23 +16,18 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.time.LocalDate
-
-import org.scalatest.{Matchers, WordSpec}
-import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.{CitizenDetailsAddress, CitizenDetailsPerson, CitizenDetailsResponse}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.WithFakeApplication
-import play.api.libs.json.{Json, Reads}
+import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 
-class CitizenDetailsConnectorSpec extends WordSpec with WithFakeApplication with Matchers with TestSupport {
+class CitizenDetailsConnectorSpec extends TestSupport with WithFakeApplication {
 
   def mockGet(url: String)(response: HttpResponse) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
@@ -52,10 +47,11 @@ class CitizenDetailsConnectorSpec extends WordSpec with WithFakeApplication with
 
   "getDetails" must {
 
+    val nino = randomNINO()
     lazy val url = connector.citizenDetailsURI(nino)
 
     "return details when there are details to return" in {
-      val person = CitizenDetailsPerson(Some("fname"), Some("lname"), Option(javadate))
+      val person = CitizenDetailsPerson(Some("fname"), Some("lname"), Option(randomDate()))
       val address = CitizenDetailsAddress(Some("line1"), Some("line2"), Some("line3"), None, None, None, None)
       val expected = CitizenDetailsResponse(Some(person), Some(address))
       mockGet(url)(HttpResponse(200, Some(Json.toJson(expected))))

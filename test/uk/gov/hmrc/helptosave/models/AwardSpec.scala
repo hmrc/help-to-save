@@ -17,16 +17,18 @@
 package uk.gov.hmrc.helptosave.models
 
 import org.joda.time.LocalDate
-import org.scalatest.{Matchers, WordSpec}
 import play.api.libs.json._
+import uk.gov.hmrc.helptosave.utils.TestSupport
 
 
-class AwardSpec extends WordSpec with Matchers {
+class AwardSpec extends TestSupport {
+
+  val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
   "Award" must {
 
     "have a valid JSON format instance" in {
-      val date = new LocalDate(2000, 1, 1)
+      val date = new LocalDate(2000, 1, 1) // scalastyle:ignore magic.number
       val awAwardStatus = AwAwardStatus
       val award = Award(AwAwardStatus.Open, date, date, 1, true, date)
 
@@ -46,12 +48,12 @@ class AwardSpec extends WordSpec with Matchers {
 
     "have the booleanFormat reads method return an error" in {
       val test = Award.booleanFormat.reads(JsString("something"))
-      test shouldBe JsError.apply("Could not read ae_etc1_wtc_entitlement: something")
+      test shouldBe JsError("Could not read ae_etc1_wtc_entitlement: something")
     }
 
     "have the booleanFormat reads method return an expected string error" in {
       val test = Award.booleanFormat.reads(JsNumber(123))//scalastyle:ignore magic.number
-      test shouldBe JsError.apply("Expected string but got for ae_etc1_wtc_entitlement 123")
+      test shouldBe JsError("Expected string but got for ae_etc1_wtc_entitlement 123")
     }
   }
 }

@@ -16,21 +16,32 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import org.joda.time.LocalDate
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.play.http.HeaderCarrier
+import java.time.LocalDate
 
-trait TestSupport extends MockFactory {
+import org.scalacheck.Gen
+import hmrc.smartstub._
+import uk.gov.hmrc.domain.Generator
+
+trait TestSupport extends WordSpecLike with Matchers with MockFactory {
+
+  implicit val ec = scala.concurrent.ExecutionContext.global
 
   implicit val hc = HeaderCarrier()
+
   val mockHttp = mock[WSHttp]
 
-  val nino = "nino"
+  private val hmrcGenerator = new Generator()
 
-  val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
+  val startDate = LocalDate.of(1800,1,1) // scalastyle:ignore magic.number
+  val endDate = LocalDate.of(2000,1,1) // scalastyle:ignore magic.number
+  val dateGen: Gen[LocalDate] = Gen.date(startDate, endDate)
 
-  val javadate = java.time.LocalDate.of(2017, 6, 12)// scalastyle:ignore magic.number
+  def randomDate() = dateGen.sample.getOrElse(sys.error("Could not generate date"))
 
+  def randomNINO() = hmrcGenerator.nextNino.value
 }
 

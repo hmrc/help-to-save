@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import org.scalatest.{Matchers, WordSpec}
 import play.api.libs.json.{JsError, JsNumber, JsString, JsSuccess}
+import uk.gov.hmrc.helptosave.utils.TestSupport
 
-class AwAwardStatusSpec extends WordSpec with Matchers {
+class AwAwardStatusSpec extends TestSupport {
 
   "AwAwardStatus" must {
 
@@ -80,12 +80,12 @@ class AwAwardStatusSpec extends WordSpec with Matchers {
 
     "return a JsError with message 'Could not read aw_award_status" in {
       val test = AwAwardStatus.aw_award_statusFormat.reads(JsString("a"))
-      test shouldBe JsError.apply("Could not read aw_award_status: a")
+      test shouldBe JsError("Could not read aw_award_status: a")
     }
 
     "return a JsError with message 'Expected string but got for aw_award_status 123" in {
       val test = AwAwardStatus.aw_award_statusFormat.reads(JsNumber(123))//scalastyle:ignore magic.number
-      test shouldBe JsError.apply("Expected string but got for aw_award_status 123")
+      test shouldBe JsError("Expected string but got for aw_award_status 123")
     }
 
   }

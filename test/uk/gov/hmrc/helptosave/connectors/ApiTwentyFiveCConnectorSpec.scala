@@ -17,21 +17,19 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import org.joda.time.LocalDate
-import org.scalatest._
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models.{ApiTwentyFiveCValues, AwAwardStatus, Award}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.WithFakeApplication
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
-class ApiTwentyFiveCConnectorSpec extends WordSpec with WithFakeApplication with Matchers with TestSupport {
+class ApiTwentyFiveCConnectorSpec extends TestSupport with WithFakeApplication {
 
+  val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
   def mockGet(url: String)(response: HttpResponse) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
@@ -48,6 +46,7 @@ class ApiTwentyFiveCConnectorSpec extends WordSpec with WithFakeApplication with
     Await.result(connector.getAwards(nino).value, 5.seconds)
 
   "getAwards" must {
+    val nino = randomNINO()
 
     val url = s"url/$nino"
 
