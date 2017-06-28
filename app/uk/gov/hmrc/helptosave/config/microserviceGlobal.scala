@@ -26,9 +26,6 @@ import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
 import uk.gov.hmrc.play.auth.microservice.filters.AuthorisationFilter
 import net.ceedubs.ficus.Ficus._
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
-import play.api.i18n.Messages.Implicits._
-import play.api.Play.current
-
 
 object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")

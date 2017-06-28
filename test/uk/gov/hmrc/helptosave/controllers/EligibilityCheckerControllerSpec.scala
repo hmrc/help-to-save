@@ -24,7 +24,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.mvc.{Result ⇒ PlayResult}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
+import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -35,7 +35,7 @@ import scala.concurrent.duration._
 class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
   class TestApparatus {
-    val eligibilityCheckService = mock[EligibilityCheckerService]
+    val eligibilityCheckService = mock[EligibilityCheckService]
     val userInfoAPIService = mock[UserInfoAPIService]
     val userInfoService = mock[UserInfoService]
 
@@ -46,7 +46,7 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
       controller.eligibilityCheck(nino, userDetailsURI, oauthAuthorisationCode)(FakeRequest())
 
     def mockEligibilityCheckerService(nino: NINO)(result: Option[Boolean]): Unit =
-      (eligibilityCheckService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+      (eligibilityCheckService.isEligible(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromOption[Future](result, "mocking failed eligibility check"))
 
