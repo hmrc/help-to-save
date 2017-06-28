@@ -35,17 +35,13 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
       .returning(Future.successful(response))
 
   lazy val connector = new EligibilityCheckConnectorImpl {
-    override val helpToSaveStubURL = "/help-to-save-stub"
-
-    override def serviceURL(nino: String) = s"checkEligibility/$nino"
-
     override val http = mockHttp
   }
 
   "check eligibility" must {
     val nino = randomNINO()
 
-    val url = s"/help-to-save-stub/checkEligibility/$nino"
+    val url = s"http://localhost:7002/help-to-save-stub/eligibilitycheck/$nino"
 
     "return true when the user is eligible" in {
 
@@ -59,6 +55,13 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
       mockGet(url)(HttpResponse(200, Some(Json.toJson(EligibilityResult(false))))) // scalastyle:ignore magic.number
 
       Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(false)
+    }
+
+    "handles errors parsing invalid json" in {
+
+      mockGet(url)(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
+
+      Await.result(connector.isEligible(nino).value, 5.seconds).isLeft shouldBe true
     }
   }
 }
