@@ -29,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 private[connectors] case class EligibilityResult(isEligible: Boolean) extends AnyVal
 
-object EligibilityResult {
+private[connectors] object EligibilityResult {
   implicit val format: Format[EligibilityResult] = Json.format[EligibilityResult]
 }
 
