@@ -25,7 +25,7 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.models.{Address, EligibilityCheckResult, OpenIDConnectUserInfo, UserInfo}
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckerService, UserInfoAPIService, UserInfoService}
+import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserInfoAPIService, UserInfoService}
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
@@ -33,13 +33,13 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckerService,
+class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckService,
                                            userInfoAPIService: UserInfoAPIService,
                                            userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
 
   def eligibilityCheck(nino: NINO, userDetailsURI: String, oauthAuthorisationCode: String): Action[AnyContent] = Action.async { implicit request ⇒
     val result: Result[Option[UserInfo]] =
-      eligibilityCheckService.getEligibility(nino).flatMap { isEligible ⇒
+      eligibilityCheckService.isEligible(nino).flatMap { isEligible ⇒
         if (isEligible) {
           val urlDecoded = URLDecoder.decode(userDetailsURI, "UTF-8")
           getUserInfo(urlDecoded, oauthAuthorisationCode, nino).map(Some(_))

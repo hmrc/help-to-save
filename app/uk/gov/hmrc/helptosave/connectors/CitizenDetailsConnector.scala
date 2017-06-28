@@ -19,12 +19,10 @@ package uk.gov.hmrc.helptosave.connectors
 import java.time.LocalDate
 
 import cats.data.EitherT
-import cats.instances.future._
 import com.google.inject.{ImplementedBy, Singleton}
 import play.api.libs.json.{Format, Json, Reads}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.CitizenDetailsResponse
-import uk.gov.hmrc.helptosave.models.Address
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.play.config.ServicesConfig

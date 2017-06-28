@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave
+package uk.gov.hmrc.helptosave.services
 
+import com.google.inject.{Inject, Singleton}
+import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
+import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-trait WithHeaderCarrier {
-  implicit val hc = HeaderCarrier()
+import scala.concurrent.ExecutionContext
+
+@Singleton
+class EligibilityCheckService @Inject()(eligCheckConnector: EligibilityCheckConnector) {
+
+  def isEligible(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Boolean] =
+    eligCheckConnector.isEligible(nino)
 }
+
