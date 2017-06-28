@@ -16,12 +16,8 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import cats.instances.future._
 import com.google.inject.{Inject, Singleton}
-import org.joda.time.LocalDate
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
-import uk.gov.hmrc.helptosave.models.AwAwardStatus.{Finalised, Provisional}
-import uk.gov.hmrc.helptosave.models.Award
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -31,6 +27,6 @@ import scala.concurrent.ExecutionContext
 class EligibilityCheckService @Inject()(eligCheckConnector: EligibilityCheckConnector) {
 
   def isEligible(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Boolean] =
-    eligCheckConnector.isEligible(nino).map(_.isEligible)
+    eligCheckConnector.isEligible(nino)
 }
 

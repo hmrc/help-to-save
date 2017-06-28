@@ -51,14 +51,14 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
 
       mockGet(url)(HttpResponse(200, Some(Json.toJson(EligibilityResult(true))))) // scalastyle:ignore magic.number
 
-      Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(EligibilityResult(true))
+      Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(true)
     }
 
     "return false when the user is not eligible" in {
 
       mockGet(url)(HttpResponse(200, Some(Json.toJson(EligibilityResult(false))))) // scalastyle:ignore magic.number
 
-      Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(EligibilityResult(false))
+      Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(false)
     }
   }
 }

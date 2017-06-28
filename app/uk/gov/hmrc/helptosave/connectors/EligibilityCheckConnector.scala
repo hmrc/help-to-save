@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class EligibilityResult(isEligible: Boolean) extends AnyVal
+private[connectors] case class EligibilityResult(isEligible: Boolean) extends AnyVal
 
 object EligibilityResult {
   implicit val format: Format[EligibilityResult] = Json.format[EligibilityResult]
@@ -35,7 +35,7 @@ object EligibilityResult {
 
 @ImplementedBy(classOf[EligibilityCheckConnectorImpl])
 trait EligibilityCheckConnector {
-  def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityResult]
+  def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Boolean]
 }
 
 @Singleton
@@ -47,9 +47,9 @@ class EligibilityCheckConnectorImpl extends EligibilityCheckConnector with Servi
 
   val http = new WSHttp
 
-  override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityResult] =
-    EitherT[Future, String, EligibilityResult](http.get(s"$helpToSaveStubURL/${serviceURL(nino)}").map {
-      _.parseJson[EligibilityResult]
+  override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Boolean] =
+    EitherT[Future, String, Boolean](http.get(s"$helpToSaveStubURL/${serviceURL(nino)}").map {
+      _.parseJson[EligibilityResult].right.map(_.isEligible)
     }.recover {
       case e ⇒
         Left(s"Error encountered when checking eligibility: ${e.getMessage}")

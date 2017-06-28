@@ -31,7 +31,7 @@ class EligibilityCheckServiceSpec extends TestSupport {
   val eligibleNino = "AE123456C"
   val nonEligibleNino = "QQ123456C"
 
-  def mockEligibilityResult(nino: String)(result: EligibilityResult): Unit = {
+  def mockEligibilityResult(nino: String)(result: Boolean): Unit = {
     (mockEligibilityConnector.isEligible(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
       .returning(Result(Future.successful(result)))
@@ -39,9 +39,9 @@ class EligibilityCheckServiceSpec extends TestSupport {
 
   "EligibilityCheckerService " must {
     "return true when the user is eligible " in {
-      mockEligibilityResult(eligibleNino)(EligibilityResult(true))
+      mockEligibilityResult(eligibleNino)(true)
       val result = checkerService.isEligible(eligibleNino)
-      Await.result(result.value, 3.seconds).fold(_ ⇒ false, identity) shouldBe true
+      Await.result(result.value, 3.seconds) shouldBe Right(true)
     }
 
   }
