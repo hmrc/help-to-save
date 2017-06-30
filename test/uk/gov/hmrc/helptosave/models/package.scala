@@ -16,15 +16,12 @@
 
 package uk.gov.hmrc.helptosave
 
-import java.text.SimpleDateFormat
 import java.time.LocalDate
 
-import cats.Show
 import org.scalacheck.{Arbitrary, Gen}
 
 import scala.reflect.ClassTag
 import scala.reflect._
-import scala.util.Try
 
 package object models {
 
@@ -70,8 +67,9 @@ package object models {
       nino ← Gen.option(Gen.identifier)
       enrolments ← Gen.option(Gen.listOf(enrolmentArb.arbitrary))
       email ← Gen.option(Gen.identifier).map(_.map(_ + "@example.com"))
+      countryCode ← Gen.option(Gen.const("JP"))
     } yield OpenIDConnectUserInfo(name, surname, middleName,
-      address.map( a ⇒ OpenIDConnectUserInfo.Address(a.lines.mkString("\n"), a.postcode, a.country)),
+      address.map( a ⇒ OpenIDConnectUserInfo.Address(a.lines.mkString("\n"), a.postcode, a.country, countryCode)),
       dob, nino, enrolments, email)
     )
 

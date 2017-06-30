@@ -82,7 +82,7 @@ class UserInfoAPIConnectorImplSpec extends TestSupport with GeneratorDrivenPrope
         "return the user info contained in the JSON response" in {
           val userInfo = OpenIDConnectUserInfo(
             Some("Bob"), Some("Bobby"), Some("Bobber"),
-            Some(OpenIDConnectUserInfo.Address("1 the Street\nThe Place", Some("ABC123"), Some("GB"))),
+            Some(OpenIDConnectUserInfo.Address("1 the Street\nThe Place", Some("ABC123"), None, Some("GB"))),
             Some(LocalDate.now()), Some("nino"), None, Some("email@abc.com"))
 
           mockGet(tokens, HttpResponse(Status.OK, Some(Json.toJson(userInfo))))
