@@ -91,7 +91,7 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
         Address(
           a.formatted.split("\n").toList,
           a.postal_code,
-          None)   // can't use country from user info API or the other sources - they aren't ISO country codes
+          a.code)   // can't use country from user info API or the other sources - they aren't ISO country codes
       }.getOrElse(userInfo.address.copy(country = None))
     )
   }

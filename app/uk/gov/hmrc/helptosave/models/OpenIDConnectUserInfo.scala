@@ -38,7 +38,8 @@ object OpenIDConnectUserInfo{
 
   case class Address(formatted: String,
                      postal_code: Option[String],
-                     country: Option[String])
+                     country: Option[String],
+                     code: Option[String])
 
   case class EnrolmentIdentifier(key: String, value: String)
 
