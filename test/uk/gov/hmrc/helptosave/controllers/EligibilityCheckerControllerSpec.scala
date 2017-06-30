@@ -131,7 +131,7 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
           checkResult.nino shouldBe nino
 
           // country code can only come from user info API
-          checkResult.address.country shouldBe apiUserInfo.address.flatMap(_.code)
+          checkResult.address.country shouldBe apiUserInfo.address.flatMap(_.code.map(_.take(2)))
         }
       }
 
