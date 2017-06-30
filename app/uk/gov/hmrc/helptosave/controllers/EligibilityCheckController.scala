@@ -91,8 +91,10 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
         Address(
           a.formatted.split("\n").toList,
           a.postal_code,
-          a.code)   // can't use country from user info API or the other sources - they aren't ISO country codes
-      }.getOrElse(userInfo.address.copy(country = None))
+          // user info API returns ISO 3166-2 codes: the first two characters of it
+          // is the ISO 3166-1 alpha-2 code that we want (see https://en.wikipedia.org/wiki/ISO_3166-2)
+          a.code.map(_.take(2)))
+      }.getOrElse(userInfo.address.copy(country = None)) // citizen details doesn't acutally provide a country code - only its name
     )
   }
 
