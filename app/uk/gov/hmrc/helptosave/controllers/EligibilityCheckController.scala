@@ -16,86 +16,85 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.net.URLDecoder
-
-import cats.data.EitherT
+import cats.data.{EitherT, ValidatedNel}
 import cats.instances.future._
+import cats.syntax.cartesian._
+import cats.syntax.option._
 import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.models.{Address, EligibilityCheckResult, OpenIDConnectUserInfo, UserInfo}
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserInfoAPIService, UserInfoService}
+import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserInfoAPIService}
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 
 class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckService,
-                                           userInfoAPIService: UserInfoAPIService,
-                                           userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
+                                           userInfoAPIService: UserInfoAPIService)(implicit ec: ExecutionContext) extends BaseController {
 
-  def eligibilityCheck(nino: NINO, userDetailsURI: String, oauthAuthorisationCode: String): Action[AnyContent] = Action.async { implicit request ⇒
-    val result: Result[Option[UserInfo]] =
+  def eligibilityCheck(nino: NINO, oauthAuthorisationCode: String): Action[AnyContent] = Action.async { implicit request ⇒
+    val result: Result[Option[OpenIDConnectUserInfo]] =
       eligibilityCheckService.isEligible(nino).flatMap { isEligible ⇒
         if (isEligible) {
-          val urlDecoded = URLDecoder.decode(userDetailsURI, "UTF-8")
-          getUserInfo(urlDecoded, oauthAuthorisationCode, nino).map(Some(_))
+          userInfoAPIService.getUserInfo(oauthAuthorisationCode, nino).map(Some(_))
         } else {
-          EitherT.pure[Future, String, Option[UserInfo]](None)
+          EitherT.pure(None)
         }
       }
 
     result.fold(
+      // there was an error calling the services above
       error ⇒ {
         Logger.error(s"Could not perform eligibility check: $error")
         InternalServerError(error)
       },
-      userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(userInfo)))
+      _.fold(
+        // the user is ineligible
+        Ok(Json.toJson(EligibilityCheckResult(None)))
+      ) { apiUserInfo ⇒
+        // the user is eligible
+        toUserInfo(apiUserInfo, nino).fold(
+          { e ⇒
+            // the api user info couldn't be converted to user info
+            val message = s"Received invalid user info: ${e.toList.mkString(",")}"
+            Logger.error(message)
+            InternalServerError(message)
+          },
+          // the api user info was successfully converted to user info
+          userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(Some(userInfo))))
+
+        )
+
+      }
     )
   }
 
-  private def getUserInfo(userDetailsURI: String, oauthAuthorisationCode: String, nino: NINO)(implicit hc: HeaderCarrier): Result[UserInfo] =
-    for {
-      apiUserInfo ← userInfoAPIService.getUserInfo(oauthAuthorisationCode, nino)
-      userInfo ← userInfoService.getUserInfo(userDetailsURI, nino)
-    } yield combine(apiUserInfo, userInfo, nino)
+  private def toUserInfo(apiUserInfo: OpenIDConnectUserInfo, nino: NINO): ValidatedNel[String, UserInfo] = {
+    val firstNameCheck = apiUserInfo.given_name.toValidNel("First name missing")
+    val lastNameCheck = apiUserInfo.family_name.toValidNel("Last name missing")
+    val birthDateCheck = apiUserInfo.birthdate.toValidNel("Birth missing")
+    val emailCheck = apiUserInfo.email.toValidNel("Email missing")
+    val addressCheck = apiUserInfo.address.toValidNel("Address missing")
 
-
-  private def combine(apiUserInfo: OpenIDConnectUserInfo, userInfo: UserInfo, nino: NINO): UserInfo = {
-    // find out if any of the fields we are interested in from the user
-    // info API came back empty
-    val empty = List(
-      "given_name" → apiUserInfo.given_name.filter(_.nonEmpty),
-      "family_name" → apiUserInfo.family_name.filter(_.nonEmpty),
-      "birthdate" → apiUserInfo.birthdate.map(_.toString),
-      "address" → apiUserInfo.address.map(_.toString),
-      "address.formatted" → apiUserInfo.address.map(_.formatted).filter(_.nonEmpty),
-      "address.postal_code" → apiUserInfo.address.flatMap(_.postal_code).filter(_.nonEmpty),
-      "email" → apiUserInfo.email.filter(_.nonEmpty)
-    ).collect{ case (k, None) ⇒ k }
-
-    if(empty.nonEmpty){
-      Logger.warn(s"User info API returned empty fields: ${empty.mkString(",")} for NINO $nino")
+    (firstNameCheck |@| lastNameCheck |@| birthDateCheck |@| emailCheck |@| addressCheck).map {
+      case (firstName, surname, dob, email, address) ⇒
+        UserInfo(
+          firstName,
+          surname,
+          nino,
+          dob,
+          email,
+          Address(
+            address.formatted.split("\n").toList,
+            address.postal_code,
+            // user info API returns ISO 3166-2 codes: the first two characters of it
+            // is the ISO 3166-1 alpha-2 code that we want (see https://en.wikipedia.org/wiki/ISO_3166-2)
+            address.code.map(_.take(2)))
+        )
     }
-
-    UserInfo(
-      apiUserInfo.given_name.getOrElse(userInfo.forename),
-      apiUserInfo.family_name.getOrElse(userInfo.surname),
-      nino,
-      apiUserInfo.birthdate.getOrElse(userInfo.dateOfBirth),
-      apiUserInfo.email.getOrElse(userInfo.email),
-      apiUserInfo.address.map{ a ⇒
-        Address(
-          a.formatted.split("\n").toList,
-          a.postal_code,
-          // user info API returns ISO 3166-2 codes: the first two characters of it
-          // is the ISO 3166-1 alpha-2 code that we want (see https://en.wikipedia.org/wiki/ISO_3166-2)
-          a.code.map(_.take(2)))
-      }.getOrElse(userInfo.address.copy(country = None)) // citizen details doesn't acutally provide a country code - only its name
-    )
   }
 
 }

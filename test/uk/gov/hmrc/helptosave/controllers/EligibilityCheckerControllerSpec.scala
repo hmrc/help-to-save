@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import java.time.LocalDate
+
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -23,8 +25,9 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.mvc.{Result ⇒ PlayResult}
+import uk.gov.hmrc.helptosave.controllers.EligibilityCheckerControllerSpec.TestUserInfo
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserInfoAPIService, UserInfoService}
+import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserInfoAPIService}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -37,48 +40,38 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
   class TestApparatus {
     val eligibilityCheckService = mock[EligibilityCheckService]
     val userInfoAPIService = mock[UserInfoAPIService]
-    val userInfoService = mock[UserInfoService]
 
     def doRequest(nino: String,
-                  userDetailsURI: String,
                   oauthAuthorisationCode: String,
                   controller: EligibilityCheckController): Future[PlayResult] =
-      controller.eligibilityCheck(nino, userDetailsURI, oauthAuthorisationCode)(FakeRequest())
+      controller.eligibilityCheck(nino, oauthAuthorisationCode)(FakeRequest())
 
     def mockEligibilityCheckerService(nino: NINO)(result: Option[Boolean]): Unit =
       (eligibilityCheckService.isEligible(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromOption[Future](result, "mocking failed eligibility check"))
 
-    def mockUserInfoService(nino: NINO, userDetailsURI: String)(userInfo: Option[UserInfo]): Unit =
-      (userInfoService.getUserInfo(_: String, _: NINO)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(userDetailsURI, nino, *, *)
-        .returning {
-          EitherT.fromOption[Future](userInfo, "mocking failed user info")
-        }
 
     def mockUserInfoAPIService(authorisationCode: String, nino: String)(result: Option[OpenIDConnectUserInfo]): Unit =
       (userInfoAPIService.getUserInfo(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(authorisationCode, nino, *, *)
       .returning(EitherT.fromOption[Future](result, "Oh no!"))
 
-    val controller = new EligibilityCheckController(eligibilityCheckService, userInfoAPIService, userInfoService)
+    val controller = new EligibilityCheckController(eligibilityCheckService, userInfoAPIService)
   }
 
   "The EligibilityCheckerController" when {
 
     "handling requests to perform eligibility checks" must {
 
-      val userDetailsURI = "uri"
       val oauthAuthorisationCode = "authorisation-code"
-      val userDetails = randomUserInfo()
       val nino = randomNINO()
 
       def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 
       "ask the EligibilityCheckerService if the user is eligible" in new TestApparatus {
         mockEligibilityCheckerService(nino)(None)
-        await(doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller))
+        await(doRequest(nino, oauthAuthorisationCode, controller))
       }
 
       "ask the UserInfoAPIService for user info if the user is eligible" in new TestApparatus {
@@ -86,28 +79,17 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
           mockEligibilityCheckerService(nino)(Some(true))
           mockUserInfoAPIService(oauthAuthorisationCode, nino)(None)
         }
-        await(doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller))
+        await(doRequest(nino, oauthAuthorisationCode, controller))
 
       }
 
-      "ask the UserInfoService for user info if the user is eligible" in new TestApparatus {
-        inSequence {
-          mockEligibilityCheckerService(nino)(Some(true))
-          mockUserInfoAPIService(oauthAuthorisationCode, nino)(Some(randomAPIUserInfo()))
-          mockUserInfoService(nino, userDetailsURI)(None)
-        }
-        await(doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller))
-      }
-
-      "return the user details once it retrieves them" in new TestApparatus {
-        forAll{ apiUserInfo: OpenIDConnectUserInfo ⇒
+      "return the user details once it retrieves them if all fields are present" in new TestApparatus {
           inSequence {
             mockEligibilityCheckerService(nino)(Some(true))
-            mockUserInfoAPIService(oauthAuthorisationCode, nino)(Some(apiUserInfo))
-            mockUserInfoService(nino, userDetailsURI)(Some(userDetails))
+            mockUserInfoAPIService(oauthAuthorisationCode, nino)(Some(TestUserInfo.apiUserInfo))
           }
 
-          val result = doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller)
+          val result = doRequest(nino, oauthAuthorisationCode, controller)
           status(result) shouldBe 200
 
           val jsValue = Json.fromJson[EligibilityCheckResult](contentAsJson(result))
@@ -116,31 +98,37 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
 
           val checkResult = jsValue.get.result.get
 
-          // test that the APIUserInfo field is favored over the corresponding UserInfo field
-          def test[T](field: T)(extractor: OpenIDConnectUserInfo ⇒ Option[T], backup: UserInfo ⇒ T): Unit =
-            field shouldBe extractor(apiUserInfo).getOrElse(backup(userDetails))
-
-          test(checkResult.forename)(_.given_name, _.forename)
-          test(checkResult.surname)(_.family_name, _.surname)
-          test(checkResult.dateOfBirth)(_.birthdate, _.dateOfBirth)
-          test(checkResult.address.lines)(_.address.map(_.formatted.split("\n").toList), _.address.lines)
-          test(checkResult.address.postcode)(_.address.map(_.postal_code), _.address.postcode)
-          test(checkResult.email)(_.email, _.email)
-
-          // these fields don't come from APIUserInfo
-          checkResult.nino shouldBe nino
-
-          // country code can only come from user info API
-          checkResult.address.country shouldBe apiUserInfo.address.flatMap(_.code.map(_.take(2)))
-        }
+        checkResult shouldBe TestUserInfo.userInfo(nino)
       }
+
+
+      "return a 500 if user details are missing" in new TestApparatus {
+
+        def test(userInfo: OpenIDConnectUserInfo): Unit = {
+          inSequence {
+            mockEligibilityCheckerService(nino)(Some(true))
+            mockUserInfoAPIService(oauthAuthorisationCode, nino)(Some(userInfo))
+          }
+
+          val result = doRequest(nino, oauthAuthorisationCode, controller)
+          status(result) shouldBe 500
+        }
+
+        test(TestUserInfo.apiUserInfo.copy(given_name = None))
+        test(TestUserInfo.apiUserInfo.copy(family_name = None))
+        test(TestUserInfo.apiUserInfo.copy(birthdate = None))
+        test(TestUserInfo.apiUserInfo.copy(email = None))
+        test(TestUserInfo.apiUserInfo.copy(address = None))
+      }
+
+
 
       "not ask the UserInfoService for user info if the user is ineligible" in new TestApparatus {
         inSequence {
           mockEligibilityCheckerService(nino)(Some(false))
         }
 
-        val result = doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller)
+        val result = doRequest(nino, oauthAuthorisationCode, controller)
         status(result) shouldBe 200
         Json.fromJson[EligibilityCheckResult](contentAsJson(result)).get shouldBe
           EligibilityCheckResult(None)
@@ -151,7 +139,7 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
           mockEligibilityCheckerService(nino)(None)
         }
 
-        val result = doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller)
+        val result = doRequest(nino, oauthAuthorisationCode, controller)
         status(result) shouldBe 500
       }
 
@@ -161,22 +149,35 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
           mockUserInfoAPIService(oauthAuthorisationCode, nino)(None)
         }
 
-        val result = doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller)
-        status(result) shouldBe 500
-      }
-
-      "return with a status 500 if the user info service fails" in new TestApparatus {
-        inSequence {
-          mockEligibilityCheckerService(nino)(Some(true))
-          mockUserInfoAPIService(oauthAuthorisationCode, nino)(Some(randomAPIUserInfo()))
-          mockUserInfoService(nino, userDetailsURI)(None)
-        }
-
-        val result = doRequest(nino, userDetailsURI, oauthAuthorisationCode, controller)
+        val result = doRequest(nino, oauthAuthorisationCode, controller)
         status(result) shouldBe 500
       }
 
     }
+  }
+
+}
+
+
+object EligibilityCheckerControllerSpec {
+
+  object TestUserInfo{
+    val forename = "Forename"
+    val surname = "Surname"
+    val addressLines = List("line1", "line2")
+    val postcode = "postcode"
+    val countryCode = "countrycode"
+    val email = "email"
+    val dateOfBirth = LocalDate.now()
+
+    val apiUserInfo = OpenIDConnectUserInfo(
+      Some(forename), Some(surname), None,
+      Some(OpenIDConnectUserInfo.Address(addressLines.mkString("\n"), Some(postcode), None, Some(countryCode))),
+      Some(dateOfBirth), None, None, Some(email)
+    )
+
+    def userInfo(nino: NINO) = UserInfo(
+      forename, surname, nino, dateOfBirth, email, Address(addressLines, Some(postcode), Some(countryCode.take(2))))
   }
 
 }
