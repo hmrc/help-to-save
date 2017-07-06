@@ -98,14 +98,22 @@ class UserInfoAPIConnectorImplSpec extends TestSupport with GeneratorDrivenPrope
           }
 
 
-          // TODO: currently the following test fails - since all of the fields
-          // TODO: are optional, the JSON gets converted to UserInfo with all
-          // TODO: the fields set to None
-          "the response contains JSON which is not of the correct format" ignore {
+          "the response contains JSON which is not of the correct format" in {
+            // TODO: currently the following test fails - since all of the fields
+            // TODO: are optional, the JSON gets converted to UserInfo with all
+            // TODO: the fields set to None
+            // mockGet(tokens, HttpResponse(Status.OK, Some(Json.parse(
+            //   """
+            //     |{
+            //     |  "key" : "value"
+            //     |}
+            //   """.stripMargin))))
+            // isUnknownError(doRequest()) shouldBe true
+
             mockGet(tokens, HttpResponse(Status.OK, Some(Json.parse(
               """
                 |{
-                |  "key" : "value"
+                |  "given_name" : 1
                 |}
               """.stripMargin))))
             isUnknownError(doRequest()) shouldBe true
