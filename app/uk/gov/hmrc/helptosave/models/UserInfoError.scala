@@ -30,6 +30,8 @@ case object DateOfBirth extends MissingUserInfo
 
 case object Contact extends MissingUserInfo
 
+case object Unknown extends MissingUserInfo
+
 object MissingUserInfo {
 
   implicit val missingInfoFormat: Format[MissingUserInfo] = new Format[MissingUserInfo] {
@@ -40,6 +42,7 @@ object MissingUserInfo {
         case JsString("Email") ⇒ Email
         case JsString("DateOfBirth") ⇒ DateOfBirth
         case JsString("Contact") ⇒ Contact
+        case _ ⇒ Unknown
       }
 
       JsSuccess(errorType)
@@ -52,6 +55,7 @@ object MissingUserInfo {
         case Email => "Email"
         case DateOfBirth => "DateOfBirth"
         case Contact ⇒ "Contact"
+        case _ ⇒ "Unknown"
       }
       JsString(result)
     }
@@ -64,6 +68,3 @@ object MissingUserInfos {
   implicit val missingInfosFormat: Format[MissingUserInfos] = Json.format[MissingUserInfos]
 
 }
-
-
-
