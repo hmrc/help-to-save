@@ -18,42 +18,24 @@ package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json._
 
-import scala.util.Try
-
 case class EligibilityCheckResult(result: Either[MissingUserInfos, Option[UserInfo]])
 
 object EligibilityCheckResult {
 
   implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = new Format[EligibilityCheckResult] {
-
     override def reads(json: JsValue): JsResult[EligibilityCheckResult] = {
+      (json \ "result").toOption match {
+        case None ⇒
+          JsError("Could not find 'result' path in JSON")
 
-      def readUserInfo(result: JsLookupResult): Either[String, EligibilityCheckResult] = {
-
-        result.get match {
-          case maybeUser: JsObject ⇒
-            maybeUser.asOpt[UserInfo] match {
-              case Some(userInfo) ⇒ Right(EligibilityCheckResult(Right(Some(userInfo))))
-              case _ ⇒ Left("Invalid Json for reading UserInfo")
-            }
-          case _ ⇒ Right(EligibilityCheckResult(Right(None)))
-        }
-      }
-
-      val mayBeEligCheckResult =
-        Try(json \ "result").toOption.flatMap(
-          result ⇒ {
-            val elig = result.get.asOpt[MissingUserInfos].fold(
-              readUserInfo(result)
-            )(missingInfos ⇒ Right(EligibilityCheckResult(Left(missingInfos))))
-
-            Some(elig)
-          }
-        )
-
-      mayBeEligCheckResult match {
-        case Some(Right(eligResult)) ⇒ JsSuccess(eligResult)
-        case _ ⇒ JsError("Invalid EligibilityCheckResult Json")
+        case Some(jsValue) ⇒
+          jsValue.validate[MissingUserInfos].fold(e1 ⇒
+            jsValue.validateOpt[UserInfo].fold (e2 ⇒
+              JsError(e1 ++ e2),
+              maybeUserInfo ⇒ JsSuccess(EligibilityCheckResult(Right(maybeUserInfo)))
+            ),
+            missing ⇒ JsSuccess(EligibilityCheckResult(Left(missing)))
+          )
       }
     }
 
