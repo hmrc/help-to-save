@@ -25,6 +25,7 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
+import uk.gov.hmrc.helptosave.models.MissingUserInfo._
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.services.UserInfoAPIService
 import uk.gov.hmrc.helptosave.util.{NINO, Result}

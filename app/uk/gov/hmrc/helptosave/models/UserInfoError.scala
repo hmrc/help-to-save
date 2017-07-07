@@ -20,32 +20,28 @@ import play.api.libs.json._
 
 trait MissingUserInfo
 
-case object GivenName extends MissingUserInfo
-
-case object Surname extends MissingUserInfo
-
-case object Email extends MissingUserInfo
-
-case object DateOfBirth extends MissingUserInfo
-
-case object Contact extends MissingUserInfo
-
-case object Unknown extends MissingUserInfo
-
 object MissingUserInfo {
+
+  case object GivenName extends MissingUserInfo
+
+  case object Surname extends MissingUserInfo
+
+  case object Email extends MissingUserInfo
+
+  case object DateOfBirth extends MissingUserInfo
+
+  case object Contact extends MissingUserInfo
 
   implicit val missingInfoFormat: Format[MissingUserInfo] = new Format[MissingUserInfo] {
     override def reads(json: JsValue): JsResult[MissingUserInfo] = {
-      val errorType = json match {
-        case JsString("GivenName") ⇒ GivenName
-        case JsString("Surname") ⇒ Surname
-        case JsString("Email") ⇒ Email
-        case JsString("DateOfBirth") ⇒ DateOfBirth
-        case JsString("Contact") ⇒ Contact
-        case _ ⇒ Unknown
+      json match {
+        case JsString("GivenName") ⇒ JsSuccess(GivenName)
+        case JsString("Surname") ⇒ JsSuccess(Surname)
+        case JsString("Email") ⇒ JsSuccess(Email)
+        case JsString("DateOfBirth") ⇒ JsSuccess(DateOfBirth)
+        case JsString("Contact") => JsSuccess(Contact)
+        case _ => JsError("unknown field for MissingUserInfo")
       }
-
-      JsSuccess(errorType)
     }
 
     override def writes(missingType: MissingUserInfo): JsValue = {
@@ -55,7 +51,6 @@ object MissingUserInfo {
         case Email => "Email"
         case DateOfBirth => "DateOfBirth"
         case Contact ⇒ "Contact"
-        case _ ⇒ "Unknown"
       }
       JsString(result)
     }

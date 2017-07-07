@@ -28,6 +28,7 @@ import play.api.mvc.{Result => PlayResult}
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.controllers.EligibilityCheckerControllerSpec.TestUserInfo
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.MissingUserInfo._
 import uk.gov.hmrc.helptosave.services.UserInfoAPIService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
@@ -128,7 +129,7 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
         test(TestUserInfo.apiUserInfo.copy(email = None), Email)
         test(TestUserInfo.apiUserInfo.copy(address = None), Contact)
       }
-      
+
       "not ask the UserInfoService for user info if the user is ineligible" in new TestApparatus {
         inSequence {
           mockEligibilityCheckerService(nino)(Some(false))
