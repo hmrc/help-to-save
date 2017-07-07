@@ -16,14 +16,51 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json._
 
-/**
-  * The result of performing an eligibility check. If the user is eligible
-  * return their details, otherwise return [[None]]
-  */
-case class EligibilityCheckResult(result: Option[UserInfo])
+import scala.util.Try
+
+case class EligibilityCheckResult(result: Either[MissingUserInfos, Option[UserInfo]])
 
 object EligibilityCheckResult {
-  implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = Json.format[EligibilityCheckResult]
+
+  implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = new Format[EligibilityCheckResult] {
+
+    override def reads(json: JsValue): JsResult[EligibilityCheckResult] = {
+
+      def readUserInfo(result: JsLookupResult): Either[String, EligibilityCheckResult] = {
+
+        result.get match {
+          case maybeUser: JsObject ⇒
+            maybeUser.asOpt[UserInfo] match {
+              case Some(userInfo) ⇒ Right(EligibilityCheckResult(Right(Some(userInfo))))
+              case _ ⇒ Left("Invalid Json for reading UserInfo")
+            }
+          case _ ⇒ Right(EligibilityCheckResult(Right(None)))
+        }
+      }
+
+      val mayBeEligCheckResult =
+        Try(json \ "result").toOption.flatMap(
+          result ⇒ {
+            val elig = result.get.asOpt[MissingUserInfos].fold(
+              readUserInfo(result)
+            )(missingInfos ⇒ Right(EligibilityCheckResult(Left(missingInfos))))
+
+            Some(elig)
+          }
+        )
+
+      mayBeEligCheckResult match {
+        case Some(Right(eligResult)) ⇒ JsSuccess(eligResult)
+        case _ ⇒ JsError("Invalid EligibilityCheckResult Json")
+      }
+    }
+
+    override def writes(o: EligibilityCheckResult): JsValue = Json.obj(
+      o.result.fold(
+        missingInfos ⇒ "result" -> Json.toJson(missingInfos),
+        maybeUserInfo ⇒ "result" -> Json.toJson(maybeUserInfo)
+      ))
+  }
 }

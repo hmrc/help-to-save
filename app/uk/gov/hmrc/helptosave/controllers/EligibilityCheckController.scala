@@ -24,20 +24,21 @@ import com.google.inject.Inject
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.helptosave.models.{Address, EligibilityCheckResult, OpenIDConnectUserInfo, UserInfo}
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserInfoAPIService}
+import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
+import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.services.UserInfoAPIService
 import uk.gov.hmrc.helptosave.util.{NINO, Result}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext
 
 
-class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckService,
+class EligibilityCheckController @Inject()(eligCheckConnector: EligibilityCheckConnector,
                                            userInfoAPIService: UserInfoAPIService)(implicit ec: ExecutionContext) extends BaseController {
 
   def eligibilityCheck(nino: NINO, oauthAuthorisationCode: String): Action[AnyContent] = Action.async { implicit request ⇒
     val result: Result[Option[OpenIDConnectUserInfo]] =
-      eligibilityCheckService.isEligible(nino).flatMap { isEligible ⇒
+      eligCheckConnector.isEligible(nino).flatMap { isEligible ⇒
         if (isEligible) {
           userInfoAPIService.getUserInfo(oauthAuthorisationCode, nino).map(Some(_))
         } else {
@@ -53,31 +54,28 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
       },
       _.fold(
         // the user is ineligible
-        Ok(Json.toJson(EligibilityCheckResult(None)))
+        Ok(Json.toJson(EligibilityCheckResult(Right(None))))
       ) { apiUserInfo ⇒
         // the user is eligible
         toUserInfo(apiUserInfo, nino).fold(
           { e ⇒
             // the api user info couldn't be converted to user info
-            val message = s"Received invalid user info: ${e.toList.mkString(",")}"
-            Logger.error(message)
-            InternalServerError(message)
+            val missingInfos = MissingUserInfos(e.toList.to[Set])
+            Logger.error(s"user $nino has missing information: ${missingInfos.missingInfo.mkString(",")}")
+            Ok(Json.toJson(EligibilityCheckResult(Left(missingInfos))))
           },
           // the api user info was successfully converted to user info
-          userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(Some(userInfo))))
-
-        )
-
+          userInfo ⇒ Ok(Json.toJson(EligibilityCheckResult(Right(Some(userInfo))))))
       }
     )
   }
 
-  private def toUserInfo(apiUserInfo: OpenIDConnectUserInfo, nino: NINO): ValidatedNel[String, UserInfo] = {
-    val firstNameCheck = apiUserInfo.given_name.toValidNel("First name missing")
-    val lastNameCheck = apiUserInfo.family_name.toValidNel("Last name missing")
-    val birthDateCheck = apiUserInfo.birthdate.toValidNel("Birth missing")
-    val emailCheck = apiUserInfo.email.toValidNel("Email missing")
-    val addressCheck = apiUserInfo.address.toValidNel("Address missing")
+  private def toUserInfo(apiUserInfo: OpenIDConnectUserInfo, nino: NINO): ValidatedNel[MissingUserInfo, UserInfo] = {
+    val firstNameCheck = apiUserInfo.given_name.toValidNel[MissingUserInfo](GivenName)
+    val lastNameCheck = apiUserInfo.family_name.toValidNel(Surname)
+    val birthDateCheck = apiUserInfo.birthdate.toValidNel(DateOfBirth)
+    val emailCheck = apiUserInfo.email.toValidNel(Email)
+    val addressCheck = apiUserInfo.address.toValidNel(Contact)
 
     (firstNameCheck |@| lastNameCheck |@| birthDateCheck |@| emailCheck |@| addressCheck).map {
       case (firstName, surname, dob, email, address) ⇒
