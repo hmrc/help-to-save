@@ -16,14 +16,33 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json._
 
-/**
-  * The result of performing an eligibility check. If the user is eligible
-  * return their details, otherwise return [[None]]
-  */
-case class EligibilityCheckResult(result: Option[UserInfo])
+case class EligibilityCheckResult(result: Either[MissingUserInfos, Option[UserInfo]])
 
 object EligibilityCheckResult {
-  implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = Json.format[EligibilityCheckResult]
+
+  implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = new Format[EligibilityCheckResult] {
+    override def reads(json: JsValue): JsResult[EligibilityCheckResult] = {
+      (json \ "result").toOption match {
+        case None ⇒
+          JsError("Could not find 'result' path in JSON")
+
+        case Some(jsValue) ⇒
+          jsValue.validate[MissingUserInfos].fold(e1 ⇒
+            jsValue.validateOpt[UserInfo].fold (e2 ⇒
+              JsError(e1 ++ e2),
+              maybeUserInfo ⇒ JsSuccess(EligibilityCheckResult(Right(maybeUserInfo)))
+            ),
+            missing ⇒ JsSuccess(EligibilityCheckResult(Left(missing)))
+          )
+      }
+    }
+
+    override def writes(o: EligibilityCheckResult): JsValue = Json.obj(
+      o.result.fold(
+        missingInfos ⇒ "result" -> Json.toJson(missingInfos),
+        maybeUserInfo ⇒ "result" -> Json.toJson(maybeUserInfo)
+      ))
+  }
 }

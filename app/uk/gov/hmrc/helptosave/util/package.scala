@@ -16,20 +16,13 @@
 
 package uk.gov.hmrc.helptosave
 
-import cats.instances.future._
 import cats.data.EitherT
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 package object util {
 
   type NINO = String
 
   type Result[A] = EitherT[Future, String, A]
-
-  object Result {
-    def apply[A](a: Future[A])(implicit ec: ExecutionContext): Result[A] =
-      EitherT.right[Future, String, A](a)
-  }
-
 }
