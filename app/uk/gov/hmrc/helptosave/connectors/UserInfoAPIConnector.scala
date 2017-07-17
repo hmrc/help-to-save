@@ -23,6 +23,7 @@ import play.api.http.Status
 import play.api.libs.json.{Format, JsError, JsSuccess, Json}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.connectors.UserInfoAPIConnector.{APIError, TokenExpiredError, UnknownError}
+import uk.gov.hmrc.helptosave.models.OpenIDConnectUserInfo.Address
 import uk.gov.hmrc.helptosave.models.{OAuthTokens, OpenIDConnectUserInfo}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
@@ -84,15 +85,31 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
     })
   }
 
+  private def returnUserInfoWithCC(userInfo: OpenIDConnectUserInfo): OpenIDConnectUserInfo = {
+    val addressWithCountry : Option[Address] =  userInfo.address match {
+      case Some(address) ⇒
+        val code1 = address.code match {
+          case Some(codee) ⇒ codee
+          case _ ⇒ "GB"
+        }
+        Some(address.copy(code = Some(code1)))
+      case _ ⇒ None
+    }
+
+    userInfo.copy(address =  addressWithCountry)
+
+  }
+
   private def handleOKResponse(response: HttpResponse): Either[APIError,OpenIDConnectUserInfo] =
     Try(response.json).map(_.validate[OpenIDConnectUserInfo]) match {
       case Success(JsSuccess(userInfo, _)) ⇒
-        Right(userInfo)
+        Right(returnUserInfoWithCC(userInfo))
       case Success(error: JsError) ⇒
         failure(s"Could not parse JSON response from user info API: ${error.prettyPrint()}")
       case Failure(_) ⇒
         failure(s"Response from user info API was not JSON. Response body was ${response.body}")
     }
+
 
   private def handleUnauthorisedResponse(response: HttpResponse): Either[APIError,OpenIDConnectUserInfo] = {
     val errorString = s"Call to user info API came back with status ${Status.UNAUTHORIZED} (unauthorised)"
