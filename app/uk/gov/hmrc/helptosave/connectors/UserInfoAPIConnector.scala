@@ -95,9 +95,7 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
         Some(address.copy(code = Some(code1)))
       case _ ⇒ None
     }
-
     userInfo.copy(address =  addressWithCountry)
-
   }
 
   private def handleOKResponse(response: HttpResponse): Either[APIError,OpenIDConnectUserInfo] =
