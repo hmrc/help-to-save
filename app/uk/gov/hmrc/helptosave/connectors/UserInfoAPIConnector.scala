@@ -110,7 +110,6 @@ class UserInfoAPIConnectorImpl @Inject()(configuration: Configuration, ec: Execu
         failure(s"Response from user info API was not JSON. Response body was ${response.body}")
     }
 
-
   private def handleUnauthorisedResponse(response: HttpResponse): Either[APIError,OpenIDConnectUserInfo] = {
     val errorString = s"Call to user info API came back with status ${Status.UNAUTHORIZED} (unauthorised)"
 
