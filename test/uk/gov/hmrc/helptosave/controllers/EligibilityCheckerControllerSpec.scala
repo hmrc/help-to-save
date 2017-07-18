@@ -24,7 +24,7 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.mvc.{Result => PlayResult}
+import play.api.mvc.{Result ⇒ PlayResult}
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.controllers.EligibilityCheckerControllerSpec.TestUserInfo
 import uk.gov.hmrc.helptosave.models._
@@ -103,6 +103,31 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
         checkResult shouldBe TestUserInfo.userInfo(nino)
       }
 
+      "return the user details with country code set as GB when it was given as None" in new TestApparatus {
+        val address = OpenIDConnectUserInfo.Address("1 the Street\nThe Place", Some("ABC123"), None, None)
+        val userInfo = OpenIDConnectUserInfo(
+          Some("Bob"), Some("Bobby"), Some("Bobber"),
+          Some(address), Some(LocalDate.now()), Some("nino"), None, Some("email@abc.com"))
+
+        inSequence {
+          mockEligibilityCheckerService(nino)(Some(true))
+          mockUserInfoAPIService(oauthAuthorisationCode, nino)(Some(userInfo))
+        }
+
+        val result = doRequest(nino, oauthAuthorisationCode, controller)
+        status(result) shouldBe 200
+
+        val jsValue = Json.fromJson[EligibilityCheckResult](contentAsJson(result))
+        jsValue.isSuccess shouldBe true
+        jsValue.get.result.isRight shouldBe true
+
+        val checkResult = jsValue.get.result.right.get.get
+
+        val newAddress = address.copy(code = Some("GB"))
+        val newUserInfo = userInfo.copy(address = Some(newAddress))
+
+        checkResult.address.country shouldBe Some("GB")
+      }
 
       "report any missing user details back to the user" in new TestApparatus {
 
