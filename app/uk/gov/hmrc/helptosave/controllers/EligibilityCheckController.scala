@@ -91,8 +91,10 @@ class EligibilityCheckController @Inject()(eligCheckConnector: EligibilityCheckC
             address.postal_code,
             // user info API returns ISO 3166-2 codes: the first two characters of it
             // is the ISO 3166-1 alpha-2 code that we want (see https://en.wikipedia.org/wiki/ISO_3166-2)
-            address.code.map(_.take(2)))
+            // country code default is set to GB
+            Some(address.code.getOrElse("GB").take(2)))
         )
+
     }
   }
 
