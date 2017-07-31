@@ -43,43 +43,9 @@ package object models {
     } yield UserInfo(name, surname, nino, dob, email, address))
 
 
-  implicit val enrolmentIdentifierArb: Arbitrary[OpenIDConnectUserInfo.EnrolmentIdentifier] =
-    Arbitrary(for {
-      key ← Gen.identifier
-      value ← Gen.identifier
-    } yield OpenIDConnectUserInfo.EnrolmentIdentifier(key, value))
-
-
-  implicit val enrolmentArb: Arbitrary[OpenIDConnectUserInfo.Enrolment] =
-    Arbitrary(for {
-      key ← Gen.identifier
-      ids ← Gen.listOf(enrolmentIdentifierArb.arbitrary)
-      state ← Gen.alphaNumStr
-    } yield OpenIDConnectUserInfo.Enrolment(key, ids, state))
-
-  implicit val apiUserInfoArb: Arbitrary[OpenIDConnectUserInfo] =
-    Arbitrary(for {
-      name ← Gen.option(Gen.identifier)
-      middleName ← Gen.option(Gen.identifier)
-      surname ← Gen.option(Gen.identifier)
-      address ← Gen.option(addressArb.arbitrary)
-      dob ← Gen.option(Gen.choose(0L, 100L).map(LocalDate.ofEpochDay))
-      nino ← Gen.option(Gen.identifier)
-      enrolments ← Gen.option(Gen.listOf(enrolmentArb.arbitrary))
-      email ← Gen.option(Gen.identifier).map(_.map(_ + "@example.com"))
-      countryCode ← Gen.option(Gen.const("JP"))
-    } yield OpenIDConnectUserInfo(name, surname, middleName,
-      address.map( a ⇒ OpenIDConnectUserInfo.Address(a.lines.mkString("\n"), a.postcode, a.country, countryCode)),
-      dob, nino, enrolments, email)
-    )
-
-
-
-
   def sample[A: ClassTag](a: Arbitrary[A]): A = a.arbitrary.sample.getOrElse(
     sys.error(s"Could not generate ${classTag[A].getClass.getSimpleName}"))
 
-  def randomAPIUserInfo(): OpenIDConnectUserInfo = sample(apiUserInfoArb)
 
   def randomUserInfo(): UserInfo = sample(userInfoArb)
 
