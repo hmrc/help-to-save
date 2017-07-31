@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.CitizenDetailsAddress
 
 case class Address(lines: List[String],
                    postcode: Option[String],
@@ -25,5 +26,17 @@ case class Address(lines: List[String],
 object Address {
 
   implicit val addressFormat: Format[Address] = Json.format[Address]
+
+  def apply(citizenDetailsAddress: CitizenDetailsAddress): Address = Address(
+    List(
+      citizenDetailsAddress.line1,
+      citizenDetailsAddress.line2,
+      citizenDetailsAddress.line3,
+      citizenDetailsAddress.line4,
+      citizenDetailsAddress.line5
+    ).collect { case Some(s) if s.nonEmpty ⇒ s },
+    citizenDetailsAddress.postcode,
+    citizenDetailsAddress.country
+  )
 
 }

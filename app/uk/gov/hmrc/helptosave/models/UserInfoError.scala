@@ -57,9 +57,3 @@ object MissingUserInfo {
   }
 }
 
-case class MissingUserInfos(missingInfo: Set[MissingUserInfo])
-
-object MissingUserInfos {
-  implicit val missingInfosFormat: Format[MissingUserInfos] = Json.format[MissingUserInfos]
-
-}

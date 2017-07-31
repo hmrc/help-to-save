@@ -17,10 +17,13 @@
 package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json._
+import uk.gov.hmrc.helptosave.services.UserInfoService.UserInfoServiceError.MissingUserInfos
 
 case class EligibilityCheckResult(result: Either[MissingUserInfos, Option[UserInfo]])
 
 object EligibilityCheckResult {
+
+  implicit val missingInfosFormat: Format[MissingUserInfos] = Json.format[MissingUserInfos]
 
   implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = new Format[EligibilityCheckResult] {
     override def reads(json: JsValue): JsResult[EligibilityCheckResult] = {
