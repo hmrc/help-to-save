@@ -25,11 +25,23 @@ trait FakeRelationshipService extends BeforeAndAfterAll with ScalaFutures {
       get(urlPathMatching("/user-info-api.*"))
         .willReturn(
           aResponse()
-            .withStatus(Status.CREATED))
+            .withStatus(Status.CREATED)
+              .withBody("{\"given_name\": \"firstname\"," +
+                " \"family_name\" : \"surname\", " +
+                " \"middle_name\" : \"middle\", " +
+                " \"address\" : " +
+                "{ \"address\" : \"this is an address\", " +
+                " \"postcode\" : \"BN43 XXX\", " +
+                " \"country\" : \"United Kingdom\", " +
+                " \"countryCode\" : \"GB\" }, " +
+                " \"birthdate\" : \"1997, 12, 12\", " +
+                " \"nino\" : \"AG010123A\", " +
+                " \"hmrc_enrolments\" : \"None\", " +
+                " \"email\" : \"email@gmail.com\" }"))
         .build())
 
     wireMockServer.addStubMapping(
-      get(urlPathMatching("/help-to-save-stub/eligibilitycheck/AG010123C"))
+      get(urlPathMatching("/help-to-save-stub/eligibilitycheck/AG010123A"))
         .willReturn(
           aResponse()
             .withStatus(Status.CREATED)
@@ -40,7 +52,11 @@ trait FakeRelationshipService extends BeforeAndAfterAll with ScalaFutures {
       post(urlPathMatching("/help-to-save-stub/oauth/token"))
         .willReturn(
           aResponse()
-            .withStatus(Status.OK))
+            .withStatus(Status.OK)
+            .withBody("{\"client_id\" : \"AG010123A\"," +
+              "\"client_secret\" : \"secret\"," +
+              "\"redirect_uri\" : \"http://localhost:7000:something\"," +
+              " \"code\" : \"dsdvsdvfds\"}"))
         .build())
   }
 
