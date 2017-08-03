@@ -55,11 +55,6 @@ class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityC
           }
         }
 
-    Logger.info("*************************************")
-    Logger.info("oauthAuthorisationCode: " + oauthAuthorisationCode)
-    Logger.info("NINO: " + nino)
-    Logger.info("*************************************")
-
     result.fold(
       handleError,
       userInfo ⇒
