@@ -1,14 +1,12 @@
 package uk.gov.hmrc.helptosave.support
 
-import org.scalatest.{BeforeAndAfterAll, Suite}
-import org.scalatest.concurrent.ScalaFutures
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
-import play.api.http.Status
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
-trait FakeRelationshipService extends BeforeAndAfterAll with ScalaFutures {
+trait FakeRelationshipService extends BeforeAndAfterAll with BeforeAndAfterEach with ScalaFutures {
 // To do: Decide whether to use stubs here or stub repo - we don't want to duplicate stubs for Selenium tests
   this: Suite =>
 
@@ -18,46 +16,13 @@ trait FakeRelationshipService extends BeforeAndAfterAll with ScalaFutures {
 
   override def beforeAll() = {
     super.beforeAll()
-    wireMockServer.start()
     WireMock.configureFor(Host, Port)
+    wireMockServer.start()
+  }
 
-    wireMockServer.addStubMapping(
-      get(urlPathMatching("/user-info-api.*"))
-        .willReturn(
-          aResponse()
-            .withStatus(Status.CREATED)
-              .withBody("{\"given_name\": \"firstname\"," +
-                " \"family_name\" : \"surname\", " +
-                " \"middle_name\" : \"middle\", " +
-                " \"address\" : " +
-                "{ \"address\" : \"this is an address\", " +
-                " \"postcode\" : \"BN43 XXX\", " +
-                " \"country\" : \"United Kingdom\", " +
-                " \"countryCode\" : \"GB\" }, " +
-                " \"birthdate\" : \"1997, 12, 12\", " +
-                " \"nino\" : \"AG010123A\", " +
-                " \"hmrc_enrolments\" : \"None\", " +
-                " \"email\" : \"email@gmail.com\" }"))
-        .build())
-
-    wireMockServer.addStubMapping(
-      get(urlPathMatching("/help-to-save-stub/eligibilitycheck/AG010123A"))
-        .willReturn(
-          aResponse()
-            .withStatus(Status.CREATED)
-            .withBody("{\"isEligible\":true}"))
-        .build())
-
-    wireMockServer.addStubMapping(
-      post(urlPathMatching("/help-to-save-stub/oauth/token"))
-        .willReturn(
-          aResponse()
-            .withStatus(Status.OK)
-            .withBody("{\"client_id\" : \"AG010123A\"," +
-              "\"client_secret\" : \"secret\"," +
-              "\"redirect_uri\" : \"http://localhost:7000:something\"," +
-              " \"code\" : \"dsdvsdvfds\"}"))
-        .build())
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    wireMockServer.resetAll()
   }
 
   override def afterAll() = {
@@ -65,6 +30,8 @@ trait FakeRelationshipService extends BeforeAndAfterAll with ScalaFutures {
     super.afterAll()
     wireMockServer.stop()
   }
+
+
 
 }
 

@@ -1,97 +1,175 @@
 package uk.gov.hmrc.helptosave
 
+import java.net.URLEncoder
+import java.time.LocalDate
 import java.util.Base64
 
+import com.github.tomakehurst.wiremock.client.WireMock._
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, WordSpec}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import play.api.http.Status
+import play.api.http.Status._
 import play.api.libs.json.Json
-import play.api.libs.ws.WSResponse
-import uk.gov.hmrc.helptosave.models.MissingUserInfo.{Email, GivenName, Surname}
+import play.api.libs.ws.{WSClient, WSResponse}
+import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.{CitizenDetailsAddress, CitizenDetailsPerson, CitizenDetailsResponse}
+import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsResponse
+import uk.gov.hmrc.helptosave.models.MissingUserInfo.{Email, Surname}
+import uk.gov.hmrc.helptosave.models.{Address, UserInfo}
 import uk.gov.hmrc.helptosave.services.UserInfoService.UserInfoServiceError.MissingUserInfos
-import uk.gov.hmrc.helptosave.support.{IntegrationSpec, InvitationActions}
+import uk.gov.hmrc.helptosave.support.FakeRelationshipService
 import uk.gov.hmrc.helptosave.util.NINO
 
 
-class MissingMandatoryData extends IntegrationSpec with InvitationActions with ScalaFutures {
+class MissingMandatoryData extends WordSpec
+  with Matchers
+  with ScalaFutures
+  with FakeRelationshipService
+  with BeforeAndAfterAll
+  with BeforeAndAfterEach
+ with GuiceOneServerPerSuite {
+
+  implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
+
+
+  override lazy val port: Int = 7001
+
+  val wsClient = app.injector.instanceOf[WSClient]
+
+  val url = "http://localhost:7001/help-to-save/eligibility-check"
 
   def decode(encodedNINO: String): NINO = {
     new String(Base64.getDecoder.decode(encodedNINO))
   }
 
+  def checkEligibility(encodedNino: String, userDetailsURI: String): WSResponse = {
+    wsClient
+      .url(s"$url?nino=${decode(encodedNino)}&userDetailsURI=${URLEncoder.encode(userDetailsURI)}")
+      .get()
+      .futureValue
+  }
+
+  def mockEligibilityCheck(result: Boolean) =
+    wireMockServer.stubFor(
+      get(urlPathMatching("/help-to-save-stub/eligibilitycheck.*"))
+        .willReturn(
+          aResponse()
+            .withStatus(Status.OK)
+            .withBody(s"""{ "isEligible" : $result }""")
+        )
+    )
+
+  def mockUserDetailsCall(userDetails: UserDetailsResponse): Unit = {
+    val body = Json.toJson(userDetails).toString
+
+    wireMockServer.stubFor(
+      get(urlPathMatching("/user-details.*"))
+        .willReturn(
+          aResponse()
+            .withStatus(Status.OK)
+            .withBody(body)
+        )
+    )
+  }
+
+  def mockCitizenDetailsCall(citizenDetails: CitizenDetailsResponse): Unit = {
+    val body = Json.toJson(citizenDetails).toString
+    wireMockServer.stubFor(
+      get(urlPathMatching(".*/citizen-details.*"))
+        .willReturn(
+          aResponse()
+            .withStatus(Status.OK)
+            .withBody(body)
+        )
+    )
+  }
+
+
   // To do: convert to Gherkin/Cucumber
-  feature("An applicant has all required mandatory data fields") {
+  "Checking if a user can create an account" when {
 
-    scenario("An eligible applicant can proceed with their application") {
+    "an applicant is eligible" when {
 
-      Given("an applicant with all required details")
-      val encodedNino = "QUcwMTAxMjND"
-      val authCode = "QUcwMTAxMjND"
+      "user details and citizen details return all the required fields" must {
 
-      When("I check whether the applicant is eligible for HtS")
-      val checkEligibilityResponse : WSResponse = checkEligibility(decode(encodedNino), authCode)
+        "return with a 200" in {
+          val encodedNino = "QUcwMTAxMjND"
+          val citizenDetailsPerson = CitizenDetailsPerson(Some("Sarah"), Some("Smith"), Some(LocalDate.of(1999, 12, 12)))
+          val citizenDetailsAddress = CitizenDetailsAddress(Some("line 1"), Some("line 2"), Some("line 3"), Some("line 4"),
+            Some("line 5"), Some("BN43 XXX"), Some("GB"))
+          val citizenDetailsResponse = CitizenDetailsResponse(Some(citizenDetailsPerson), Some(citizenDetailsAddress))
+          val userDetails = UserDetailsResponse("Sarah", Some("Smith"), Some("email@gmail.com"), Some(LocalDate.of(1999, 12, 12)))
+          val expected: UserInfo = UserInfo("Sarah", "Smith", decode(encodedNino), LocalDate.of(1999, 12, 12), "email@gmail.com",
+            Address(List("line 1", "line 2", "line 3", "line 4", "line 5"), Some("BN43 XXX"), Some("GB")))
 
-      Then("I see that there are no missing fields")
-      checkEligibilityResponse.status shouldBe OK
-      checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":[]}}""")
+          mockEligibilityCheck(true)
+          mockUserDetailsCall(userDetails)
+          mockCitizenDetailsCall(citizenDetailsResponse)
+
+          val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, "http://localhost:7002/user-details/hello")
+
+          checkEligibilityResponse.status shouldBe OK
+          val json = Json.toJson(expected)
+          (checkEligibilityResponse.json \ "result").get shouldBe json
+        }
+      }
+
     }
 
   }
 
 
-  feature("An applicant has missing mandatory data fields") {
+  "Checking an applicant cannot create an account" when {
 
-    scenario("An applicant with no associated surname CANNOT proceed with their application") {
+    "An applicant has no associated surname so CANNOT proceed with their application" must {
 
-      Given("an applicant with no associated surname")
-      val encodedNino = "QUUxMjAxMjNB"
-      val authCode = "QUUxMjAxMjNB"
+      "return with a 200 result and a response showing the surname is missing" in {
+        val encodedNino = "QUUxMjAxMjNB"
+        val citizenDetailsPerson = CitizenDetailsPerson(Some("Sarah"), None, Some(LocalDate.of(1999, 12, 12)))
+        val citizenDetailsAddress = CitizenDetailsAddress(Some("line 1"), Some("line 2"), Some("line 3"), Some("line 4"),
+          Some("line 5"), Some("BN43 XXX"), Some("GB"))
+        val citizenDetailsResponse = CitizenDetailsResponse(Some(citizenDetailsPerson), Some(citizenDetailsAddress))
+        val userDetails = UserDetailsResponse("Sarah", None, Some("email@gmail.com"), Some(LocalDate.of(1999, 12, 12)))
 
-      When("I check whether the applicant is eligible for HtS")
-      val checkEligibilityResponse : WSResponse = checkEligibility(decode(encodedNino), authCode)
+        mockEligibilityCheck(true)
+        mockUserDetailsCall(userDetails)
+        mockCitizenDetailsCall(citizenDetailsResponse)
 
-      Then("I see that the surname is missing")
-      checkEligibilityResponse.status shouldBe OK
-      val missingUserInfos = MissingUserInfos(Set(Surname))
-      checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":["Surname"]}}""")
+        val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, "http://localhost:7002/user-details/")
+
+        checkEligibilityResponse.status shouldBe OK
+        val missingUserInfos = MissingUserInfos(Set(Surname))
+        checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":["Surname"]}}""")
+      }
     }
-
   }
 
-  feature("An applicant has missing mandatory data fields") {
 
-    scenario("An applicant with no associated forename CANNOT proceed with their application") {
+    "Checking an applicant cannot create an account" when {
 
-      Given("an applicant with no associated forename")
-      val encodedNino = "QUUxMjAxMjNC"
-      val authCode = "QUUxMjAxMjNC"
+      "An applicant has no associated email should be able to proceed with their application" must {
 
-      When("I check whether the applicant is eligible for HtS")
-      val checkEligibilityResponse : WSResponse = checkEligibility(decode(encodedNino), authCode)
+        "return with a 200 result and a response showing the email address is missing" in {
+          val encodedNino = "QUUxMzAxMjNC"
+          val citizenDetailsPerson = CitizenDetailsPerson(Some("Sarah"), Some("Smith"), Some(LocalDate.of(1999,12,12)))
+          val citizenDetailsAddress = CitizenDetailsAddress(Some("line 1"), Some("line 2"), Some("line 3"), Some("line 4"),
+            Some("line 5"), Some("BN43 XXX"), Some("GB"))
+          val citizenDetailsResponse = CitizenDetailsResponse(Some(citizenDetailsPerson), Some(citizenDetailsAddress))
+          val userDetails = UserDetailsResponse("Sarah", None, None, Some(LocalDate.of(1999,12,12)))
 
-      Then("I see that the forename is missing")
-      checkEligibilityResponse.status shouldBe OK
-      val missingUserInfos = MissingUserInfos(Set(GivenName))
-      checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":["GivenName"]}}""")
+          mockEligibilityCheck(true)
+          mockUserDetailsCall(userDetails)
+          mockCitizenDetailsCall(citizenDetailsResponse)
+
+
+          val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, "http://localhost:7002/user-details/")
+
+          checkEligibilityResponse.status shouldBe OK
+          val missingUserInfos = MissingUserInfos(Set(Email))
+          checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":["Email"]}}""")
+        }
+      }
     }
-
-  }
-
-  feature("An applicant has missing not mandatory data fields") {
-
-    scenario("An applicant with no associated email should be able to proceed with their application") {
-
-      Given("an applicant with no associated email address")
-      val encodedNino = "QUUxMzAxMjNC"
-      val authCode = "QUUxMzAxMjNC"
-
-      When("I check whether the applicant is eligible for HtS")
-      val checkEligibilityResponse : WSResponse = checkEligibility(decode(encodedNino), authCode)
-
-      Then("I see that the email is missing")
-      checkEligibilityResponse.status shouldBe OK
-      val missingUserInfos = MissingUserInfos(Set(Email))
-      checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":["Email"]}}""")
-    }
-
-  }
 
 }
