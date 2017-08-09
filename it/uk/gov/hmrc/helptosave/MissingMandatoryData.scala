@@ -18,20 +18,19 @@ import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsRespons
 import uk.gov.hmrc.helptosave.models.MissingUserInfo.{Email, Surname}
 import uk.gov.hmrc.helptosave.models.{Address, UserInfo}
 import uk.gov.hmrc.helptosave.services.UserInfoService.UserInfoServiceError.MissingUserInfos
-import uk.gov.hmrc.helptosave.support.FakeRelationshipService
+import uk.gov.hmrc.helptosave.support.WiremockSupport
 import uk.gov.hmrc.helptosave.util.NINO
 
 
 class MissingMandatoryData extends WordSpec
   with Matchers
   with ScalaFutures
-  with FakeRelationshipService
+  with WiremockSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach
  with GuiceOneServerPerSuite {
 
   implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
-
 
   override lazy val port: Int = 7001
 
@@ -50,41 +49,16 @@ class MissingMandatoryData extends WordSpec
       .futureValue
   }
 
-  def mockEligibilityCheck(result: Boolean) =
+  def stubCall(url: String, json: String) = {
     wireMockServer.stubFor(
-      get(urlPathMatching("/help-to-save-stub/eligibilitycheck.*"))
+      get(urlPathMatching(url))
         .willReturn(
           aResponse()
             .withStatus(Status.OK)
-            .withBody(s"""{ "isEligible" : $result }""")
-        )
-    )
-
-  def mockUserDetailsCall(userDetails: UserDetailsResponse): Unit = {
-    val body = Json.toJson(userDetails).toString
-
-    wireMockServer.stubFor(
-      get(urlPathMatching("/user-details.*"))
-        .willReturn(
-          aResponse()
-            .withStatus(Status.OK)
-            .withBody(body)
+            .withBody(json)
         )
     )
   }
-
-  def mockCitizenDetailsCall(citizenDetails: CitizenDetailsResponse): Unit = {
-    val body = Json.toJson(citizenDetails).toString
-    wireMockServer.stubFor(
-      get(urlPathMatching(".*/citizen-details.*"))
-        .willReturn(
-          aResponse()
-            .withStatus(Status.OK)
-            .withBody(body)
-        )
-    )
-  }
-
 
   // To do: convert to Gherkin/Cucumber
   "Checking if a user can create an account" when {
@@ -103,9 +77,9 @@ class MissingMandatoryData extends WordSpec
           val expected: UserInfo = UserInfo("Sarah", "Smith", decode(encodedNino), LocalDate.of(1999, 12, 12), "email@gmail.com",
             Address(List("line 1", "line 2", "line 3", "line 4", "line 5"), Some("BN43 XXX"), Some("GB")))
 
-          mockEligibilityCheck(true)
-          mockUserDetailsCall(userDetails)
-          mockCitizenDetailsCall(citizenDetailsResponse)
+          stubCall("/help-to-save-stub/eligibilitycheck.*", """{ "isEligible" : true }""")
+          stubCall("/user-details.*", Json.toJson(userDetails).toString())
+          stubCall(".*/citizen-details.*", Json.toJson(citizenDetailsResponse).toString)
 
           val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, "http://localhost:7002/user-details/hello")
 
@@ -114,7 +88,6 @@ class MissingMandatoryData extends WordSpec
           (checkEligibilityResponse.json \ "result").get shouldBe json
         }
       }
-
     }
 
   }
@@ -132,9 +105,9 @@ class MissingMandatoryData extends WordSpec
         val citizenDetailsResponse = CitizenDetailsResponse(Some(citizenDetailsPerson), Some(citizenDetailsAddress))
         val userDetails = UserDetailsResponse("Sarah", None, Some("email@gmail.com"), Some(LocalDate.of(1999, 12, 12)))
 
-        mockEligibilityCheck(true)
-        mockUserDetailsCall(userDetails)
-        mockCitizenDetailsCall(citizenDetailsResponse)
+        stubCall("/help-to-save-stub/eligibilitycheck.*", """{ "isEligible" : true }""")
+        stubCall("/user-details.*", Json.toJson(userDetails).toString())
+        stubCall(".*/citizen-details.*", Json.toJson(citizenDetailsResponse).toString)
 
         val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, "http://localhost:7002/user-details/")
 
@@ -146,28 +119,26 @@ class MissingMandatoryData extends WordSpec
   }
 
 
-    "Checking an applicant cannot create an account" when {
+  "Checking an applicant cannot create an account" when {
 
-      "An applicant has no associated email should be able to proceed with their application" must {
+    "An applicant has no associated email should be able to proceed with their application" must {
 
-        "return with a 200 result and a response showing the email address is missing" in {
-          val encodedNino = "QUUxMzAxMjNC"
-          val citizenDetailsPerson = CitizenDetailsPerson(Some("Sarah"), Some("Smith"), Some(LocalDate.of(1999,12,12)))
-          val citizenDetailsAddress = CitizenDetailsAddress(Some("line 1"), Some("line 2"), Some("line 3"), Some("line 4"),
-            Some("line 5"), Some("BN43 XXX"), Some("GB"))
-          val citizenDetailsResponse = CitizenDetailsResponse(Some(citizenDetailsPerson), Some(citizenDetailsAddress))
-          val userDetails = UserDetailsResponse("Sarah", None, None, Some(LocalDate.of(1999,12,12)))
+      "return with a 200 result and a response showing the email address is missing" in {
+        val encodedNino = "QUUxMzAxMjNC"
+        val citizenDetailsPerson = CitizenDetailsPerson(Some("Sarah"), Some("Smith"), Some(LocalDate.of(1999,12,12)))
+        val citizenDetailsAddress = CitizenDetailsAddress(Some("line 1"), Some("line 2"), Some("line 3"), Some("line 4"),
+          Some("line 5"), Some("BN43 XXX"), Some("GB"))
+        val citizenDetailsResponse = CitizenDetailsResponse(Some(citizenDetailsPerson), Some(citizenDetailsAddress))
+        val userDetails = UserDetailsResponse("Sarah", None, None, Some(LocalDate.of(1999,12,12)))
 
-          mockEligibilityCheck(true)
-          mockUserDetailsCall(userDetails)
-          mockCitizenDetailsCall(citizenDetailsResponse)
+        stubCall("/help-to-save-stub/eligibilitycheck.*", """{ "isEligible" : true }""")
+        stubCall("/user-details.*", Json.toJson(userDetails).toString())
+        stubCall(".*/citizen-details.*", Json.toJson(citizenDetailsResponse).toString)
 
-
-          val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, "http://localhost:7002/user-details/")
-
-          checkEligibilityResponse.status shouldBe OK
-          val missingUserInfos = MissingUserInfos(Set(Email))
-          checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":["Email"]}}""")
+        val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, "http://localhost:7002/user-details/")
+        checkEligibilityResponse.status shouldBe OK
+        val missingUserInfos = MissingUserInfos(Set(Email))
+        checkEligibilityResponse.json shouldBe Json.parse("""{"result":{"missingInfo":["Email"]}}""")
         }
       }
     }

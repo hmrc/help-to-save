@@ -6,7 +6,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
-trait FakeRelationshipService extends BeforeAndAfterAll with BeforeAndAfterEach with ScalaFutures {
+trait WiremockSupport extends BeforeAndAfterAll with BeforeAndAfterEach with ScalaFutures {
 // To do: Decide whether to use stubs here or stub repo - we don't want to duplicate stubs for Selenium tests
   this: Suite =>
 
