@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Singleton}
-import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Result
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -27,30 +27,26 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-private[connectors] case class EligibilityResult(isEligible: Boolean) extends AnyVal
-
-private[connectors] object EligibilityResult {
-  implicit val format: Format[EligibilityResult] = Json.format[EligibilityResult]
-}
-
 @ImplementedBy(classOf[EligibilityCheckConnectorImpl])
 trait EligibilityCheckConnector {
-  def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Boolean]
+  def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult]
 }
 
 @Singleton
 class EligibilityCheckConnectorImpl extends EligibilityCheckConnector with ServicesConfig {
 
-  val helpToSaveStubURL: String = baseUrl("help-to-save-stub")
-
-  def serviceURL(nino: String) = s"help-to-save-stub/eligibilitycheck/$nino"
+  def url(nino: String) = {
+    val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
+    s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
+  }
 
   val http = new WSHttp
 
-  override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Boolean] =
-    EitherT[Future, String, Boolean](http.get(s"$helpToSaveStubURL/${serviceURL(nino)}").map {
-      _.parseJson[EligibilityResult].right.map(_.isEligible)
-    }.recover {
+  override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
+    EitherT[Future, String, EligibilityCheckResult](
+      http.get(url(nino))
+        .map (_.parseJson[EligibilityCheckResult])
+        .recover {
       case e ⇒
         Left(s"Error encountered when checking eligibility: ${e.getMessage}")
     })

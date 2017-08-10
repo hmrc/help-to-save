@@ -16,36 +16,27 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import play.api.libs.json._
-import uk.gov.hmrc.helptosave.services.UserInfoService.UserInfoServiceError.MissingUserInfos
+import play.api.libs.json.{Format, Json}
 
-case class EligibilityCheckResult(result: Either[MissingUserInfos, Option[UserInfo]])
+/**
+  * Response from ITMP eligibility check
+  *
+  * @param result 1 = customer eligible to HtS Account
+  *               2 = customer ineligible to HtS Account
+  * @param reason 1 = An HtS account was opened previously (the HtS account may have been closed or inactive)
+  *               2 = Not entitled to WTC and not in receipt of UC
+  *               3 = Entitled to WTC but not in receipt of positive WTC/CTC Tax Credit (nil TC)   and not in receipt of UC
+  *               4 = Entitled to WTC but not in receipt of positive WTC/CTC Tax Credit (nil TC)   and in receipt of UC but income is insufficient
+  *               5 = Not entitled to WTC and in receipt of UC but income is insufficient
+  *               6 = In receipt of UC and income sufficient
+  *               7 = Entitled to WTC and in receipt of positive WTC/CTC Tax Credit
+  *               8 = Entitled to WTC and in receipt of positive WTC/CTC Tax Credit and in receipt of UC and income sufficient
+  *               N.B. 1-5 represent reasons for ineligibility and 6-8 repesents reasons for eligibility
+  */
+case class EligibilityCheckResult(result: Int, reason: Int)
 
 object EligibilityCheckResult {
 
-  implicit val missingInfosFormat: Format[MissingUserInfos] = Json.format[MissingUserInfos]
+  implicit val format: Format[EligibilityCheckResult] = Json.format[EligibilityCheckResult]
 
-  implicit val eligibilityResultFormat: Format[EligibilityCheckResult] = new Format[EligibilityCheckResult] {
-    override def reads(json: JsValue): JsResult[EligibilityCheckResult] = {
-      (json \ "result").toOption match {
-        case None ⇒
-          JsError("Could not find 'result' path in JSON")
-
-        case Some(jsValue) ⇒
-          jsValue.validate[MissingUserInfos].fold(e1 ⇒
-            jsValue.validateOpt[UserInfo].fold (e2 ⇒
-              JsError(e1 ++ e2),
-              maybeUserInfo ⇒ JsSuccess(EligibilityCheckResult(Right(maybeUserInfo)))
-            ),
-            missing ⇒ JsSuccess(EligibilityCheckResult(Left(missing)))
-          )
-      }
-    }
-
-    override def writes(o: EligibilityCheckResult): JsValue = Json.obj(
-      o.result.fold(
-        missingInfos ⇒ "result" -> Json.toJson(missingInfos),
-        maybeUserInfo ⇒ "result" -> Json.toJson(maybeUserInfo)
-      ))
-  }
 }

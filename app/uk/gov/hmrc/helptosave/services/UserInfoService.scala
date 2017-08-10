@@ -21,6 +21,7 @@ import cats.instances.future._
 import cats.syntax.cartesian._
 import cats.syntax.option._
 import com.google.inject.Inject
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.connectors.CitizenDetailsConnector.CitizenDetailsResponse
 import uk.gov.hmrc.helptosave.connectors.{CitizenDetailsConnector, UserDetailsConnector}
 import uk.gov.hmrc.helptosave.connectors.UserDetailsConnector.UserDetailsResponse
@@ -72,6 +73,10 @@ object UserInfoService {
     case class UserDetailsError(message: String) extends UserInfoServiceError
     case class CitizenDetailsError(message: String) extends UserInfoServiceError
     case class MissingUserInfos(missingInfo: Set[MissingUserInfo])  extends UserInfoServiceError
+
+    object MissingUserInfos {
+      implicit val format: Format[MissingUserInfos] = Json.format[MissingUserInfos]
+    }
   }
 
 }
