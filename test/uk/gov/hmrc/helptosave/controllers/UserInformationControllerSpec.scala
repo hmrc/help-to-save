@@ -46,12 +46,6 @@ class UserInformationControllerSpec extends TestSupport {
 
   }
 
-  case class ErrorResponse(missingUserInfos: Option[MissingUserInfos])
-
-  object ErrorResponse {
-    implicit val errorResponseFormat: Format[ErrorResponse] = Json.format[ErrorResponse]
-  }
-
   "The UserInformationController" must {
 
     def doRequest(nino: String,
@@ -87,17 +81,16 @@ class UserInformationControllerSpec extends TestSupport {
     "report any missing user details back to the user" in new TestApparatus {
       List(MissingUserInfo.GivenName, MissingUserInfo.Surname, MissingUserInfo.DateOfBirth,
         MissingUserInfo.Email, MissingUserInfo.Contact).permutations.foreach { missingInfo ⇒
-
         inSequence {
           mockUserInfoService(userDetailsURI, nino)(Left(UserInfoServiceError.MissingUserInfos(missingInfo.toSet)))
         }
 
         val result = doRequest(nino, userDetailsURI, controller)
-        status(result) shouldBe 500
+        status(result) shouldBe 200
 
-        val jsValue = Json.fromJson[ErrorResponse](contentAsJson(result))
+        val jsValue = Json.fromJson[MissingUserInfos](contentAsJson(result))
         jsValue.isSuccess shouldBe true
-        jsValue.get.missingUserInfos shouldBe Some(MissingUserInfos(missingInfo.toSet))
+        jsValue.get.missingInfo shouldBe missingInfo.toSet
       }
     }
 
@@ -110,11 +103,6 @@ class UserInformationControllerSpec extends TestSupport {
 
         val result = doRequest(nino, userDetailsURI, controller)
         status(result) shouldBe 500
-        contentAsJson(result)
-
-        val jsValue = Json.fromJson[ErrorResponse](contentAsJson(result))
-        jsValue.isSuccess shouldBe true
-        jsValue.get.missingUserInfos shouldBe None
       }
     }
   }

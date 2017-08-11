@@ -50,7 +50,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
     result ← Gen.choose(1,2)
-    reason ← Gen.choose(1,6)
+    reason ← Gen.choose(1,8)
   } yield EligibilityCheckResult(result, reason))
 
 

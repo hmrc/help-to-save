@@ -33,8 +33,6 @@ import scala.concurrent.ExecutionContext
 
 class UserInformationController @Inject()(userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
 
-  import uk.gov.hmrc.helptosave.controllers.UserInformationController.ErrorResponse
-
   val logger = Logger(this.getClass)
 
   def getUserInformation(nino: NINO, userDetailsURI: String): Action[AnyContent] = Action.async { implicit request ⇒
@@ -62,14 +60,4 @@ class UserInformationController @Inject()(userInfoService: UserInfoService)(impl
 
 }
 
-object UserInformationController {
-
-  private[controllers] case class ErrorResponse(missingUserInfos: Option[MissingUserInfos])
-
-  private[controllers] object ErrorResponse {
-
-    implicit val format: Format[ErrorResponse] = Json.format[ErrorResponse]
-  }
-
-}
 
