@@ -16,85 +16,31 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.net.URLDecoder
-
-import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.Logger
-import play.api.libs.json.{Format, Json}
-import play.api.mvc.{Action, AnyContent, Result ⇒ PlayResult}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
-import uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.EligibilityCheckError
-import uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.EligibilityCheckError.{EligibilityCheckControllerError, UserInfoError}
-import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.services.UserInfoService
-import uk.gov.hmrc.helptosave.services.UserInfoService.UserInfoServiceError
-import uk.gov.hmrc.helptosave.services.UserInfoService.UserInfoServiceError.{CitizenDetailsError, MissingUserInfos, UserDetailsError}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 
-class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckConnector,
-                                           userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
+class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckConnector)(implicit ec: ExecutionContext) extends BaseController {
 
+val logger = Logger(this.getClass)
 
-
-  def eligibilityCheck(nino: NINO, userDetailsURI: String): Action[AnyContent] = Action.async { implicit request ⇒
-    val result =
-      eligibilityCheckService.isEligible(nino)
-        .leftMap(EligibilityCheckControllerError)
-        .flatMap[EligibilityCheckError,Option[UserInfo]] { isEligible ⇒
-          if (isEligible) {
-            val urlDecoded = URLDecoder.decode(userDetailsURI, "UTF-8")
-            userInfoService.getUserInfo(urlDecoded, nino).bimap(UserInfoError, Some(_))
-          } else {
-            EitherT.pure[Future, EligibilityCheckError, Option[UserInfo]](None)
-          }
-        }
-
-    result.fold(
-      handleError,
-      userInfo ⇒
-        Ok(Json.toJson(EligibilityCheckResult(Right(userInfo))))
-    )
+  def eligibilityCheck(nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
+      eligibilityCheckService.isEligible(nino).fold(
+        {
+          e ⇒ logger.warn(s"Could not check eligibility: $e")
+            InternalServerError
+        },
+        r ⇒ Ok(Json.toJson(r))
+      )
   }
-
-  private def handleError(error: EligibilityCheckError): PlayResult = error match {
-    case EligibilityCheckControllerError(message) ⇒
-      Logger.warn(errorMessage(s"error encountered in the eligibility check controller: $message"))
-      InternalServerError
-
-    case UserInfoError(error) ⇒
-      error match {
-        case UserDetailsError(message) ⇒
-          Logger.warn(errorMessage(s"error encountered in the user details service: $message"))
-          InternalServerError
-
-        case CitizenDetailsError(message) ⇒
-          Logger.warn(errorMessage(s"error encountered in the citizen details service: $message"))
-          InternalServerError
-
-        case m: MissingUserInfos ⇒
-          Ok(Json.toJson(EligibilityCheckResult(Left(m))))
-
-      }
-  }
-
-  private def errorMessage(message: String): String = s"Could not perform eligibilty check - $message"
 
 }
 
-object EligibilityCheckController {
-
-  sealed trait EligibilityCheckError
-
-  object EligibilityCheckError {
-    case class EligibilityCheckControllerError(message: String) extends EligibilityCheckError
-    case class UserInfoError(error: UserInfoServiceError) extends EligibilityCheckError
-  }
-
-
-}
