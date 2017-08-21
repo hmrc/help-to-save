@@ -35,10 +35,10 @@ trait EligibilityCheckConnector {
 @Singleton
 class EligibilityCheckConnectorImpl extends EligibilityCheckConnector with ServicesConfig {
 
-  def url(nino: String) = {
-    val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
+  val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
+
+  def url(nino: String) =
     s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
-  }
 
   val http = new WSHttp
 

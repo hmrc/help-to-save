@@ -20,6 +20,7 @@ package uk.gov.hmrc.helptosave.controllers
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.mvc.{Result ⇒ PlayResult}
@@ -70,6 +71,17 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
         val result = doRequest(nino, controller)
         status(result) shouldBe 500
       }
+
+      "return the eligibility status returned from the eligibility check service if " +
+        "successful" in new TestApparatus{
+        val eligibility = EligibilityCheckResult(1,2)
+        mockEligibilityCheckerService(nino)(Some(eligibility))
+
+        val result = doRequest(nino, controller)
+        status(result) shouldBe 200
+        contentAsJson(result) shouldBe Json.toJson(eligibility)
+      }
+
     }
   }
 
