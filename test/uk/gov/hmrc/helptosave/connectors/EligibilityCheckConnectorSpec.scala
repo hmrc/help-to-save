@@ -33,7 +33,6 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
 
   val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
-
   def url(nino: String) = {
     val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
     s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
