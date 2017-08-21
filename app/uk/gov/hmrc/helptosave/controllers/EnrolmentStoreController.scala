@@ -82,7 +82,7 @@ object EnrolmentStoreController {
     case class NotEnrolledJSON (enrolled: Boolean = false)
 
     implicit val enrolledWrites: Writes[EnrolledJSON] = Json.writes[EnrolledJSON]
-    implicit val notEnrolledFormat: Writes[NotEnrolledJSON] = Json.writes[NotEnrolledJSON]
+    implicit val notEnrolledWrites: Writes[NotEnrolledJSON] = Json.writes[NotEnrolledJSON]
 
     override def writes(o: EnrolmentStore.Status) = o match {
       case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolledJSON(itmpHtSFlag = itmpHtSFlag))
