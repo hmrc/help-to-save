@@ -37,7 +37,6 @@ trait DataEncrypter {
 @Singleton
 class DataEncrypterImpl @Inject()(configuration: Configuration) extends DataEncrypter {
 
-  //TODO: read from config!!
   private val seed = configuration.underlying.getString("data-encrypter.seed")
 
   private val key: SecretKey = {
