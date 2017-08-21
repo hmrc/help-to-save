@@ -191,7 +191,8 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
           EnrolmentStore.NotEnrolled →
             """
               |{
-              |  "enrolled"    : false
+              |  "enrolled"    : false,
+              |  "itmpHtSFlag" : false
               |}
             """.stripMargin
         )

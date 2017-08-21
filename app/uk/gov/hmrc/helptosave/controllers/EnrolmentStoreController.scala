@@ -77,16 +77,13 @@ class EnrolmentStoreController @Inject()(enrolmentStore: EnrolmentStore, itmpCon
 object EnrolmentStoreController {
 
   implicit val enrolmentStatusWrites: Writes[EnrolmentStore.Status] = new Writes[EnrolmentStore.Status]{
-    case class EnrolledJSON (enrolled
-                             : Boolean = true, itmpHtSFlag: Boolean)
-    case class NotEnrolledJSON (enrolled: Boolean = false)
+    case class EnrolmentStatusJSON (enrolled: Boolean, itmpHtSFlag: Boolean)
 
-    implicit val enrolledWrites: Writes[EnrolledJSON] = Json.writes[EnrolledJSON]
-    implicit val notEnrolledWrites: Writes[NotEnrolledJSON] = Json.writes[NotEnrolledJSON]
+    implicit val enrolmentStatusWrites: Writes[EnrolmentStatusJSON] = Json.writes[EnrolmentStatusJSON]
 
     override def writes(o: EnrolmentStore.Status) = o match {
-      case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolledJSON(itmpHtSFlag = itmpHtSFlag))
-      case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(NotEnrolledJSON())
+      case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolmentStatusJSON(enrolled = true, itmpHtSFlag = itmpHtSFlag))
+      case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(EnrolmentStatusJSON(enrolled = false, itmpHtSFlag = false))
     }
 
   }
