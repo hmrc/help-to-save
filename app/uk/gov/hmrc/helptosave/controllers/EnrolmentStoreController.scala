@@ -22,7 +22,7 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Result}
-import uk.gov.hmrc.helptosave.connectors.ITMPConnector
+import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -30,7 +30,7 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentStoreController @Inject()(enrolmentStore: EnrolmentStore, itmpConnector: ITMPConnector
+class EnrolmentStoreController @Inject()(enrolmentStore: EnrolmentStore, itmpConnector: ITMPEnrolmentConnector
                                         )(implicit ec: ExecutionContext)
   extends BaseController with Logging {
 

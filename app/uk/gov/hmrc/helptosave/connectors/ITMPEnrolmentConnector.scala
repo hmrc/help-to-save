@@ -28,16 +28,16 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-@ImplementedBy(classOf[ITMPConnectorImpl])
-trait ITMPConnector {
+@ImplementedBy(classOf[ITMPEnrolmentConnectorImpl])
+trait ITMPEnrolmentConnector {
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit]
 
 }
 
 @Singleton
-class ITMPConnectorImpl extends ITMPConnector with ServicesConfig with Logging {
-  import uk.gov.hmrc.helptosave.connectors.ITMPConnectorImpl._
+class ITMPEnrolmentConnectorImpl extends ITMPEnrolmentConnector with ServicesConfig with Logging {
+  import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnectorImpl._
 
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
 
@@ -65,7 +65,7 @@ class ITMPConnectorImpl extends ITMPConnector with ServicesConfig with Logging {
 }
 
 
-object ITMPConnectorImpl {
+object ITMPEnrolmentConnectorImpl {
 
   /** The information required in the body of the post request to set the ITMP flag */
   // TODO: put in the actual required details when they are known

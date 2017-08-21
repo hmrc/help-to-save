@@ -23,7 +23,7 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
-import uk.gov.hmrc.helptosave.connectors.ITMPConnector
+import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
   val enrolmentStore: EnrolmentStore = mock[EnrolmentStore]
-  val itmpConnector: ITMPConnector = mock[ITMPConnector]
+  val itmpConnector: ITMPEnrolmentConnector = mock[ITMPEnrolmentConnector]
 
   def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
     (enrolmentStore.update(_: NINO, _: Boolean))

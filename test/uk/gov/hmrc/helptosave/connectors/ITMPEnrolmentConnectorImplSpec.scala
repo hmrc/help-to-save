@@ -21,13 +21,13 @@ import play.api.libs.json.Writes
 import uk.gov.hmrc.play.test.WithFakeApplication
 import play.api.test.Helpers._
 import uk.gov.hmrc.helptosave.utils.TestSupport
-import uk.gov.hmrc.helptosave.connectors.ITMPConnectorImpl.PostBody
+import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnectorImpl.PostBody
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.Future
 
-class ITMPConnectorImplSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks{
+class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks{
 
   def mockPost[A](url: String, body: A)(result: Option[HttpResponse]): Unit =
     (mockHttp.post(_: String, _: A, _: Seq[(String,String)])(_: Writes[A], _: HeaderCarrier))
@@ -35,7 +35,7 @@ class ITMPConnectorImplSpec extends TestSupport with WithFakeApplication with Ge
       .returning(result.fold[Future[HttpResponse]](Future.failed(new Exception("")))(Future.successful))
 
 
-  lazy val connector = new ITMPConnectorImpl{
+  lazy val connector = new ITMPEnrolmentConnectorImpl{
     override val http = mockHttp
   }
 
