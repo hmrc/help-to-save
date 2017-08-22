@@ -23,8 +23,7 @@ import uk.gov.hmrc.crypto._
 import scala.util.Try
 
 @ImplementedBy(classOf[CryptoImpl])
-trait Crypto extends CompositeSymmetricCrypto {
-  override protected val previousCryptos: Seq[Decrypter] = Seq.empty
+trait Crypto {
 
   def encrypt(s: String): String
 
@@ -32,14 +31,13 @@ trait Crypto extends CompositeSymmetricCrypto {
 }
 
 @Singleton
-class CryptoImpl @Inject()(configuration: Configuration) extends Crypto {
+class CryptoImpl @Inject()(configuration: Configuration) extends AesGCMCrypto with Crypto {
 
-  override protected val currentCrypto: Encrypter with Decrypter = new AesGCMCrypto {
-    override protected val encryptionKey: String = configuration.underlying.getString("crypto.encryption-key")
-  }
+  val encryptionKey: String = configuration.underlying.getString("crypto.encryption-key")
 
-  override def encrypt(s: String): String = encrypt(PlainText(s)).value
+  def encrypt(s: String): String = encrypt(PlainText(s)).value
 
-  override def decrypt(s: String): Try[String] = Try(decrypt(Crypted(s)).value)
+  def decrypt(s: String): Try[String] = Try(decrypt(Crypted(s)).value)
 
 }
+

@@ -21,7 +21,7 @@ object MicroServiceBuild extends Build with MicroService {
     "org.typelevel" %% "cats" % "0.9.0",
     "com.github.kxbmap" %% "configs" % "0.4.4",
     "uk.gov.hmrc" %% "play-reactivemongo" % "5.2.0",
-    "uk.gov.hmrc" %% "json-encryption" % "3.2.0"
+    "uk.gov.hmrc" %% "crypto" % "4.4.0"
   )
 
   def test(scope: String = "test,it") = Seq(
