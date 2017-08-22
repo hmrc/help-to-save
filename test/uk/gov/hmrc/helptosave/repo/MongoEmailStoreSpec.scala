@@ -19,16 +19,16 @@ package uk.gov.hmrc.helptosave.repo
 import reactivemongo.api.indexes.Index
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.{DataEncrypter, NINO}
+import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, MongoEmailStore]{
 
-  val mockDataEncrypter = mock[DataEncrypter]
+  val crypto = stub[Crypto]
 
-  def newMongoStore() = new MongoEmailStore(mockMongo, mockDataEncrypter) {
+  def newMongoStore() = new MongoEmailStore(mockMongo, crypto) {
 
     override def indexes: Seq[Index] = {
       // this line is to ensure scoverage picks up this line in MongoEnrolmentStore -
