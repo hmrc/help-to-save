@@ -55,7 +55,7 @@ class MongoEmailStore @Inject()(mongo: ReactiveMongoComponent, crypto: Crypto)
 
   def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future,String,Unit] =
     EitherT[Future,String,Unit](
-      doUpdate(email, nino)
+      doUpdate(crypto.encrypt(email), nino)
         .map{ _.fold[Either[String,Unit]](
           Left("Could not update email mongo store"))(
           _ ⇒ Right(()))
@@ -66,10 +66,10 @@ class MongoEmailStore @Inject()(mongo: ReactiveMongoComponent, crypto: Crypto)
         })
 
 
-  private[repo] def doUpdate(email: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
+  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
     collection.findAndUpdate(
       BSONDocument("nino" -> nino),
-      BSONDocument("$set" -> BSONDocument("email" -> crypto.encrypt(email))),
+      BSONDocument("$set" -> BSONDocument("email" -> encryptedEmail)),
       fetchNewObject = true,
       upsert = true
     ).map(_.result[EmailData])

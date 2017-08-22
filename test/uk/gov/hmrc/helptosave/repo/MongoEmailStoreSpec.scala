@@ -17,16 +17,21 @@
 package uk.gov.hmrc.helptosave.repo
 
 import reactivemongo.api.indexes.Index
-import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
+import uk.gov.hmrc.helptosave.utils.TestSupport
 
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
-class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, MongoEmailStore]{
+class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, MongoEmailStore] {
 
-  val crypto = stub[Crypto]
+  val crypto: Crypto = mock[Crypto]
+
+  def mockEncrypt(input: String)(output: String): Unit =
+    (crypto.encrypt(_: String))
+      .expects(input)
+      .returning(output)
 
   def newMongoStore() = new MongoEmailStore(mockMongo, crypto) {
 
@@ -38,8 +43,8 @@ class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, M
       Seq.empty[Index]
     }
 
-    override def doUpdate(nino: NINO, email: String)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
-      mockDBFunctions.update(EmailData(nino, email))
+    override def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
+      mockDBFunctions.update(EmailData(nino, encryptedEmail))
   }
 
   "The MongoEmailStore" when {
@@ -48,34 +53,45 @@ class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, M
 
       val nino = "NINO"
       val email = "EMAIL"
-      val data = EmailData(nino, email)
+      val encryptedEmail = "ENCRYPTED"
+      val data = EmailData(nino, encryptedEmail)
 
       def update(nino: NINO, email: String): Either[String, Unit] =
-        Await.result(mongoStore.storeConfirmedEmail(nino, email).value, 5.seconds)
+        Await.result(mongoStore.storeConfirmedEmail(email, nino).value, 5.seconds)
 
       "store the email in the mongo database" in {
-//        mockEncrypt(email)(encryptedEmail)
-        mockUpdate(data)(Right(None))
+        inSequence {
+          mockEncrypt(email)(encryptedEmail)
+          mockUpdate(data)(Right(None))
+        }
+
         update(nino, email)
       }
 
       "return a right if the update is successful" in {
-        mockUpdate(data)(Right(Some(data)))
+        inSequence {
+          mockEncrypt(email)(encryptedEmail)
+          mockUpdate(data)(Right(Some(data)))
+        }
+
         update(nino, email) shouldBe Right(())
       }
 
       "return a left if the update is unsuccessful" in {
-        mockUpdate(data)(Right(None))
+        inSequence {
+          mockEncrypt(email)(encryptedEmail)
+          mockUpdate(data)(Right(None))
+        }
         update(nino, email).isLeft shouldBe true
 
-        mockUpdate(data)(Left(""))
+        inSequence {
+          mockEncrypt(email)(encryptedEmail)
+          mockUpdate(data)(Left(""))
+        }
         update(nino, email).isLeft shouldBe true
       }
 
-
-
     }
-
 
   }
 

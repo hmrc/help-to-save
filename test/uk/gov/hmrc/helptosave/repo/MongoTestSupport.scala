@@ -40,7 +40,7 @@ trait MongoTestSupport[Data, R <: ReactiveRepository[Data,BSONObjectID]] { this:
 
   def newMongoStore(): R
 
-  val mongoStore: R = {
+  lazy val mongoStore: R = {
     val connector = mock[MongoConnector]
     val db = stub[DefaultDB]
     (mockMongo.mongoConnector _).expects().returning(connector)
