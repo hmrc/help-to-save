@@ -16,18 +16,29 @@
 
 package uk.gov.hmrc.helptosave.util
 
+import java.util.Base64
+
 import com.typesafe.config.ConfigFactory
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
-class DataEncrypterSpec extends TestSupport with GeneratorDrivenPropertyChecks {
+import scala.util.{Random, Success}
 
-  "The DataEncrypter" must {
+class CryptoImplSpec  extends TestSupport with GeneratorDrivenPropertyChecks {
 
-    val encrypter = new DataEncrypterImpl(Configuration(ConfigFactory.parseString(
-      """
-        |data-encrypter.seed = "test-seed"
+  "The CryptoImpl" must {
+
+    val key = {
+      // create a 256 bit key
+      val bytes = new Array[Byte](32)
+      Random.nextBytes(bytes)
+      new String(Base64.getEncoder.encode(bytes))
+    }
+
+    val encrypter = new CryptoImpl(Configuration(ConfigFactory.parseString(
+      s"""
+        | crypto.encryption-key = "$key"
       """.stripMargin)))
 
     "correctly encrypt and decrypt the data given" in {
@@ -40,7 +51,7 @@ class DataEncrypterSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
       val decoded = encrypter.decrypt(encoded)
 
-      decoded should be(Right(original))
+      decoded should be(Success(original))
     }
 
     "correctly encrypt and decrypt the data when there are special characters" in {
@@ -53,13 +64,13 @@ class DataEncrypterSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
       val decoded = encrypter.decrypt(encoded)
 
-      decoded should be(Right(original))
+      decoded should be(Success(original))
     }
 
     "return an error when there are errors decrypting" in {
       forAll{ s: String ⇒
         whenever(s.nonEmpty){
-          encrypter.decrypt(s).isLeft shouldBe true
+          encrypter.decrypt(s).isFailure shouldBe true
         }
       }
     }

@@ -23,7 +23,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.{DataEncrypter, NINO}
+import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
@@ -38,7 +38,7 @@ trait EmailStore {
 }
 
 @Singleton
-class MongoEmailStore @Inject()(mongo: ReactiveMongoComponent, dataEncrypter: DataEncrypter)
+class MongoEmailStore @Inject()(mongo: ReactiveMongoComponent, crypto: Crypto)
   extends ReactiveRepository[EmailData, BSONObjectID](
     collectionName = "emails",
     mongo = mongo.mongoConnector.db,
@@ -55,7 +55,7 @@ class MongoEmailStore @Inject()(mongo: ReactiveMongoComponent, dataEncrypter: Da
 
   def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future,String,Unit] =
     EitherT[Future,String,Unit](
-      doUpdate(email, nino)
+      doUpdate(crypto.encrypt(email), nino)
         .map{ _.fold[Either[String,Unit]](
           Left("Could not update email mongo store"))(
           _ ⇒ Right(()))
@@ -66,10 +66,10 @@ class MongoEmailStore @Inject()(mongo: ReactiveMongoComponent, dataEncrypter: Da
         })
 
 
-  private[repo] def doUpdate(email: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
+  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
     collection.findAndUpdate(
       BSONDocument("nino" -> nino),
-      BSONDocument("$set" -> BSONDocument("email" -> dataEncrypter.encrypt(email))),
+      BSONDocument("$set" -> BSONDocument("email" -> encryptedEmail)),
       fetchNewObject = true,
       upsert = true
     ).map(_.result[EmailData])
