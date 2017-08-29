@@ -30,11 +30,10 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 /**
-  * A connector which connects to the `citizen-details` microservice to obtain
-  * a person's address
-  */
+ * A connector which connects to the `citizen-details` microservice to obtain
+ * a person's address
+ */
 @ImplementedBy(classOf[CitizenDetailsConnectorImpl])
 trait CitizenDetailsConnector {
 
@@ -43,19 +42,17 @@ trait CitizenDetailsConnector {
 
 object CitizenDetailsConnector {
 
-  case class CitizenDetailsPerson(firstName: Option[String],
-                                  lastName: Option[String],
+  case class CitizenDetailsPerson(firstName:   Option[String],
+                                  lastName:    Option[String],
                                   dateOfBirth: Option[LocalDate])
 
-  case class CitizenDetailsAddress(line1: Option[String],
-                                   line2: Option[String],
-                                   line3: Option[String],
-                                   line4: Option[String],
-                                   line5: Option[String],
+  case class CitizenDetailsAddress(line1:    Option[String],
+                                   line2:    Option[String],
+                                   line3:    Option[String],
+                                   line4:    Option[String],
+                                   line5:    Option[String],
                                    postcode: Option[String],
-                                   country: Option[String])
-
-
+                                   country:  Option[String])
 
   case class CitizenDetailsResponse(person: Option[CitizenDetailsPerson], address: Option[CitizenDetailsAddress])
 
@@ -82,7 +79,7 @@ class CitizenDetailsConnectorImpl extends CitizenDetailsConnector with ServicesC
   val http = new WSHttp
 
   override def getDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[CitizenDetailsResponse] =
-    EitherT[Future,String,CitizenDetailsResponse](
+    EitherT[Future, String, CitizenDetailsResponse](
       http.get(citizenDetailsURI(nino)).map(response ⇒
         if (response.status == 200) {
           response.parseJson[CitizenDetailsResponse]

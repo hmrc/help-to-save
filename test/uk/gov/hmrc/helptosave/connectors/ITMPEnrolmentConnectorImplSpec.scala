@@ -27,15 +27,14 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.Future
 
-class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks{
+class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks {
 
   def mockPost[A](url: String, body: A)(result: Option[HttpResponse]): Unit =
-    (mockHttp.post(_: String, _: A, _: Seq[(String,String)])(_: Writes[A], _: HeaderCarrier))
-      .expects(url, body, Seq.empty[(String,String)], *, *)
+    (mockHttp.post(_: String, _: A, _: Seq[(String, String)])(_: Writes[A], _: HeaderCarrier))
+      .expects(url, body, Seq.empty[(String, String)], *, *)
       .returning(result.fold[Future[HttpResponse]](Future.failed(new Exception("")))(Future.successful))
 
-
-  lazy val connector = new ITMPEnrolmentConnectorImpl{
+  lazy val connector = new ITMPEnrolmentConnectorImpl {
     override val http = mockHttp
   }
 
@@ -43,7 +42,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplicatio
 
     val nino = "NINO"
 
-    def url(nino: NINO): String = s"${connector.itmpEnrolmentURL}/set-enrolment-flag/$nino"
+      def url(nino: NINO): String = s"${connector.itmpEnrolmentURL}/set-enrolment-flag/$nino"
 
     "setting the ITMP flag" must {
 

@@ -30,15 +30,14 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentStoreController @Inject()(enrolmentStore: EnrolmentStore, itmpConnector: ITMPEnrolmentConnector
-                                        )(implicit ec: ExecutionContext)
+class EnrolmentStoreController @Inject() (enrolmentStore: EnrolmentStore, itmpConnector: ITMPEnrolmentConnector)(implicit ec: ExecutionContext)
   extends BaseController with Logging {
 
   import EnrolmentStoreController._
 
   def enrol(nino: NINO): Action[AnyContent] = Action.async{ implicit request ⇒
     handle(
-      for{
+      for {
         _ ← enrolmentStore.update(nino, itmpFlag = false)
         _ ← setITMPFlagAndUpdateMongo(nino)
       } yield (),
@@ -55,12 +54,12 @@ class EnrolmentStoreController @Inject()(enrolmentStore: EnrolmentStore, itmpCon
     handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 
-  private def handle[A](f: EitherT[Future,String,A], description: String, nino: NINO)(implicit writes: Writes[A]): Future[Result] =
+  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit writes: Writes[A]): Future[Result] =
     f.fold(
       { e ⇒
         logger.warn(s"Could not $description for $nino: $e")
         InternalServerError
-      },{ a ⇒
+      }, { a ⇒
         logger.info(s"$description successful for $nino")
         Ok(Json.toJson(a))
       }
@@ -73,22 +72,21 @@ class EnrolmentStoreController @Inject()(enrolmentStore: EnrolmentStore, itmpCon
 
 }
 
-
 object EnrolmentStoreController {
 
-  implicit val enrolmentStatusWrites: Writes[EnrolmentStore.Status] = new Writes[EnrolmentStore.Status]{
-    case class EnrolmentStatusJSON (enrolled: Boolean, itmpHtSFlag: Boolean)
+  implicit val enrolmentStatusWrites: Writes[EnrolmentStore.Status] = new Writes[EnrolmentStore.Status] {
+    case class EnrolmentStatusJSON(enrolled: Boolean, itmpHtSFlag: Boolean)
 
     implicit val enrolmentStatusWrites: Writes[EnrolmentStatusJSON] = Json.writes[EnrolmentStatusJSON]
 
     override def writes(o: EnrolmentStore.Status) = o match {
-      case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolmentStatusJSON(enrolled = true, itmpHtSFlag = itmpHtSFlag))
-      case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(EnrolmentStatusJSON(enrolled = false, itmpHtSFlag = false))
+      case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = true, itmpHtSFlag = itmpHtSFlag))
+      case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = false, itmpHtSFlag = false))
     }
 
   }
 
-  implicit val unitWrites: Writes[Unit] = new Writes[Unit]{
+  implicit val unitWrites: Writes[Unit] = new Writes[Unit] {
     override def writes(o: Unit) = JsNull
   }
 

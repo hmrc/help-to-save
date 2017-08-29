@@ -29,8 +29,8 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class EmailStoreController @Inject()(emailStore: EmailStore)(implicit ec: ExecutionContext)
-  extends BaseController with Logging{
+class EmailStoreController @Inject() (emailStore: EmailStore)(implicit ec: ExecutionContext)
+  extends BaseController with Logging {
 
   val decoder = Base64.getDecoder
 
@@ -39,12 +39,12 @@ class EmailStoreController @Inject()(emailStore: EmailStore)(implicit ec: Execut
       { error ⇒
         logger.warn(s"Could not store email for $nino. Could not decode email: $error")
         Future.successful(InternalServerError)
-      },{ decodedEmail ⇒
+      }, { decodedEmail ⇒
         emailStore.storeConfirmedEmail(decodedEmail, nino).fold(
           { e ⇒
             logger.error(s"Could not store email for user $nino: $e")
             InternalServerError
-          },{ _ ⇒
+          }, { _ ⇒
             Ok
           }
         )

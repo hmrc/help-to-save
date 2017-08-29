@@ -27,7 +27,7 @@ class UserInfoSpec extends TestSupport {
 
     "have a valid JSON format instance" in {
       val userInfo = UserInfo("nane", "surname", "nino", randomDate(), "email",
-        Address(List("address"), Some("postcode"), Some("Country")))
+                                                         Address(List("address"), Some("postcode"), Some("Country")))
 
       val jsValue = Json.toJson(userInfo)
       Json.fromJson[UserInfo](jsValue) shouldBe JsSuccess(userInfo)

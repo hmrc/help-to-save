@@ -42,10 +42,8 @@ package object models {
       address ← addressArb.arbitrary
     } yield UserInfo(name, surname, nino, dob, email, address))
 
-
   def sample[A: ClassTag](a: Arbitrary[A]): A = a.arbitrary.sample.getOrElse(
     sys.error(s"Could not generate ${classTag[A].getClass.getSimpleName}"))
-
 
   def randomUserInfo(): UserInfo = sample(userInfoArb)
 

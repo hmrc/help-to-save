@@ -66,7 +66,7 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
 
     "enrolling a user" must {
 
-      def enrol(): Future[Result] = controller.enrol(nino)(FakeRequest())
+        def enrol(): Future[Result] = controller.enrol(nino)(FakeRequest())
 
       "create a mongo record with the ITMP flag set to false" in {
         mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Left(""))
@@ -113,13 +113,12 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
         status(enrol()) shouldBe INTERNAL_SERVER_ERROR
       }
 
-
     }
 
     "setting the ITMP flag" must {
 
-      def setFlag(): Future[Result] =
-        controller.setITMPFlag(nino)(FakeRequest())
+        def setFlag(): Future[Result] =
+          controller.setITMPFlag(nino)(FakeRequest())
 
       "set the ITMP flag" in {
         mockITMPConnector(nino)(Left(""))
@@ -146,10 +145,10 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
       }
 
       "return a Left if any of the steps failed" in {
-        def test(mockActions: ⇒ Unit): Unit = {
-          mockActions
-          status(setFlag()) shouldBe INTERNAL_SERVER_ERROR
-        }
+          def test(mockActions: ⇒ Unit): Unit = {
+            mockActions
+            status(setFlag()) shouldBe INTERNAL_SERVER_ERROR
+          }
 
         test(mockITMPConnector(nino)(Left("")))
 
@@ -163,8 +162,8 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
 
     "getting the user enrolment status" must {
 
-      def getEnrolmentStatus(): Future[Result] =
-        controller.getEnrolmentStatus(nino)(FakeRequest())
+        def getEnrolmentStatus(): Future[Result] =
+          controller.getEnrolmentStatus(nino)(FakeRequest())
 
       "get the enrolment status form the enrolment store" in {
         mockEnrolmentStoreGet(nino)(Left(""))
@@ -173,7 +172,7 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
       }
 
       "return the enrolment status if the call was successful" in {
-        val m: Map[EnrolmentStore.Status,String] = Map(
+        val m: Map[EnrolmentStore.Status, String] = Map(
           EnrolmentStore.Enrolled(true) →
             """
               |{
@@ -197,11 +196,12 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
             """.stripMargin
         )
 
-        m.foreach{ case (s,j) ⇒
-          mockEnrolmentStoreGet(nino)(Right(s))
+        m.foreach{
+          case (s, j) ⇒
+            mockEnrolmentStoreGet(nino)(Right(s))
 
-          val result = getEnrolmentStatus()
-          status(result) shouldBe OK
+            val result = getEnrolmentStatus()
+            status(result) shouldBe OK
             contentAsJson(result) shouldBe Json.parse(j)
         }
       }

@@ -27,19 +27,19 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext
 
+class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector)(implicit ec: ExecutionContext) extends BaseController {
 
-class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckConnector)(implicit ec: ExecutionContext) extends BaseController {
-
-val logger = Logger(this.getClass)
+  val logger = Logger(this.getClass)
 
   def eligibilityCheck(nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
-      eligibilityCheckService.isEligible(nino).fold(
-        {
-          e ⇒ logger.warn(s"Could not check eligibility: $e")
-            InternalServerError
-        },
-        r ⇒ Ok(Json.toJson(r))
-      )
+    eligibilityCheckService.isEligible(nino).fold(
+      {
+        e ⇒
+          logger.warn(s"Could not check eligibility: $e")
+          InternalServerError
+      },
+      r ⇒ Ok(Json.toJson(r))
+    )
   }
 
 }

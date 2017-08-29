@@ -26,7 +26,7 @@ import uk.gov.hmrc.helptosave.util.NINO
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[EnrolmentData,MongoEnrolmentStore] {
+class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[EnrolmentData, MongoEnrolmentStore] {
 
   def newMongoStore() = new MongoEnrolmentStore(mockMongo) {
 
@@ -56,9 +56,8 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
 
     "updating" must {
 
-      def update(nino: NINO, itmpNeedsUpdate: Boolean): Either[String, Unit] =
-        Await.result(mongoStore.update(nino, itmpNeedsUpdate).value, 5.seconds)
-
+        def update(nino: NINO, itmpNeedsUpdate: Boolean): Either[String, Unit] =
+          Await.result(mongoStore.update(nino, itmpNeedsUpdate).value, 5.seconds)
 
       "update the mongodb collection" in {
         mockUpdate(EnrolmentData(nino, true))(Right(Some(EnrolmentData(nino, true))))
@@ -87,8 +86,8 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
 
     "getting" must {
 
-      def get(nino: NINO): Either[String, Status] =
-        Await.result(mongoStore.get(nino).value, 5.seconds)
+        def get(nino: NINO): Either[String, Status] =
+          Await.result(mongoStore.get(nino).value, 5.seconds)
 
       "attempt to find the entry in the collection based on the input nino" in {
         mockFind(nino)(Future.successful(List.empty[EnrolmentData]))
@@ -98,7 +97,6 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
 
       "return an enrolled status if an entry is found" in {
         mockFind(nino)(Future.successful(List(EnrolmentData("a", true), EnrolmentData("b", false))))
-
 
         get(nino) shouldBe Right(Enrolled(true))
       }

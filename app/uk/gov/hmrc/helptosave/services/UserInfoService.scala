@@ -33,17 +33,17 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class UserInfoService @Inject()(userDetailsConnector: UserDetailsConnector,
-                                citizenDetailsConnector: CitizenDetailsConnector) {
+class UserInfoService @Inject() (userDetailsConnector:    UserDetailsConnector,
+                                 citizenDetailsConnector: CitizenDetailsConnector) {
 
-  def getUserInfo(userDetailsUri: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future,UserInfoServiceError, UserInfo] = for {
-      userDetails ← userDetailsConnector.getUserDetails(userDetailsUri).leftMap(UserDetailsError)
-      citizenDetails ← citizenDetailsConnector.getDetails(nino).leftMap(CitizenDetailsError)
-      userInfo ← EitherT.fromEither[Future](toUserInfo(userDetails, citizenDetails, nino))
-    } yield userInfo
+  def getUserInfo(userDetailsUri: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, UserInfoServiceError, UserInfo] = for {
+    userDetails ← userDetailsConnector.getUserDetails(userDetailsUri).leftMap(UserDetailsError)
+    citizenDetails ← citizenDetailsConnector.getDetails(nino).leftMap(CitizenDetailsError)
+    userInfo ← EitherT.fromEither[Future](toUserInfo(userDetails, citizenDetails, nino))
+  } yield userInfo
 
-  private def toUserInfo(u: UserDetailsResponse,
-                         c: CitizenDetailsResponse,
+  private def toUserInfo(u:    UserDetailsResponse,
+                         c:    CitizenDetailsResponse,
                          nino: NINO): Either[UserInfoServiceError, UserInfo] = {
     val surnameValidation: ValidatedNel[MissingUserInfo, String] =
       u.lastName.orElse(c.person.flatMap(_.lastName))
@@ -72,7 +72,7 @@ object UserInfoService {
   object UserInfoServiceError {
     case class UserDetailsError(message: String) extends UserInfoServiceError
     case class CitizenDetailsError(message: String) extends UserInfoServiceError
-    case class MissingUserInfos(missingInfo: Set[MissingUserInfo])  extends UserInfoServiceError
+    case class MissingUserInfos(missingInfo: Set[MissingUserInfo]) extends UserInfoServiceError
 
     object MissingUserInfos {
       implicit val format: Format[MissingUserInfos] = Json.format[MissingUserInfos]

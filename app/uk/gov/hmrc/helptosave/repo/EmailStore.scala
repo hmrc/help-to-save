@@ -33,45 +33,45 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[MongoEmailStore])
 trait EmailStore {
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future,String,Unit]
+  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
 
 }
 
 @Singleton
-class MongoEmailStore @Inject()(mongo: ReactiveMongoComponent, crypto: Crypto)
+class MongoEmailStore @Inject() (mongo: ReactiveMongoComponent, crypto: Crypto)
   extends ReactiveRepository[EmailData, BSONObjectID](
     collectionName = "emails",
-    mongo = mongo.mongoConnector.db,
+    mongo          = mongo.mongoConnector.db,
     EmailData.emailDataFormat,
     ReactiveMongoFormats.objectIdFormats)
-    with EmailStore {
+  with EmailStore {
 
   override def indexes: Seq[Index] = Seq(
     Index(
-      key = Seq("nino" → IndexType.Ascending),
+      key  = Seq("nino" → IndexType.Ascending),
       name = Some("ninoIndex")
     )
   )
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future,String,Unit] =
-    EitherT[Future,String,Unit](
+  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
+    EitherT[Future, String, Unit](
       doUpdate(crypto.encrypt(email), nino)
-        .map{ _.fold[Either[String,Unit]](
-          Left("Could not update email mongo store"))(
-          _ ⇒ Right(()))
+        .map{
+          _.fold[Either[String, Unit]](
+            Left("Could not update email mongo store"))(
+              _ ⇒ Right(()))
         }
         .recover{
           case NonFatal(e) ⇒
             Left(e.getMessage)
         })
 
-
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
     collection.findAndUpdate(
       BSONDocument("nino" -> nino),
       BSONDocument("$set" -> BSONDocument("email" -> encryptedEmail)),
       fetchNewObject = true,
-      upsert = true
+      upsert         = true
     ).map(_.result[EmailData])
 
 }

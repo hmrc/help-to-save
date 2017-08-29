@@ -36,8 +36,8 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory {
 
   private val hmrcGenerator = new Generator()
 
-  val startDate = LocalDate.of(1800,1,1) // scalastyle:ignore magic.number
-  val endDate = LocalDate.of(2000,1,1) // scalastyle:ignore magic.number
+  val startDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
+  val endDate = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
   val dateGen: Gen[LocalDate] = Gen.date(startDate, endDate)
 
   def randomDate() = dateGen.sample.getOrElse(sys.error("Could not generate date"))

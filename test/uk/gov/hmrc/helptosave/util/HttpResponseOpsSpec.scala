@@ -31,7 +31,6 @@ class HttpResponseOpsSpec extends TestSupport {
   implicit val test1Format: Format[Test1] = Json.format[Test1]
   implicit val test2Format: Format[Test2] = Json.format[Test2]
 
-
   case class ThrowingHttpResponse() extends HttpResponse {
     override def json: JsValue = throw new Exception()
     override def body: String = ""

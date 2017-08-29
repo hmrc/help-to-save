@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -38,7 +37,7 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
   class TestApparatus {
     val connector = mock[EligibilityCheckConnector]
 
-    def doRequest(nino: String,
+    def doRequest(nino:       String,
                   controller: EligibilityCheckController): Future[PlayResult] =
       controller.eligibilityCheck(nino)(FakeRequest())
 
@@ -57,13 +56,12 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
       val userDetailsURI = "user-details-uri"
       val nino = randomNINO()
 
-      def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
+        def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
         mockEligibilityCheckerService(nino)(None)
         await(doRequest(nino, controller))
       }
-
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
         mockEligibilityCheckerService(nino)(None)
@@ -73,14 +71,14 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
       }
 
       "return the eligibility status returned from the eligibility check service if " +
-        "successful" in new TestApparatus{
-        val eligibility = EligibilityCheckResult(1,2)
-        mockEligibilityCheckerService(nino)(Some(eligibility))
+        "successful" in new TestApparatus {
+          val eligibility = EligibilityCheckResult(1, 2)
+          mockEligibilityCheckerService(nino)(Some(eligibility))
 
-        val result = doRequest(nino, controller)
-        status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.toJson(eligibility)
-      }
+          val result = doRequest(nino, controller)
+          status(result) shouldBe 200
+          contentAsJson(result) shouldBe Json.toJson(eligibility)
+        }
 
     }
   }

@@ -33,10 +33,10 @@ class EmailStoreControllerSpec extends TestSupport {
 
   val emailStore: EmailStore = mock[EmailStore]
 
-  def mockStore(email: String, nino: NINO)(result: Either[String,Unit]): Unit =
-    (emailStore.storeConfirmedEmail(_: String,_ : NINO)(_: ExecutionContext))
-    .expects(email, nino, *)
-    .returning(EitherT.fromEither[Future](result))
+  def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
+    (emailStore.storeConfirmedEmail(_: String, _: NINO)(_: ExecutionContext))
+      .expects(email, nino, *)
+      .returning(EitherT.fromEither[Future](result))
 
   "The EmailStoreController" when {
 
@@ -45,8 +45,8 @@ class EmailStoreControllerSpec extends TestSupport {
     val encodedEmail = new String(Base64.getEncoder.encode(email.getBytes()))
     val nino = "NINO"
 
-    def store(email: String): Future[Result] =
-      controller.store(email, nino)(FakeRequest())
+      def store(email: String): Future[Result] =
+        controller.store(email, nino)(FakeRequest())
 
     "handling requests to store emails" must {
 

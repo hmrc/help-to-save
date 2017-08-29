@@ -29,7 +29,6 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 object MicroserviceAuditConnector extends AuditConnector with RunMode {
   override lazy val auditingConfig = LoadAuditingConfig(s"auditing")
 }
@@ -38,35 +37,35 @@ object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
   override val authBaseUrl = baseUrl("auth")
 }
 
-
 class WSHttp extends WSGet with WSPut with WSPost with WSDelete with WSPatch with AppName {
   override val hooks: Seq[HttpHook] = NoneRequired
 
   /**
-    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
-    * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
-    */
-  def get(url: String, headers: Map[String,String] = Map.empty[String,String])(
-           implicit rhc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = withTracing(GET_VERB, url) {
+   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
+   * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
+   */
+  def get(url: String, headers: Map[String, String] = Map.empty[String, String])(
+      implicit
+      rhc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = withTracing(GET_VERB, url) {
     val httpResponse = buildRequest(url).withHeaders(headers.toSeq: _*).get().map(new WSHttpResponse(_))
     executeHooks(url, GET_VERB, None, httpResponse)
     httpResponse
   }
 
   /**
-    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
-    * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
-    */
-  def post[A](url: String,
-              body: A,
+   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
+   * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
+   */
+  def post[A](url:     String,
+              body:    A,
               headers: Seq[(String, String)]
-             )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] = withTracing(POST_VERB, url) {
+  )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] = withTracing(POST_VERB, url) {
     val httpResponse = doPost(url, body, headers)
     executeHooks(url, POST_VERB, None, httpResponse)
     httpResponse
   }
 
-  def postForm(url: String, body: Map[String,Seq[String]])(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+  def postForm(url: String, body: Map[String, Seq[String]])(implicit hc: HeaderCarrier): Future[HttpResponse] = {
     val httpResponse = doFormPost(url, body)
     executeHooks(url, POST_VERB, None, httpResponse)
     httpResponse

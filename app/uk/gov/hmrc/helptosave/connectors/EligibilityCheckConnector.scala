@@ -47,7 +47,7 @@ class EligibilityCheckConnectorImpl extends EligibilityCheckConnector with Servi
       http.get(url(nino))
         .map (_.parseJson[EligibilityCheckResult])
         .recover {
-      case e ⇒
-        Left(s"Error encountered when checking eligibility: ${e.getMessage}")
-    })
+          case e ⇒
+            Left(s"Error encountered when checking eligibility: ${e.getMessage}")
+        })
 }

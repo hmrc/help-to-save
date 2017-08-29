@@ -35,22 +35,22 @@ object MissingUserInfo {
   implicit val missingInfoFormat: Format[MissingUserInfo] = new Format[MissingUserInfo] {
     override def reads(json: JsValue): JsResult[MissingUserInfo] = {
       json match {
-        case JsString("GivenName") ⇒ JsSuccess(GivenName)
-        case JsString("Surname") ⇒ JsSuccess(Surname)
-        case JsString("Email") ⇒ JsSuccess(Email)
+        case JsString("GivenName")   ⇒ JsSuccess(GivenName)
+        case JsString("Surname")     ⇒ JsSuccess(Surname)
+        case JsString("Email")       ⇒ JsSuccess(Email)
         case JsString("DateOfBirth") ⇒ JsSuccess(DateOfBirth)
-        case JsString("Contact") => JsSuccess(Contact)
-        case _ => JsError("unknown field for MissingUserInfo")
+        case JsString("Contact")     ⇒ JsSuccess(Contact)
+        case _                       ⇒ JsError("unknown field for MissingUserInfo")
       }
     }
 
     override def writes(missingType: MissingUserInfo): JsValue = {
       val result = missingType match {
-        case GivenName ⇒ "GivenName"
-        case Surname ⇒ "Surname"
-        case Email => "Email"
-        case DateOfBirth => "DateOfBirth"
-        case Contact ⇒ "Contact"
+        case GivenName   ⇒ "GivenName"
+        case Surname     ⇒ "Surname"
+        case Email       ⇒ "Email"
+        case DateOfBirth ⇒ "DateOfBirth"
+        case Contact     ⇒ "Contact"
       }
       JsString(result)
     }

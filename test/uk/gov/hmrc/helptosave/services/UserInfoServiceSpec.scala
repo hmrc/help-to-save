@@ -47,7 +47,6 @@ class UserInfoServiceSpec extends TestSupport {
       .expects(nino, *, *)
       .returning(EitherT.fromOption[Future](response, "Oh no"))
 
-
   val service = new UserInfoService(userDetailsConnector, citizenDetailsConnector)
 
   def getUserInfo(userDetailsURI: String, nino: NINO): Either[UserInfoService.UserInfoServiceError, UserInfo] =
@@ -69,7 +68,7 @@ class UserInfoServiceSpec extends TestSupport {
       val name = "name2"
       val surname = "surname2"
       val dateOfBirth = LocalDate.ofEpochDay(1L)
-      val cdAddress = CitizenDetailsConnector.CitizenDetailsAddress(Some("address"), None, None,None,None, Some("postcode"), Some("GB"))
+      val cdAddress = CitizenDetailsConnector.CitizenDetailsAddress(Some("address"), None, None, None, None, Some("postcode"), Some("GB"))
       val address = Address(List("address"), Some("postcode"), Some("GB"))
       val person = CitizenDetailsPerson(Some(name), Some(surname), Some(dateOfBirth))
     }
@@ -155,10 +154,10 @@ class UserInfoServiceSpec extends TestSupport {
 
     "return an error" when {
 
-      def testFailure(mockActions: ⇒ Unit, errorCheck: UserInfoServiceError ⇒ Unit): Unit = {
-        mockActions
-        getUserInfo(userDetailsURI, nino).isLeft shouldBe true
-      }
+        def testFailure(mockActions: ⇒ Unit, errorCheck: UserInfoServiceError ⇒ Unit): Unit = {
+          mockActions
+          getUserInfo(userDetailsURI, nino).isLeft shouldBe true
+        }
 
       "the user details connector comes back with an error" in {
         testFailure(
@@ -219,7 +218,6 @@ class UserInfoServiceSpec extends TestSupport {
           _.asInstanceOf[UserInfoServiceError.MissingUserInfos].missingInfo should contain(MissingUserInfo.Surname)
         )
       }
-
 
       "the citizen details service doesn't return a person and user details is missing a date of birth" in {
         testFailure(inSequence{

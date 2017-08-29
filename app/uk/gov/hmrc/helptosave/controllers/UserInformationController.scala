@@ -31,7 +31,7 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext
 
-class UserInformationController @Inject()(userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
+class UserInformationController @Inject() (userInfoService: UserInfoService)(implicit ec: ExecutionContext) extends BaseController {
 
   val logger = Logger(this.getClass)
 
@@ -41,7 +41,7 @@ class UserInformationController @Inject()(userInfoService: UserInfoService)(impl
   }
 
   private def handleError(error: UserInfoServiceError): Result = {
-    def errorMessage(message: String): String = s"Could not perform eligibility check - $message"
+      def errorMessage(message: String): String = s"Could not perform eligibility check - $message"
 
     error match {
       case UserDetailsError(message) ⇒
@@ -53,11 +53,10 @@ class UserInformationController @Inject()(userInfoService: UserInfoService)(impl
         InternalServerError
 
       case m: MissingUserInfos ⇒
-       Ok(Json.toJson(m))
+        Ok(Json.toJson(m))
 
     }
   }
 
 }
-
 

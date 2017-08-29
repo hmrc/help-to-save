@@ -39,9 +39,9 @@ trait UserDetailsConnector {
 
 object UserDetailsConnector {
 
-  case class UserDetailsResponse(name: String,
-                                 lastName: Option[String],
-                                 email: Option[String],
+  case class UserDetailsResponse(name:        String,
+                                 lastName:    Option[String],
+                                 email:       Option[String],
                                  dateOfBirth: Option[LocalDate])
 
   implicit val userDetailsResponseReads: Reads[UserDetailsResponse] = Json.reads[UserDetailsResponse]
@@ -54,7 +54,7 @@ class UserDetailsConnectorImpl extends UserDetailsConnector with ServicesConfig 
   val http = new WSHttp
 
   override def getUserDetails(userDetailsUri: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UserDetailsResponse] =
-    EitherT[Future,String,UserDetailsResponse](http.get(userDetailsUri).map{ response ⇒
+    EitherT[Future, String, UserDetailsResponse](http.get(userDetailsUri).map{ response ⇒
       if (response.status == 200) {
         response.parseJson[UserDetailsResponse]
       } else {
