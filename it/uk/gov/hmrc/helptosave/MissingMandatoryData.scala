@@ -39,7 +39,7 @@ class MissingMandatoryData extends WordSpec
   with GuiceOneServerPerSuite {
 
   implicit override val patienceConfig =
-    PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
+    PatienceConfig(timeout  = Span(5, Seconds), interval = Span(100, Millis))
 
   override lazy val port: Int = 7001
 
@@ -57,7 +57,6 @@ class MissingMandatoryData extends WordSpec
       .get()
       .futureValue
 
-
   // To do: convert to Gherkin/Cucumber
   "Checking if a user can create an account" when {
 
@@ -68,7 +67,7 @@ class MissingMandatoryData extends WordSpec
         "return with a 200" in {
           val encodedNino = "QUcwMTAxMjND"
           val expected: UserInfo = UserInfo("Sarah", "Smith", decode(encodedNino), LocalDate.of(1999, 12, 12), "sarah@smith.com",
-            Address(List("line 1", "line 2", "line 3", "line 4", "line 5"), Some("BN43 XXX"), Some("GB")))
+                                                              Address(List("line 1", "line 2", "line 3", "line 4", "line 5"), Some("BN43 XXX"), Some("GB")))
 
           val checkEligibilityResponse: WSResponse = checkEligibility(encodedNino, userDetailsURL(encodedNino))
 
@@ -95,7 +94,6 @@ class MissingMandatoryData extends WordSpec
       }
     }
   }
-
 
   "Checking an applicant cannot create an account" when {
 

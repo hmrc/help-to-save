@@ -56,8 +56,8 @@ class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, M
       val encryptedEmail = "ENCRYPTED"
       val data = EmailData(nino, encryptedEmail)
 
-      def update(nino: NINO, email: String): Either[String, Unit] =
-        Await.result(mongoStore.storeConfirmedEmail(email, nino).value, 5.seconds)
+        def update(nino: NINO, email: String): Either[String, Unit] =
+          Await.result(mongoStore.storeConfirmedEmail(email, nino).value, 5.seconds)
 
       "store the email in the mongo database" in {
         inSequence {

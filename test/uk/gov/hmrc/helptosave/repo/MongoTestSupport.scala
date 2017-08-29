@@ -26,7 +26,7 @@ import uk.gov.hmrc.mongo.{MongoConnector, ReactiveRepository}
 
 import scala.concurrent.Future
 
-trait MongoTestSupport[Data, R <: ReactiveRepository[Data,BSONObjectID]] { this: MockFactory ⇒
+trait MongoTestSupport[Data, R <: ReactiveRepository[Data, BSONObjectID]] { this: MockFactory ⇒
 
   trait MockDBFunctions {
     def update(data: Data): Future[Option[Data]]
@@ -48,7 +48,7 @@ trait MongoTestSupport[Data, R <: ReactiveRepository[Data,BSONObjectID]] { this:
     newMongoStore()
   }
 
-  def mockUpdate(data: Data)(result: Either[String,Option[Data]]): Unit =
+  def mockUpdate(data: Data)(result: Either[String, Option[Data]]): Unit =
     (mockDBFunctions.update(_: Data))
       .expects(data)
       .returning(result.fold(

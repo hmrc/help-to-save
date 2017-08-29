@@ -26,14 +26,12 @@ import uk.gov.hmrc.helptosave.utils.TestSupport
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
-
 class CitizenDetailsConnectorSpec extends TestSupport with WithFakeApplication {
 
   def mockGet(url: String)(response: HttpResponse) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
       .expects(url, Map.empty[String, String], *, *)
       .returning(Future.successful(response))
-
 
   lazy val connector = new CitizenDetailsConnectorImpl {
     override val citizenDetailsBaseURL = "url"
@@ -43,7 +41,6 @@ class CitizenDetailsConnectorSpec extends TestSupport with WithFakeApplication {
 
   def getDetails(nino: NINO): Either[String, CitizenDetailsResponse] =
     Await.result(connector.getDetails(nino).value, 5.seconds)
-
 
   "getDetails" must {
 
@@ -61,10 +58,10 @@ class CitizenDetailsConnectorSpec extends TestSupport with WithFakeApplication {
 
     "return an error" when {
 
-      def testFailure(mockActions: ⇒ Unit): Unit = {
-        mockActions
-        getDetails(nino).isLeft shouldBe true
-      }
+        def testFailure(mockActions: ⇒ Unit): Unit = {
+          mockActions
+          getDetails(nino).isLeft shouldBe true
+        }
 
       "there is an error calling the API" in {
         val error = new Exception("Oh no!")
@@ -77,7 +74,7 @@ class CitizenDetailsConnectorSpec extends TestSupport with WithFakeApplication {
 
       "the API doesn't return JSON in the response body" in {
         testFailure(
-          mockGet(url)(HttpResponse(200, responseString = Some("hello")))//scalastyle:ignore magic.number
+          mockGet(url)(HttpResponse(200, responseString = Some("hello"))) //scalastyle:ignore magic.number
         )
       }
 
@@ -86,7 +83,7 @@ class CitizenDetailsConnectorSpec extends TestSupport with WithFakeApplication {
         // TODO: are optional, the JSON gets converted to UserInfo with all
         // TODO: the fields set to None
         testFailure(
-          mockGet(url)(HttpResponse(200, Some(  // scalastyle:ignore magic.number
+          mockGet(url)(HttpResponse(200, Some( // scalastyle:ignore magic.number
             Json.parse(
               """
                 |{

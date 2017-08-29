@@ -46,7 +46,7 @@ class ITMPEnrolmentConnectorImpl extends ITMPEnrolmentConnector with ServicesCon
   def url(nino: NINO): String = s"$itmpEnrolmentURL/set-enrolment-flag/$nino"
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
-    EitherT(http.post(url(nino), PostBody(), Seq.empty[(String,String)])
+    EitherT(http.post(url(nino), PostBody(), Seq.empty[(String, String)])
       .map{ response ⇒
         response.status match {
           case OK ⇒ Right(())
@@ -63,7 +63,6 @@ class ITMPEnrolmentConnectorImpl extends ITMPEnrolmentConnector with ServicesCon
       })
 
 }
-
 
 object ITMPEnrolmentConnectorImpl {
 

@@ -38,15 +38,15 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
         Left(s"Could not read http response as JSON: ${error.getMessage}. Response body was ${response.body}"),
       jsValue ⇒
         // use Option here to filter out null values
-        Option(jsValue).fold[Either[String,A]](
+        Option(jsValue).fold[Either[String, A]](
           Left("No JSON found in body of http response")
         )(_.validate[A].fold(
-          errors ⇒
-            // there was JSON in the response but we couldn't read it
-            Left(s"Could not parse http reponse JSON: ${JsError(errors).prettyPrint()}. Response body was ${response.body}"),
-          Right(_)
-        )
-        )
+            errors ⇒
+              // there was JSON in the response but we couldn't read it
+              Left(s"Could not parse http reponse JSON: ${JsError(errors).prettyPrint()}. Response body was ${response.body}"),
+            Right(_)
+          )
+          )
     )
 
 }

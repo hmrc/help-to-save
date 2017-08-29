@@ -25,7 +25,7 @@ import uk.gov.hmrc.helptosave.utils.TestSupport
 
 import scala.util.{Random, Success}
 
-class CryptoImplSpec  extends TestSupport with GeneratorDrivenPropertyChecks {
+class CryptoImplSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
   "The CryptoImpl" must {
 

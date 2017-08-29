@@ -48,15 +48,13 @@ class UserInformationControllerSpec extends TestSupport {
 
   "The UserInformationController" must {
 
-    def doRequest(nino: String,
-                  userDetailsURI: String,
-                  controller: UserInformationController): Future[Result] =
-      controller.getUserInformation(nino, userDetailsURI)(FakeRequest())
-
+      def doRequest(nino:           String,
+                    userDetailsURI: String,
+                    controller:     UserInformationController): Future[Result] =
+        controller.getUserInformation(nino, userDetailsURI)(FakeRequest())
 
     val nino = "nino"
     val userDetailsURI = "user-details"
-
 
     "ask the UserInfoAPIService for user info if the user is eligible" in new TestApparatus {
       inSequence {
@@ -77,21 +75,20 @@ class UserInformationControllerSpec extends TestSupport {
       Json.fromJson[UserInfo](contentAsJson(result)) shouldBe JsSuccess(userInfo)
     }
 
-
     "report any missing user details back to the user" in new TestApparatus {
       List(MissingUserInfo.GivenName, MissingUserInfo.Surname, MissingUserInfo.DateOfBirth,
-        MissingUserInfo.Email, MissingUserInfo.Contact).permutations.foreach { missingInfo ⇒
-        inSequence {
-          mockUserInfoService(userDetailsURI, nino)(Left(UserInfoServiceError.MissingUserInfos(missingInfo.toSet)))
+           MissingUserInfo.Email, MissingUserInfo.Contact).permutations.foreach { missingInfo ⇒
+          inSequence {
+            mockUserInfoService(userDetailsURI, nino)(Left(UserInfoServiceError.MissingUserInfos(missingInfo.toSet)))
+          }
+
+          val result = doRequest(nino, userDetailsURI, controller)
+          status(result) shouldBe 200
+
+          val jsValue = Json.fromJson[MissingUserInfos](contentAsJson(result))
+          jsValue.isSuccess shouldBe true
+          jsValue.get.missingInfo shouldBe missingInfo.toSet
         }
-
-        val result = doRequest(nino, userDetailsURI, controller)
-        status(result) shouldBe 200
-
-        val jsValue = Json.fromJson[MissingUserInfos](contentAsJson(result))
-        jsValue.isSuccess shouldBe true
-        jsValue.get.missingInfo shouldBe missingInfo.toSet
-      }
     }
 
     "return with a status 500 if the user info service fails" in new TestApparatus {
@@ -99,11 +96,11 @@ class UserInformationControllerSpec extends TestSupport {
         UserInfoServiceError.UserDetailsError("Uh oh"),
         UserInfoServiceError.CitizenDetailsError("Oh no")
       ).foreach { e ⇒
-        mockUserInfoService(userDetailsURI, nino)(Left(e))
+          mockUserInfoService(userDetailsURI, nino)(Left(e))
 
-        val result = doRequest(nino, userDetailsURI, controller)
-        status(result) shouldBe 500
-      }
+          val result = doRequest(nino, userDetailsURI, controller)
+          status(result) shouldBe 500
+        }
     }
   }
 }

@@ -48,7 +48,6 @@ class UserDetailsConnectorSpec extends TestSupport with WithFakeApplication {
       .expects(userDetailsUri, Map.empty[String, String], *, *)
       .returning(Future.successful(response))
 
-
   lazy val connector = new UserDetailsConnectorImpl {
     override val http = mockHttp
   }
@@ -56,24 +55,23 @@ class UserDetailsConnectorSpec extends TestSupport with WithFakeApplication {
   def getUserDetails(userDetailsUri: String): Either[String, UserDetailsResponse] =
     Await.result(connector.getUserDetails(userDetailsUri).value, 5.seconds)
 
-
   "getUserDetails" must {
 
     lazy val userDetailsUri = "url"
 
     "return user details when there are user details to return" in {
       val expected = UserDetailsResponse("name", Some("lastname"), Some("email"), Some(randomDate()))
-      mockGet(userDetailsUri)(HttpResponse(200, Some(Json.toJson(expected))))// scalastyle:ignore magic.number
+      mockGet(userDetailsUri)(HttpResponse(200, Some(Json.toJson(expected)))) // scalastyle:ignore magic.number
 
       getUserDetails(userDetailsUri) shouldBe Right(expected)
     }
 
     "return an error" when {
 
-      def testFailure(mockActions: ⇒ Unit): Unit = {
-        mockActions
-        getUserDetails(userDetailsUri).isLeft shouldBe true
-      }
+        def testFailure(mockActions: ⇒ Unit): Unit = {
+          mockActions
+          getUserDetails(userDetailsUri).isLeft shouldBe true
+        }
 
       "there is an error calling the API" in {
         val error = new Exception("Oh no!")
@@ -86,7 +84,7 @@ class UserDetailsConnectorSpec extends TestSupport with WithFakeApplication {
 
       "the API doesn't return JSON in the response body" in {
         testFailure(
-          mockGet(userDetailsUri)(HttpResponse(200, responseString = Some("hello")))//scalastyle:ignore magic.number
+          mockGet(userDetailsUri)(HttpResponse(200, responseString = Some("hello"))) //scalastyle:ignore magic.number
         )
       }
     }

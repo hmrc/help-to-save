@@ -1,9 +1,10 @@
 import sbt.Keys._
-import sbt.Tests.{SubProcess, Group}
+import sbt.Tests.{Group, SubProcess}
 import sbt._
 import play.routes.compiler.StaticRoutesGenerator
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
+import scalariform.formatter.preferences._
 
 trait MicroService {
 
@@ -13,7 +14,6 @@ trait MicroService {
   import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
   import uk.gov.hmrc.versioning.SbtGitVersioning
   import play.sbt.routes.RoutesKeys.routesGenerator
-
 
   import TestPhases._
 
@@ -35,12 +35,46 @@ trait MicroService {
     )
   }
 
+  lazy val scalariformSettings = {
+    import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+    import scalariform.formatter.preferences._
+    // description of options found here -> https://github.com/scala-ide/scalariform
+    ScalariformKeys.preferences := ScalariformKeys.preferences.value
+      .setPreference(AlignArguments, true)
+      .setPreference(AlignParameters, true)
+      .setPreference(AlignSingleLineCaseStatements, true)
+      .setPreference(CompactControlReadability, false)
+      .setPreference(CompactStringConcatenation, false)
+      .setPreference(DanglingCloseParenthesis, Preserve)
+      .setPreference(DoubleIndentConstructorArguments, true)
+      .setPreference(DoubleIndentMethodDeclaration, true)
+      .setPreference(FirstArgumentOnNewline, Preserve)
+      .setPreference(FirstParameterOnNewline, Preserve)
+      .setPreference(FormatXml, true)
+      .setPreference(IndentLocalDefs, true)
+      .setPreference(IndentPackageBlocks, true)
+      .setPreference(IndentSpaces, 2)
+      .setPreference(IndentWithTabs, false)
+      .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
+      .setPreference(NewlineAtEndOfFile, true)
+      .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, false)
+      .setPreference(PreserveSpaceBeforeArguments, true)
+      .setPreference(RewriteArrowSymbols, true)
+      .setPreference(SpaceBeforeColon, false)
+      .setPreference(SpaceBeforeContextColon, false)
+      .setPreference(SpaceInsideBrackets, false)
+      .setPreference(SpaceInsideParentheses, false)
+      .setPreference(SpacesAroundMultiImports, false)
+      .setPreference(SpacesWithinPatternBinders, true)
+  }
+
   lazy val microservice = Project(appName, file("."))
     .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
     .settings(playSettings ++ scoverageSettings: _*)
     .settings(scalaSettings: _*)
     .settings(publishingSettings: _*)
     .settings(defaultSettings(): _*)
+    .settings(scalariformSettings: _*)
     .settings(
       libraryDependencies ++= appDependencies,
       retrieveManaged := true,
@@ -51,7 +85,7 @@ trait MicroService {
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
     .settings(
       Keys.fork in IntegrationTest := false,
-      unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest) (base => Seq(base / "it")),
+      unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest) (base ⇒ Seq(base / "it")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
       parallelExecution in IntegrationTest := false)
@@ -66,6 +100,6 @@ private object TestPhases {
 
   def oneForkedJvmPerTest(tests: Seq[TestDefinition]) =
     tests map {
-      test => new Group(test.name, Seq(test), SubProcess(ForkOptions(runJVMOptions = Seq("-Dtest.name=" + test.name))))
+      test ⇒ new Group(test.name, Seq(test), SubProcess(ForkOptions(runJVMOptions = Seq("-Dtest.name=" + test.name))))
     }
 }

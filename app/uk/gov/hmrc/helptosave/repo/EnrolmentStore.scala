@@ -34,9 +34,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait EnrolmentStore {
   import EnrolmentStore._
 
-  def get(nino: NINO): EitherT[Future,String,Status]
+  def get(nino: NINO): EitherT[Future, String, Status]
 
-  def update(nino: NINO, itmpFlag: Boolean): EitherT[Future,String,Unit]
+  def update(nino: NINO, itmpFlag: Boolean): EitherT[Future, String, Unit]
 
 }
 
@@ -50,17 +50,17 @@ object EnrolmentStore {
 
 }
 
-class MongoEnrolmentStore @Inject()(mongo: ReactiveMongoComponent)(implicit ec: ExecutionContext)
-  extends ReactiveRepository[EnrolmentData, BSONObjectID] (
+class MongoEnrolmentStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: ExecutionContext)
+  extends ReactiveRepository[EnrolmentData, BSONObjectID](
     collectionName = "enrolments",
-    mongo = mongo.mongoConnector.db,
+    mongo          = mongo.mongoConnector.db,
     EnrolmentData.ninoFormat,
     ReactiveMongoFormats.objectIdFormats)
-    with EnrolmentStore {
+  with EnrolmentStore {
 
   override def indexes: Seq[Index] = Seq(
     Index(
-      key = Seq("nino" → IndexType.Ascending),
+      key  = Seq("nino" → IndexType.Ascending),
       name = Some("ninoIndex")
     )
   )
@@ -70,7 +70,7 @@ class MongoEnrolmentStore @Inject()(mongo: ReactiveMongoComponent)(implicit ec: 
       BSONDocument("nino" -> nino),
       BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
       fetchNewObject = true,
-      upsert = true
+      upsert         = true
     ).map(_.result[EnrolmentData])
 
   override def get(nino: String): EitherT[Future, String, EnrolmentStore.Status] = EitherT(
@@ -85,16 +85,17 @@ class MongoEnrolmentStore @Inject()(mongo: ReactiveMongoComponent)(implicit ec: 
   override def update(nino: NINO, itmpFlag: Boolean): EitherT[Future, String, Unit] = {
     logger.info(s"Putting nino $nino into enrolment store")
     EitherT(
-      doUpdate(nino, itmpFlag).map[Either[String,Unit]]{ result ⇒
-        result.fold[Either[String,Unit]](
+      doUpdate(nino, itmpFlag).map[Either[String, Unit]]{ result ⇒
+        result.fold[Either[String, Unit]](
           Left("Could not update enrolment store")
         ){ _ ⇒
-          logger.info("Successfully updated enrolment store")
-          Right(())
-        }
-      }.recover{ case e ⇒
-        logger.error(s"Could not write to enrolment store", e)
-        Left(s"Failed to write to enrolments store: ${e.getMessage}")
+            logger.info("Successfully updated enrolment store")
+            Right(())
+          }
+      }.recover{
+        case e ⇒
+          logger.error(s"Could not write to enrolment store", e)
+          Left(s"Failed to write to enrolments store: ${e.getMessage}")
       }
     )
   }
@@ -104,7 +105,7 @@ object MongoEnrolmentStore {
 
   private[repo] case class EnrolmentData(nino: String, itmpHtSFlag: Boolean)
 
-  private[repo]  object EnrolmentData {
+  private[repo] object EnrolmentData {
     implicit val ninoFormat = Json.format[EnrolmentData]
   }
 
