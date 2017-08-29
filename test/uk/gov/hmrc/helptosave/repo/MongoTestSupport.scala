@@ -26,21 +26,21 @@ import uk.gov.hmrc.mongo.{MongoConnector, ReactiveRepository}
 
 import scala.concurrent.Future
 
-trait MongoTestSupport[Data, R <: ReactiveRepository[Data, BSONObjectID]] { this: MockFactory ⇒
+trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] { this: MockFactory ⇒
 
   trait MockDBFunctions {
     def update(data: Data): Future[Option[Data]]
 
-    def get[ID, Data](id: ID): Future[List[Data]]
+    def get[ID](id: ID): Future[List[Data]]
   }
 
   val mockDBFunctions = mock[MockDBFunctions]
 
   val mockMongo = mock[ReactiveMongoComponent]
 
-  def newMongoStore(): R
+  def newMongoStore(): Repo
 
-  lazy val mongoStore: R = {
+  lazy val mongoStore: Repo = {
     val connector = mock[MongoConnector]
     val db = stub[DefaultDB]
     (mockMongo.mongoConnector _).expects().returning(connector)
@@ -57,7 +57,7 @@ trait MongoTestSupport[Data, R <: ReactiveRepository[Data, BSONObjectID]] { this
       )
 
   def mockFind(id: String)(result: ⇒ Future[List[Data]]): Unit =
-    (mockDBFunctions.get[Json.JsValueWrapper, Data](_: Json.JsValueWrapper))
+    (mockDBFunctions.get[Json.JsValueWrapper](_: Json.JsValueWrapper))
       .expects(toJsFieldJsValueWrapper(JsString(id)))
       .returning(result)
 

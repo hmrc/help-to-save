@@ -56,12 +56,6 @@ object CitizenDetailsConnector {
 
   case class CitizenDetailsResponse(person: Option[CitizenDetailsPerson], address: Option[CitizenDetailsAddress])
 
-  implicit val personReads: Reads[CitizenDetailsPerson] = Json.reads[CitizenDetailsPerson]
-
-  implicit val addressReads: Reads[CitizenDetailsAddress] = Json.reads[CitizenDetailsAddress]
-
-  implicit val citizenDetailsResponseReads: Reads[CitizenDetailsResponse] = Json.reads[CitizenDetailsResponse]
-
   implicit val addressFormat: Format[CitizenDetailsAddress] = Json.format[CitizenDetailsAddress]
 
   implicit val personFormat: Format[CitizenDetailsPerson] = Json.format[CitizenDetailsPerson]
