@@ -44,7 +44,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
     override def find(query: (String, Json.JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[EnrolmentData]] =
       query.toList match {
         case (_, value) :: Nil ⇒
-          mockDBFunctions.get[Json.JsValueWrapper, EnrolmentData](value)
+          mockDBFunctions.get[Json.JsValueWrapper](value)
 
         case _ ⇒ fail("find method called with multiple NINOs")
       }
