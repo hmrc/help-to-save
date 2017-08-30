@@ -70,6 +70,7 @@ trait MicroService {
 
   lazy val microservice = Project(appName, file("."))
     .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
+    .settings(addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17"))
     .settings(playSettings ++ scoverageSettings: _*)
     .settings(scalaSettings: _*)
     .settings(publishingSettings: _*)
