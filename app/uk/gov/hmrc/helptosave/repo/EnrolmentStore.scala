@@ -78,7 +78,7 @@ class MongoEnrolmentStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec:
       Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
     }.recover{
       case e ⇒
-        logger.error(s"Could not read from enrolment store", e)
+        logger.error("Could not read from enrolment store", e)
         Left(s"Could not read from enrolment store: ${e.getMessage}")
     })
 
@@ -94,7 +94,7 @@ class MongoEnrolmentStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec:
           }
       }.recover{
         case e ⇒
-          logger.error(s"Could not write to enrolment store", e)
+          logger.error("Could not write to enrolment store", e)
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
       }
     )

@@ -156,7 +156,7 @@ class UserInfoServiceSpec extends TestSupport {
 
         def testFailure(mockActions: ⇒ Unit, errorCheck: UserInfoServiceError ⇒ Unit): Unit = {
           mockActions
-          getUserInfo(userDetailsURI, nino).isLeft shouldBe true
+          getUserInfo(userDetailsURI, nino).fold(errorCheck, _ ⇒ fail("expected call to fail"))
         }
 
       "the user details connector comes back with an error" in {
