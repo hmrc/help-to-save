@@ -32,7 +32,7 @@ import scala.util.Try
 class EmailStoreController @Inject() (emailStore: EmailStore)(implicit ec: ExecutionContext)
   extends BaseController with Logging {
 
-  val decoder = Base64.getDecoder
+  val decoder: Base64.Decoder = Base64.getDecoder
 
   def store(email: String, nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
     Try(new String(decoder.decode(email))).fold(

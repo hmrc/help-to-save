@@ -106,7 +106,7 @@ object MongoEnrolmentStore {
   private[repo] case class EnrolmentData(nino: String, itmpHtSFlag: Boolean)
 
   private[repo] object EnrolmentData {
-    implicit val ninoFormat = Json.format[EnrolmentData]
+    implicit val ninoFormat: Format[EnrolmentData] = Json.format[EnrolmentData]
   }
 
 }
