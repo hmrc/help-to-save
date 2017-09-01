@@ -78,23 +78,23 @@ class MongoEnrolmentStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec:
       Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
     }.recover{
       case e ⇒
-        logger.error("Could not read from enrolment store", e)
-        Left(s"Could not read from enrolment store: ${e.getMessage}")
+        logger.error(s"For NINO [$nino]: Could not read from enrolment store", e)
+        Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
     })
 
   override def update(nino: NINO, itmpFlag: Boolean): EitherT[Future, String, Unit] = {
-    logger.info(s"Putting nino $nino into enrolment store")
+    logger.info(s"For NINO [$nino]: Updating entry into enrolment store (itmpFlag = $itmpFlag)")
     EitherT(
       doUpdate(nino, itmpFlag).map[Either[String, Unit]]{ result ⇒
         result.fold[Either[String, Unit]](
-          Left("Could not update enrolment store")
+          Left("For NINO [$nino]: Could not update enrolment store")
         ){ _ ⇒
-            logger.info("Successfully updated enrolment store")
+            logger.info(s"For NINO [$nino]: Successfully updated enrolment store")
             Right(())
           }
       }.recover{
         case e ⇒
-          logger.error("Could not write to enrolment store", e)
+          logger.error(s"For NINO [$nino]: Could not write to enrolment store", e)
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
       }
     )
