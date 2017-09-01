@@ -41,13 +41,13 @@ class ITMPEnrolmentConnectorImpl extends ITMPEnrolmentConnector with ServicesCon
 
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
 
-  val http = new WSHttp
+  val http: WSHttp = new WSHttp
 
   def url(nino: NINO): String = s"$itmpEnrolmentURL/set-enrolment-flag/$nino"
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
     EitherT(http.post(url(nino), PostBody(), Seq.empty[(String, String)])
-      .map{ response ⇒
+      .map[Either[String, Unit]]{ response ⇒
         response.status match {
           case OK ⇒ Right(())
           case CONFLICT ⇒

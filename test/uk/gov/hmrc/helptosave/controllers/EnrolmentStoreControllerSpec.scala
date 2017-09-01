@@ -53,7 +53,7 @@ class EnrolmentStoreControllerSpec extends TestSupport with GeneratorDrivenPrope
       .returning(EitherT.fromEither[Future](result))
 
   implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
-    Arbitrary(Gen.oneOf(
+    Arbitrary(Gen.oneOf[EnrolmentStore.Status](
       Gen.const(EnrolmentStore.NotEnrolled),
       Gen.oneOf(true, false).map(EnrolmentStore.Enrolled)
     ))

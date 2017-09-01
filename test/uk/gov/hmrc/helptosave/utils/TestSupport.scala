@@ -26,22 +26,24 @@ import org.scalacheck.Gen
 import hmrc.smartstub._
 import uk.gov.hmrc.domain.Generator
 
+import scala.concurrent.ExecutionContext
+
 trait TestSupport extends WordSpecLike with Matchers with MockFactory {
 
-  implicit val ec = scala.concurrent.ExecutionContext.global
+  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val mockHttp = mock[WSHttp]
+  val mockHttp: WSHttp = mock[WSHttp]
 
-  private val hmrcGenerator = new Generator()
+  private val hmrcGenerator: Generator = new Generator()
 
-  val startDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
-  val endDate = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
+  val startDate: LocalDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
+  val endDate: LocalDate = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
   val dateGen: Gen[LocalDate] = Gen.date(startDate, endDate)
 
-  def randomDate() = dateGen.sample.getOrElse(sys.error("Could not generate date"))
+  def randomDate(): LocalDate = dateGen.sample.getOrElse(sys.error("Could not generate date"))
 
-  def randomNINO() = hmrcGenerator.nextNino.value
+  def randomNINO(): String = hmrcGenerator.nextNino.value
 }
 

@@ -32,17 +32,17 @@ import scala.util.Try
 class EmailStoreController @Inject() (emailStore: EmailStore)(implicit ec: ExecutionContext)
   extends BaseController with Logging {
 
-  val decoder = Base64.getDecoder
+  val decoder: Base64.Decoder = Base64.getDecoder
 
   def store(email: String, nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
     Try(new String(decoder.decode(email))).fold(
       { error ⇒
-        logger.warn(s"Could not store email for $nino. Could not decode email: $error")
+        logger.warn(s"For NINO [$nino]: Could not store email. Could not decode email: $error")
         Future.successful(InternalServerError)
       }, { decodedEmail ⇒
         emailStore.storeConfirmedEmail(decodedEmail, nino).fold(
           { e ⇒
-            logger.error(s"Could not store email for user $nino: $e")
+            logger.error(s"For NINO [$nino]: Could not store email: $e")
             InternalServerError
           }, { _ ⇒
             Ok

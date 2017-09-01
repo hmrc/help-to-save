@@ -37,10 +37,10 @@ class EligibilityCheckConnectorImpl extends EligibilityCheckConnector with Servi
 
   val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
 
-  def url(nino: String) =
+  def url(nino: String): String =
     s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
 
-  val http = new WSHttp
+  val http: WSHttp = new WSHttp
 
   override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     EitherT[Future, String, EligibilityCheckResult](

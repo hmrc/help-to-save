@@ -18,18 +18,16 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.instances.future._
 import com.google.inject.Inject
-import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
-import uk.gov.hmrc.helptosave.util.NINO
+import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext
 
-class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector)(implicit ec: ExecutionContext) extends BaseController {
-
-  val logger = Logger(this.getClass)
+class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector)(implicit ec: ExecutionContext)
+  extends BaseController with Logging {
 
   def eligibilityCheck(nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
     eligibilityCheckService.isEligible(nino).fold(

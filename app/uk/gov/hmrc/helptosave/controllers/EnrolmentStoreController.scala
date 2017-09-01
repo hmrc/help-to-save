@@ -57,10 +57,10 @@ class EnrolmentStoreController @Inject() (enrolmentStore: EnrolmentStore, itmpCo
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit writes: Writes[A]): Future[Result] =
     f.fold(
       { e ⇒
-        logger.warn(s"Could not $description for $nino: $e")
+        logger.warn(s"For NINO [$nino]: Could not $description: $e")
         InternalServerError
       }, { a ⇒
-        logger.info(s"$description successful for $nino")
+        logger.info(s"For NINO [$nino]: $description successful")
         Ok(Json.toJson(a))
       }
     )
