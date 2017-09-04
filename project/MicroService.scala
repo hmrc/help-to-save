@@ -1,6 +1,6 @@
 import sbt.Keys._
 import sbt.Tests.{Group, SubProcess}
-import sbt._
+import sbt.{Def, _}
 import play.routes.compiler.StaticRoutesGenerator
 import play.sbt.routes.RoutesKeys.routes
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
@@ -100,7 +100,11 @@ trait MicroService {
     // scalamock, (Equals) seems to struggle with stub generator AutoGen and (NonUnitStatements) is
     // imcompatible with a lot of WordSpec
     .settings(wartremoverErrors in (Test, compile) --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference))
-    .settings(wartremoverExcluded ++= (sourceManaged ** "*.scala").value.get ++ routes.in(Compile).value ++ (baseDirectory ** "*.sc").value.get)
+    .settings(wartremoverExcluded ++=
+      routes.in(Compile).value ++
+      (baseDirectory ** "*.sc").value ++
+      Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala")
+    )
     .settings(
       libraryDependencies ++= appDependencies,
       retrieveManaged := true,
