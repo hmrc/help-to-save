@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.utils
 
+import com.codahale.metrics.{Counter, Timer}
+import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.helptosave.config.WSHttp
@@ -25,6 +27,7 @@ import java.time.LocalDate
 import org.scalacheck.Gen
 import hmrc.smartstub._
 import uk.gov.hmrc.domain.Generator
+import uk.gov.hmrc.helptosave.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
@@ -35,6 +38,12 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory {
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val mockHttp: WSHttp = mock[WSHttp]
+
+  val mockMetrics = new Metrics(stub[PlayMetrics]) {
+    override def timer(name: String): Timer = new Timer()
+
+    override def counter(name: String): Counter = new Counter()
+  }
 
   private val hmrcGenerator: Generator = new Generator()
 

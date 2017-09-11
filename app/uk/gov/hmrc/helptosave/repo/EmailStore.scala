@@ -22,6 +22,8 @@ import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.ReactiveRepository
@@ -38,7 +40,9 @@ trait EmailStore {
 }
 
 @Singleton
-class MongoEmailStore @Inject() (mongo: ReactiveMongoComponent, crypto: Crypto)
+class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
+                                 crypto:  Crypto,
+                                 metrics: Metrics)
   extends ReactiveRepository[EmailData, BSONObjectID](
     collectionName = "emails",
     mongo          = mongo.mongoConnector.db,
@@ -54,17 +58,27 @@ class MongoEmailStore @Inject() (mongo: ReactiveMongoComponent, crypto: Crypto)
   )
 
   def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
-    EitherT[Future, String, Unit](
+    EitherT[Future, String, Unit]({
+      val timerContext = metrics.emailStoreUpdateTimer.time()
+
       doUpdate(crypto.encrypt(email), nino)
-        .map{
-          _.fold[Either[String, Unit]](
-            Left("Could not update email mongo store"))(
-              _ ⇒ Right(()))
+        .map{ result ⇒
+          val time = timerContext.stop()
+          logger.info(s"Update on email store completed (successful: ${result.isDefined}) (time: ${nanosToPrettyString(time)})")
+
+          result.fold[Either[String, Unit]]{
+            metrics.emailStoreUpdateErrorCounter.inc()
+            Left("Could not update email mongo store")
+          }(_ ⇒ Right(()))
         }
         .recover{
           case NonFatal(e) ⇒
-            Left(e.getMessage)
-        })
+            val time = timerContext.stop()
+            metrics.emailStoreUpdateErrorCounter.inc()
+
+            Left(s"${e.getMessage} (time: ${nanosToPrettyString(time)})")
+        }
+    })
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
     collection.findAndUpdate(

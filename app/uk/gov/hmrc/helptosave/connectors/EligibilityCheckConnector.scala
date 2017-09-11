@@ -17,11 +17,13 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
-import com.google.inject.{ImplementedBy, Singleton}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-import uk.gov.hmrc.helptosave.util.Result
+import uk.gov.hmrc.helptosave.util.{Logging, Result}
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -33,7 +35,7 @@ trait EligibilityCheckConnector {
 }
 
 @Singleton
-class EligibilityCheckConnectorImpl extends EligibilityCheckConnector with ServicesConfig {
+class EligibilityCheckConnectorImpl @Inject() (metrics: Metrics) extends EligibilityCheckConnector with ServicesConfig with Logging {
 
   val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
 
@@ -44,10 +46,22 @@ class EligibilityCheckConnectorImpl extends EligibilityCheckConnector with Servi
 
   override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     EitherT[Future, String, EligibilityCheckResult](
-      http.get(url(nino))
-        .map (_.parseJson[EligibilityCheckResult])
-        .recover {
-          case e ⇒
-            Left(s"Error encountered when checking eligibility: ${e.getMessage}")
-        })
+      {
+        val timerContext = metrics.itmpEligibilityCheckTimer.time()
+
+        http.get(url(nino))
+          .map{ response ⇒
+            val time = timerContext.stop()
+            logger.info(s"Received response from ITMP eligibility check in ${nanosToPrettyString(time)}")
+            val result = response.parseJson[EligibilityCheckResult]
+            result.fold(_ ⇒ metrics.itmpEligibilityCheckErrorCounter.inc(), _ ⇒ ())
+            result
+          }
+          .recover {
+            case e ⇒
+              val time = timerContext.stop()
+              metrics.itmpEligibilityCheckErrorCounter.inc()
+              Left(s"Error encountered when checking eligibility: ${e.getMessage} (time: ${nanosToPrettyString(time)})")
+          }
+      })
 }
