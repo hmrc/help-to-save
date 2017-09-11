@@ -53,11 +53,14 @@ class EligibilityCheckConnectorImpl @Inject() (metrics: Metrics) extends Eligibi
           .map{ response ⇒
             val time = timerContext.stop()
             logger.info(s"Received response from ITMP eligibility check in ${nanosToPrettyString(time)}")
-            response.parseJson[EligibilityCheckResult]
+            val result = response.parseJson[EligibilityCheckResult]
+            result.fold(_ ⇒ metrics.itmpEligibilityCheckErrorCounter.inc(), _ ⇒ ())
+            result
           }
           .recover {
             case e ⇒
               val time = timerContext.stop()
+              metrics.itmpEligibilityCheckErrorCounter.inc()
               Left(s"Error encountered when checking eligibility: ${e.getMessage} (time: ${nanosToPrettyString(time)})")
           }
       })

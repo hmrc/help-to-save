@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
+import com.codahale.metrics.Counter
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import play.mvc.Http.Status.{CONFLICT, OK}
@@ -61,16 +62,19 @@ class ITMPEnrolmentConnectorImpl @Inject() (metrics: Metrics) extends ITMPEnrolm
               Right(())
 
             case CONFLICT ⇒
+              metrics.itmpSetFlagConflictCounter.inc()
               logger.warn(s"Tried to set ITMP HtS flag even though it was already set - proceeding as normal  (time: ${nanosToPrettyString(time)})")
               Right(())
 
             case other ⇒
+              metrics.itmpSetFlagErrorCounter.inc()
               Left(s"Received unexpected response status ($other) when trying to set ITMP flag  (time: ${nanosToPrettyString(time)})")
           }
         }
         .recover{
           case NonFatal(e) ⇒
             val time = timerContext.stop()
+            metrics.itmpSetFlagErrorCounter.inc()
             Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (time: ${nanosToPrettyString(time)})")
         }
     })

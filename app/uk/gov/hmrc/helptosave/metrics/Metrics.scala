@@ -18,8 +18,7 @@ package uk.gov.hmrc.helptosave.metrics
 
 import cats.instances.long._
 import cats.syntax.eq._
-
-import com.codahale.metrics.Timer
+import com.codahale.metrics.{Counter, Timer}
 import com.google.inject.{Inject, Singleton}
 
 import scala.annotation.tailrec
@@ -29,15 +28,29 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   protected def timer(name: String): Timer = metrics.defaultRegistry.timer(name)
 
+  protected def counter(name: String): Counter = metrics.defaultRegistry.counter(name)
+
   val itmpEligibilityCheckTimer: Timer = timer("backend.itmp-eligibility-check-time")
+
+  val itmpEligibilityCheckErrorCounter: Counter = counter("backend.itmp-eligibility-check-error-counter")
 
   val itmpSetFlagTimer: Timer = timer("backend.itmp-set-flag-time")
 
+  val itmpSetFlagConflictCounter: Counter = counter("backend.itmp-set-flag-conflict-counter")
+
+  val itmpSetFlagErrorCounter: Counter = counter("backend.itmp-set-flag-error-counter")
+
   val emailStoreUpdateTimer: Timer = timer("backend.email-store-update-time")
+
+  val emailStoreUpdateErrorCounter: Counter = counter("backend.email-store-error-counter")
 
   val enrolmentStoreGetTimer: Timer = timer("backend.enrolment-store-get-time")
 
+  val enrolmentStoreGetErrorCounter: Counter = counter("backend.enrolment-store-get-error-counter")
+
   val enrolmentStoreUpdateTimer: Timer = timer("backend.enrolment-store-update-time")
+
+  val enrolmentStoreUpdateErrorCounter: Counter = counter("backend.enrolment-store-update-error-counter")
 
 }
 

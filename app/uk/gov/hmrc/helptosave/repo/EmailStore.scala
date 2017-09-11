@@ -66,13 +66,16 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
           val time = timerContext.stop()
           logger.info(s"Update on email store completed (successful: ${result.isDefined}) (time: ${nanosToPrettyString(time)})")
 
-          result.fold[Either[String, Unit]](
-            Left("Could not update email mongo store"))(
-              _ ⇒ Right(()))
+          result.fold[Either[String, Unit]]{
+            metrics.emailStoreUpdateErrorCounter.inc()
+            Left("Could not update email mongo store")
+          }(_ ⇒ Right(()))
         }
         .recover{
           case NonFatal(e) ⇒
             val time = timerContext.stop()
+            metrics.emailStoreUpdateErrorCounter.inc()
+
             Left(s"${e.getMessage} (time: ${nanosToPrettyString(time)})")
         }
     })

@@ -84,10 +84,14 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
         val time = timerContext.stop()
         logger.info(s"For NINO [$nino]: GET on enrolment store took ${nanosToPrettyString(time)}")
 
-        Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
+        Right(res.headOption.fold[Status]{
+          metrics.enrolmentStoreGetErrorCounter.inc()
+          NotEnrolled
+        }(data ⇒ Enrolled(data.itmpHtSFlag)))
       }.recover{
         case e ⇒
           val time = timerContext.stop()
+          metrics.enrolmentStoreGetErrorCounter.inc()
 
           logger.error(s"For NINO [$nino]: Could not read from enrolment store (time: ${nanosToPrettyString(time)})", e)
           Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
@@ -102,15 +106,17 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
       doUpdate(nino, itmpFlag).map[Either[String, Unit]]{ result ⇒
         val time = timerContext.stop()
 
-        result.fold[Either[String, Unit]](
+        result.fold[Either[String, Unit]] {
+          metrics.enrolmentStoreUpdateErrorCounter.inc()
           Left(s"For NINO [$nino]: Could not update enrolment store (time: ${nanosToPrettyString(time)})")
-        ){ _ ⇒
+        }{ _ ⇒
             logger.info(s"For NINO [$nino]: Successfully updated enrolment store (time: ${nanosToPrettyString(time)})")
             Right(())
           }
       }.recover{
         case e ⇒
           val time = timerContext.stop()
+          metrics.enrolmentStoreUpdateErrorCounter.inc()
 
           logger.error(s"For NINO [$nino]: Could not write to enrolment store (time: ${nanosToPrettyString(time)})", e)
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
