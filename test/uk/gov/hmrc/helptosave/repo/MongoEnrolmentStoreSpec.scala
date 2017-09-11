@@ -28,7 +28,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[EnrolmentData, MongoEnrolmentStore] {
 
-  def newMongoStore() = new MongoEnrolmentStore(mockMongo) {
+  def newMongoStore() = new MongoEnrolmentStore(mockMongo, mockMetrics) {
 
     override def indexes: Seq[Index] = {
       // this line is to ensure scoverage picks up this line in MongoEnrolmentStore -

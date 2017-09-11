@@ -33,7 +33,7 @@ class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, M
       .expects(input)
       .returning(output)
 
-  def newMongoStore() = new MongoEmailStore(mockMongo, crypto) {
+  def newMongoStore() = new MongoEmailStore(mockMongo, crypto, mockMetrics) {
 
     override def indexes: Seq[Index] = {
       // this line is to ensure scoverage picks up this line in MongoEnrolmentStore -

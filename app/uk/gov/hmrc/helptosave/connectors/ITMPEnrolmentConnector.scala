@@ -17,10 +17,12 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
-import com.google.inject.{ImplementedBy, Singleton}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import play.mvc.Http.Status.{CONFLICT, OK}
 import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, Result}
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -36,7 +38,7 @@ trait ITMPEnrolmentConnector {
 }
 
 @Singleton
-class ITMPEnrolmentConnectorImpl extends ITMPEnrolmentConnector with ServicesConfig with Logging {
+class ITMPEnrolmentConnectorImpl @Inject() (metrics: Metrics) extends ITMPEnrolmentConnector with ServicesConfig with Logging {
   import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnectorImpl._
 
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
@@ -46,21 +48,32 @@ class ITMPEnrolmentConnectorImpl extends ITMPEnrolmentConnector with ServicesCon
   def url(nino: NINO): String = s"$itmpEnrolmentURL/set-enrolment-flag/$nino"
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
-    EitherT(http.post(url(nino), PostBody(), Seq.empty[(String, String)])
-      .map[Either[String, Unit]]{ response ⇒
-        response.status match {
-          case OK ⇒ Right(())
-          case CONFLICT ⇒
-            logger.warn("Tried to set ITMP HtS flag even though it was already set - proceeding as normal")
-            Right(())
-          case other ⇒
-            Left(s"Received unexpected response status ($other) when trying to set ITMP flag")
+    EitherT({
+      val timerContext = metrics.itmpSetFlagTimer.time()
+
+      http.post(url(nino), PostBody(), Seq.empty[(String, String)])
+        .map[Either[String, Unit]]{ response ⇒
+          val time = timerContext.stop()
+
+          response.status match {
+            case OK ⇒
+              logger.info(s"ITMP HtS flag successfully set (time: ${nanosToPrettyString(time)})")
+              Right(())
+
+            case CONFLICT ⇒
+              logger.warn(s"Tried to set ITMP HtS flag even though it was already set - proceeding as normal  (time: ${nanosToPrettyString(time)})")
+              Right(())
+
+            case other ⇒
+              Left(s"Received unexpected response status ($other) when trying to set ITMP flag  (time: ${nanosToPrettyString(time)})")
+          }
         }
-      }
-      .recover{
-        case NonFatal(e) ⇒
-          Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage}")
-      })
+        .recover{
+          case NonFatal(e) ⇒
+            val time = timerContext.stop()
+            Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (time: ${nanosToPrettyString(time)})")
+        }
+    })
 
 }
 

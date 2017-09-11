@@ -43,7 +43,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
       .expects(url, Map.empty[String, String], *, *)
       .returning(Future.successful(response))
 
-  lazy val connector = new EligibilityCheckConnectorImpl {
+  lazy val connector = new EligibilityCheckConnectorImpl(mockMetrics) {
     override val http = mockHttp
   }
 

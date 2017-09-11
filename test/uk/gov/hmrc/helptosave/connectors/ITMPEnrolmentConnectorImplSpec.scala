@@ -34,7 +34,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplicatio
       .expects(url, body, Seq.empty[(String, String)], *, *)
       .returning(result.fold[Future[HttpResponse]](Future.failed(new Exception("")))(Future.successful))
 
-  lazy val connector = new ITMPEnrolmentConnectorImpl {
+  lazy val connector = new ITMPEnrolmentConnectorImpl(mockMetrics) {
     override val http = mockHttp
   }
 
