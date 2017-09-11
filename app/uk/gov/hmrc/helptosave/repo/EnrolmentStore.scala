@@ -110,9 +110,9 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
           metrics.enrolmentStoreUpdateErrorCounter.inc()
           Left(s"For NINO [$nino]: Could not update enrolment store (time: ${nanosToPrettyString(time)})")
         }{ _ ⇒
-            logger.info(s"For NINO [$nino]: Successfully updated enrolment store (time: ${nanosToPrettyString(time)})")
-            Right(())
-          }
+          logger.info(s"For NINO [$nino]: Successfully updated enrolment store (time: ${nanosToPrettyString(time)})")
+          Right(())
+        }
       }.recover{
         case e ⇒
           val time = timerContext.stop()

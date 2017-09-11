@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import com.codahale.metrics.Timer
+import com.codahale.metrics.{Counter, Timer}
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, WordSpecLike}
@@ -41,6 +41,8 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory {
 
   val mockMetrics = new Metrics(stub[PlayMetrics]) {
     override def timer(name: String): Timer = new Timer()
+
+    override def counter(name: String): Counter = new Counter()
   }
 
   private val hmrcGenerator: Generator = new Generator()
