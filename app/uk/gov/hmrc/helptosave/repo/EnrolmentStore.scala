@@ -84,10 +84,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
         val time = timerContext.stop()
         logger.info(s"For NINO [$nino]: GET on enrolment store took ${nanosToPrettyString(time)}")
 
-        Right(res.headOption.fold[Status]{
-          metrics.enrolmentStoreGetErrorCounter.inc()
-          NotEnrolled
-        }(data ⇒ Enrolled(data.itmpHtSFlag)))
+        Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
       }.recover{
         case e ⇒
           val time = timerContext.stop()
