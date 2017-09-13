@@ -103,7 +103,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
     }.recover{
       case e ⇒
         val time = timerContext.stop()
-        metrics.enrolmentStoreUpdateErrorCounter.inc()
+        metrics.emailStoreGetErrorCounter.inc()
 
         logger.error(s"For NINO [$nino]: Could not read from email store (time: ${nanosToPrettyString(time)})", e)
         Left(s"For NINO [$nino]: Could not read from email store: ${e.getMessage}")
