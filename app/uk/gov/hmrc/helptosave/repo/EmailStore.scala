@@ -99,7 +99,11 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
         .map(data ⇒ crypto.decrypt(data.email))
         .traverse[Try, String](identity)
 
-      decryptedEmail.toEither().leftMap(t ⇒ s"Could not decrypt email: ${t.getMessage}")
+      decryptedEmail.toEither().leftMap{
+        t ⇒
+          logger.warn("Could not decrypt email", t)
+          s"Could not decrypt email: ${t.getMessage}"
+      }
     }.recover{
       case e ⇒
         val time = timerContext.stop()
