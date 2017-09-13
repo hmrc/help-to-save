@@ -20,6 +20,7 @@ import java.util.Base64
 
 import cats.instances.future._
 import com.google.inject.Inject
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
@@ -32,10 +33,12 @@ import scala.util.Try
 class EmailStoreController @Inject() (emailStore: EmailStore)(implicit ec: ExecutionContext)
   extends BaseController with Logging {
 
-  val decoder: Base64.Decoder = Base64.getDecoder
+  import uk.gov.hmrc.helptosave.controllers.EmailStoreController._
+
+  val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
   def store(email: String, nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
-    Try(new String(decoder.decode(email))).fold(
+    Try(new String(base64Decoder.decode(email))).fold(
       { error ⇒
         logger.warn(s"For NINO [$nino]: Could not store email. Could not decode email: $error")
         Future.successful(InternalServerError)
@@ -50,7 +53,24 @@ class EmailStoreController @Inject() (emailStore: EmailStore)(implicit ec: Execu
         )
       }
     )
-
   }
+
+  def get(nino: NINO): Action[AnyContent] = Action.async{ implicit request ⇒
+    emailStore.getConfirmedEmail(nino).fold(
+      { e ⇒
+        logger.warn(e)
+        InternalServerError
+      },
+      maybeEmail ⇒ Ok(Json.toJson(EmailGetResponse(maybeEmail)))
+    )
+  }
+
+}
+
+object EmailStoreController {
+
+  private[controllers] case class EmailGetResponse(email: Option[String])
+
+  private[controllers] implicit val emailGetResponseFormat: Format[EmailGetResponse] = Json.format[EmailGetResponse]
 
 }

@@ -20,6 +20,7 @@ import java.util.Base64
 
 import cats.data.EitherT
 import cats.instances.future._
+import play.api.libs.json.{JsNull, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -36,6 +37,11 @@ class EmailStoreControllerSpec extends TestSupport {
   def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
     (emailStore.storeConfirmedEmail(_: String, _: NINO)(_: ExecutionContext))
       .expects(email, nino, *)
+      .returning(EitherT.fromEither[Future](result))
+
+  def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit =
+    (emailStore.getConfirmedEmail(_: NINO)(_: ExecutionContext))
+      .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   "The EmailStoreController" when {
@@ -73,6 +79,49 @@ class EmailStoreControllerSpec extends TestSupport {
       }
 
     }
+
+    "handling requests to get emails" must {
+
+      val email = "email"
+
+        def get(nino: String): Future[Result] = controller.get(nino)(FakeRequest())
+
+      "get the email from the email store" in {
+        mockGet(nino)(Right(None))
+        await(get(nino))
+      }
+
+      "return an OK with the email if the email exists" in {
+        mockGet(nino)(Right(Some(email)))
+
+        val result = get(nino)
+        status(result) shouldBe OK
+        contentAsJson(result) shouldBe Json.parse(
+          s"""
+             |{
+             |  "email" : "$email"
+             |}
+          """.stripMargin
+        )
+      }
+
+      "return an OK with empty JSON if the email does not exist" in {
+        mockGet(nino)(Right(None))
+
+        val result = get(nino)
+        status(result) shouldBe OK
+        contentAsJson(result) shouldBe Json.parse("{}")
+      }
+
+      "return a HTTP 500 if there is an error getting from the email store" in {
+        mockGet(nino)(Left("oh no"))
+
+        val result = get(nino)
+        status(result) shouldBe INTERNAL_SERVER_ERROR
+      }
+
+    }
+
   }
 
 }

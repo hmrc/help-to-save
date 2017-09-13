@@ -42,7 +42,11 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   val emailStoreUpdateTimer: Timer = timer("backend.email-store-update-time")
 
-  val emailStoreUpdateErrorCounter: Counter = counter("backend.email-store-error-counter")
+  val emailStoreUpdateErrorCounter: Counter = counter("backend.email-store-update-error-counter")
+
+  val emailStoreGetTimer: Timer = timer("backend.email-store-get-time")
+
+  val emailStoreGetErrorCounter: Counter = counter("backend.email-store-get-error-counter")
 
   val enrolmentStoreGetTimer: Timer = timer("backend.enrolment-store-get-time")
 

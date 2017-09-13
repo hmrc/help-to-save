@@ -5,3 +5,4 @@ GET /enrolment-status        @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreC
 GET /enrol-user              @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.enrol(nino: String)
 GET /set-itmp-flag           @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag(nino: String)
 GET /store-email             @uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String, nino: String)
+GET /get-email               @uk.gov.hmrc.helptosave.controllers.EmailStoreController.get(nino: String)
