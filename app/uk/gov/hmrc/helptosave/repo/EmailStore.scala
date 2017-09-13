@@ -17,8 +17,12 @@
 package uk.gov.hmrc.helptosave.repo
 
 import cats.data.EitherT
+import cats.instances.option._
+import cats.instances.try_._
+import cats.syntax.either._
+import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, JsString, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
@@ -26,16 +30,20 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
+import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[MongoEmailStore])
 trait EmailStore {
 
   def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
+
+  def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]]
 
 }
 
@@ -79,6 +87,32 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
             Left(s"${e.getMessage} (time: ${nanosToPrettyString(time)})")
         }
     })
+
+  override def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
+    val timerContext = metrics.emailStoreGetTimer.time()
+
+    find("nino" → JsString(nino)).map { res ⇒
+      val time = timerContext.stop()
+      logger.info(s"For NINO [$nino]: GET on email store took ${nanosToPrettyString(time)}")
+
+      val decryptedEmail = res.headOption
+        .map(data ⇒ crypto.decrypt(data.email))
+        .traverse[Try, String](identity)
+
+      decryptedEmail.toEither().leftMap{
+        t ⇒
+          logger.warn("Could not decrypt email", t)
+          s"Could not decrypt email: ${t.getMessage}"
+      }
+    }.recover{
+      case e ⇒
+        val time = timerContext.stop()
+        metrics.emailStoreGetErrorCounter.inc()
+
+        logger.error(s"For NINO [$nino]: Could not read from email store (time: ${nanosToPrettyString(time)})", e)
+        Left(s"For NINO [$nino]: Could not read from email store: ${e.getMessage}")
+    }
+  })
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
     collection.findAndUpdate(

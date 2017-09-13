@@ -29,4 +29,6 @@ class TryOps[A](val t: Try[A]) extends AnyVal {
     case Success(s) ⇒ g(s)
   }
 
+  def toEither(): Either[Throwable, A] = fold[Either[Throwable, A]](Left(_), Right(_))
+
 }
