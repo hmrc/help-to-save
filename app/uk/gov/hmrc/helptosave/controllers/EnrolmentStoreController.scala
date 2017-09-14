@@ -87,7 +87,7 @@ object EnrolmentStoreController {
   }
 
   implicit val unitWrites: Writes[Unit] = new Writes[Unit] {
-    override def writes(o: Unit): JsNull.type = JsNull
+    override def writes(o: Unit) = JsNull
   }
 
 }

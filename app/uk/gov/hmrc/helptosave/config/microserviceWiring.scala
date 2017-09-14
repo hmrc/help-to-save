@@ -62,7 +62,7 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
   override def appName: String = getString("appName")
 
   /**
-   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status us not `2xx`. Needed
+   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
    * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
    */
   def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url) {
@@ -72,7 +72,7 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
   }
 
   /**
-   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status us not `2xx`. Needed
+   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
    * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
    */
   def post[A](url:     String,
