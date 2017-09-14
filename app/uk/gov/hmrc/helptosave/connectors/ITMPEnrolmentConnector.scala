@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
-import com.codahale.metrics.Counter
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import play.mvc.Http.Status.{CONFLICT, OK}
@@ -39,12 +38,11 @@ trait ITMPEnrolmentConnector {
 }
 
 @Singleton
-class ITMPEnrolmentConnectorImpl @Inject() (metrics: Metrics) extends ITMPEnrolmentConnector with ServicesConfig with Logging {
+class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) extends ITMPEnrolmentConnector with ServicesConfig with Logging {
+
   import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnectorImpl._
 
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
-
-  val http: WSHttp = new WSHttp
 
   def url(nino: NINO): String = s"$itmpEnrolmentURL/set-enrolment-flag/$nino"
 
@@ -53,7 +51,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (metrics: Metrics) extends ITMPEnrolm
       val timerContext = metrics.itmpSetFlagTimer.time()
 
       http.post(url(nino), PostBody(), Seq.empty[(String, String)])
-        .map[Either[String, Unit]]{ response ⇒
+        .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 
           response.status match {
@@ -71,7 +69,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (metrics: Metrics) extends ITMPEnrolm
               Left(s"Received unexpected response status ($other) when trying to set ITMP flag  (time: ${nanosToPrettyString(time)})")
           }
         }
-        .recover{
+        .recover {
           case NonFatal(e) ⇒
             val time = timerContext.stop()
             metrics.itmpSetFlagErrorCounter.inc()
