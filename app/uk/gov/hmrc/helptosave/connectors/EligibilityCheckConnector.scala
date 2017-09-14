@@ -35,14 +35,12 @@ trait EligibilityCheckConnector {
 }
 
 @Singleton
-class EligibilityCheckConnectorImpl @Inject() (metrics: Metrics) extends EligibilityCheckConnector with ServicesConfig with Logging {
+class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) extends EligibilityCheckConnector with ServicesConfig with Logging {
 
   val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
 
   def url(nino: String): String =
     s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
-
-  val http: WSHttp = new WSHttp
 
   override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     EitherT[Future, String, EligibilityCheckResult](
@@ -50,7 +48,7 @@ class EligibilityCheckConnectorImpl @Inject() (metrics: Metrics) extends Eligibi
         val timerContext = metrics.itmpEligibilityCheckTimer.time()
 
         http.get(url(nino))
-          .map{ response ⇒
+          .map { response ⇒
             val time = timerContext.stop()
             logger.info(s"Received response from ITMP eligibility check in ${nanosToPrettyString(time)}")
             val result = response.parseJson[EligibilityCheckResult]

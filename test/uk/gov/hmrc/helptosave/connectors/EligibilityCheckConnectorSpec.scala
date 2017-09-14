@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks with ServicesConfig {
 
@@ -39,13 +39,11 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
   }
 
   def mockGet(url: String)(response: HttpResponse) =
-    (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(url, Map.empty[String, String], *, *)
+    (mockHttp.get(_: String)(_: HeaderCarrier))
+      .expects(url, *)
       .returning(Future.successful(response))
 
-  lazy val connector = new EligibilityCheckConnectorImpl(mockMetrics) {
-    override val http = mockHttp
-  }
+  lazy val connector = new EligibilityCheckConnectorImpl(mockHttp, mockMetrics)
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
     result ← Gen.choose(1, 2)
@@ -56,7 +54,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
     val nino = randomNINO()
 
     "return with the eligibility check result unchanged from ITMP" in {
-      forAll{ result: EligibilityCheckResult ⇒
+      forAll { result: EligibilityCheckResult ⇒
         mockGet(url(nino))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
         Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(result)
       }

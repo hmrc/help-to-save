@@ -79,7 +79,7 @@ object EnrolmentStoreController {
 
     implicit val enrolmentStatusWrites: Writes[EnrolmentStatusJSON] = Json.writes[EnrolmentStatusJSON]
 
-    override def writes(o: EnrolmentStore.Status) = o match {
+    override def writes(o: EnrolmentStore.Status): JsValue = o match {
       case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = true, itmpHtSFlag = itmpHtSFlag))
       case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = false, itmpHtSFlag = false))
     }
@@ -87,7 +87,7 @@ object EnrolmentStoreController {
   }
 
   implicit val unitWrites: Writes[Unit] = new Writes[Unit] {
-    override def writes(o: Unit) = JsNull
+    override def writes(o: Unit): JsNull.type = JsNull
   }
 
 }
