@@ -17,24 +17,18 @@
 package uk.gov.hmrc.helptosave.config
 
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
+import play.api.mvc.EssentialFilter
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.play.audit.filters.AuditFilter
-import uk.gov.hmrc.play.auth.controllers.AuthParamsControllerConfig
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
+import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
-import uk.gov.hmrc.play.auth.microservice.filters.AuthorisationFilter
-import net.ceedubs.ficus.Ficus._
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.auth.microservice.connectors.AuthConnector
-import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
 
 object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs: Config = Play.current.configuration.underlying.as[Config]("controllers")
-}
-
-object AuthParamsControllerConfiguration extends AuthParamsControllerConfig {
-  lazy val controllerConfigs: Config = ControllerConfiguration.controllerConfigs
 }
 
 object MicroserviceAuditFilter extends AuditFilter with AppName with MicroserviceFilterSupport {
@@ -47,13 +41,6 @@ object MicroserviceLoggingFilter extends LoggingFilter with MicroserviceFilterSu
   override def controllerNeedsLogging(controllerName: String): Boolean = ControllerConfiguration.paramsForController(controllerName).needsLogging
 }
 
-object MicroserviceAuthFilter extends AuthorisationFilter with MicroserviceFilterSupport {
-  override lazy val authParamsConfig: AuthParamsControllerConfig = AuthParamsControllerConfiguration
-  override lazy val authConnector: AuthConnector = HtsAuthConnector
-
-  override def controllerNeedsAuth(controllerName: String): Boolean = ControllerConfiguration.paramsForController(controllerName).needsAuth
-}
-
 object MicroserviceGlobal extends DefaultMicroserviceGlobal with RunMode with MicroserviceFilterSupport {
   override val auditConnector: AuditConnector = HtsAuditConnector
 
@@ -63,5 +50,5 @@ object MicroserviceGlobal extends DefaultMicroserviceGlobal with RunMode with Mi
 
   override val microserviceAuditFilter: AuditFilter = MicroserviceAuditFilter
 
-  override val authFilter: Option[AuthorisationFilter] = Some(MicroserviceAuthFilter)
+  override val authFilter: Option[EssentialFilter] = None
 }

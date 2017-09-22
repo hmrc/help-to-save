@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.helptosave.config
 
-import com.google.inject.{ImplementedBy, Singleton}
-import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, POST ⇒ POST_VERB}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.http.HttpVerbs.{GET => GET_VERB, POST => POST_VERB}
 import play.api.libs.json.Writes
+import uk.gov.hmrc.auth.core.PlayAuthConnector
 import uk.gov.hmrc.play.audit.http.HttpAuditing
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, LoadAuditingConfig}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.auth.microservice.connectors.AuthConnector
 import uk.gov.hmrc.play.config.{AppName, ServicesConfig}
 import uk.gov.hmrc.play.http.hooks.HttpHook
 import uk.gov.hmrc.play.http.ws._
@@ -34,37 +34,40 @@ object HtsAuditConnector extends AuditConnector with AppName {
   override lazy val auditingConfig: AuditingConfig = LoadAuditingConfig("auditing")
 }
 
-object HtsAuthConnector extends AuthConnector with ServicesConfig {
-  override val authBaseUrl: String = baseUrl("auth")
+@Singleton
+class HtsAuthConnector @Inject()(wsHttp: WSHttp) extends PlayAuthConnector with ServicesConfig {
+  override lazy val serviceUrl: String = baseUrl("auth")
+
+  override def http: WSHttp = wsHttp
 }
 
 @ImplementedBy(classOf[WSHttpExtension])
 trait WSHttp
   extends HttpGet with WSGet
-  with HttpPost with WSPost {
+    with HttpPost with WSPost {
 
   def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse]
 
-  def post[A](url:     String,
-              body:    A,
+  def post[A](url: String,
+              body: A,
               headers: Seq[(String, String)] = Seq.empty[(String, String)]
-  )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse]
+             )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse]
 
 }
 
 @Singleton
 class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
 
-  override val hooks: Seq[HttpHook] = Seq(AuditingHook)
+  override val hooks: Seq[HttpHook] = NoneRequired
 
   override def auditConnector: AuditConnector = HtsAuditConnector
 
   override def appName: String = getString("appName")
 
   /**
-   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
-   * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
-   */
+    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
+    * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
+    */
   def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url) {
     val httpResponse = doGet(url)
     executeHooks(url, GET_VERB, None, httpResponse)
@@ -72,13 +75,13 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
   }
 
   /**
-   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
-   * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
-   */
-  def post[A](url:     String,
-              body:    A,
+    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
+    * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
+    */
+  def post[A](url: String,
+              body: A,
               headers: Seq[(String, String)] = Seq.empty[(String, String)]
-  )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] = withTracing(POST_VERB, url) {
+             )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] = withTracing(POST_VERB, url) {
     val httpResponse = doPost(url, body, headers)
     executeHooks(url, POST_VERB, None, httpResponse)
     httpResponse
