@@ -16,85 +16,47 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import cats.data.ValidatedNel
-import cats.syntax.cartesian._
-import cats.syntax.either._
-import cats.syntax.option._
-import org.joda.time.LocalDate
 import play.api.mvc._
-import play.api.{Application, Configuration, Environment}
+import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.ConfidenceLevel.L200
 import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.authorise.Predicate
+import uk.gov.hmrc.auth.core.retrieve.Retrievals
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
-import uk.gov.hmrc.helptosave.util.Logging
-import uk.gov.hmrc.play.config.ServicesConfig
+import uk.gov.hmrc.helptosave.util.toFuture
+import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
 
-class HelpToSaveAuth(app: Application, htsAuthConnector: HtsAuthConnector)
-  extends AuthorisedFunctions with ServicesConfig with Logging {
+class HelpToSaveAuth(htsAuthConnector: HtsAuthConnector) extends BaseController with AuthorisedFunctions {
 
   override def authConnector: AuthConnector = htsAuthConnector
 
-//  override def config: Configuration = app.configuration
-//
-//  override def env: Environment = Environment(app.path, app.classloader, app.mode)
+  private val NinoWithCL200: Enrolment = Enrolment("HMRC-NI").withConfidenceLevel(L200)
 
- private val ggLoginUrl = getString("microservice.services.company-auth-frontend.url")
+  private val AuthProvider: AuthProviders = AuthProviders(GovernmentGateway)
 
-  private val origin = getString("appName")
+  private val AuthWithCL200: Predicate = NinoWithCL200 and AuthProvider
 
   private type HtsAction = Request[AnyContent] ⇒ Future[Result]
 
-  def authorisedForHtsWithInfo(action: Request[AnyContent] ⇒ Future[Result])(redirectOnLoginURL: String): Action[AnyContent] =
+  def authorised(action: HtsAction): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
-        .retrieve(UserRetrievals and authorisedEnrolments) {
-          case name ~ email ~ dateOfBirth ~ itmpName ~ itmpDateOfBirth ~ itmpAddress ~ authorisedEnrols ⇒
+        .retrieve(Retrievals.authorisedEnrolments) { authorisedEnrols ⇒
 
             val mayBeNino = authorisedEnrols.enrolments
-              .find(_.key === "HMRC-NI")
+              .find(_.key == "HMRC-NI")
               .flatMap(_.getIdentifier("NINO"))
               .map(_.value)
 
             mayBeNino.fold(
               toFuture(InternalServerError("could not find NINO for logged in user"))
-            )(nino ⇒ {
-                val userDetails = getUserInfo(nino, name, email, dateOfBirth, itmpName, itmpDateOfBirth, itmpAddress)
-                action(request)(HtsContext(Some(nino), Some(userDetails.map(NSIUserInfo.apply)), isAuthorised = true))
-              })
-
-        }.recover {
-          handleFailure(redirectOnLoginURL)
-        }
-    }
-
-
-  def authorisedForHtsWithCL200(action: HtsAction)(redirectOnLoginURL: String): Action[AnyContent] = {
-    Action.async { implicit request ⇒
-      authorised(AuthWithCL200) {
-        action(request)(HtsContext(isAuthorised = true))
-      }.recover {
-        handleFailure(redirectOnLoginURL)
+            )(_ ⇒ action(request))
+        }.recoverWith {
+        case e =>
+          toFuture(InternalServerError(s"Error during check auth: ${e.getMessage}"))
       }
     }
-  }
-
-  def handleFailure(redirectOnLoginURL: String): PartialFunction[Throwable, Result] = {
-    case _: NoActiveSession ⇒
-      redirectToLogin(redirectOnLoginURL)
-
-    case _: InsufficientConfidenceLevel | _: InsufficientEnrolments ⇒
-      toPersonalIV(s"$identityCallbackUrl?continueURL=${encoded(redirectOnLoginURL)}", ConfidenceLevel.L200)
-
-    case ex: AuthorisationException ⇒
-      logger.error(s"could not authenticate user due to: $ex")
-      InternalServerError("")
-  }
-
-  private def redirectToLogin(redirectOnLoginURL: String) = Results.Redirect(ggLoginUrl, Map(
-    "continue" -> Seq(redirectOnLoginURL),
-    "accountType" -> Seq("individual"),
-    "origin" -> Seq(origin)
-  ))
 }
 

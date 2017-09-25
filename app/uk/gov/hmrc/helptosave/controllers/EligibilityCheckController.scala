@@ -20,16 +20,17 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
+import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
-import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext
 
-class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector)(implicit ec: ExecutionContext)
-  extends BaseController with Logging {
+class EligibilityCheckController @Inject()(eligibilityCheckService: EligibilityCheckConnector,
+                                           htsAuthConnector: HtsAuthConnector)(implicit ec: ExecutionContext)
+  extends HelpToSaveAuth(htsAuthConnector) with Logging {
 
-  def eligibilityCheck(nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
+  def eligibilityCheck(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
     eligibilityCheckService.isEligible(nino).fold(
       {
         e ⇒

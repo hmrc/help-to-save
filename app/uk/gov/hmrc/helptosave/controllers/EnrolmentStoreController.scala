@@ -18,24 +18,25 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-
 import com.google.inject.Inject
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Result}
+import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentStoreController @Inject() (enrolmentStore: EnrolmentStore, itmpConnector: ITMPEnrolmentConnector)(implicit ec: ExecutionContext)
-  extends BaseController with Logging {
+class EnrolmentStoreController @Inject()(enrolmentStore: EnrolmentStore,
+                                          itmpConnector: ITMPEnrolmentConnector,
+                                          htsAuthConnector: HtsAuthConnector)(implicit ec: ExecutionContext)
+  extends HelpToSaveAuth(htsAuthConnector) with Logging {
 
   import EnrolmentStoreController._
 
-  def enrol(nino: NINO): Action[AnyContent] = Action.async{ implicit request ⇒
+  def enrol(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
     handle(
       for {
         _ ← enrolmentStore.update(nino, itmpFlag = false)
@@ -46,11 +47,11 @@ class EnrolmentStoreController @Inject() (enrolmentStore: EnrolmentStore, itmpCo
     )
   }
 
-  def setITMPFlag(nino: NINO): Action[AnyContent] = Action.async{ implicit request ⇒
+  def setITMPFlag(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
     handle(setITMPFlagAndUpdateMongo(nino), "set ITMP flag", nino)
   }
 
-  def getEnrolmentStatus(nino: NINO): Action[AnyContent] = Action.async{ implicit request ⇒
+  def getEnrolmentStatus(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
     handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 
@@ -86,8 +87,6 @@ object EnrolmentStoreController {
 
   }
 
-  implicit val unitWrites: Writes[Unit] = new Writes[Unit] {
-    override def writes(o: Unit) = JsNull
-  }
+  implicit val unitWrites: Writes[Unit] = (o: Unit) => JsNull
 
 }
