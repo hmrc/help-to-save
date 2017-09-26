@@ -20,17 +20,17 @@ import java.util.Base64
 
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.libs.json.{JsNull, Json}
+import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import HelpToSaveAuth._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EmailStoreControllerSpec extends TestSupport {
+class EmailStoreControllerSpec extends AuthSupport {
 
   val emailStore: EmailStore = mock[EmailStore]
 
@@ -46,22 +46,18 @@ class EmailStoreControllerSpec extends TestSupport {
 
   "The EmailStoreController" when {
 
-    val controller = new EmailStoreController(emailStore)
+    val controller = new EmailStoreController(emailStore, mockAuthConnector)
     val email = "email"
     val encodedEmail = new String(Base64.getEncoder.encode(email.getBytes()))
     val nino = "NINO"
 
       def store(email: String): Future[Result] =
-        controller.store(email, nino)(FakeRequest())
+        controller.store(email)(FakeRequest())
 
     "handling requests to store emails" must {
 
-      "decode the email and store it with the email store" in {
-        mockStore(email, nino)(Left(""))
-        store(encodedEmail)
-      }
-
       "return a HTTP 200 if the email is successfully stored" in {
+        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockStore(email, nino)(Right(()))
         status(store(encodedEmail)) shouldBe 200
       }
@@ -69,10 +65,12 @@ class EmailStoreControllerSpec extends TestSupport {
       "return a HTTP 500" when {
 
         "the email cannot be decoded" in {
+          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
           status(store("not base 64 encoded")) shouldBe 500
         }
 
         "the email is not successfully stored" in {
+          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
           mockStore(email, nino)(Left(""))
           status(store(encodedEmail)) shouldBe 500
         }
@@ -84,14 +82,16 @@ class EmailStoreControllerSpec extends TestSupport {
 
       val email = "email"
 
-        def get(nino: String): Future[Result] = controller.get(nino)(FakeRequest())
+        def get(nino: String): Future[Result] = controller.get()(FakeRequest())
 
       "get the email from the email store" in {
+        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Right(None))
         await(get(nino))
       }
 
       "return an OK with the email if the email exists" in {
+        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Right(Some(email)))
 
         val result = get(nino)
@@ -106,6 +106,7 @@ class EmailStoreControllerSpec extends TestSupport {
       }
 
       "return an OK with empty JSON if the email does not exist" in {
+        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Right(None))
 
         val result = get(nino)
@@ -114,6 +115,7 @@ class EmailStoreControllerSpec extends TestSupport {
       }
 
       "return a HTTP 500 if there is an error getting from the email store" in {
+        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Left("oh no"))
 
         val result = get(nino)

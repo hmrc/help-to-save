@@ -21,17 +21,18 @@ import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.helptosave.config.WSHttp
-import uk.gov.hmrc.play.http.HeaderCarrier
 import java.time.LocalDate
 
 import org.scalacheck.Gen
 import hmrc.smartstub._
 import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends WordSpecLike with Matchers with MockFactory {
+trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitSpec {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 

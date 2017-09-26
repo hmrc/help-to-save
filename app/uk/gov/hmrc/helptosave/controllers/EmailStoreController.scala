@@ -22,22 +22,23 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent}
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.repo.EmailStore
-import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 import uk.gov.hmrc.helptosave.util.TryOps._
-import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class EmailStoreController @Inject() (emailStore: EmailStore)(implicit ec: ExecutionContext)
-  extends BaseController with Logging {
+class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: HtsAuthConnector)(implicit ec: ExecutionContext)
+  extends HelpToSaveAuth(htsAuthConnector) with Logging {
 
   import uk.gov.hmrc.helptosave.controllers.EmailStoreController._
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
-  def store(email: String, nino: NINO): Action[AnyContent] = Action.async { implicit request ⇒
+  def store(email: String): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     Try(new String(base64Decoder.decode(email))).fold(
       { error ⇒
         logger.warn(s"For NINO [$nino]: Could not store email. Could not decode email: $error")
@@ -55,7 +56,7 @@ class EmailStoreController @Inject() (emailStore: EmailStore)(implicit ec: Execu
     )
   }
 
-  def get(nino: NINO): Action[AnyContent] = Action.async{ implicit request ⇒
+  def get(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     emailStore.getConfirmedEmail(nino).fold(
       { e ⇒
         logger.warn(e)

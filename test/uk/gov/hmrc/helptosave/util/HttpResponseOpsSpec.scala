@@ -17,9 +17,9 @@
 package uk.gov.hmrc.helptosave.util
 
 import play.api.libs.json.{Format, JsValue, Json}
-import uk.gov.hmrc.play.http.HttpResponse
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.http.HttpResponse
 
 import scala.util.Right
 

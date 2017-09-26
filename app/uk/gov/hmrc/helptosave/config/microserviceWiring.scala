@@ -16,17 +16,19 @@
 
 package uk.gov.hmrc.helptosave.config
 
-import com.google.inject.{ImplementedBy, Singleton}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, POST ⇒ POST_VERB}
 import play.api.libs.json.Writes
+import uk.gov.hmrc.auth.core.PlayAuthConnector
+import uk.gov.hmrc.http.hooks.HttpHook
+import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, HttpResponse}
 import uk.gov.hmrc.play.audit.http.HttpAuditing
-import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, LoadAuditingConfig}
+import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.auth.microservice.connectors.AuthConnector
 import uk.gov.hmrc.play.config.{AppName, ServicesConfig}
-import uk.gov.hmrc.play.http.hooks.HttpHook
 import uk.gov.hmrc.play.http.ws._
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpPost, HttpResponse}
+import uk.gov.hmrc.play.microservice.config.LoadAuditingConfig
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 
@@ -34,8 +36,11 @@ object HtsAuditConnector extends AuditConnector with AppName {
   override lazy val auditingConfig: AuditingConfig = LoadAuditingConfig("auditing")
 }
 
-object HtsAuthConnector extends AuthConnector with ServicesConfig {
-  override val authBaseUrl: String = baseUrl("auth")
+@Singleton
+class HtsAuthConnector @Inject() (wsHttp: WSHttp) extends PlayAuthConnector with ServicesConfig {
+  override lazy val serviceUrl: String = baseUrl("auth")
+
+  override def http: WSHttp = wsHttp
 }
 
 @ImplementedBy(classOf[WSHttpExtension])
@@ -55,7 +60,7 @@ trait WSHttp
 @Singleton
 class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
 
-  override val hooks: Seq[HttpHook] = Seq(AuditingHook)
+  override val hooks: Seq[HttpHook] = NoneRequired
 
   override def auditConnector: AuditConnector = HtsAuditConnector
 
