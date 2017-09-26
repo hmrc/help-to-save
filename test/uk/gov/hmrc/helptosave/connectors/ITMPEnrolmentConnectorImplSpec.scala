@@ -18,12 +18,11 @@ package uk.gov.hmrc.helptosave.connectors
 
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Writes
-import uk.gov.hmrc.play.test.WithFakeApplication
-import play.api.test.Helpers._
-import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnectorImpl.PostBody
 import uk.gov.hmrc.helptosave.util.NINO
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.Future
 

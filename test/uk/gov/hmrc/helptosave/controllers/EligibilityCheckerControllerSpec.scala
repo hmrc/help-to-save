@@ -20,33 +20,33 @@ import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
+import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.mvc.{Result ⇒ PlayResult}
+import uk.gov.hmrc.auth.core.Enrolments
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.util.NINO
-import uk.gov.hmrc.helptosave.utils.TestSupport
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
-class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenPropertyChecks {
+class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenPropertyChecks {
 
   class TestApparatus {
-    val connector = mock[EligibilityCheckConnector]
+    val eligibilityConnector = mock[EligibilityCheckConnector]
 
     def doRequest(nino:       String,
                   controller: EligibilityCheckController): Future[PlayResult] =
       controller.eligibilityCheck(nino)(FakeRequest())
 
     def mockEligibilityCheckerService(nino: NINO)(result: Option[EligibilityCheckResult]): Unit =
-      (connector.isEligible(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+      (eligibilityConnector.isEligible(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromOption[Future](result, "mocking failed eligibility check"))
 
-    val controller = new EligibilityCheckController(connector)
+    val controller = new EligibilityCheckController(eligibilityConnector, mockAuthConnector)
   }
 
   "The EligibilityCheckerController" when {
@@ -59,11 +59,13 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
         def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
+        mockAuthResultWithSuccess(AuthWithCL200)(Enrolments(enrolments))
         mockEligibilityCheckerService(nino)(None)
         await(doRequest(nino, controller))
       }
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
+        mockAuthResultWithSuccess(AuthWithCL200)(Enrolments(enrolments))
         mockEligibilityCheckerService(nino)(None)
 
         val result = doRequest(nino, controller)
@@ -73,6 +75,7 @@ class EligibilityCheckerControllerSpec extends TestSupport with GeneratorDrivenP
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
           val eligibility = EligibilityCheckResult(1, 2)
+          mockAuthResultWithSuccess(AuthWithCL200)(Enrolments(enrolments))
           mockEligibilityCheckerService(nino)(Some(eligibility))
 
           val result = doRequest(nino, controller)

@@ -22,8 +22,8 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
 import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.duration._
