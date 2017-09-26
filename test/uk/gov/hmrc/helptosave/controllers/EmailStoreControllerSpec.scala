@@ -24,9 +24,9 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.Enrolments
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
+import HelpToSaveAuth._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -52,7 +52,7 @@ class EmailStoreControllerSpec extends AuthSupport {
     val nino = "NINO"
 
       def store(email: String): Future[Result] =
-        controller.store(email, nino)(FakeRequest())
+        controller.store(email)(FakeRequest())
 
     "handling requests to store emails" must {
 
@@ -82,7 +82,7 @@ class EmailStoreControllerSpec extends AuthSupport {
 
       val email = "email"
 
-        def get(nino: String): Future[Result] = controller.get(nino)(FakeRequest())
+        def get(nino: String): Future[Result] = controller.get()(FakeRequest())
 
       "get the email from the email store" in {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)

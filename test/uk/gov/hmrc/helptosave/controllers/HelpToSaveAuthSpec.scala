@@ -24,12 +24,13 @@ import uk.gov.hmrc.auth.core.Enrolments
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import HelpToSaveAuth._
 
 class HelpToSaveAuthSpec extends AuthSupport {
 
   val htsAuth = new HelpToSaveAuth(mockAuthConnector)
 
-  private def callAuth = htsAuth.authorised { implicit request ⇒
+  private def callAuth = htsAuth.authorised { implicit request ⇒ implicit nino ⇒
     Future.successful(Ok("authSuccess"))
   }
 

@@ -23,11 +23,11 @@ import play.api.libs.json.Json
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.Enrolments
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
+import HelpToSaveAuth._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -39,7 +39,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
 
     def doRequest(nino:       String,
                   controller: EligibilityCheckController): Future[PlayResult] =
-      controller.eligibilityCheck(nino)(FakeRequest())
+      controller.eligibilityCheck()(FakeRequest())
 
     def mockEligibilityCheckerService(nino: NINO)(result: Option[EligibilityCheckResult]): Unit =
       (eligibilityConnector.isEligible(_: NINO)(_: HeaderCarrier, _: ExecutionContext))

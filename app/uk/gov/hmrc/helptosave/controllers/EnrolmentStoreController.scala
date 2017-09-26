@@ -36,7 +36,7 @@ class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
 
   import EnrolmentStoreController._
 
-  def enrol(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
+  def enrol(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     handle(
       for {
         _ ← enrolmentStore.update(nino, itmpFlag = false)
@@ -47,11 +47,11 @@ class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
     )
   }
 
-  def setITMPFlag(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
+  def setITMPFlag(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     handle(setITMPFlagAndUpdateMongo(nino), "set ITMP flag", nino)
   }
 
-  def getEnrolmentStatus(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
+  def getEnrolmentStatus(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 

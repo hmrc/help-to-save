@@ -29,12 +29,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait AuthSupport extends TestSupport {
 
-  val NinoWithCL200: Enrolment = Enrolment("HMRC-NI").withConfidenceLevel(L200)
-
-  val AuthProvider: AuthProviders = AuthProviders(GovernmentGateway)
-
-  val AuthWithCL200: Predicate = NinoWithCL200 and AuthProvider
-
   val nino = "AE123456C"
 
   val enrolment = Enrolment("HMRC-NI", Seq(EnrolmentIdentifier("NINO", nino)), "activated", L200)

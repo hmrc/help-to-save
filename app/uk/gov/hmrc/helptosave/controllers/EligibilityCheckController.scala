@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
-import uk.gov.hmrc.helptosave.util.{Logging, NINO}
+import uk.gov.hmrc.helptosave.util.Logging
 
 import scala.concurrent.ExecutionContext
 
@@ -30,7 +30,7 @@ class EligibilityCheckController @Inject() (eligibilityCheckService: Eligibility
                                             htsAuthConnector:        HtsAuthConnector)(implicit ec: ExecutionContext)
   extends HelpToSaveAuth(htsAuthConnector) with Logging {
 
-  def eligibilityCheck(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒
+  def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     eligibilityCheckService.isEligible(nino).fold(
       {
         e ⇒

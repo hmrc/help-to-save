@@ -24,23 +24,29 @@ import uk.gov.hmrc.auth.core.ConfidenceLevel.L200
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrievals
-import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.microservice.controller.BaseController
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+object HelpToSaveAuth {
+
+  val NinoWithCL200: Enrolment = Enrolment("HMRC-NI").withConfidenceLevel(L200)
+
+  val AuthProvider: AuthProviders = AuthProviders(GovernmentGateway)
+
+  val AuthWithCL200: Predicate = NinoWithCL200 and AuthProvider
+
+}
 
 class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController with AuthorisedFunctions with Logging {
 
+  import HelpToSaveAuth._
+
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private val NinoWithCL200: Enrolment = Enrolment("HMRC-NI").withConfidenceLevel(L200)
-
-  private val AuthProvider: AuthProviders = AuthProviders(GovernmentGateway)
-
-  private val AuthWithCL200: Predicate = NinoWithCL200 and AuthProvider
-
-  private type HtsAction = Request[AnyContent] ⇒ Future[Result]
+  private type HtsAction = Request[AnyContent] ⇒ NINO ⇒ Future[Result]
 
   def authorised(action: HtsAction): Action[AnyContent] =
     Action.async { implicit request ⇒
@@ -54,7 +60,9 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
 
           mayBeNino.fold(
             toFuture(InternalServerError("could not find NINO for logged in user"))
-          )(_ ⇒ action(request))
+          )(
+              nino ⇒ action(request)(nino)
+            )
         }.recover {
           handleFailure()
         }
@@ -63,15 +71,15 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   def handleFailure(): PartialFunction[Throwable, Result] = {
     case _: NoActiveSession ⇒
       logger.warn("user is not logged in, probably a hack? ")
-      InternalServerError("")
+      InternalServerError("no active session found for logged in user")
 
     case _: InsufficientConfidenceLevel | _: InsufficientEnrolments ⇒
       logger.warn("unexpected: not met required ConfidenceLevel for logged in user")
-      InternalServerError("")
+      InternalServerError("not met required ConfidenceLevel for logged in user")
 
     case ex: AuthorisationException ⇒
       logger.warn(s"could not authenticate user due to: $ex")
-      InternalServerError("")
+      InternalServerError(s"could not authenticate user due to: ${ex.reason}")
   }
 }
 

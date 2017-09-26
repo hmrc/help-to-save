@@ -24,11 +24,11 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.Enrolments
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
+import HelpToSaveAuth._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -66,7 +66,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
     "enrolling a user" must {
 
-        def enrol(): Future[Result] = controller.enrol(nino)(FakeRequest())
+        def enrol(): Future[Result] = controller.enrol()(FakeRequest())
 
       "create a mongo record with the ITMP flag set to false" in {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
@@ -123,7 +123,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
     "setting the ITMP flag" must {
 
         def setFlag(): Future[Result] =
-          controller.setITMPFlag(nino)(FakeRequest())
+          controller.setITMPFlag()(FakeRequest())
 
       "set the ITMP flag" in {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
@@ -175,7 +175,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
     "getting the user enrolment status" must {
 
         def getEnrolmentStatus(): Future[Result] =
-          controller.getEnrolmentStatus(nino)(FakeRequest())
+          controller.getEnrolmentStatus()(FakeRequest())
 
       "get the enrolment status form the enrolment store" in {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
