@@ -39,7 +39,7 @@ trait AuthSupport extends TestSupport {
 
   val enrolment = Enrolment("HMRC-NI", Seq(EnrolmentIdentifier("NINO", nino)), "activated", L200)
 
-  val enrolments = Set(enrolment)
+  val enrolments = Enrolments(Set(enrolment))
 
   val mockAuthConnector: HtsAuthConnector = mock[HtsAuthConnector]
 
