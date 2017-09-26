@@ -53,7 +53,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR
     }
 
-    "handle NoActiveSession exception and throw an error" in {
+    "handle various auth related exceptions and throw an error" in {
 
       val exceptions = List(
         "BearerTokenExpired",
@@ -62,7 +62,8 @@ class HelpToSaveAuthSpec extends AuthSupport {
         "SessionRecordNotFound",
         "InsufficientEnrolments",
         "InsufficientConfidenceLevel",
-        "UnsupportedCredentialRole")
+        "UnsupportedCredentialRole",
+        "unknown-blah")
 
       exceptions.foreach { error ⇒
         mockAuthWith(error)
