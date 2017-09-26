@@ -41,7 +41,7 @@ trait AuthSupport extends TestSupport {
 
   val enrolments = Set(enrolment)
 
-  val mockAuthConnector: AuthConnector = mock[HtsAuthConnector]
+  val mockAuthConnector: HtsAuthConnector = mock[HtsAuthConnector]
 
   def mockAuthResultWithFail(predicate: Predicate)(ex: Throwable): Unit =
     (mockAuthConnector.authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))

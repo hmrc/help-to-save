@@ -20,14 +20,14 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 
 import scala.concurrent.ExecutionContext
 
 class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector,
-                                            htsAuthConnector:        AuthConnector)(implicit ec: ExecutionContext)
+                                            htsAuthConnector:        HtsAuthConnector)(implicit ec: ExecutionContext)
   extends HelpToSaveAuth(htsAuthConnector) with Logging {
 
   def eligibilityCheck(nino: NINO): Action[AnyContent] = authorised { implicit request ⇒

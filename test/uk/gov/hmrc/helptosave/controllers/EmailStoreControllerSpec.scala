@@ -56,12 +56,6 @@ class EmailStoreControllerSpec extends AuthSupport {
 
     "handling requests to store emails" must {
 
-      "decode the email and store it with the email store" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(Enrolments(enrolments))
-        mockStore(email, nino)(Left(""))
-        store(encodedEmail)
-      }
-
       "return a HTTP 200 if the email is successfully stored" in {
         mockAuthResultWithSuccess(AuthWithCL200)(Enrolments(enrolments))
         mockStore(email, nino)(Right(()))
