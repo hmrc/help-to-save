@@ -49,7 +49,6 @@ class EmailStoreControllerSpec extends AuthSupport {
     val controller = new EmailStoreController(emailStore, mockAuthConnector)
     val email = "email"
     val encodedEmail = new String(Base64.getEncoder.encode(email.getBytes()))
-    val nino = "NINO"
 
       def store(email: String): Future[Result] =
         controller.store(email)(FakeRequest())

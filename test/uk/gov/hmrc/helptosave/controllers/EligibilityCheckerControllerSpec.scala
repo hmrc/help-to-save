@@ -54,7 +54,6 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
     "handling requests to perform eligibility checks" must {
 
       val userDetailsURI = "user-details-uri"
-      val nino = randomNINO()
 
         def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 
