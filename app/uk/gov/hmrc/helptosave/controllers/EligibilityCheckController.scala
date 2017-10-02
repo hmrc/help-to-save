@@ -23,6 +23,7 @@ import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.util.Logging
+import uk.gov.hmrc.helptosave.util.Logging._
 
 import scala.concurrent.ExecutionContext
 
@@ -34,7 +35,7 @@ class EligibilityCheckController @Inject() (eligibilityCheckService: Eligibility
     eligibilityCheckService.isEligible(nino).fold(
       {
         e ⇒
-          logger.warn(s"Could not check eligibility: $e")
+          logger.warn(s"Could not check eligibility: $e", nino)
           InternalServerError
       },
       r ⇒ Ok(Json.toJson(r))

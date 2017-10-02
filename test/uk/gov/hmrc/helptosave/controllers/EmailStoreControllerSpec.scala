@@ -81,19 +81,19 @@ class EmailStoreControllerSpec extends AuthSupport {
 
       val email = "email"
 
-        def get(nino: String): Future[Result] = controller.get()(FakeRequest())
+        def get(): Future[Result] = controller.get()(FakeRequest())
 
       "get the email from the email store" in {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Right(None))
-        await(get(nino))
+        await(get())
       }
 
       "return an OK with the email if the email exists" in {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Right(Some(email)))
 
-        val result = get(nino)
+        val result = get()
         status(result) shouldBe OK
         contentAsJson(result) shouldBe Json.parse(
           s"""
@@ -108,7 +108,7 @@ class EmailStoreControllerSpec extends AuthSupport {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Right(None))
 
-        val result = get(nino)
+        val result = get()
         status(result) shouldBe OK
         contentAsJson(result) shouldBe Json.parse("{}")
       }
@@ -117,7 +117,7 @@ class EmailStoreControllerSpec extends AuthSupport {
         mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
         mockGet(nino)(Left("oh no"))
 
-        val result = get(nino)
+        val result = get()
         status(result) shouldBe INTERNAL_SERVER_ERROR
       }
 

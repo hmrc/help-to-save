@@ -22,6 +22,7 @@ import cats.instances.try_._
 import cats.syntax.either._
 import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.Logger
 import play.api.libs.json.{Format, JsString, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -30,6 +31,7 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
+import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -58,6 +60,8 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
     ReactiveMongoFormats.objectIdFormats)
   with EmailStore {
 
+  val log: Logger = new Logger(logger)
+
   override def indexes: Seq[Index] = Seq(
     Index(
       key  = Seq("nino" → IndexType.Ascending),
@@ -72,7 +76,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
       doUpdate(crypto.encrypt(email), nino)
         .map{ result ⇒
           val time = timerContext.stop()
-          logger.info(s"Update on email store completed (successful: ${result.isDefined}) (time: ${nanosToPrettyString(time)})")
+          log.info(s"Update on email store completed (successful: ${result.isDefined}) (time: ${nanosToPrettyString(time)})", nino)
 
           result.fold[Either[String, Unit]]{
             metrics.emailStoreUpdateErrorCounter.inc()
@@ -93,7 +97,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
     find("nino" → JsString(nino)).map { res ⇒
       val time = timerContext.stop()
-      logger.info(s"For NINO [$nino]: GET on email store took ${nanosToPrettyString(time)}")
+      log.info(s"GET on email store took ${nanosToPrettyString(time)}", nino)
 
       val decryptedEmail = res.headOption
         .map(data ⇒ crypto.decrypt(data.email))
@@ -101,7 +105,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
       decryptedEmail.toEither().leftMap{
         t ⇒
-          logger.warn("Could not decrypt email", t)
+          log.warn("Could not decrypt email", t, nino)
           s"Could not decrypt email: ${t.getMessage}"
       }
     }.recover{
@@ -109,8 +113,8 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
         val time = timerContext.stop()
         metrics.emailStoreGetErrorCounter.inc()
 
-        logger.error(s"For NINO [$nino]: Could not read from email store (time: ${nanosToPrettyString(time)})", e)
-        Left(s"For NINO [$nino]: Could not read from email store: ${e.getMessage}")
+        log.warn(s"Could not read from email store (time: ${nanosToPrettyString(time)})", e, nino)
+        Left(s"Could not read from email store: ${e.getMessage}")
     }
   })
 

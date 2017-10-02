@@ -23,3 +23,24 @@ trait Logging {
   val logger: Logger = Logger(this.getClass)
 
 }
+
+object Logging {
+
+  private def loggingPrefix(nino: String): String = s"For NINO [$nino]:"
+
+  implicit class LoggerOps(val logger: Logger) {
+
+    def debug(message: String, nino: NINO): Unit = logger.debug(loggingPrefix(nino) + message)
+
+    def info(message: String, nino: NINO): Unit = logger.info(loggingPrefix(nino) + message)
+
+    def warn(message: String, nino: NINO): Unit = logger.warn(loggingPrefix(nino) + message)
+
+    def warn(message: String, e: ⇒ Throwable, nino: NINO): Unit = logger.warn(loggingPrefix(nino) + message, e)
+
+    def error(message: String, nino: NINO): Unit = logger.error(loggingPrefix(nino) + message)
+
+    def error(message: String, e: ⇒ Throwable, nino: NINO): Unit = logger.error(loggingPrefix(nino) + message, e)
+
+  }
+}
