@@ -33,21 +33,16 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
 
   val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
-  def url(nino: String) = {
-    val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
-    s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
-  }
-
-  def mockGet(url: String)(response: HttpResponse) =
-    (mockHttp.get(_: String)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(Future.successful(response))
-
   lazy val connector = new EligibilityCheckConnectorImpl(mockHttp, mockMetrics)
 
+  def mockGet(url: String)(response: HttpResponse) =
+    (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier))
+      .expects(url, connector.headers, *)
+      .returning(Future.successful(response))
+
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
-    result ← Gen.choose(1, 2)
-    reason ← Gen.choose(1, 8)
+    result ← Gen.alphaStr
+    reason ← Gen.alphaStr
   } yield EligibilityCheckResult(result, reason))
 
   "check eligibility" must {
@@ -55,14 +50,14 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
 
     "return with the eligibility check result unchanged from ITMP" in {
       forAll { result: EligibilityCheckResult ⇒
-        mockGet(url(nino))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
+        mockGet(connector.url(nino))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
         Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(result)
       }
 
     }
 
     "handles errors parsing invalid json" in {
-      mockGet(url(nino))(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
+      mockGet(connector.url(nino))(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
 
       Await.result(connector.isEligible(nino).value, 5.seconds).isLeft shouldBe true
     }
