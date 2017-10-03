@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json.{Format, Json}
-import play.mvc.Http.Status.{CONFLICT, OK}
+import play.api.mvc.Results.EmptyContent
+import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
@@ -41,17 +41,21 @@ trait ITMPEnrolmentConnector {
 @Singleton
 class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) extends ITMPEnrolmentConnector with ServicesConfig with Logging {
 
-  import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnectorImpl._
-
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
 
-  def url(nino: NINO): String = s"$itmpEnrolmentURL/set-enrolment-flag/$nino"
+  val environment: String = getString("microservice.services.itmp-enrolment.environment")
+
+  val header: Map[String, String] = Map("Environment" → environment)
+
+  val body: EmptyContent = EmptyContent()
+
+  def url(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
     EitherT({
       val timerContext = metrics.itmpSetFlagTimer.time()
 
-      http.post(url(nino), PostBody(), Seq.empty[(String, String)])
+      http.put(url(nino), body, header)
         .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 
@@ -60,14 +64,15 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) exte
               logger.info(s"ITMP HtS flag successfully set (time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
-            case CONFLICT ⇒
+            case FORBIDDEN ⇒
               metrics.itmpSetFlagConflictCounter.inc()
               logger.warn(s"Tried to set ITMP HtS flag even though it was already set - proceeding as normal  (time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
             case other ⇒
               metrics.itmpSetFlagErrorCounter.inc()
-              Left(s"Received unexpected response status ($other) when trying to set ITMP flag  (time: ${nanosToPrettyString(time)})")
+              Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${response.body} " +
+                s"(time: ${nanosToPrettyString(time)})")
           }
         }
         .recover {
@@ -77,15 +82,5 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) exte
             Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (time: ${nanosToPrettyString(time)})")
         }
     })
-
-}
-
-object ITMPEnrolmentConnectorImpl {
-
-  /** The information required in the body of the post request to set the ITMP flag */
-  // TODO: put in the actual required details when they are known
-  private[connectors] case class PostBody(tmp: String = "")
-
-  implicit val postBodyFormat: Format[PostBody] = Json.format[PostBody]
 
 }
