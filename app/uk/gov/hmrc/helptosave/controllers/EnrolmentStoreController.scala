@@ -25,6 +25,7 @@ import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
+import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,10 +59,10 @@ class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit writes: Writes[A]): Future[Result] =
     f.fold(
       { e ⇒
-        logger.warn(s"For NINO [$nino]: Could not $description: $e")
+        logger.warn(s"Could not $description: $e", nino)
         InternalServerError
       }, { a ⇒
-        logger.info(s"For NINO [$nino]: $description successful")
+        logger.info(s"$description successful", nino)
         Ok(Json.toJson(a))
       }
     )

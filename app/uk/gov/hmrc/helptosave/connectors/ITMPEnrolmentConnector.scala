@@ -24,6 +24,7 @@ import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, Result}
+import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -56,12 +57,12 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) exte
 
           response.status match {
             case OK ⇒
-              logger.info(s"ITMP HtS flag successfully set (time: ${nanosToPrettyString(time)})")
+              logger.info(s"ITMP HtS flag successfully set (time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
             case CONFLICT ⇒
               metrics.itmpSetFlagConflictCounter.inc()
-              logger.warn(s"Tried to set ITMP HtS flag even though it was already set - proceeding as normal  (time: ${nanosToPrettyString(time)})")
+              logger.warn(s"Tried to set ITMP HtS flag even though it was already set - proceeding as normal  (time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
             case other ⇒

@@ -24,6 +24,7 @@ import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.{Logging, Result}
+import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -50,7 +51,7 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) e
         http.get(url(nino))
           .map { response ⇒
             val time = timerContext.stop()
-            logger.info(s"Received response from ITMP eligibility check in ${nanosToPrettyString(time)}")
+            logger.info(s"Received response from ITMP eligibility check in ${nanosToPrettyString(time)}", nino)
             val result = response.parseJson[EligibilityCheckResult]
             result.fold(_ ⇒ metrics.itmpEligibilityCheckErrorCounter.inc(), _ ⇒ ())
             result

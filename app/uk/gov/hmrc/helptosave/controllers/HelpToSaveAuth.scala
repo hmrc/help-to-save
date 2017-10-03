@@ -70,7 +70,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
 
   def handleFailure(): PartialFunction[Throwable, Result] = {
     case _: NoActiveSession ⇒
-      logger.warn("user is not logged in, probably a hack? ")
+      logger.warn("user is not logged in, probably a hack?")
       InternalServerError("no active session found for logged in user")
 
     case _: InsufficientConfidenceLevel | _: InsufficientEnrolments ⇒
