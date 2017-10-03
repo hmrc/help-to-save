@@ -17,8 +17,8 @@
 package uk.gov.hmrc.helptosave.repo
 
 import org.scalamock.scalatest.MockFactory
-import play.api.libs.json.{JsString, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.libs.json.{JsString, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.BSONObjectID
@@ -26,12 +26,17 @@ import uk.gov.hmrc.mongo.{MongoConnector, ReactiveRepository}
 
 import scala.concurrent.Future
 
-trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] { this: MockFactory ⇒
+trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
+  this: MockFactory ⇒
 
   trait MockDBFunctions {
     def update(data: Data): Future[Option[Data]]
 
     def get[ID](id: ID): Future[List[Data]]
+
+    def getOne(): Future[Option[Data]]
+
+    def remove(data: Data): Future[Option[Data]]
   }
 
   val mockDBFunctions = mock[MockDBFunctions]
@@ -59,6 +64,14 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] { t
   def mockFind(id: String)(result: ⇒ Future[List[Data]]): Unit =
     (mockDBFunctions.get[Json.JsValueWrapper](_: Json.JsValueWrapper))
       .expects(toJsFieldJsValueWrapper(JsString(id)))
+      .returning(result)
+
+  def mockGetOne()(result: ⇒ Future[Option[Data]]): Unit =
+    (mockDBFunctions.getOne: () ⇒ Future[Option[Data]]).expects()
+      .returning(result)
+
+  def mockDelete(record: Data)(result: ⇒ Future[Option[Data]]): Unit =
+    (mockDBFunctions.remove(_: Data)).expects(record)
       .returning(result)
 
 }

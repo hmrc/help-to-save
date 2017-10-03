@@ -29,7 +29,7 @@ trait MicroService {
     import scoverage.ScoverageKeys
     Seq(
       // Semicolon-separated list of regexs matching classes to exclude
-      ScoverageKeys.coverageExcludedPackages := "<empty>;.*config.*;.*(AuthService|BuildInfo|Routes|JsErrorOps).*",
+      ScoverageKeys.coverageExcludedPackages := "<empty>;.*config.*;.*(AuthService|BuildInfo|Routes|JsErrorOps|UserCapStore).*",
       ScoverageKeys.coverageMinimum := 94,
       ScoverageKeys.coverageFailOnMinimum := true,
       ScoverageKeys.coverageHighlighting := true,
@@ -82,7 +82,8 @@ trait MicroService {
       Wart.Nothing,
       Wart.Overloading,
       Wart.ToString,
-      Wart.Var)
+      Wart.Var,
+      Wart.NonUnitStatements)
 
     wartremoverErrors in (Compile, compile) ++= Warts.allBut(excludedWarts: _*)
   }

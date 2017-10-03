@@ -6,3 +6,5 @@ GET /enrol-user              @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreC
 GET /set-itmp-flag           @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag()
 GET /store-email             @uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String)
 GET /get-email               @uk.gov.hmrc.helptosave.controllers.EmailStoreController.get()
+GET /account-create-allowed  @uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()
+POST /update-user-count      @uk.gov.hmrc.helptosave.controllers.UserCapController.update()

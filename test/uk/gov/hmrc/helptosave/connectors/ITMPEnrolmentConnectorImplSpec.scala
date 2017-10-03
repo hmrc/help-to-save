@@ -26,7 +26,7 @@ import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.Future
 
-class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks {
+class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
   def mockPost[A](url: String, body: A)(result: Option[HttpResponse]): Unit =
     (mockHttp.post(_: String, _: A, _: Seq[(String, String)])(_: Writes[A], _: HeaderCarrier))

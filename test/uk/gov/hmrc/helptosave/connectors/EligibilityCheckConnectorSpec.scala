@@ -29,7 +29,7 @@ import uk.gov.hmrc.play.test.WithFakeApplication
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks with ServicesConfig {
+class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks with ServicesConfig {
 
   val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
