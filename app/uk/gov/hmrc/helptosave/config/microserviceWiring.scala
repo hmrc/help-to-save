@@ -49,7 +49,8 @@ trait WSHttp
   with HttpPost with WSPost
   with HttpPut with WSPut {
 
-  def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse]
+  def get(url:     String,
+          headers: Map[String, String] = Map.empty[String, String])(implicit rhc: HeaderCarrier): Future[HttpResponse]
 
   def put[A](url:     String,
              body:    A,
@@ -71,8 +72,10 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
    * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
    */
-  def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url) {
-    val httpResponse = doGet(url)
+  def get(url:     String,
+          headers: Map[String, String] = Map.empty[String, String])(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url) {
+    // cannot use `doGet` over here because it doesn't allow for headers
+    val httpResponse = buildRequest(url).withHeaders(headers.toList: _*).get().map(new WSHttpResponse(_))
     executeHooks(url, GET_VERB, None, httpResponse)
     httpResponse
   }

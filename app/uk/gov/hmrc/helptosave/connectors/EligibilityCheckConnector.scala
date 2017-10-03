@@ -43,12 +43,16 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) e
   def url(nino: String): String =
     s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
 
+  val headers: Map[String, String] = Map(
+    "Environment" → getString("microservice.services.itmp-eligibility-check.environment")
+  )
+
   override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     EitherT[Future, String, EligibilityCheckResult](
       {
         val timerContext = metrics.itmpEligibilityCheckTimer.time()
 
-        http.get(url(nino))
+        http.get(url(nino), headers)
           .map { response ⇒
             val time = timerContext.stop()
             logger.info(s"Received response from ITMP eligibility check in ${nanosToPrettyString(time)}", nino)
