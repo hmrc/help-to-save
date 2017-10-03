@@ -17,9 +17,8 @@
 package uk.gov.hmrc.helptosave.config
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, POST ⇒ POST_VERB, PUT ⇒ PUT_VERB}
+import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, PUT ⇒ PUT_VERB}
 import play.api.http.Writeable
-import play.api.libs.json.{JsValue, Json, Writes}
 import uk.gov.hmrc.auth.core.PlayAuthConnector
 import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.http._
@@ -52,11 +51,6 @@ trait WSHttp
 
   def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse]
 
-  def post[A](url:     String,
-              body:    A,
-              headers: Seq[(String, String)] = Seq.empty[(String, String)]
-  )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse]
-
   def put[A](url:     String,
              body:    A,
              headers: Map[String, String] = Map.empty[String, String]
@@ -80,19 +74,6 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
   def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url) {
     val httpResponse = doGet(url)
     executeHooks(url, GET_VERB, None, httpResponse)
-    httpResponse
-  }
-
-  /**
-   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
-   * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
-   */
-  def post[A](url:     String,
-              body:    A,
-              headers: Seq[(String, String)] = Seq.empty[(String, String)]
-  )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] = withTracing(POST_VERB, url) {
-    val httpResponse = doPost(url, body, headers)
-    executeHooks(url, POST_VERB, None, httpResponse)
     httpResponse
   }
 
