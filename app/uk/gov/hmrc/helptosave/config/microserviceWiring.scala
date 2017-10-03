@@ -17,20 +17,20 @@
 package uk.gov.hmrc.helptosave.config
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, POST ⇒ POST_VERB}
-import play.api.libs.json.Writes
+import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, PUT ⇒ PUT_VERB}
+import play.api.http.Writeable
 import uk.gov.hmrc.auth.core.PlayAuthConnector
 import uk.gov.hmrc.http.hooks.HttpHook
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, HttpResponse}
+import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.audit.http.HttpAuditing
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ServicesConfig}
 import uk.gov.hmrc.play.http.ws._
 import uk.gov.hmrc.play.microservice.config.LoadAuditingConfig
-import scala.concurrent.ExecutionContext.Implicits.global
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 object HtsAuditConnector extends AuditConnector with AppName {
   override lazy val auditingConfig: AuditingConfig = LoadAuditingConfig("auditing")
@@ -46,14 +46,15 @@ class HtsAuthConnector @Inject() (wsHttp: WSHttp) extends PlayAuthConnector with
 @ImplementedBy(classOf[WSHttpExtension])
 trait WSHttp
   extends HttpGet with WSGet
-  with HttpPost with WSPost {
+  with HttpPost with WSPost
+  with HttpPut with WSPut {
 
   def get(url: String)(implicit rhc: HeaderCarrier): Future[HttpResponse]
 
-  def post[A](url:     String,
-              body:    A,
-              headers: Seq[(String, String)] = Seq.empty[(String, String)]
-  )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse]
+  def put[A](url:     String,
+             body:    A,
+             headers: Map[String, String] = Map.empty[String, String]
+  )(implicit rds: Writeable[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
 }
 
@@ -76,16 +77,14 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
     httpResponse
   }
 
-  /**
-   * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
-   * to replace [[POST]] method provided by the hmrc library which will throw exceptions in such cases.
-   */
-  def post[A](url:     String,
-              body:    A,
-              headers: Seq[(String, String)] = Seq.empty[(String, String)]
-  )(implicit rds: Writes[A], hc: HeaderCarrier): Future[HttpResponse] = withTracing(POST_VERB, url) {
-    val httpResponse = doPost(url, body, headers)
-    executeHooks(url, POST_VERB, None, httpResponse)
+  def put[A](url:     String,
+             body:    A,
+             headers: Map[String, String] = Map.empty[String, String]
+  )(implicit rds: Writeable[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+    // cannot use `doPut` over here because it doesn't allow for headers
+    val httpResponse = buildRequest(url).withHeaders(headers.toList: _*).put(body).map(new WSHttpResponse(_))
+    executeHooks(url, PUT_VERB, None, httpResponse)
     httpResponse
   }
+
 }
