@@ -27,7 +27,6 @@ import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ServicesConfig}
 import uk.gov.hmrc.play.http.ws._
 import uk.gov.hmrc.play.microservice.config.LoadAuditingConfig
-import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -79,12 +78,12 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
    */
   def get(url:     String,
           headers: Map[String, String] = Map.empty[String, String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    super.GET(url)(httpReads, hc.withExtraHeaders(headers), ec)
+    super.GET(url)(httpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 
   def put[A](url:     String,
              body:    A,
              headers: Map[String, String] = Map.empty[String, String]
   )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    super.PUT(url, body)(w, httpReads, hc.withExtraHeaders(headers), ec)
+    super.PUT(url, body)(w, httpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 
 }
