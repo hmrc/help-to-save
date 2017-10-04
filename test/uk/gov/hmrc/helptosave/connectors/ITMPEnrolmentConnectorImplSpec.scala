@@ -17,8 +17,7 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import play.api.http.Writeable
-import play.api.mvc.Results.EmptyContent
+import play.api.libs.json.{JsNull, Writes}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -33,7 +32,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplicatio
   lazy val environment: String = connector.environment
 
   def mockPut[A](url: String, body: A)(result: Option[HttpResponse]): Unit =
-    (mockHttp.put(_: String, _: A, _: Map[String, String])(_: Writeable[A], _: HeaderCarrier, _: ExecutionContext))
+    (mockHttp.put(_: String, _: A, _: Map[String, String])(_: Writes[A], _: HeaderCarrier, _: ExecutionContext))
       .expects(url, body, Map("Environment" → environment), *, *, *)
       .returning(result.fold[Future[HttpResponse]](Future.failed(new Exception("")))(Future.successful))
 
@@ -46,19 +45,19 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplicatio
     "setting the ITMP flag" must {
 
       "perform a post to the configured URL" in {
-        mockPut(url(nino), EmptyContent())(None)
+        mockPut(url(nino), JsNull)(None)
 
         await(connector.setFlag(nino).value)
       }
 
       "return a Right if the call to ITMP comes back with a 200 (OK) status" in {
-        mockPut(url(nino), EmptyContent())(Some(HttpResponse(200)))
+        mockPut(url(nino), JsNull)(Some(HttpResponse(200)))
 
         await(connector.setFlag(nino).value) shouldBe Right(())
       }
 
       "return a Right if the call to ITMP comes back with a 403 (FORBIDDEN) status" in {
-        mockPut(url(nino), EmptyContent())(Some(HttpResponse(403)))
+        mockPut(url(nino), JsNull)(Some(HttpResponse(403)))
 
         await(connector.setFlag(nino).value) shouldBe Right(())
       }
@@ -68,7 +67,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplicatio
         "the call to ITMP comes back with a status which isn't 200 or 403" in {
           forAll{ status: Int ⇒
             whenever(status != 200 && status != 403){
-              mockPut(url(nino), EmptyContent())(Some(HttpResponse(status)))
+              mockPut(url(nino), JsNull)(Some(HttpResponse(status)))
 
               await(connector.setFlag(nino).value).isLeft shouldBe true
             }
@@ -76,7 +75,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplicatio
         }
 
         "an error occurs while calling the ITMP endpoint" in {
-          mockPut(url(nino), EmptyContent())(None)
+          mockPut(url(nino), JsNull)(None)
           await(connector.setFlag(nino).value).isLeft shouldBe true
         }
 

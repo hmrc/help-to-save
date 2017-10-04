@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks with ServicesConfig {
 
@@ -36,8 +36,8 @@ class EligibilityCheckConnectorSpec extends TestSupport with WithFakeApplication
   lazy val connector = new EligibilityCheckConnectorImpl(mockHttp, mockMetrics)
 
   def mockGet(url: String)(response: HttpResponse) =
-    (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier))
-      .expects(url, connector.headers, *)
+    (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(url, connector.headers, *, *)
       .returning(Future.successful(response))
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {

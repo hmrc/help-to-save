@@ -17,8 +17,7 @@
 package uk.gov.hmrc.helptosave.config
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.http.HttpVerbs.{GET ⇒ GET_VERB, PUT ⇒ PUT_VERB}
-import play.api.http.Writeable
+import play.api.libs.json.Writes
 import uk.gov.hmrc.auth.core.PlayAuthConnector
 import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.http._
@@ -28,8 +27,8 @@ import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ServicesConfig}
 import uk.gov.hmrc.play.http.ws._
 import uk.gov.hmrc.play.microservice.config.LoadAuditingConfig
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 object HtsAuditConnector extends AuditConnector with AppName {
@@ -50,17 +49,21 @@ trait WSHttp
   with HttpPut with WSPut {
 
   def get(url:     String,
-          headers: Map[String, String] = Map.empty[String, String])(implicit rhc: HeaderCarrier): Future[HttpResponse]
+          headers: Map[String, String] = Map.empty[String, String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
   def put[A](url:     String,
              body:    A,
              headers: Map[String, String] = Map.empty[String, String]
-  )(implicit rds: Writeable[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
 }
 
 @Singleton
 class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
+
+  val httpReads: HttpReads[HttpResponse] = new HttpReads[HttpResponse] {
+    override def read(method: String, url: String, response: HttpResponse) = response
+  }
 
   override val hooks: Seq[HttpHook] = NoneRequired
 
@@ -68,26 +71,20 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
 
   override def appName: String = getString("appName")
 
+  override def mapErrors(httpMethod: String, url: String, f: Future[HttpResponse])(implicit ec: ExecutionContext): Future[HttpResponse] = f
+
   /**
    * Returns a [[Future[HttpResponse]] without throwing exceptions if the status is not `2xx`. Needed
    * to replace [[GET]] method provided by the hmrc library which will throw exceptions in such cases.
    */
   def get(url:     String,
-          headers: Map[String, String] = Map.empty[String, String])(implicit rhc: HeaderCarrier): Future[HttpResponse] = withTracing(GET_VERB, url) {
-    // cannot use `doGet` over here because it doesn't allow for headers
-    val httpResponse = buildRequest(url).withHeaders(headers.toList: _*).get().map(new WSHttpResponse(_))
-    executeHooks(url, GET_VERB, None, httpResponse)
-    httpResponse
-  }
+          headers: Map[String, String] = Map.empty[String, String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    super.GET(url)(httpReads, hc.withExtraHeaders(headers), ec)
 
   def put[A](url:     String,
              body:    A,
              headers: Map[String, String] = Map.empty[String, String]
-  )(implicit rds: Writeable[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-    // cannot use `doPut` over here because it doesn't allow for headers
-    val httpResponse = buildRequest(url).withHeaders(headers.toList: _*).put(body).map(new WSHttpResponse(_))
-    executeHooks(url, PUT_VERB, None, httpResponse)
-    httpResponse
-  }
+  )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    super.PUT(url, body)(w, httpReads, hc.withExtraHeaders(headers), ec)
 
 }

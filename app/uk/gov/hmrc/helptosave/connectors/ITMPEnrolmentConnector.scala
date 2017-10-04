@@ -18,6 +18,7 @@ package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.libs.json.{JsNull, JsValue}
 import play.api.mvc.Results.EmptyContent
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.WSHttp
@@ -47,7 +48,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) exte
 
   val header: Map[String, String] = Map("Environment" → environment)
 
-  val body: EmptyContent = EmptyContent()
+  val body: JsValue = JsNull
 
   def url(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"
 
