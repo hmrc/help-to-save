@@ -71,15 +71,15 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   def handleFailure(): PartialFunction[Throwable, Result] = {
     case _: NoActiveSession ⇒
       logger.warn("user is not logged in, probably a hack?")
-      InternalServerError("no active session found for logged in user")
+      Forbidden("no active session found for logged in user")
 
     case _: InsufficientConfidenceLevel | _: InsufficientEnrolments ⇒
       logger.warn("unexpected: not met required ConfidenceLevel for logged in user")
-      InternalServerError("not met required ConfidenceLevel for logged in user")
+      Forbidden("not met required ConfidenceLevel for logged in user")
 
     case ex: AuthorisationException ⇒
       logger.warn(s"could not authenticate user due to: $ex")
-      InternalServerError(s"could not authenticate user due to: ${ex.reason}")
+      Forbidden(s"could not authenticate user due to: ${ex.reason}")
   }
 }
 
