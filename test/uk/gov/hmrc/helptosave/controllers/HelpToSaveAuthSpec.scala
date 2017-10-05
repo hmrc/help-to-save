@@ -68,7 +68,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
       exceptions.foreach { error ⇒
         mockAuthWith(error)
         val result = callAuth(FakeRequest())
-        status(result) shouldBe Status.INTERNAL_SERVER_ERROR
+        status(result) shouldBe Status.FORBIDDEN
       }
     }
   }
