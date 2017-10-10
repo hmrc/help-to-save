@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import java.time.LocalDate
+
 import reactivemongo.api.indexes.Index
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.util.toFuture
@@ -36,28 +38,26 @@ class UserCapStoreSpec extends TestSupport with MongoTestSupport[UserCap, MongoU
       Seq.empty[Index]
     }
 
-    override def doFind(): Future[Option[UserCap]] = mockDBFunctions.getOne()
+    override def doFind(): Future[Option[UserCap]] = mockDBFunctions.get()
 
     override def doUpdate(userCap: UserCap): Future[Option[UserCap]] = mockDBFunctions.update(userCap)
   }
 
   "The UserCapStore" when {
 
-    val date = "2017-10-06"
-
-    val record = UserCap(date, 1, 1)
+    val record = UserCap(LocalDate.now(), 1, 1)
 
     "getting the user-cap" should {
 
       "return the existing record successfully" in {
 
-        mockGetOne()(toFuture(Some(record)))
-        Await.result(mongoStore.getOne(), 5.seconds) shouldBe Some(record)
+        mockGet()(toFuture(Some(record)))
+        Await.result(mongoStore.get(), 5.seconds) shouldBe Some(record)
       }
 
       "returns None if no record exists" in {
-        mockGetOne()(toFuture(None))
-        Await.result(mongoStore.getOne(), 5.seconds) shouldBe None
+        mockGet()(toFuture(None))
+        Await.result(mongoStore.get(), 5.seconds) shouldBe None
       }
     }
 

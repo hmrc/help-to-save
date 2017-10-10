@@ -34,7 +34,7 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
 
     def get[ID](id: ID): Future[List[Data]]
 
-    def getOne(): Future[Option[Data]]
+    def get(): Future[Option[Data]]
 
     def remove(data: Data): Future[Option[Data]]
   }
@@ -66,12 +66,7 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
       .expects(toJsFieldJsValueWrapper(JsString(id)))
       .returning(result)
 
-  def mockGetOne()(result: ⇒ Future[Option[Data]]): Unit =
-    (mockDBFunctions.getOne: () ⇒ Future[Option[Data]]).expects()
+  def mockGet()(result: ⇒ Future[Option[Data]]): Unit =
+    (mockDBFunctions.get: () ⇒ Future[Option[Data]]).expects()
       .returning(result)
-
-  def mockDelete(record: Data)(result: ⇒ Future[Option[Data]]): Unit =
-    (mockDBFunctions.remove(_: Data)).expects(record)
-      .returning(result)
-
 }

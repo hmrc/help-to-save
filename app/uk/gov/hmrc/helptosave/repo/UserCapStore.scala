@@ -17,13 +17,14 @@
 package uk.gov.hmrc.helptosave.repo
 
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
+import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
@@ -31,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoUserCapStore])
 trait UserCapStore {
-  def getOne(): Future[Option[UserCap]]
+  def get(): Future[Option[UserCap]]
 
   def upsert(userCap: UserCap): Future[Option[UserCap]]
 }
@@ -54,12 +55,12 @@ class MongoUserCapStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: E
 
   private[repo] def doFind(): Future[Option[UserCap]] = collection.find(Json.obj()).one[UserCap]
 
-  override def getOne(): Future[Option[UserCap]] = doFind()
+  override def get(): Future[Option[UserCap]] = doFind()
 
   private[repo] def doUpdate(userCap: UserCap): Future[Option[UserCap]] = {
     collection.findAndUpdate(
       BSONDocument(),
-      BSONDocument("$set" -> BSONDocument("date" -> userCap.date, "dailyCount" -> userCap.dailyCount, "totalCount" -> userCap.totalCount)),
+      BSONDocument("$set" -> BSONDocument("date" -> dateFormat.format(userCap.date), "dailyCount" -> userCap.dailyCount, "totalCount" -> userCap.totalCount)),
       fetchNewObject = true,
       upsert         = true
     ).map(_.result[UserCap])
@@ -70,14 +71,20 @@ class MongoUserCapStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: E
 
 object UserCapStore {
 
-  case class UserCap(date: String, dailyCount: Int, totalCount: Int) {
+  val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-    def isTodaysRecord: Boolean = LocalDate.now().atStartOfDay().isEqual(LocalDate.parse(date).atStartOfDay())
+  case class UserCap(date: LocalDate = LocalDate.now(), dailyCount: Int, totalCount: Int) {
+
+    def isTodaysRecord: Boolean = LocalDate.now().isEqual(date)
 
     def isPreviousRecord: Boolean = !isTodaysRecord
   }
 
   object UserCap {
+
+    def apply(dailyCount: Int, totalCount: Int): UserCap =
+      new UserCap(LocalDate.now(), dailyCount, totalCount)
+
     implicit val userCapFormat: Format[UserCap] = Json.format[UserCap]
   }
 

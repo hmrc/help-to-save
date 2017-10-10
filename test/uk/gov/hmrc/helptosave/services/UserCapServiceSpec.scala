@@ -21,7 +21,6 @@ import java.time.LocalDate
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
-import uk.gov.hmrc.helptosave.services.UserCapService.dateFormat
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -39,22 +38,21 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
     val today = LocalDate.now
 
-    val formattedToday = dateFormat.format(today)
-    val formattedYesterday = dateFormat.format(today.minusDays(1))
+    val yesterday = today.minusDays(1)
 
       def mockUserCapStoreGetOne(userCap: Option[UserCap]) =
-        (userCapStore.getOne: () ⇒ Future[Option[UserCap]]).expects()
+        (userCapStore.get: () ⇒ Future[Option[UserCap]]).expects()
           .returning(Future.successful(userCap))
 
       def mockUserCapStoreGetOneFailure() =
-        (userCapStore.getOne: () ⇒ Future[Option[UserCap]]).expects()
+        (userCapStore.get: () ⇒ Future[Option[UserCap]]).expects()
           .returning(Future.failed(new RuntimeException("oh no")))
 
       def mockUserCapStoreUpsert(userCap: UserCap) =
         (userCapStore.upsert(_: UserCap)).expects(userCap)
           .returning(Future.successful(Some(userCap)))
 
-    "checking if account create is allowed" should {
+    "checking if account create is allowed" must {
 
       "return false if dailyCap is set to 0" in {
 
@@ -74,94 +72,7 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
       }
 
-      "both dailyCap and totalCap are enabled" must {
-
-        val userCapService = new UserCapServiceImpl(userCapStore, fakeApplication.configuration)
-
-        "allow account creation if both dailyCap and totalCap are not reached" in {
-
-          val userCap = UserCap(formattedToday, 9, 100)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe true
-        }
-
-        "not allow account creation if dailyCap is reached " in {
-
-          val userCap = UserCap(formattedToday, 11, 100)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe false
-        }
-
-        "not allow account creation if totalCap is reached " in {
-
-          val userCap = UserCap(formattedToday, 9, 10000)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe false
-        }
-
-        "allow account creation if dailyCap was reached yesterday but not today and totalCap not reached " in {
-
-          val userCap = UserCap(formattedYesterday, 11, 100)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe true
-        }
-      }
-
-      "when dailyCap is disabled and totalCap is enabled" must {
-
-        val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.daily.enabled" -> false))
-
-        val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
-
-        "allow account creation as long as totalCap is not reached" in {
-          val userCap = UserCap(formattedYesterday, 113, 100)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe true
-        }
-      }
-
-      "when dailyCap is enabled and totalCap is disabled" must {
-
-        val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.total.enabled" -> false))
-
-        val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
-
-        "allow account creation as long as dailyCap is not reached" in {
-          val userCap = UserCap(formattedYesterday, 9, 100)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe true
-        }
-
-        "not allow account creation if the dailyCap is already reached" in {
-          val userCap = UserCap(formattedToday, 10, 100)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe false
-        }
-      }
-
-      "when both dailyCap and totalCap are disabled" must {
-
-        val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.daily.enabled" -> false,
-          "microservice.user-cap.total.enabled" -> false))
-
-        val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
-
-        "always allow account creation" in {
-          val userCap = UserCap(formattedYesterday, 9, 100)
-          mockUserCapStoreGetOne(Some(userCap))
-
-          result(userCapService.isAccountCreateAllowed) shouldBe true
-        }
-      }
-
-      "handle the exceptions and return true" in {
+      "return true incase of any exceptions" in {
         mockUserCapStoreGetOneFailure()
         val userCapService = new UserCapServiceImpl(userCapStore, fakeApplication.configuration)
 
@@ -169,55 +80,142 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
       }
     }
 
+    "checking if account create is allowed when both dailyCap and totalCap are enabled" must {
+
+      val userCapService = new UserCapServiceImpl(userCapStore, fakeApplication.configuration)
+
+      "allow account creation if both dailyCap and totalCap are not reached" in {
+
+        val userCap = UserCap(today, 9, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe true
+      }
+
+      "not allow account creation if dailyCap is reached " in {
+
+        val userCap = UserCap(today, 11, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe false
+      }
+
+      "not allow account creation if totalCap is reached " in {
+
+        val userCap = UserCap(yesterday, 9, 10000)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe false
+      }
+
+      "allow account creation if dailyCap was reached yesterday but not today and totalCap not reached " in {
+
+        val userCap = UserCap(yesterday, 11, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe true
+      }
+    }
+
+    "checking if account create is allowed when dailyCap is disabled and totalCap is enabled" must {
+
+      val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.daily.enabled" -> false))
+
+      val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
+
+      "allow account creation as long as totalCap is not reached" in {
+        val userCap = UserCap(yesterday, 113, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe true
+      }
+    }
+
+    "checking if account create is allowed when dailyCap is enabled and totalCap is disabled" must {
+
+      val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.total.enabled" -> false))
+
+      val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
+
+      "allow account creation as long as dailyCap is not reached" in {
+        val userCap = UserCap(yesterday, 9, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe true
+      }
+
+      "not allow account creation if the dailyCap is already reached" in {
+        val userCap = UserCap(today, 10, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe false
+      }
+    }
+
+    "checking if account create is allowed when both dailyCap and totalCap are disabled" must {
+
+      val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.daily.enabled" -> false,
+        "microservice.user-cap.total.enabled" -> false))
+
+      val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
+
+      "always allow account creation" in {
+        val userCap = UserCap(yesterday, 9, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed) shouldBe true
+      }
+    }
+
     "updating the user-cap" when {
 
-      "any one of dailyCap or totalCap is enabled" should {
+      "any one of dailyCap or totalCap is enabled" must {
 
         val userCapService = new UserCapServiceImpl(userCapStore, fakeApplication.configuration)
 
         "successfully update the daily count and total counts if there are no existing records" in {
           mockUserCapStoreGetOne(None)
-          mockUserCapStoreUpsert(UserCap(formattedToday, 1, 1))
+          mockUserCapStoreUpsert(UserCap(today, 1, 1))
 
           result(userCapService.update()) shouldBe ((): Unit)
         }
 
         "successfully update the daily count and total counts if there is no record for today but yesterday" in {
-          val userCap = UserCap(formattedYesterday, 1, 10)
+          val userCap = UserCap(yesterday, 1, 10)
           mockUserCapStoreGetOne(Some(userCap))
-          mockUserCapStoreUpsert(UserCap(formattedToday, 1, userCap.totalCount + 1))
+          mockUserCapStoreUpsert(UserCap(today, 1, userCap.totalCount + 1))
 
           result(userCapService.update()) shouldBe ((): Unit)
         }
 
         "successfully update the daily count and total counts if there is a record for today" in {
-          val userCap = UserCap(formattedToday, 1, 10)
+          val userCap = UserCap(today, 1, 10)
           mockUserCapStoreGetOne(Some(userCap))
-          mockUserCapStoreUpsert(UserCap(formattedToday, userCap.dailyCount + 1, userCap.totalCount + 1))
+          mockUserCapStoreUpsert(UserCap(today, userCap.dailyCount + 1, userCap.totalCount + 1))
 
           result(userCapService.update()) shouldBe ((): Unit)
         }
 
       }
 
-      "both dailyCap and totalCap are disabled" should {
+      "both dailyCap and totalCap are disabled" must {
 
         val configOverride = fakeApplication.configuration.++(
           Configuration("microservice.user-cap.daily.enabled" -> false, "microservice.user-cap.total.enabled" -> false))
 
         val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
 
-        "update both the counts as 0 and delete previous record if any" in {
-          val userCap = UserCap(formattedYesterday, 1, 10)
+        "update both the counts as 0 - given there is an existing record" in {
+          val userCap = UserCap(yesterday, 1, 10)
           mockUserCapStoreGetOne(Some(userCap))
-          mockUserCapStoreUpsert(UserCap(formattedToday, 0, 0))
+          mockUserCapStoreUpsert(UserCap(today, 0, 0))
 
           result(userCapService.update()) shouldBe ((): Unit)
         }
 
-        "update both the counts as 0 and delete previous record if any xxxx" in {
+        "update both the counts as 0 - given there is no existing record" in {
           mockUserCapStoreGetOne(None)
-          mockUserCapStoreUpsert(UserCap(formattedToday, 0, 0))
+          mockUserCapStoreUpsert(UserCap(today, 0, 0))
 
           result(userCapService.update()) shouldBe ((): Unit)
         }
