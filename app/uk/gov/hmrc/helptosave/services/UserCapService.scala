@@ -104,7 +104,7 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
 
     val queryResult = userCapStore.getOne()
 
-    queryResult.map {
+    queryResult.map[Unit] {
       case Some(userCap) ⇒
         val newRecord = (isTotalCapEnabled, isDailyCapEnabled) match {
           case (false, false) ⇒ UserCap(formattedToday, 0, 0)
@@ -112,22 +112,16 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
             val c = if (userCap.isPreviousRecord) 1 else userCap.dailyCount + 1
             UserCap(formattedToday, c, userCap.totalCount + 1)
         }
-        userCapStore.upsert(newRecord)
-        if (userCap.isPreviousRecord) {
-          userCapStore.remove(userCap)
-        }
-        Unit
+        userCapStore.upsert(newRecord).map(_ ⇒ ())
       case None ⇒
         val newRecord = (isTotalCapEnabled, isDailyCapEnabled) match {
           case (false, false) ⇒ UserCap(formattedToday, 0, 0)
           case (_, _)         ⇒ UserCap(formattedToday, 1, 1)
         }
-        userCapStore.upsert(newRecord)
+        userCapStore.upsert(newRecord).map(_ ⇒ ())
     }.recover {
-      case e ⇒
-        logger.warn("error updating the account cap", e)
-        Unit
-    }.map(_ ⇒ ())
+      case e ⇒ logger.warn("error updating the account cap", e)
+    }
   }
 }
 

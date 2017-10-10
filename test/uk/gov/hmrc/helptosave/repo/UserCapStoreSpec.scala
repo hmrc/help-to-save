@@ -16,15 +16,13 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import play.api.libs.json.Json
-import play.api.libs.json.Json.JsValueWrapper
 import reactivemongo.api.indexes.Index
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 class UserCapStoreSpec extends TestSupport with MongoTestSupport[UserCap, MongoUserCapStore] {
 
@@ -41,8 +39,6 @@ class UserCapStoreSpec extends TestSupport with MongoTestSupport[UserCap, MongoU
     override def doFind(): Future[Option[UserCap]] = mockDBFunctions.getOne()
 
     override def doUpdate(userCap: UserCap): Future[Option[UserCap]] = mockDBFunctions.update(userCap)
-
-    override def doRemove(userCap: UserCap): Future[Option[UserCap]] = mockDBFunctions.remove(userCap)
   }
 
   "The UserCapStore" when {
@@ -71,15 +67,6 @@ class UserCapStoreSpec extends TestSupport with MongoTestSupport[UserCap, MongoU
 
         mockUpdate(record)(Right(Some(record)))
         Await.result(mongoStore.upsert(record), 5.seconds) shouldBe Some(record)
-      }
-    }
-
-    "removing the user-cap record" should {
-
-      "delete the record successfully" in {
-
-        mockDelete(record)(toFuture(Some(record)))
-        Await.result(mongoStore.remove(record), 5.seconds) shouldBe Some(record)
       }
     }
   }

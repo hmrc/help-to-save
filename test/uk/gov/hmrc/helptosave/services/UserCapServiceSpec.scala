@@ -54,10 +54,6 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
         (userCapStore.upsert(_: UserCap)).expects(userCap)
           .returning(Future.successful(Some(userCap)))
 
-      def mockUserCapStoreRemove(userCap: UserCap) =
-        (userCapStore.remove(_: UserCap)).expects(userCap)
-          .returning(Future.successful(Some(userCap)))
-
     "checking if account create is allowed" should {
 
       "return false if dailyCap is set to 0" in {
@@ -190,7 +186,6 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
           val userCap = UserCap(formattedYesterday, 1, 10)
           mockUserCapStoreGetOne(Some(userCap))
           mockUserCapStoreUpsert(UserCap(formattedToday, 1, userCap.totalCount + 1))
-          mockUserCapStoreRemove(userCap)
 
           result(userCapService.update()) shouldBe ((): Unit)
         }
@@ -216,13 +211,11 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
           val userCap = UserCap(formattedYesterday, 1, 10)
           mockUserCapStoreGetOne(Some(userCap))
           mockUserCapStoreUpsert(UserCap(formattedToday, 0, 0))
-          mockUserCapStoreRemove(userCap)
 
           result(userCapService.update()) shouldBe ((): Unit)
         }
 
         "update both the counts as 0 and delete previous record if any xxxx" in {
-          val userCap = UserCap(formattedYesterday, 1, 10)
           mockUserCapStoreGetOne(None)
           mockUserCapStoreUpsert(UserCap(formattedToday, 0, 0))
 

@@ -34,8 +34,6 @@ trait UserCapStore {
   def getOne(): Future[Option[UserCap]]
 
   def upsert(userCap: UserCap): Future[Option[UserCap]]
-
-  def remove(userCap: UserCap): Future[Option[UserCap]]
 }
 
 @Singleton
@@ -60,21 +58,14 @@ class MongoUserCapStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: E
 
   private[repo] def doUpdate(userCap: UserCap): Future[Option[UserCap]] = {
     collection.findAndUpdate(
-      BSONDocument("date" -> userCap.date),
-      BSONDocument("$set" -> BSONDocument("dailyCount" -> userCap.dailyCount, "totalCount" -> userCap.totalCount)),
+      BSONDocument(),
+      BSONDocument("$set" -> BSONDocument("date" -> userCap.date, "dailyCount" -> userCap.dailyCount, "totalCount" -> userCap.totalCount)),
       fetchNewObject = true,
       upsert         = true
     ).map(_.result[UserCap])
   }
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)
-
-  private[repo] def doRemove(userCap: UserCap): Future[Option[UserCap]] = {
-    collection.findAndRemove(BSONDocument("date" -> userCap.date))
-      .map(_.result[UserCap])
-  }
-
-  override def remove(userCap: UserCap): Future[Option[UserCap]] = doRemove(userCap)
 }
 
 object UserCapStore {
