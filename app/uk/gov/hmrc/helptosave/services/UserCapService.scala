@@ -62,25 +62,11 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
         }
 
       case (true, false) ⇒ userCap ⇒ userCap.totalCount < totalCap
-
-      case (false, true) ⇒ userCap ⇒
-        if (userCap.isTodaysRecord) {
-          userCap.dailyCount < dailyCap
-        } else {
-          true
-        }
-      case (false, false) ⇒ userCap ⇒ true
+      case (false, true) ⇒ userCap ⇒ !userCap.isTodaysRecord || (userCap.dailyCount < dailyCap)
+      case (false, false) ⇒ _ ⇒ true
     }
 
   }
-
-  //  private val doCheck: Option[UserCap] ⇒ Boolean = {
-  //    (dailyCap, totalCap) match {
-  //      case (0, _) | (_, 0) ⇒ userCap ⇒ false
-  //      case (_, _) ⇒
-  //        userCap ⇒ userCap.forall(check)
-  //    }
-  //  }
 
   override def isAccountCreateAllowed(): Future[Boolean] = {
     if (dailyCap === 0 || totalCap === 0) {
@@ -95,9 +81,9 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
     }
   }
 
-  private val doUpdate: Option[UserCap] ⇒ UserCap = {
+  private val calculateUserCap: Option[UserCap] ⇒ UserCap = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
-      case (false, false) ⇒ userCap ⇒ UserCap(0, 0)
+      case (false, false) ⇒ _ ⇒ UserCap(0, 0)
       case (_, _) ⇒ {
         case Some(uc) ⇒
           val c = if (uc.isPreviousRecord) 1 else uc.dailyCount + 1
@@ -108,11 +94,10 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
   }
 
   override def update(): Future[Unit] =
-    userCapStore.get().map(doUpdate)
-      .map(newRecord ⇒ userCapStore.upsert(newRecord))
-      .map(_ ⇒ ())
-      .recover {
-        case e ⇒ logger.warn("error updating the account cap", e)
-      }
+    userCapStore.get().flatMap {
+      userCap ⇒ userCapStore.upsert(calculateUserCap(userCap)).map(_ ⇒ ())
+    }.recover {
+      case e ⇒ logger.warn("error updating the account cap", e)
+    }
 }
 

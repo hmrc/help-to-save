@@ -82,8 +82,7 @@ trait MicroService {
       Wart.Nothing,
       Wart.Overloading,
       Wart.ToString,
-      Wart.Var,
-      Wart.NonUnitStatements)
+      Wart.Var)
 
     wartremoverErrors in (Compile, compile) ++= Warts.allBut(excludedWarts: _*)
   }
