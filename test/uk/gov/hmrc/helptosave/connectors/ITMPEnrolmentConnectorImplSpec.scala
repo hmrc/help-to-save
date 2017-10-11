@@ -25,7 +25,7 @@ import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ITMPEnrolmentConnectorImplSpec extends TestSupport with WithFakeApplication with GeneratorDrivenPropertyChecks {
+class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPropertyChecks {
 
   lazy val connector = new ITMPEnrolmentConnectorImpl(mockHttp, mockMetrics)
 

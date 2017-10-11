@@ -16,25 +16,44 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import com.codahale.metrics.{Counter, Timer}
-import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.{Matchers, WordSpecLike}
-import uk.gov.hmrc.helptosave.config.WSHttp
 import java.time.LocalDate
 
-import org.scalacheck.Gen
+import com.codahale.metrics.{Counter, Timer}
+import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import hmrc.smartstub._
+import org.scalacheck.Gen
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
+import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitSpec {
+trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitSpec with BeforeAndAfterAll {
 
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
+  lazy val additionalConfig = Configuration()
+
+  lazy val fakeApplication: Application =
+    new GuiceApplicationBuilder()
+      .configure(Configuration("metrics.enabled" → false) ++ additionalConfig)
+      .build()
+
+  override def beforeAll() {
+    Play.start(fakeApplication)
+    super.beforeAll()
+  }
+
+  override def afterAll() {
+    Play.stop(fakeApplication)
+    super.afterAll()
+  }
+
+  implicit lazy val ec: ExecutionContext = fakeApplication.injector.instanceOf[ExecutionContext]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 

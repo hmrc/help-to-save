@@ -27,4 +27,5 @@ package object util {
   type Result[A] = EitherT[Future, String, A]
 
   implicit def toFuture[A](a: A): Future[A] = Future.successful(a)
+
 }
