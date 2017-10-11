@@ -32,7 +32,7 @@ object ControllerConfiguration extends ControllerConfig {
 object MicroserviceAuditFilter extends AuditFilter with AppName with MicroserviceFilterSupport {
   override val auditConnector: AuditConnector = HtsAuditConnector
 
-  override def controllerNeedsAuditing(controllerName: String): Boolean = ControllerConfiguration.paramsForController(controllerName).needsAuditing
+  override def controllerNeedsAuditing(controllerName: String): Boolean = false
 }
 
 object MicroserviceLoggingFilter extends LoggingFilter with MicroserviceFilterSupport {
