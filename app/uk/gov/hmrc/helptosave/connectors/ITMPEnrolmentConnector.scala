@@ -19,7 +19,6 @@ package uk.gov.hmrc.helptosave.connectors
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue}
-import play.api.mvc.Results.EmptyContent
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -62,12 +61,13 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) exte
 
           response.status match {
             case OK ⇒
-              logger.info(s"ITMP HtS flag successfully set (time: ${nanosToPrettyString(time)})", nino)
+              logger.info(s"ITMP HtS flag successfully set, received status 200 (OK) (time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
             case FORBIDDEN ⇒
               metrics.itmpSetFlagConflictCounter.inc()
-              logger.warn(s"Tried to set ITMP HtS flag even though it was already set - proceeding as normal  (time: ${nanosToPrettyString(time)})", nino)
+              logger.warn(s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
+                s"- proceeding as normal  (time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
             case other ⇒

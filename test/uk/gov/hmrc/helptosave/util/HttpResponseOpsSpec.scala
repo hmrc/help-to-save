@@ -34,6 +34,7 @@ class HttpResponseOpsSpec extends TestSupport {
   case class ThrowingHttpResponse() extends HttpResponse {
     override def json: JsValue = sys.error("")
     override def body: String = ""
+    override def status: Int = 0
   }
 
   "HttpResponseOps" must {

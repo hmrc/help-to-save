@@ -55,9 +55,16 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) e
         http.get(url(nino), headers)
           .map { response ⇒
             val time = timerContext.stop()
-            logger.info(s"Received response from ITMP eligibility check in ${nanosToPrettyString(time)}", nino)
+
             val result = response.parseJson[EligibilityCheckResult]
-            result.fold(_ ⇒ metrics.itmpEligibilityCheckErrorCounter.inc(), _ ⇒ ())
+            result.fold({
+              e ⇒
+                metrics.itmpEligibilityCheckErrorCounter.inc()
+                logger.warn(s"Error while checking eligibility: $e. Received status ${response.status} " +
+                  s"(${nanosToPrettyString(time)})", nino)
+            }, _ ⇒
+              logger.info(s"Eligibility successful, received 200 (OK) (${nanosToPrettyString(time)})", nino)
+            )
             result
           }
           .recover {
