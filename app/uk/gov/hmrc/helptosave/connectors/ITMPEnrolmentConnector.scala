@@ -61,26 +61,26 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) exte
 
           response.status match {
             case OK ⇒
-              logger.info(s"ITMP HtS flag successfully set, received status 200 (OK) (time: ${nanosToPrettyString(time)})", nino)
+              logger.info(s"ITMP HtS flag successfully set, received status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
             case FORBIDDEN ⇒
               metrics.itmpSetFlagConflictCounter.inc()
               logger.warn(s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
-                s"- proceeding as normal  (time: ${nanosToPrettyString(time)})", nino)
+                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})", nino)
               Right(())
 
             case other ⇒
               metrics.itmpSetFlagErrorCounter.inc()
               Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${response.body} " +
-                s"(time: ${nanosToPrettyString(time)})")
+                s"(round-trip time: ${nanosToPrettyString(time)})")
           }
         }
         .recover {
           case NonFatal(e) ⇒
             val time = timerContext.stop()
             metrics.itmpSetFlagErrorCounter.inc()
-            Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (time: ${nanosToPrettyString(time)})")
+            Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
         }
     })
 

@@ -76,7 +76,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
       doUpdate(crypto.encrypt(email), nino)
         .map{ result ⇒
           val time = timerContext.stop()
-          log.info(s"Update on email store completed (successful: ${result.isDefined}) (time: ${nanosToPrettyString(time)})", nino)
+          log.info(s"Update on email store completed (successful: ${result.isDefined}) (round-trip time: ${nanosToPrettyString(time)})", nino)
 
           result.fold[Either[String, Unit]]{
             metrics.emailStoreUpdateErrorCounter.inc()
@@ -88,7 +88,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
             val time = timerContext.stop()
             metrics.emailStoreUpdateErrorCounter.inc()
 
-            Left(s"${e.getMessage} (time: ${nanosToPrettyString(time)})")
+            Left(s"${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
         }
     })
 
@@ -113,7 +113,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
         val time = timerContext.stop()
         metrics.emailStoreGetErrorCounter.inc()
 
-        log.warn(s"Could not read from email store (time: ${nanosToPrettyString(time)})", e, nino)
+        log.warn(s"Could not read from email store (round-trip time: ${nanosToPrettyString(time)})", e, nino)
         Left(s"Could not read from email store: ${e.getMessage}")
     }
   })

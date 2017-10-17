@@ -94,7 +94,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
           val time = timerContext.stop()
           metrics.enrolmentStoreGetErrorCounter.inc()
 
-          log.warn(s"Could not read from enrolment store (time: ${nanosToPrettyString(time)})", e, nino)
+          log.warn(s"Could not read from enrolment store (round-trip time: ${nanosToPrettyString(time)})", e, nino)
           Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
       }
     })
@@ -109,9 +109,9 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
         result.fold[Either[String, Unit]] {
           metrics.enrolmentStoreUpdateErrorCounter.inc()
-          Left(s"For NINO [$nino]: Could not update enrolment store (time: ${nanosToPrettyString(time)})")
+          Left(s"For NINO [$nino]: Could not update enrolment store (round-trip time: ${nanosToPrettyString(time)})")
         }{ _ ⇒
-          log.info(s"Successfully updated enrolment store (time: ${nanosToPrettyString(time)})", nino)
+          log.info(s"Successfully updated enrolment store (round-trip time: ${nanosToPrettyString(time)})", nino)
           Right(())
         }
       }.recover{
@@ -119,7 +119,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
           val time = timerContext.stop()
           metrics.enrolmentStoreUpdateErrorCounter.inc()
 
-          log.error(s"Could not write to enrolment store (time: ${nanosToPrettyString(time)})", e, nino)
+          log.error(s"Could not write to enrolment store (round-trip time: ${nanosToPrettyString(time)})", e, nino)
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
       }
     }
