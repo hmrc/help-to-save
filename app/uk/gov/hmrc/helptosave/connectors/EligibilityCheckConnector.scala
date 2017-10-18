@@ -71,7 +71,7 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) e
             case e ⇒
               val time = timerContext.stop()
               metrics.itmpEligibilityCheckErrorCounter.inc()
-              Left(s"Error encountered when checking eligibility: ${e.getMessage} (time: ${nanosToPrettyString(time)})")
+              Left(s"Error encountered when checking eligibility: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
           }
       })
 }

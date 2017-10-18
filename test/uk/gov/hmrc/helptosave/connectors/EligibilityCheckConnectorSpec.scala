@@ -42,8 +42,10 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
     result ← Gen.alphaStr
+    resultCode ← Gen.choose(1, 10)
     reason ← Gen.alphaStr
-  } yield EligibilityCheckResult(result, reason))
+    reasonCode ← Gen.choose(1, 10)
+  } yield EligibilityCheckResult(result, resultCode, reason, reasonCode))
 
   "check eligibility" must {
     val nino = randomNINO()

@@ -72,7 +72,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
 
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
-          val eligibility = EligibilityCheckResult("x", "y")
+          val eligibility = EligibilityCheckResult("x", 0, "y", 0)
           mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
           mockEligibilityCheckerService(nino)(Some(eligibility))
 

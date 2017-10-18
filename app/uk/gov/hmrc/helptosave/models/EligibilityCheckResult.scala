@@ -21,7 +21,7 @@ import play.api.libs.json.{Format, Json}
 /**
  * Response from ITMP eligibility check
  */
-case class EligibilityCheckResult(result: String, reason: String)
+case class EligibilityCheckResult(result: String, resultCode: Int, reason: String, reasonCode: Int)
 
 object EligibilityCheckResult {
 
