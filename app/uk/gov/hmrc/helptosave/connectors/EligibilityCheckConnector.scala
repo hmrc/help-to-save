@@ -60,18 +60,20 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) e
             result.fold({
               e ⇒
                 metrics.itmpEligibilityCheckErrorCounter.inc()
-                logger.warn(s"Error while checking eligibility: $e. Received status ${response.status} " +
-                  s"(${nanosToPrettyString(time)})", nino)
+                logger.warn(s"Call to check eligibility unsuccessful: $e. Received status ${response.status} ${timeString(time)}", nino)
             }, _ ⇒
-              logger.info(s"Eligibility successful, received 200 (OK) (${nanosToPrettyString(time)})", nino)
+              logger.info(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino)
             )
             result
           }
           .recover {
             case e ⇒
               val time = timerContext.stop()
+
               metrics.itmpEligibilityCheckErrorCounter.inc()
-              Left(s"Error encountered when checking eligibility: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
+              Left(s"Call to check eligibility unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
           }
       })
+
+  private def timeString(nanos: Long): String = s"(round-trip time: ${nanosToPrettyString(nanos)})"
 }

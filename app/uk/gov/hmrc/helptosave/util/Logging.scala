@@ -26,7 +26,7 @@ trait Logging {
 
 object Logging {
 
-  private def loggingPrefix(nino: String): String = s"For NINO [$nino]:"
+  private def loggingPrefix(nino: String): String = s"For NINO [$nino]: "
 
   implicit class LoggerOps(val logger: Logger) {
 
