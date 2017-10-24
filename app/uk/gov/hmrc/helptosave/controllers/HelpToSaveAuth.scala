@@ -32,7 +32,7 @@ import scala.concurrent.Future
 
 object HelpToSaveAuth {
 
-  val NinoWithCL200: Enrolment = Enrolment("HMRC-NI").withConfidenceLevel(L200)
+  val NinoWithCL200: Enrolment = Enrolment("HMRC-NI")
 
   val AuthProvider: AuthProviders = AuthProviders(GovernmentGateway)
 
