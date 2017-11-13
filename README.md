@@ -21,7 +21,89 @@ The `help-to-save` service will run on port 7001 when started by the service man
  ```
  If eligible, expect a `200` response with JSON describing the user. If not eligible expect a `200`
 response with an empty body.
- 
+
+# GET /enrolment-status
+ Checks whether or not a person is enrolled in help to save. This endpoint requires one parameter:
+
+  | parameter      | description                                      |
+  |----------------|--------------------------------------------------|
+  | nino           | The NINO of the applicant                        |
+
+  For example:
+   ```
+   /enrolment-status?nino=NINO&userDetailsURI=http%3A%2F%2F
+   ```
+   If enrolled, expect a `200` response with JSON describing the user. If not eligible expect a `200`
+  response with an empty body.
+
+# GET /enrol-user
+ Enrols user into help to save. This endpoint requires one parameter:
+
+  | parameter      | description                                      |
+  |----------------|--------------------------------------------------|
+  | nino           | The NINO of the applicant                        |
+
+  For example:
+   ```
+   /enrol-user?nino=NINO&userDetailsURI=http%3A%2F%2F
+   ```
+   If eligible, expect a `200` response. If not eligible expect a `400` response and returns the nino.
+
+# GET /set-itmp-flag
+ Sets the ITMP flag when a user has successfully enrolled into help to save. This endpoint requires one parameter:
+
+  | parameter      | description                                      |
+  |----------------|--------------------------------------------------|
+  | nino           | The NINO of the applicant                        |
+
+  For example:
+   ```
+   /set-itmp-flag?nino=NINO&userDetailsURI=http%3A%2F%2F
+   ```
+   If successful, expect a `200` response. If setting flag is unsuccessful expect a `500` response.
+
+# GET /store-email
+ Stores the users new email address in help to save mongo collection. This endpoint requires two parameters:
+
+  | parameter      | description                                      |
+  |----------------|--------------------------------------------------|
+  | nino           | The NINO of the applicant                        |
+  | email          | The user's new email address                     |
+
+  For example:
+   ```
+   /store-email?nino=NINO&userDetailsURI=http%3A%2F%2F&email=gfgfds%sd32%45
+   ```
+   If successful, expect a `200` response. If storing email is unsuccessful expect a `500` response.
+
+# GET /get-email
+ Gets the stored users email. This endpoint requires one parameter:
+
+  | parameter      | description                                      |
+  |----------------|--------------------------------------------------|
+  | nino           | The NINO of the applicant                        |
+
+  For example:
+   ```
+   /get-email?nino=NINO&userDetailsURI=http%3A%2F%2F
+   ```
+   If successful, expect a `200` response with JSON containing the user's email address. If unsuccessful expect a `500` response.
+
+# GET /account-create-allowed
+ Checks if user cap has been reached. This endpoint requires one parameter:
+
+  | parameter      | description                                      |
+  |----------------|--------------------------------------------------|
+  | nino           | The NINO of the applicant                        |
+
+  For example:
+   ```
+   /account-create-allowed?nino=NINO&userDetailsURI=http%3A%2F%2F
+   ```
+   Expect a `200` response with JSON containing the boolean result.
+
+# POST /update-user-count
+ Updates the number of users who have enrolled into help to save. Expect a `200` response.
  
 # POST /create-an-account
 Creates a help to save account. Requires the user information in the request body as JSON. This
