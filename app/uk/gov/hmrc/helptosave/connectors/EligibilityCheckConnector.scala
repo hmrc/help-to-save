@@ -45,7 +45,7 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) e
 
   val headers: Map[String, String] = Map(
     "Environment" → getString("microservice.services.itmp-eligibility-check.environment"),
-    "Authorization: Bearer" → getString("microservice.services.itmp-eligibility-check.token")
+    "Authorization" → s"Bearer ${getString("microservice.services.itmp-eligibility-check.token")}"
   )
 
   override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
