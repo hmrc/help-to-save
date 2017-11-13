@@ -32,7 +32,6 @@ This microservice is deployed as per all MDTP microservices via Jenkins into a D
  ```
  /eligibility-check
  ```
-
  If the call is successful, expect a `200` response with JSON containing the eligibility result. If call is not successful expect a `500`
  response.
 
