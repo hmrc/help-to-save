@@ -1,9 +1,27 @@
-# help-to-save 
-
 [![Build Status](https://travis-ci.org/hmrc/help-to-save.svg)](https://travis-ci.org/hmrc/help-to-save) [ ![Download](https://api.bintray.com/packages/hmrc/releases/help-to-save/images/download.svg) ](https://bintray.com/hmrc/releases/help-to-save/_latestVersion)
 
+## Help to Save
+
+## How to run
 
 The `help-to-save` service will run on port 7001 when started by the service manager.
+
+Start service manager with the following command to run the service with all required dependencies:
+
+```
+sm --start HTS_ALL -f
+```
+
+## How to test
+
+The unit tests can be run by running
+```
+sbt test
+```
+
+## How to deploy
+
+This microservice is deployed as per all MDTP microservices via Jenkins into a Docker slug running on a Cloud Provider.
 
 ## Endpoints
 
