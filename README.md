@@ -2,6 +2,12 @@
 
 ## Help to Save
 
+Backend application process for Help to Save.
+
+## About Help to Save
+
+Please click [here](https://github.com/hmrc/help-to-save-frontend#product-repos) for more information
+
 ## How to run
 
 The `help-to-save` service will run on port 7001 when started by the service manager.
