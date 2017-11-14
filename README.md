@@ -7,7 +7,6 @@
 The `help-to-save` service will run on port 7001 when started by the service manager.
 
 Start service manager with the following command to run the service with all required dependencies:
-
 ```
 sm --start HTS_ALL -f
 ```
