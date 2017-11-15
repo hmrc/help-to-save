@@ -21,7 +21,6 @@ import play.api.libs.json.{JsNull, Writes}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,11 +28,9 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPro
 
   lazy val connector = new ITMPEnrolmentConnectorImpl(mockHttp, mockMetrics)
 
-  lazy val environment: String = connector.environment
-
   def mockPut[A](url: String, body: A)(result: Option[HttpResponse]): Unit =
     (mockHttp.put(_: String, _: A, _: Map[String, String])(_: Writes[A], _: HeaderCarrier, _: ExecutionContext))
-      .expects(url, body, Map("Environment" → environment), *, *, *)
+      .expects(url, body, connector.desHeaders, *, *, *)
       .returning(result.fold[Future[HttpResponse]](Future.failed(new Exception("")))(Future.successful))
 
   "The ITMPConnectorImpl" when {
