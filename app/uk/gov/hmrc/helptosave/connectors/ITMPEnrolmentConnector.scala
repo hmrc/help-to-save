@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json.{JsNull, JsValue}
+import play.api.libs.json.{JsNull, JsValue, Writes}
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -39,13 +39,10 @@ trait ITMPEnrolmentConnector {
 }
 
 @Singleton
-class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) extends ITMPEnrolmentConnector with ServicesConfig with Logging {
+class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics)
+  extends ITMPEnrolmentConnector with ServicesConfig with DESConnector with Logging {
 
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
-
-  val environment: String = getString("microservice.services.itmp-enrolment.environment")
-
-  val header: Map[String, String] = Map("Environment" → environment)
 
   val body: JsValue = JsNull
 
@@ -55,7 +52,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics) exte
     EitherT({
       val timerContext = metrics.itmpSetFlagTimer.time()
 
-      http.put(url(nino), body, header)
+      http.put(url(nino), body, desHeaders)(Writes.JsValueWrites, hc.copy(authorization = None), ec)
         .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 

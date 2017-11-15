@@ -37,7 +37,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
 
   def mockGet(url: String)(response: HttpResponse) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(url, connector.headers, *, *)
+      .expects(url, connector.desHeaders, *, *)
       .returning(Future.successful(response))
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
