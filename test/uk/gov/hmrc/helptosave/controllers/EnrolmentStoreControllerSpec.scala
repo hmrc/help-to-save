@@ -69,7 +69,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
         def enrol(): Future[Result] = controller.enrol()(FakeRequest())
 
       "create a mongo record with the ITMP flag set to false" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Left(""))
 
         await(enrol())
@@ -77,7 +77,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "set the ITMP flag" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
           mockITMPConnector(nino)(Left(""))
         }
@@ -87,7 +87,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "update the mongo record with the ITMP flag set to true" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
           mockITMPConnector(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
@@ -98,7 +98,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "return an OK if all the steps were successful" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
           mockITMPConnector(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
@@ -109,7 +109,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "return a 500 if any of the steps failed" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
           mockITMPConnector(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
@@ -126,7 +126,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
           controller.setITMPFlag()(FakeRequest())
 
       "set the ITMP flag" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockITMPConnector(nino)(Left(""))
 
         await(setFlag())
@@ -134,7 +134,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "update the mongo record with the ITMP flag set to true" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockITMPConnector(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
         }
@@ -144,7 +144,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "return a 200 if all the steps were successful" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockITMPConnector(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
         }
@@ -159,12 +159,12 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
           }
 
         test(inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockITMPConnector(nino)(Left(""))
         })
 
         test(inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockITMPConnector(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
         })
@@ -178,7 +178,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
           controller.getEnrolmentStatus()(FakeRequest())
 
       "get the enrolment status form the enrolment store" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockEnrolmentStoreGet(nino)(Left(""))
 
         await(getEnrolmentStatus())
@@ -211,7 +211,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
         m.foreach{
           case (s, j) ⇒
-            mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+            mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
             mockEnrolmentStoreGet(nino)(Right(s))
 
             val result = getEnrolmentStatus()
@@ -221,7 +221,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
       }
 
       "return an error if the call was not successful" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockEnrolmentStoreGet(nino)(Left(""))
 
         status(getEnrolmentStatus()) shouldBe INTERNAL_SERVER_ERROR

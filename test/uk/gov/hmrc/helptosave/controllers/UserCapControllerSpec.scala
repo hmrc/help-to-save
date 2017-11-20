@@ -44,7 +44,7 @@ class UserCapControllerSpec extends AuthSupport {
         (userCapService.isAccountCreateAllowed: () ⇒ Future[Boolean]).expects()
           .returning(toFuture(true))
 
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         val result = controller.isAccountCreateAllowed()(FakeRequest())
 
         status(result) shouldBe OK
@@ -57,7 +57,7 @@ class UserCapControllerSpec extends AuthSupport {
         (userCapService.update: () ⇒ Future[Unit]).expects()
           .returning(toFuture(()))
 
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         val result = controller.update()(FakeRequest())
 
         status(result) shouldBe OK

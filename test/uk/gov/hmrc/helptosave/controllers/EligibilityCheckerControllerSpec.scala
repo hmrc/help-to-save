@@ -57,13 +57,13 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
         def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockEligibilityCheckerService(nino)(None)
         await(doRequest(controller))
       }
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockEligibilityCheckerService(nino)(None)
 
         val result = doRequest(controller)
@@ -73,7 +73,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
           val eligibility = EligibilityCheckResult("x", 0, "y", 0)
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockEligibilityCheckerService(nino)(Some(eligibility))
 
           val result = doRequest(controller)

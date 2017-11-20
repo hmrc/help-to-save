@@ -20,11 +20,10 @@ import play.api.http.Status
 import play.api.mvc.Results.Ok
 import play.api.test.FakeRequest
 import uk.gov.hmrc.auth.core.AuthorisationException.fromString
-import uk.gov.hmrc.auth.core.Enrolments
+import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import HelpToSaveAuth._
 
 class HelpToSaveAuthSpec extends AuthSupport {
 
@@ -40,14 +39,14 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "return after successful authentication" in {
 
-      mockAuthResultWithSuccess(AuthWithCL200)(Enrolments(Set(enrolment)))
+      mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
 
       val result = Await.result(callAuth(FakeRequest()), 5.seconds)
       status(result) shouldBe Status.OK
     }
 
     "throw error if nino is not found" in {
-      mockAuthResultWithSuccess(AuthWithCL200)(Enrolments(Set()))
+      mockAuthResultWithSuccess(AuthWithCL200)(None)
 
       val result = Await.result(callAuth(FakeRequest()), 5.seconds)
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR
