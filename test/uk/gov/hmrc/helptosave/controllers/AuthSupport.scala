@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import uk.gov.hmrc.auth.core.ConfidenceLevel.L200
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
@@ -30,9 +28,7 @@ trait AuthSupport extends TestSupport {
 
   val nino = "AE123456C"
 
-  val enrolment = Enrolment("HMRC-NI", Seq(EnrolmentIdentifier("NINO", nino)), "activated", L200)
-
-  val enrolments = Enrolments(Set(enrolment))
+  val mockedNinoRetrieval = Some(nino)
 
   val mockAuthConnector: HtsAuthConnector = mock[HtsAuthConnector]
 
@@ -41,9 +37,9 @@ trait AuthSupport extends TestSupport {
       .expects(predicate, *, *, *)
       .returning(Future.failed(ex))
 
-  def mockAuthResultWithSuccess(predicate: Predicate)(result: Enrolments) =
-    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[Enrolments])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(predicate, Retrievals.authorisedEnrolments, *, *)
+  def mockAuthResultWithSuccess(predicate: Predicate)(result: Option[String]) =
+    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[Option[String]])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(predicate, Retrievals.nino, *, *)
       .returning(Future.successful(result))
 
 }

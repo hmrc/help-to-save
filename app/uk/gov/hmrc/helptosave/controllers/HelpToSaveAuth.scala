@@ -16,11 +16,8 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import cats.instances.string._
-import cats.syntax.eq._
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core.ConfidenceLevel.L200
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrievals
@@ -32,11 +29,9 @@ import scala.concurrent.Future
 
 object HelpToSaveAuth {
 
-  val NinoWithCL200: Enrolment = Enrolment("HMRC-NI").withConfidenceLevel(L200)
-
   val AuthProvider: AuthProviders = AuthProviders(GovernmentGateway)
 
-  val AuthWithCL200: Predicate = NinoWithCL200 and AuthProvider
+  val AuthWithCL200: Predicate = AuthProvider and ConfidenceLevel.L200
 
 }
 
@@ -51,17 +46,10 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   def authorised(action: HtsAction): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
-        .retrieve(Retrievals.authorisedEnrolments) { authorisedEnrols ⇒
-
-          val mayBeNino = authorisedEnrols.enrolments
-            .find(_.key === "HMRC-NI")
-            .flatMap(_.getIdentifier("NINO"))
-            .map(_.value)
-
+        .retrieve(Retrievals.nino) { mayBeNino ⇒
           mayBeNino.fold(
             toFuture(InternalServerError("could not find NINO for logged in user"))
-          )(
-              nino ⇒ action(request)(nino)
+          )(nino ⇒ action(request)(nino)
             )
         }.recover {
           handleFailure()

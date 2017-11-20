@@ -56,7 +56,7 @@ class EmailStoreControllerSpec extends AuthSupport {
     "handling requests to store emails" must {
 
       "return a HTTP 200 if the email is successfully stored" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockStore(email, nino)(Right(()))
         status(store(encodedEmail)) shouldBe 200
       }
@@ -64,12 +64,12 @@ class EmailStoreControllerSpec extends AuthSupport {
       "return a HTTP 500" when {
 
         "the email cannot be decoded" in {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           status(store("not base 64 encoded")) shouldBe 500
         }
 
         "the email is not successfully stored" in {
-          mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
           mockStore(email, nino)(Left(""))
           status(store(encodedEmail)) shouldBe 500
         }
@@ -84,13 +84,13 @@ class EmailStoreControllerSpec extends AuthSupport {
         def get(): Future[Result] = controller.get()(FakeRequest())
 
       "get the email from the email store" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockGet(nino)(Right(None))
         await(get())
       }
 
       "return an OK with the email if the email exists" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockGet(nino)(Right(Some(email)))
 
         val result = get()
@@ -105,7 +105,7 @@ class EmailStoreControllerSpec extends AuthSupport {
       }
 
       "return an OK with empty JSON if the email does not exist" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockGet(nino)(Right(None))
 
         val result = get()
@@ -114,7 +114,7 @@ class EmailStoreControllerSpec extends AuthSupport {
       }
 
       "return a HTTP 500 if there is an error getting from the email store" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(enrolments)
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockGet(nino)(Left("oh no"))
 
         val result = get()
