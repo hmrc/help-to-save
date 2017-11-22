@@ -22,7 +22,7 @@ trait DESConnector { this: ServicesConfig ⇒
 
   val desHeaders: Map[String, String] = Map(
     "Environment" → getString("microservice.services.des.environment"),
-    "Authorization" → s"Bearer: ${getString("microservice.services.des.token")}"
+    "Authorization" → s"Bearer ${getString("microservice.services.des.token")}"
   )
 
 }
