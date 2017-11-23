@@ -41,7 +41,7 @@ trait UserCapService {
 }
 
 @Singleton
-class UserCapServiceImpl @Inject()(userCapStore: UserCapStore, configuration: Configuration) extends UserCapService with Logging {
+class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: Configuration) extends UserCapService with Logging {
 
   private val isDailyCapEnabled = configuration.underlying.getBoolean("microservice.user-cap.daily.enabled")
 
@@ -97,7 +97,7 @@ class UserCapServiceImpl @Inject()(userCapStore: UserCapStore, configuration: Co
     if (dailyCap === 0 || totalCap === 0) {
       toFuture(UserCapResponse(forceDisabled = true))
     } else {
-      userCapStore.get().map(_.foreach(check))
+      userCapStore.get().map(_.fold(UserCapResponse())(check))
         .recover {
           case NonFatal(e) ⇒
             logger.warn("error checking account cap", e)
