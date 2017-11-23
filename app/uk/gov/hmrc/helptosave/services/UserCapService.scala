@@ -22,6 +22,7 @@ import cats.instances.int._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject}
 import play.api.Configuration
+import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.util._
@@ -33,14 +34,14 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[UserCapServiceImpl])
 trait UserCapService {
 
-  def isAccountCreateAllowed(): Future[Boolean]
+  def isAccountCreateAllowed(): Future[UserCapResponse]
 
   def update(): Future[Unit]
 
 }
 
 @Singleton
-class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: Configuration) extends UserCapService with Logging {
+class UserCapServiceImpl @Inject()(userCapStore: UserCapStore, configuration: Configuration) extends UserCapService with Logging {
 
   private val isDailyCapEnabled = configuration.underlying.getBoolean("microservice.user-cap.daily.enabled")
 
@@ -52,31 +53,55 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
 
   require(dailyCap >= 0 && totalCap >= 0)
 
-  private val check: UserCap ⇒ Boolean = {
+  private val check: UserCap ⇒ UserCapResponse = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
       case (true, true) ⇒ userCap ⇒
         if (userCap.isTodaysRecord) {
-          userCap.dailyCount < dailyCap && userCap.totalCount < totalCap
+          if (userCap.dailyCount < dailyCap && userCap.totalCount < totalCap) {
+            UserCapResponse()
+          } else if (userCap.dailyCount >= dailyCap) {
+            UserCapResponse(isDailyCapReached = true)
+          } else {
+            UserCapResponse(isTotalCapReached = true)
+          }
         } else {
-          userCap.totalCount < totalCap
+          if (userCap.totalCount < totalCap) {
+            UserCapResponse()
+          } else {
+            UserCapResponse(isTotalCapReached = true)
+          }
         }
 
-      case (true, false) ⇒ userCap ⇒ userCap.totalCount < totalCap
-      case (false, true) ⇒ userCap ⇒ !userCap.isTodaysRecord || (userCap.dailyCount < dailyCap)
-      case (false, false) ⇒ _ ⇒ true
+      case (true, false) ⇒ userCap ⇒
+        if (userCap.totalCount < totalCap) {
+          UserCapResponse()
+        } else {
+          UserCapResponse(isTotalCapReached = true)
+        }
+      case (false, true) ⇒ userCap ⇒
+        if (userCap.isTodaysRecord) {
+          if (userCap.dailyCount < dailyCap) {
+            UserCapResponse()
+          } else {
+            UserCapResponse(isDailyCapReached = true)
+          }
+        } else {
+          UserCapResponse()
+        }
+      case (false, false) ⇒ _ ⇒
+        UserCapResponse()
     }
-
   }
 
-  override def isAccountCreateAllowed(): Future[Boolean] = {
+  override def isAccountCreateAllowed(): Future[UserCapResponse] = {
     if (dailyCap === 0 || totalCap === 0) {
-      toFuture(false)
+      toFuture(UserCapResponse(forceDisabled = true))
     } else {
-      userCapStore.get().map(_.forall(check))
+      userCapStore.get().map(_.foreach(check))
         .recover {
           case NonFatal(e) ⇒
             logger.warn("error checking account cap", e)
-            true
+            UserCapResponse()
         }
     }
   }
