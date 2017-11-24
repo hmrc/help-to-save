@@ -57,33 +57,33 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
     (isTotalCapEnabled, isDailyCapEnabled) match {
       case (true, true) ⇒ userCap ⇒
         if (userCap.isTodaysRecord) {
-          if (userCap.dailyCount < dailyCap && userCap.totalCount < totalCap) {
-            UserCapResponse()
+          if (userCap.totalCount >= totalCap) {
+            UserCapResponse(isTotalCapReached = true)
           } else if (userCap.dailyCount >= dailyCap) {
             UserCapResponse(isDailyCapReached = true)
           } else {
-            UserCapResponse(isTotalCapReached = true)
+            UserCapResponse()
           }
         } else {
-          if (userCap.totalCount < totalCap) {
-            UserCapResponse()
-          } else {
+          if (userCap.totalCount >= totalCap) {
             UserCapResponse(isTotalCapReached = true)
+          } else {
+            UserCapResponse()
           }
         }
 
       case (true, false) ⇒ userCap ⇒
-        if (userCap.totalCount < totalCap) {
-          UserCapResponse()
-        } else {
+        if (userCap.totalCount >= totalCap) {
           UserCapResponse(isTotalCapReached = true)
+        } else {
+          UserCapResponse()
         }
       case (false, true) ⇒ userCap ⇒
         if (userCap.isTodaysRecord) {
-          if (userCap.dailyCount < dailyCap) {
-            UserCapResponse()
-          } else {
+          if (userCap.dailyCount >= dailyCap) {
             UserCapResponse(isDailyCapReached = true)
+          } else {
+            UserCapResponse()
           }
         } else {
           UserCapResponse()
