@@ -55,6 +55,10 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
 
   private val check: UserCap ⇒ UserCapResponse = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
+      case (false, false) ⇒ _ ⇒
+        //This is the normal code path post private-beta, eg: uncapped
+        UserCapResponse()
+
       case (true, true) ⇒ userCap ⇒
         if (userCap.isTodaysRecord) {
           if (userCap.totalCount >= totalCap) {
@@ -78,6 +82,7 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
         } else {
           UserCapResponse()
         }
+
       case (false, true) ⇒ userCap ⇒
         if (userCap.isTodaysRecord) {
           if (userCap.dailyCount >= dailyCap) {
@@ -88,8 +93,6 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
         } else {
           UserCapResponse()
         }
-      case (false, false) ⇒ _ ⇒
-        UserCapResponse()
     }
   }
 
