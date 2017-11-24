@@ -30,7 +30,7 @@ class UserCapController @Inject() (userCapService:   UserCapService,
   extends HelpToSaveAuth(htsAuthConnector) with Logging {
 
   def isAccountCreateAllowed: Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
-    userCapService.isAccountCreateAllowed().map(result ⇒ Ok(Json.toJson(result)))
+    userCapService.isAccountCreateAllowed().map(userCapResponse ⇒ Ok(Json.toJson(userCapResponse)))
   }
 
   def update: Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒

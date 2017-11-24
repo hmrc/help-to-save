@@ -24,11 +24,13 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
+import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.toFuture
 
 import scala.concurrent.Future
 
+// scalastyle:off magic.number
 class UserCapControllerSpec extends AuthSupport {
 
   val userCapService = mock[UserCapService]
@@ -41,14 +43,14 @@ class UserCapControllerSpec extends AuthSupport {
 
     "checking if account creation is allowed " should {
       "return successful result" in {
-        (userCapService.isAccountCreateAllowed: () ⇒ Future[Boolean]).expects()
-          .returning(toFuture(true))
+        (userCapService.isAccountCreateAllowed: () ⇒ Future[UserCapResponse]).expects()
+          .returning(toFuture(UserCapResponse()))
 
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         val result = controller.isAccountCreateAllowed()(FakeRequest())
 
         status(result) shouldBe OK
-        contentAsJson(result) shouldBe Json.parse("true")
+        contentAsJson(result) shouldBe Json.parse("""{"isDailyCapReached":false, "isTotalCapReached":false, "forceDisabled":false}""")
       }
     }
 
