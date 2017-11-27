@@ -16,29 +16,31 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
+import cats.instances.int._
+import cats.syntax.eq._
+
 import org.joda.time.LocalDate
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks with ServicesConfig {
+class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks with ServicesConfig with MockPagerDuty {
 
   val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
-  lazy val connector = new EligibilityCheckConnectorImpl(mockHttp, mockMetrics)
+  lazy val connector = new EligibilityCheckConnectorImpl(mockHttp, mockMetrics, mockPagerDuty)
 
-  def mockGet(url: String)(response: HttpResponse) =
+  def mockGet(url: String)(response: Option[HttpResponse]) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
       .expects(url, connector.desHeaders, *, *)
-      .returning(Future.successful(response))
+      .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
     result ← Gen.alphaStr
@@ -52,17 +54,48 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
 
     "return with the eligibility check result unchanged from ITMP" in {
       forAll { result: EligibilityCheckResult ⇒
-        mockGet(connector.url(nino))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
+        mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
         Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(result)
       }
 
     }
 
     "handles errors parsing invalid json" in {
-      mockGet(connector.url(nino))(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
+      inSequence{
+        mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}"""))))) // scalastyle:ignore magic.number
+        mockPagerDutyAlert("Could not parse JSON in eligibility check response")
+      }
 
       Await.result(connector.isEligible(nino).value, 5.seconds).isLeft shouldBe true
     }
+
+    "return with an error" when {
+      "the call fails" in {
+        inSequence{
+          mockGet(connector.url(nino))(None)
+          mockPagerDutyAlert("Failed to make call to check eligibility")
+        }
+
+        Await.result(connector.isEligible(nino).value, 5.seconds).isLeft shouldBe true
+      }
+
+      "the call comes back with an unexpected http status" in {
+        forAll{ status: Int ⇒
+          whenever(status > 0 && status =!= 200){
+            inSequence{
+              mockGet(connector.url(nino))(Some(HttpResponse(status)))
+              mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
+            }
+
+            Await.result(connector.isEligible(nino).value, 5.seconds).isLeft shouldBe true
+          }
+
+        }
+
+      }
+
+    }
+
   }
 }
 

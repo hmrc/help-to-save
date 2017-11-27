@@ -18,12 +18,13 @@ package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.http.Status
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-import uk.gov.hmrc.helptosave.util.{Logging, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting, Result}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -36,7 +37,7 @@ trait EligibilityCheckConnector {
 }
 
 @Singleton
-class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics)
+class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, pagerDutyAlerting: PagerDutyAlerting)
   extends EligibilityCheckConnector with ServicesConfig with DESConnector with Logging {
 
   val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
@@ -53,20 +54,31 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics)
           .map { response ⇒
             val time = timerContext.stop()
 
-            val result = response.parseJson[EligibilityCheckResult]
-            result.fold({
-              e ⇒
+            response.status match {
+              case Status.OK ⇒
+                val result = response.parseJson[EligibilityCheckResult]
+                result.fold({
+                  e ⇒
+                    metrics.itmpEligibilityCheckErrorCounter.inc()
+                    logger.warn(s"Could not parse JSON response from eligibility check, received 200 (OK): $e ${timeString(time)}", nino)
+                    pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
+                }, _ ⇒
+                  logger.info(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino)
+                )
+                result
+
+              case other ⇒
+                logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}", nino)
                 metrics.itmpEligibilityCheckErrorCounter.inc()
-                logger.warn(s"Call to check eligibility unsuccessful: $e. Received status ${response.status} ${timeString(time)}", nino)
-            }, _ ⇒
-              logger.info(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino)
-            )
-            result
+                pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
+                Left(s"Received unexpected status $other")
+
+            }
           }
           .recover {
             case e ⇒
               val time = timerContext.stop()
-
+              pagerDutyAlerting.alert("Failed to make call to check eligibility")
               metrics.itmpEligibilityCheckErrorCounter.inc()
               Left(s"Call to check eligibility unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
           }
