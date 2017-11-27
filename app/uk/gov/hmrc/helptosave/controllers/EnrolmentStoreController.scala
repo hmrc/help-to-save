@@ -32,8 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
                                           itmpConnector:    ITMPEnrolmentConnector,
-                                          htsAuthConnector: HtsAuthConnector)(implicit ec: ExecutionContext)
-  extends HelpToSaveAuth(htsAuthConnector) with Logging {
+                                          htsAuthConnector: HtsAuthConnector)
+  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
   import EnrolmentStoreController._
 
@@ -56,7 +56,7 @@ class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
     handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 
-  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit writes: Writes[A]): Future[Result] =
+  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] =
     f.fold(
       { e ⇒
         logger.warn(s"Could not $description: $e", nino)
@@ -67,8 +67,8 @@ class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
       }
     )
 
-  private def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = for {
-    _ ← itmpConnector.setFlag(nino)(hc, ec)
+  private def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = for {
+    _ ← itmpConnector.setFlag(nino)
     _ ← enrolmentStore.update(nino, itmpFlag = true)
   } yield ()
 

@@ -26,8 +26,8 @@ import uk.gov.hmrc.helptosave.util.Logging
 import scala.concurrent.ExecutionContext
 
 class UserCapController @Inject() (userCapService:   UserCapService,
-                                   htsAuthConnector: HtsAuthConnector)(implicit ec: ExecutionContext)
-  extends HelpToSaveAuth(htsAuthConnector) with Logging {
+                                   htsAuthConnector: HtsAuthConnector)
+  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
   def isAccountCreateAllowed: Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     userCapService.isAccountCreateAllowed().map(userCapResponse ⇒ Ok(Json.toJson(userCapResponse)))

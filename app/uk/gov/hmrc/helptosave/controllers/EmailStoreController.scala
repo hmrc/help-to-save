@@ -31,8 +31,8 @@ import uk.gov.hmrc.helptosave.util.Logging._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: HtsAuthConnector)(implicit ec: ExecutionContext)
-  extends HelpToSaveAuth(htsAuthConnector) with Logging {
+class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: HtsAuthConnector)
+  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
   import uk.gov.hmrc.helptosave.controllers.EmailStoreController._
 

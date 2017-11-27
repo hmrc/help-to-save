@@ -18,7 +18,6 @@ package uk.gov.hmrc.helptosave.connectors
 
 import cats.instances.int._
 import cats.syntax.eq._
-
 import org.joda.time.LocalDate
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -27,12 +26,13 @@ import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks with ServicesConfig with MockPagerDuty {
-
+  MdcLoggingExecutionContext
   val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
   lazy val connector = new EligibilityCheckConnectorImpl(mockHttp, mockMetrics, mockPagerDuty)
