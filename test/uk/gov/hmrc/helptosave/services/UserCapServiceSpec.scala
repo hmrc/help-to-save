@@ -31,7 +31,7 @@ import scala.concurrent.{Await, Future}
 // scalastyle:off magic.number
 class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
-  val userCapStore = mock[UserCapStore]
+  private val userCapStore = mock[UserCapStore]
 
   def result[T](awaitable: Future[T]): T = Await.result(awaitable, 5.seconds)
 
@@ -55,7 +55,7 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
     "checking if account create is allowed" must {
 
-      "return false if dailyCap is set to 0" in {
+      "not allow account creation if dailyCap is set to 0" in {
 
         val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.daily.limit" -> 0))
         val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
@@ -64,7 +64,7 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
       }
 
-      "return false if totalCap is set to 0" in {
+      "not allow account creation if totalCap is set to 0" in {
 
         val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.total.limit" -> 0))
         val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
@@ -73,7 +73,7 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
       }
 
-      "return true incase of any exceptions" in {
+      "allow account creation incase of any exceptions" in {
         mockUserCapStoreGetOneFailure()
         val userCapService = new UserCapServiceImpl(userCapStore, fakeApplication.configuration)
 
@@ -101,9 +101,17 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isDailyCapReached = true)
       }
 
-      "not allow account creation if totalCap is reached " in {
+      "not allow account creation if totalCap is reached yesterday " in {
 
         val userCap = UserCap(yesterday, 9, 10000)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isTotalCapReached = true)
+      }
+
+      "not allow account creation if totalCap is reached today " in {
+
+        val userCap = UserCap(today, 9, 10000)
         mockUserCapStoreGetOne(Some(userCap))
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isTotalCapReached = true)
@@ -113,6 +121,13 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
         val userCap = UserCap(yesterday, 11, 100)
         mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse()
+      }
+
+      "allow account creation if not mongo record exists for the user cap" in {
+
+        mockUserCapStoreGetOne(None)
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse()
       }
@@ -130,6 +145,14 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse()
       }
+
+      "not allow account creation if totalCap is reached " in {
+
+        val userCap = UserCap(today, 9, 10000)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isTotalCapReached = true)
+      }
     }
 
     "checking if account create is allowed when dailyCap is enabled and totalCap is disabled" must {
@@ -138,8 +161,15 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
       val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
 
-      "allow account creation as long as dailyCap is not reached" in {
+      "allow account creation as long as dailyCap is not reached with no record today " in {
         val userCap = UserCap(yesterday, 9, 100)
+        mockUserCapStoreGetOne(Some(userCap))
+
+        result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse()
+      }
+
+      "not allow account creation if the dailyCap is reached with record today " in {
+        val userCap = UserCap(today, 9, 100)
         mockUserCapStoreGetOne(Some(userCap))
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse()
