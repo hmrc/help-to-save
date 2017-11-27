@@ -25,11 +25,9 @@ import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.helptosave.util.Logging._
 
-import scala.concurrent.ExecutionContext
-
 class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector,
-                                            htsAuthConnector:        HtsAuthConnector)(implicit ec: ExecutionContext)
-  extends HelpToSaveAuth(htsAuthConnector) with Logging {
+                                            htsAuthConnector:        HtsAuthConnector)
+  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
   def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     eligibilityCheckService.isEligible(nino).fold(
