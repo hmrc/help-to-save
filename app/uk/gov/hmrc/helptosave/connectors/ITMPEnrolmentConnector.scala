@@ -23,7 +23,7 @@ import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, PagerDutyAlerting, Result}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -39,7 +39,7 @@ trait ITMPEnrolmentConnector {
 }
 
 @Singleton
-class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics)
+class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, pagerDutyAlerting: PagerDutyAlerting)
   extends ITMPEnrolmentConnector with ServicesConfig with DESConnector with Logging {
 
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
@@ -69,6 +69,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics)
 
             case other ⇒
               metrics.itmpSetFlagErrorCounter.inc()
+              pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
               Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${response.body} " +
                 s"(round-trip time: ${nanosToPrettyString(time)})")
           }
@@ -77,6 +78,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics)
           case NonFatal(e) ⇒
             val time = timerContext.stop()
             metrics.itmpSetFlagErrorCounter.inc()
+            pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
             Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
         }
     })

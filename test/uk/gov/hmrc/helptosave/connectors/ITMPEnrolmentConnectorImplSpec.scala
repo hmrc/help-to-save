@@ -19,14 +19,14 @@ package uk.gov.hmrc.helptosave.connectors
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.{JsNull, Writes}
 import uk.gov.hmrc.helptosave.util.NINO
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPropertyChecks {
+class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPropertyChecks with MockPagerDuty {
 
-  lazy val connector = new ITMPEnrolmentConnectorImpl(mockHttp, mockMetrics)
+  lazy val connector = new ITMPEnrolmentConnectorImpl(mockHttp, mockMetrics, mockPagerDuty)
 
   def mockPut[A](url: String, body: A)(result: Option[HttpResponse]): Unit =
     (mockHttp.put(_: String, _: A, _: Map[String, String])(_: Writes[A], _: HeaderCarrier, _: ExecutionContext))
@@ -42,7 +42,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPro
     "setting the ITMP flag" must {
 
       "perform a post to the configured URL" in {
-        mockPut(url(nino), JsNull)(None)
+        mockPut(url(nino), JsNull)(Some(HttpResponse(200)))
 
         await(connector.setFlag(nino).value)
       }
@@ -64,7 +64,10 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPro
         "the call to ITMP comes back with a status which isn't 200 or 403" in {
           forAll{ status: Int ⇒
             whenever(status != 200 && status != 403){
-              mockPut(url(nino), JsNull)(Some(HttpResponse(status)))
+              inSequence{
+                mockPut(url(nino), JsNull)(Some(HttpResponse(status)))
+                mockPagerDutyAlert("Received unexpected http status in response to setting ITMP flag")
+              }
 
               await(connector.setFlag(nino).value).isLeft shouldBe true
             }
@@ -72,7 +75,10 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPro
         }
 
         "an error occurs while calling the ITMP endpoint" in {
-          mockPut(url(nino), JsNull)(None)
+          inSequence {
+            mockPut(url(nino), JsNull)(None)
+            mockPagerDutyAlert("Failed to make call to set ITMP flag")
+          }
           await(connector.setFlag(nino).value).isLeft shouldBe true
         }
 
