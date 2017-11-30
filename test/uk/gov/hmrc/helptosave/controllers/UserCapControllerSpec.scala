@@ -50,7 +50,7 @@ class UserCapControllerSpec extends AuthSupport {
         val result = controller.isAccountCreateAllowed()(FakeRequest())
 
         status(result) shouldBe OK
-        contentAsJson(result) shouldBe Json.parse("""{"isDailyCapReached":false, "isTotalCapReached":false, "forceDisabled":false}""")
+        contentAsJson(result) shouldBe Json.parse("""{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}""")
       }
     }
 
