@@ -97,8 +97,12 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
   }
 
   override def isAccountCreateAllowed(): Future[UserCapResponse] = {
-    if (dailyCap === 0 || totalCap === 0) {
-      toFuture(UserCapResponse(forceDisabled = true))
+    if (totalCap === 0 && dailyCap === 0) {
+      toFuture(UserCapResponse(isDailyCapDisabled = true, isTotalCapDisabled = true))
+    } else if (totalCap === 0) {
+      toFuture(UserCapResponse(isTotalCapDisabled = true))
+    } else if (dailyCap === 0) {
+      toFuture(UserCapResponse(isDailyCapDisabled = true))
     } else {
       userCapStore.get().map(_.fold(UserCapResponse())(check))
         .recover {
