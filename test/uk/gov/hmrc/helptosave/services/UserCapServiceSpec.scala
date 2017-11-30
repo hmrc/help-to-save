@@ -55,7 +55,7 @@ class UserCapServiceSpec extends TestSupport with ServicesConfig {
 
     "checking if account create is allowed" must {
 
-      "show Service Unavailable page if both caps are set to 0" in {
+      "return response with isDailyCapDisabled = true and isTotalCapDisabled = true if both caps are set to 0" in {
 
         val configOverride = fakeApplication.configuration.++(Configuration("microservice.user-cap.daily.limit" -> 0, "microservice.user-cap.total.limit" -> 0))
         val userCapService = new UserCapServiceImpl(userCapStore, configOverride)
