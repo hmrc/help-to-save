@@ -17,6 +17,9 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
+import cats.instances.either._
+import cats.instances.option._
+import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import uk.gov.hmrc.helptosave.config.WSHttp
@@ -33,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[EligibilityCheckConnectorImpl])
 trait EligibilityCheckConnector {
-  def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult]
+  def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]]
 }
 
 @Singleton
@@ -45,8 +48,10 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, p
   def url(nino: String): String =
     s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
 
-  override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
-    EitherT[Future, String, EligibilityCheckResult](
+  type EitherStringOr[A] = Either[String, A]
+
+  override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] =
+    EitherT[Future, String, Option[EligibilityCheckResult]](
       {
         val timerContext = metrics.itmpEligibilityCheckTimer.time()
 
@@ -54,7 +59,7 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, p
           .map { response ⇒
             val time = timerContext.stop()
 
-            response.status match {
+            val r: Option[Either[String, EligibilityCheckResult]] = response.status match {
               case Status.OK ⇒
                 val result = response.parseJson[EligibilityCheckResult]
                 result.fold({
@@ -65,17 +70,22 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, p
                 }, _ ⇒
                   logger.info(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino)
                 )
-                result
+                Some(result)
+
+              case Status.NOT_FOUND ⇒
+                pagerDutyAlerting.alert("Retrieved nino has not been found in DES, so user is not receiving Working Tax Credit")
+                None
 
               case other ⇒
                 logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}", nino)
                 metrics.itmpEligibilityCheckErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
-                Left(s"Received unexpected status $other")
+                Some(Left(s"Received unexpected status $other"))
 
             }
-          }
-          .recover {
+
+            r.traverse[EitherStringOr, EligibilityCheckResult](identity)
+          }.recover {
             case e ⇒
               val time = timerContext.stop()
               pagerDutyAlerting.alert("Failed to make call to check eligibility")

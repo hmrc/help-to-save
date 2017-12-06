@@ -55,7 +55,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
     "return with the eligibility check result unchanged from ITMP" in {
       forAll { result: EligibilityCheckResult ⇒
         mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(result)
+        Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(Some(result))
       }
 
     }
