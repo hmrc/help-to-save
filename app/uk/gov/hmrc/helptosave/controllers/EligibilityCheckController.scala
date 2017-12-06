@@ -22,11 +22,14 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
-import uk.gov.hmrc.helptosave.util.Logging
+import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
 
 class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector,
-                                            htsAuthConnector:        HtsAuthConnector)
+                                            htsAuthConnector:        HtsAuthConnector)(
+    implicit
+    transformer: NINOLogMessageTransformer
+)
   extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
   def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
