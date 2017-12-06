@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.controllers
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import play.api.libs.json.{JsDefined, Json}
+import play.api.libs.json.{JsDefined, JsNull, Json}
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -80,6 +80,15 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
           status(result) shouldBe 200
           contentAsJson(result) \ "response" shouldBe JsDefined(Json.toJson(eligibility))
         }
+
+      "return with a status 200 and empty json if the nino is NOT_FOUND as its not in receipt of Tax Credit" in new TestApparatus {
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockEligibilityCheckerService(nino)(Right(None))
+
+        val result = doRequest(controller)
+        status(result) shouldBe 200
+        contentAsJson(result) shouldBe Json.parse("{ }")
+      }
 
     }
   }

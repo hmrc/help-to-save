@@ -40,7 +40,9 @@ trait EligibilityCheckConnector {
 }
 
 @Singleton
-class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: NINOLogMessageTransformer)
+class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
+                                               metrics:           Metrics,
+                                               pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: NINOLogMessageTransformer)
   extends EligibilityCheckConnector with ServicesConfig with DESConnector with Logging {
 
   val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
@@ -59,7 +61,7 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, p
           .map { response ⇒
             val time = timerContext.stop()
 
-            val r: Option[Either[String, EligibilityCheckResult]] = response.status match {
+            val res: Option[Either[String, EligibilityCheckResult]] = response.status match {
               case Status.OK ⇒
                 val result = response.parseJson[EligibilityCheckResult]
                 result.fold({
@@ -73,7 +75,7 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, p
                 Some(result)
 
               case Status.NOT_FOUND ⇒
-                pagerDutyAlerting.alert("Retrieved nino has not been found in DES, so user is not receiving Working Tax Credit")
+                logger.info(s"Retrieved nino has not been found in DES, so user is not receiving Working Tax Credit ${timeString(time)}", nino)
                 None
 
               case other ⇒
@@ -84,7 +86,7 @@ class EligibilityCheckConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, p
 
             }
 
-            r.traverse[EitherStringOr, EligibilityCheckResult](identity)
+            res.traverse[EitherStringOr, EligibilityCheckResult](identity)
           }.recover {
             case e ⇒
               val time = timerContext.stop()
