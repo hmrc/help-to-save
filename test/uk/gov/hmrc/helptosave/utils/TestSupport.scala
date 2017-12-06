@@ -29,6 +29,7 @@ import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.util.{NINO, NINOLogMessageTransformer}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -74,5 +75,10 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
   def randomDate(): LocalDate = dateGen.sample.getOrElse(sys.error("Could not generate date"))
 
   def randomNINO(): String = hmrcGenerator.nextNino.value
+
+  implicit val transformer: NINOLogMessageTransformer = new NINOLogMessageTransformer {
+    override def transform(message: String, nino: NINO): String = s"$nino - $message"
+  }
+
 }
 

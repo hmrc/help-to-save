@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import play.api.Logger
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.{Configuration, Logger}
 
 trait Logging {
 
@@ -26,21 +27,44 @@ trait Logging {
 
 object Logging {
 
-  private def loggingPrefix(nino: String): String = s"For NINO [$nino]: "
-
   implicit class LoggerOps(val logger: Logger) {
 
-    def debug(message: String, nino: NINO): Unit = logger.debug(loggingPrefix(nino) + message)
+    def debug(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+      logger.debug(transformer.transform(message, nino))
 
-    def info(message: String, nino: NINO): Unit = logger.info(loggingPrefix(nino) + message)
+    def info(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+      logger.info(transformer.transform(message, nino))
 
-    def warn(message: String, nino: NINO): Unit = logger.warn(loggingPrefix(nino) + message)
+    def warn(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+      logger.warn(transformer.transform(message, nino))
 
-    def warn(message: String, e: ⇒ Throwable, nino: NINO): Unit = logger.warn(loggingPrefix(nino) + message, e)
+    def warn(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+      logger.warn(transformer.transform(message, nino), e)
 
-    def error(message: String, nino: NINO): Unit = logger.error(loggingPrefix(nino) + message)
+    def error(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+      logger.error(transformer.transform(message, nino))
 
-    def error(message: String, e: ⇒ Throwable, nino: NINO): Unit = logger.error(loggingPrefix(nino) + message, e)
+    def error(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+      logger.error(transformer.transform(message, nino), e)
 
   }
+}
+
+@ImplementedBy(classOf[NINOLogMessageTransformerImpl])
+trait NINOLogMessageTransformer {
+  def transform(message: String, nino: NINO): String
+}
+
+@Singleton
+class NINOLogMessageTransformerImpl @Inject() (configuration: Configuration) extends NINOLogMessageTransformer {
+
+  private val loggingPrefix: NINO ⇒ String =
+    if (configuration.underlying.getBoolean("nino-logging.enabled")) {
+      nino ⇒ s"For NINO [$nino]: "
+    } else {
+      _ ⇒ ""
+    }
+
+  def transform(message: String, nino: NINO): String = loggingPrefix(nino) + message
+
 }

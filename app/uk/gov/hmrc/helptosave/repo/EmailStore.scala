@@ -30,7 +30,7 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
+import uk.gov.hmrc.helptosave.util.{Crypto, NINO, NINOLogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.mongo.ReactiveRepository
@@ -52,7 +52,9 @@ trait EmailStore {
 @Singleton
 class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
                                  crypto:  Crypto,
-                                 metrics: Metrics)
+                                 metrics: Metrics)(
+    implicit
+    transformer: NINOLogMessageTransformer)
   extends ReactiveRepository[EmailData, BSONObjectID](
     collectionName = "emails",
     mongo          = mongo.mongoConnector.db,

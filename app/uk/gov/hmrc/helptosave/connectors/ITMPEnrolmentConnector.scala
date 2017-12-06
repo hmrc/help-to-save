@@ -23,7 +23,7 @@ import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, PagerDutyAlerting, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, PagerDutyAlerting, Result}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -39,7 +39,9 @@ trait ITMPEnrolmentConnector {
 }
 
 @Singleton
-class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, pagerDutyAlerting: PagerDutyAlerting)
+class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, pagerDutyAlerting: PagerDutyAlerting)(
+    implicit
+    transformer: NINOLogMessageTransformer)
   extends ITMPEnrolmentConnector with ServicesConfig with DESConnector with Logging {
 
   val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
