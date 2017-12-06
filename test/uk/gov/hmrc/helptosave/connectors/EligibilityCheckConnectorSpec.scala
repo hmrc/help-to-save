@@ -55,18 +55,26 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
     "return with the eligibility check result unchanged from ITMP" in {
       forAll { result: EligibilityCheckResult ⇒
         mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(result)
+        Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(Some(result))
       }
 
     }
 
-    "handles errors parsing invalid json" in {
+    "handle errors when parsing invalid json" in {
       inSequence{
         mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}"""))))) // scalastyle:ignore magic.number
         mockPagerDutyAlert("Could not parse JSON in eligibility check response")
       }
 
       Await.result(connector.isEligible(nino).value, 5.seconds).isLeft shouldBe true
+    }
+
+    "handle 404 responses when nino is not found when an eligibility check is made" in {
+      inSequence{
+        mockGet(connector.url(nino))(Some(HttpResponse(404, None))) // scalastyle:ignore magic.number
+      }
+
+      Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(None)
     }
 
     "return with an error" when {
@@ -81,7 +89,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
 
       "the call comes back with an unexpected http status" in {
         forAll{ status: Int ⇒
-          whenever(status > 0 && status =!= 200){
+          whenever(status > 0 && status =!= 200 && status =!= 404){
             inSequence{
               mockGet(connector.url(nino))(Some(HttpResponse(status)))
               mockPagerDutyAlert("Received unexpected http status in response to eligibility check")

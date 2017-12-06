@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.controllers
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import play.api.libs.json.Json
+import play.api.libs.json.{JsDefined, JsNull, Json}
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -40,10 +40,10 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
     def doRequest(controller: EligibilityCheckController): Future[PlayResult] =
       controller.eligibilityCheck()(FakeRequest())
 
-    def mockEligibilityCheckerService(nino: NINO)(result: Option[EligibilityCheckResult]): Unit =
+    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, Option[EligibilityCheckResult]]): Unit =
       (eligibilityConnector.isEligible(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
-        .returning(EitherT.fromOption[Future](result, "mocking failed eligibility check"))
+        .returning(EitherT.fromEither[Future](result))
 
     val controller = new EligibilityCheckController(eligibilityConnector, mockAuthConnector)
   }
@@ -58,13 +58,13 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockEligibilityCheckerService(nino)(None)
+        mockEligibilityCheckerService(nino)(Right(None))
         await(doRequest(controller))
       }
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockEligibilityCheckerService(nino)(None)
+        mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
 
         val result = doRequest(controller)
         status(result) shouldBe 500
@@ -74,12 +74,21 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
         "successful" in new TestApparatus {
           val eligibility = EligibilityCheckResult("x", 0, "y", 0)
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockEligibilityCheckerService(nino)(Some(eligibility))
+          mockEligibilityCheckerService(nino)(Right(Some(eligibility)))
 
           val result = doRequest(controller)
           status(result) shouldBe 200
-          contentAsJson(result) shouldBe Json.toJson(eligibility)
+          contentAsJson(result) \ "response" shouldBe JsDefined(Json.toJson(eligibility))
         }
+
+      "return with a status 200 and empty json if the nino is NOT_FOUND as its not in receipt of Tax Credit" in new TestApparatus {
+        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockEligibilityCheckerService(nino)(Right(None))
+
+        val result = doRequest(controller)
+        status(result) shouldBe 200
+        contentAsJson(result) shouldBe Json.parse("{ }")
+      }
 
     }
   }
