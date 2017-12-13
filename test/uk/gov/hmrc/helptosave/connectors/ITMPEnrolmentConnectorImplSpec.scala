@@ -66,6 +66,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPro
             whenever(status != 200 && status != 403){
               inSequence{
                 mockPut(url(nino), JsNull)(Some(HttpResponse(status)))
+                // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to setting ITMP flag")
               }
 
@@ -77,6 +78,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPro
         "an error occurs while calling the ITMP endpoint" in {
           inSequence {
             mockPut(url(nino), JsNull)(None)
+            // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to set ITMP flag")
           }
           await(connector.setFlag(nino).value).isLeft shouldBe true

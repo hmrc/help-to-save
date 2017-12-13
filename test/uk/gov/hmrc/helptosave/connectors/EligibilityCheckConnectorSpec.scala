@@ -63,6 +63,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
     "handle errors when parsing invalid json" in {
       inSequence{
         mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}"""))))) // scalastyle:ignore magic.number
+        // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
         mockPagerDutyAlert("Could not parse JSON in eligibility check response")
       }
 
@@ -81,6 +82,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
       "the call fails" in {
         inSequence{
           mockGet(connector.url(nino))(None)
+          // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("Failed to make call to check eligibility")
         }
 
@@ -92,6 +94,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
           whenever(status > 0 && status =!= 200 && status =!= 404){
             inSequence{
               mockGet(connector.url(nino))(Some(HttpResponse(status)))
+              // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
               mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
             }
 
