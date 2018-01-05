@@ -61,6 +61,8 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
           .map { response ⇒
             val time = timerContext.stop()
 
+            logger.info(s"eligibility response body from DES is: ${response.body}")
+
             val res: Option[Either[String, EligibilityCheckResult]] = response.status match {
               case Status.OK ⇒
                 val result = response.parseJson[EligibilityCheckResult]
