@@ -28,4 +28,13 @@ package object util {
 
   implicit def toFuture[A](a: A): Future[A] = Future.successful(a)
 
+  val ninoRegex = """[A-Za-z]{2}[0-9]{6}[A-Za-z]{1}""".r
+
+  def maskNino(original: String): String = {
+    Option(original) match {
+      case Some(text) => ninoRegex.replaceAllIn(text, "<NINO>")
+      case None => original
+    }
+  }
+
 }
