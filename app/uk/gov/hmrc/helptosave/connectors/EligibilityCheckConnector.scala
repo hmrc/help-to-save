@@ -27,8 +27,8 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, PagerDutyAlerting, Result}
 import uk.gov.hmrc.helptosave.util.Logging._
+import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -61,7 +61,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
           .map { response ⇒
             val time = timerContext.stop()
 
-            logger.info(s"eligibility response body from DES is: ${response.body}", nino)
+            logger.info(s"eligibility response body from DES is: ${maskNino(response.body)}", nino)
 
             val res: Option[Either[String, EligibilityCheckResult]] = response.status match {
               case Status.OK ⇒
