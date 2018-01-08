@@ -20,10 +20,11 @@ import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue, Writes}
 import play.mvc.Http.Status.{FORBIDDEN, OK}
+import uk.gov.hmrc.helptosave
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, PagerDutyAlerting, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -72,7 +73,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
             case other ⇒
               metrics.itmpSetFlagErrorCounter.inc()
               pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
-              Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${response.body} " +
+              Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${maskNino(response.body)} " +
                 s"(round-trip time: ${nanosToPrettyString(time)})")
           }
         }
