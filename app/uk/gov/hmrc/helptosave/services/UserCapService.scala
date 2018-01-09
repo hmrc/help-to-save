@@ -84,12 +84,8 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
         }
 
       case (false, true) ⇒ userCap ⇒
-        if (userCap.isTodaysRecord) {
-          if (userCap.dailyCount >= dailyCap) {
-            UserCapResponse(isDailyCapReached = true)
-          } else {
-            UserCapResponse()
-          }
+        if (userCap.isTodaysRecord && userCap.dailyCount >= dailyCap) {
+          UserCapResponse(isDailyCapReached = true)
         } else {
           UserCapResponse()
         }
@@ -127,7 +123,13 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: C
 
   override def update(): Future[Unit] =
     userCapStore.get().flatMap {
-      userCap ⇒ userCapStore.upsert(calculateUserCap(userCap)).map(_ ⇒ ())
+      userCap ⇒
+        userCapStore.upsert(calculateUserCap(userCap)).map{ updatedUserCap ⇒
+          val logMessage = "Updated user cap - " + updatedUserCap.fold("could not retrieve user cap data"){ cap ⇒
+            s"counts are now (daily: ${cap.dailyCount}, total: ${cap.totalCount})"
+          }
+          logger.info(logMessage)
+        }
     }.recover {
       case e ⇒ logger.warn("error updating the account cap", e)
     }
