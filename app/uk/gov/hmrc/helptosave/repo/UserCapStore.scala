@@ -27,6 +27,7 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import reactivemongo.play.json.ImplicitBSONHandlers._
 
 import scala.concurrent.{ExecutionContext, Future}
 

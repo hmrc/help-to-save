@@ -35,6 +35,7 @@ import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import reactivemongo.play.json.ImplicitBSONHandlers._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
