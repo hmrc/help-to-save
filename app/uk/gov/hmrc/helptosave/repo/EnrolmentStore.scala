@@ -31,6 +31,7 @@ import uk.gov.hmrc.helptosave.util.{NINO, NINOLogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import reactivemongo.play.json.ImplicitBSONHandlers._
 
 import scala.concurrent.{ExecutionContext, Future}
 
