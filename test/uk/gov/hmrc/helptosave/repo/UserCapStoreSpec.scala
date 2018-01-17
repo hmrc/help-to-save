@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import java.time.LocalDate
+import java.time.{LocalDate, ZoneId}
 
 import reactivemongo.api.indexes.Index
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
@@ -45,7 +45,7 @@ class UserCapStoreSpec extends TestSupport with MongoTestSupport[UserCap, MongoU
 
   "The UserCapStore" when {
 
-    val record = UserCap(LocalDate.now(), 1, 1)
+    val record = UserCap(LocalDate.now(ZoneId.of("Z")), 1, 1)
 
     "getting the user-cap" should {
 

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import java.time.LocalDate
+import java.time.{Clock, LocalDate, ZoneId}
 import java.time.format.DateTimeFormatter
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
@@ -74,9 +74,11 @@ object UserCapStore {
 
   val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-  case class UserCap(date: LocalDate = LocalDate.now(), dailyCount: Int, totalCount: Int) {
+  private val utcZone: ZoneId = ZoneId.of("Z")
 
-    def isTodaysRecord: Boolean = LocalDate.now().isEqual(date)
+  case class UserCap(date: LocalDate = LocalDate.now(utcZone), dailyCount: Int, totalCount: Int) {
+
+    def isTodaysRecord: Boolean = LocalDate.now(utcZone).isEqual(date)
 
     def isPreviousRecord: Boolean = !isTodaysRecord
   }
@@ -84,7 +86,7 @@ object UserCapStore {
   object UserCap {
 
     def apply(dailyCount: Int, totalCount: Int): UserCap =
-      new UserCap(LocalDate.now(), dailyCount, totalCount)
+      new UserCap(LocalDate.now(utcZone), dailyCount, totalCount)
 
     implicit val userCapFormat: Format[UserCap] = Json.format[UserCap]
   }
