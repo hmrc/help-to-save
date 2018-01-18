@@ -55,6 +55,11 @@ trait WSHttp
              headers: Map[String, String] = Map.empty[String, String]
   )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
+  def post[A](url:     String,
+              body:    A,
+              headers: Map[String, String] = Map.empty[String, String]
+  )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+
 }
 
 @Singleton
@@ -85,5 +90,11 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
              headers: Map[String, String] = Map.empty[String, String]
   )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     super.PUT(url, body)(w, httpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
+
+  def post[A](url:     String,
+             body:    A,
+             headers: Map[String, String] = Map.empty[String, String]
+            )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    super.POST(url, body)(w, httpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 
 }
