@@ -24,25 +24,24 @@ import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 
-case class NSIUserInfo(forename: String,
-                       surname: String,
-                       dateOfBirth: LocalDate,
-                       nino: String,
-                       contactDetails: ContactDetails,
+case class NSIUserInfo(forename:            String,
+                       surname:             String,
+                       dateOfBirth:         LocalDate,
+                       nino:                String,
+                       contactDetails:      ContactDetails,
                        registrationChannel: String)
 
 object NSIUserInfo {
 
-  case class ContactDetails(address1: String,
-                            address2: String,
-                            address3: Option[String],
-                            address4: Option[String],
-                            address5: Option[String],
-                            postcode: String,
-                            countryCode: Option[String],
-                            phoneNumber: Option[String] = None,
+  case class ContactDetails(address1:                String,
+                            address2:                String,
+                            address3:                Option[String],
+                            address4:                Option[String],
+                            address5:                Option[String],
+                            postcode:                String,
+                            countryCode:             Option[String],
+                            phoneNumber:             Option[String] = None,
                             communicationPreference: String)
-
 
   implicit val dateFormat: Format[LocalDate] = {
     val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")

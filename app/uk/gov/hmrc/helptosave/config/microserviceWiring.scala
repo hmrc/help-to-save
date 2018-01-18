@@ -92,9 +92,9 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
     super.PUT(url, body)(w, httpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 
   def post[A](url:     String,
-             body:    A,
-             headers: Map[String, String] = Map.empty[String, String]
-            )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+              body:    A,
+              headers: Map[String, String] = Map.empty[String, String]
+  )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     super.POST(url, body)(w, httpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 
 }

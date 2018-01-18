@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.helptosave.controllers
 
 import com.google.inject.Inject
@@ -9,24 +25,25 @@ import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-class CreateAccountController @Inject()(frontendConnector: FrontendConnector) extends BaseController with Logging with WithMdcExecutionContext {
+class CreateAccountController @Inject() (frontendConnector: FrontendConnector) extends BaseController with Logging with WithMdcExecutionContext {
 
   def createAccount(): Action[AnyContent] = Action.async {
-    implicit request ⇒ {
-      request.body.asJson.map(_.validate[NSIUserInfo]) match {
-        case Some(JsSuccess(userInfo, _)) ⇒
-          frontendConnector.createAccount(userInfo)
-            .map(response ⇒ Status(response.status))
+    implicit request ⇒
+      {
+        request.body.asJson.map(_.validate[NSIUserInfo]) match {
+          case Some(JsSuccess(userInfo, _)) ⇒
+            frontendConnector.createAccount(userInfo)
+              .map(response ⇒ Status(response.status))
 
-        case Some(error: JsError) ⇒
-          val errorString = error.prettyPrint()
-          logger.warn(s"Could not parse JSON in request body: $errorString")
-          toFuture(BadRequest(ErrorResponse("Could not parse JSON in request", errorString).toJson()))
+          case Some(error: JsError) ⇒
+            val errorString = error.prettyPrint()
+            logger.warn(s"Could not parse JSON in request body: $errorString")
+            toFuture(BadRequest(ErrorResponse("Could not parse JSON in request", errorString).toJson()))
 
-        case None ⇒
-          logger.warn("No JSON body found in request")
-          toFuture(BadRequest(ErrorResponse("No JSON found in request body", "").toJson()))
+          case None ⇒
+            logger.warn("No JSON body found in request")
+            toFuture(BadRequest(ErrorResponse("No JSON found in request body", "").toJson()))
+        }
       }
-    }
   }
 }
