@@ -8,3 +8,5 @@ GET /store-email             @uk.gov.hmrc.helptosave.controllers.EmailStoreContr
 GET /get-email               @uk.gov.hmrc.helptosave.controllers.EmailStoreController.get()
 GET /account-create-allowed  @uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()
 POST /update-user-count      @uk.gov.hmrc.helptosave.controllers.UserCapController.update()
+
+POST /create-de-account      @uk.gov.hmrc.helptosave.controllers.CreateDEAccountController.createDEAccount()
