@@ -38,6 +38,6 @@ class FrontendConnectorImpl @Inject() (http: WSHttp)(implicit hc: HeaderCarrier)
   val createAccountURL: String = getString("microservice.services.help-to-save-frontend.url")
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-    http.post(createAccountURL, userInfo)(NSIUserInfo.nsiUserInfoFormat, hc, ec)
+    http.post(createAccountURL, userInfo)
   }
 }

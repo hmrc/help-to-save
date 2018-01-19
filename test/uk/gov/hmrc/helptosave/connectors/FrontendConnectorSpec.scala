@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class FrontendConnectorSpec extends TestSupport {
 
   lazy val frontendConnector = new FrontendConnectorImpl(mockHttp)
-  val createAccountURL: String = "http://localhost:7002/nsi-services/account"
+  val createAccountURL: String = "http://localhost:7000/create-de-account"
 
   val userInfo: NSIUserInfo =
     NSIUserInfo(
