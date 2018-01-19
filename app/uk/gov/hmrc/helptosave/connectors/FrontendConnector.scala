@@ -17,8 +17,9 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.config.WSHttp
-import uk.gov.hmrc.helptosave.models.NSIUserInfo
+import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -32,12 +33,18 @@ trait FrontendConnector {
 }
 
 @Singleton
-class FrontendConnectorImpl @Inject() (http: WSHttp)(implicit hc: HeaderCarrier)
+class FrontendConnectorImpl @Inject() (http: WSHttp)
   extends FrontendConnector with ServicesConfig with Logging {
 
   val createAccountURL: String = getString("microservice.services.help-to-save-frontend.url")
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
     http.post(createAccountURL, userInfo)
+      .recover {
+        case e ⇒
+          logger.warn(s"unexpected error from frontend during /create-de-account, message=${e.getMessage}")
+          val errorJson = ErrorResponse("unexpected error from frontend during /create-de-account", s"${e.getMessage}").toJson()
+          HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
+      }
   }
 }

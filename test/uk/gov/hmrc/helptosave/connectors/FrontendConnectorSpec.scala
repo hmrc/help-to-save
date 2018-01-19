@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosave.connectors
 
 import java.time.LocalDate
 
-import play.api.libs.json.Writes
-import play.mvc.Http.Status.{BAD_REQUEST, CREATED}
+import play.api.libs.json.{Json, Writes}
+import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 import uk.gov.hmrc.helptosave.util.toFuture
@@ -43,10 +43,15 @@ class FrontendConnectorSpec extends TestSupport {
       "regChannel"
     )
 
-  def mockCreateAccountResponse(userInfo: NSIUserInfo)(response: Future[HttpResponse]) =
+  private def mockCreateAccountResponse(userInfo: NSIUserInfo)(response: Future[HttpResponse]) =
     (mockHttp.post(_: String, _: NSIUserInfo, _: Map[String, String])(_: Writes[NSIUserInfo], _: HeaderCarrier, _: ExecutionContext))
       .expects(createAccountURL, userInfo, Map.empty[String, String], *, *, *)
       .returning(response)
+
+  private def mockFailCreateAccountResponse(userInfo: NSIUserInfo)(ex: Exception) =
+    (mockHttp.post(_: String, _: NSIUserInfo, _: Map[String, String])(_: Writes[NSIUserInfo], _: HeaderCarrier, _: ExecutionContext))
+      .expects(createAccountURL, userInfo, Map.empty[String, String], *, *, *)
+      .returning(Future.failed(ex))
 
   "The FrontendConnector" when {
     "creating account" must {
@@ -64,6 +69,21 @@ class FrontendConnectorSpec extends TestSupport {
         val result = await(frontendConnector.createAccount(userInfo))
 
         result.status shouldBe BAD_REQUEST
+      }
+
+      "handle unexpected errors" in {
+
+        mockFailCreateAccountResponse(userInfo)(new RuntimeException("boom"))
+        val result = await(frontendConnector.createAccount(userInfo))
+
+        result.status shouldBe INTERNAL_SERVER_ERROR
+        Json.parse(result.body) shouldBe
+          Json.parse(
+            """{
+              "errorMessageId" : "",
+              "errorMessage" : "unexpected error from frontend during /create-de-account",
+              "errorDetails" : "boom"
+            }""")
       }
     }
   }

@@ -29,24 +29,22 @@ class CreateDEAccountController @Inject() (frontendConnector: FrontendConnector)
 
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒
-      {
-        request.body.asJson.map(_.validate[NSIUserInfo]) match {
-          case Some(JsSuccess(userInfo, _)) ⇒
-            frontendConnector.createAccount(userInfo)
-              .map(response ⇒
-                Option(response.body).fold[Result](
-                  Status(response.status)
-                )(body ⇒ Status(response.status)(body)))
+      request.body.asJson.map(_.validate[NSIUserInfo]) match {
+        case Some(JsSuccess(userInfo, _)) ⇒
+          frontendConnector.createAccount(userInfo)
+            .map(response ⇒
+              Option(response.body).fold[Result](
+                Status(response.status)
+              )(body ⇒ Status(response.status)(body)))
 
-          case Some(error: JsError) ⇒
-            val errorString = error.prettyPrint()
-            logger.warn(s"Could not parse JSON in request body: $errorString")
-            toFuture(BadRequest(ErrorResponse("Could not parse JSON in request", errorString).toJson()))
+        case Some(error: JsError) ⇒
+          val errorString = error.prettyPrint()
+          logger.warn(s"Could not parse JSON in request body: $errorString")
+          BadRequest(ErrorResponse("Could not parse JSON in request", errorString).toJson())
 
-          case None ⇒
-            logger.warn("No JSON body found in request")
-            toFuture(BadRequest(ErrorResponse("No JSON found in request body", "").toJson()))
-        }
+        case None ⇒
+          logger.warn("No JSON body found in request")
+          BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
       }
   }
 }
