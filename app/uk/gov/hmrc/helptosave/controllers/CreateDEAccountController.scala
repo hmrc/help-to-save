@@ -18,22 +18,25 @@ package uk.gov.hmrc.helptosave.controllers
 
 import com.google.inject.Inject
 import play.api.libs.json.{JsError, JsSuccess}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.helptosave.connectors.FrontendConnector
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-class CreateAccountController @Inject() (frontendConnector: FrontendConnector) extends BaseController with Logging with WithMdcExecutionContext {
+class CreateDEAccountController @Inject() (frontendConnector: FrontendConnector) extends BaseController with Logging with WithMdcExecutionContext {
 
-  def createAccount(): Action[AnyContent] = Action.async {
+  def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒
       {
         request.body.asJson.map(_.validate[NSIUserInfo]) match {
           case Some(JsSuccess(userInfo, _)) ⇒
             frontendConnector.createAccount(userInfo)
-              .map(response ⇒ Status(response.status))
+              .map(response ⇒
+                Option(response.body).fold[Result](
+                  Status(response.status)
+                )(body ⇒ Status(response.status)(body)))
 
           case Some(error: JsError) ⇒
             val errorString = error.prettyPrint()

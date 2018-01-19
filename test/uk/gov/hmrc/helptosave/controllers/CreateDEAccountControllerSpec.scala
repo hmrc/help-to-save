@@ -32,14 +32,14 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import scala.concurrent.ExecutionContext
 
 // scalastyle:off magic.number
-class CreateAccountControllerSpec extends TestSupport {
+class CreateDEAccountControllerSpec extends TestSupport {
 
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
   class TestApparatus {
     val frontendConnector = mock[FrontendConnector]
 
-    val controller = new CreateAccountController(frontendConnector)
+    val controller = new CreateDEAccountController(frontendConnector)
   }
 
   "The CreateAccountController" when {
@@ -52,7 +52,7 @@ class CreateAccountControllerSpec extends TestSupport {
           .returning(toFuture(HttpResponse(CREATED)))
 
         val requestBody = Json.parse(jsonString("20200101"))
-        val result = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
 
         status(result) shouldBe CREATED
       }
@@ -60,13 +60,13 @@ class CreateAccountControllerSpec extends TestSupport {
       "return bad request reposne if the request body is not a valid NSIUserInfo json" in new TestApparatus {
 
         val requestBody = Json.parse(jsonString("\"123456\""))
-        val result = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")
       }
 
       "return bad request response if there is no json the in the request body" in new TestApparatus {
-        val result = controller.createAccount()(FakeRequest())
+        val result = controller.createDEAccount()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetails":""}"""
       }
