@@ -36,10 +36,10 @@ trait HelpToSaveProxyConnector {
 class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)
   extends HelpToSaveProxyConnector with ServicesConfig with Logging {
 
-  val createAccountURL: String = getString("microservice.services.help-to-save-proxy.url")
+  val proxyURL: String = baseUrl("help-to-save-proxy")
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-    http.post(createAccountURL, userInfo)
+    http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
           logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}")
