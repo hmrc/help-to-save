@@ -23,7 +23,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED}
-import uk.gov.hmrc.helptosave.connectors.FrontendConnector
+import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.models.NSIUserInfo
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.TestSupport
@@ -37,9 +37,9 @@ class CreateDEAccountControllerSpec extends TestSupport {
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
   class TestApparatus {
-    val frontendConnector = mock[FrontendConnector]
+    val proxyConnector = mock[HelpToSaveProxyConnector]
 
-    val controller = new CreateDEAccountController(frontendConnector)
+    val controller = new CreateDEAccountController(proxyConnector)
   }
 
   "The CreateAccountController" when {
@@ -47,7 +47,7 @@ class CreateDEAccountControllerSpec extends TestSupport {
     "creating an account for a DE user" must {
 
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
-        (frontendConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+        (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
           .expects(*, *, *)
           .returning(toFuture(HttpResponse(CREATED)))
 

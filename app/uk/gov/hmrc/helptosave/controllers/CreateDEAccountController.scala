@@ -19,13 +19,13 @@ package uk.gov.hmrc.helptosave.controllers
 import com.google.inject.Inject
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
-import uk.gov.hmrc.helptosave.connectors.FrontendConnector
+import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-class CreateDEAccountController @Inject() (frontendConnector: FrontendConnector) extends BaseController with Logging with WithMdcExecutionContext {
+class CreateDEAccountController @Inject() (frontendConnector: HelpToSaveProxyConnector) extends BaseController with Logging with WithMdcExecutionContext {
 
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒

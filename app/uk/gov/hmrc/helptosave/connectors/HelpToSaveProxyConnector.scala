@@ -26,24 +26,24 @@ import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[FrontendConnectorImpl])
-trait FrontendConnector {
+@ImplementedBy(classOf[HelpToSaveProxyConnectorImpl])
+trait HelpToSaveProxyConnector {
 
   def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 }
 
 @Singleton
-class FrontendConnectorImpl @Inject() (http: WSHttp)
-  extends FrontendConnector with ServicesConfig with Logging {
+class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)
+  extends HelpToSaveProxyConnector with ServicesConfig with Logging {
 
-  val createAccountURL: String = getString("microservice.services.help-to-save-frontend.url")
+  val createAccountURL: String = getString("microservice.services.help-to-save-proxy.url")
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
     http.post(createAccountURL, userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from frontend during /create-de-account, message=${e.getMessage}")
-          val errorJson = ErrorResponse("unexpected error from frontend during /create-de-account", s"${e.getMessage}").toJson()
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}")
+          val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
   }

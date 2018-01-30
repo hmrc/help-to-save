@@ -28,10 +28,10 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FrontendConnectorSpec extends TestSupport {
+class HelpToSaveProxyConnectorSpec extends TestSupport {
 
-  lazy val frontendConnector = new FrontendConnectorImpl(mockHttp)
-  val createAccountURL: String = "http://localhost:7002/help-to-save/create-de-account"
+  lazy val frontendConnector = new HelpToSaveProxyConnectorImpl(mockHttp)
+  val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
 
   val userInfo: NSIUserInfo =
     NSIUserInfo(
@@ -81,7 +81,7 @@ class FrontendConnectorSpec extends TestSupport {
           Json.parse(
             """{
               "errorMessageId" : "",
-              "errorMessage" : "unexpected error from frontend during /create-de-account",
+              "errorMessage" : "unexpected error from proxy during /create-de-account",
               "errorDetails" : "boom"
             }""")
       }
