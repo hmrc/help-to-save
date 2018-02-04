@@ -56,6 +56,10 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   val enrolmentStoreUpdateErrorCounter: Counter = counter("backend.enrolment-store-update-error-counter")
 
+  val payePersonalDetailsTimer: Timer = timer("backend.paye-personal-details.time")
+
+  val payePersonalDetailsErrorCounter: Counter = counter("backend.paye-personal-details-error-counter")
+
 }
 
 object Metrics {

@@ -18,14 +18,13 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.instances.future._
 import com.google.inject.Inject
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
-import uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.ECResponseHolder
-import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.util.Logging._
+import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer}
 
 class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector,
                                             htsAuthConnector:        HtsAuthConnector)(
@@ -42,17 +41,9 @@ class EligibilityCheckController @Inject() (eligibilityCheckService: Eligibility
           InternalServerError
       }, {
         r ⇒
-          Ok(Json.toJson(ECResponseHolder(r)))
+          Ok(Json.toJson(EligibilityResponseHolder(r)))
       }
     )
   }
 
-}
-
-object EligibilityCheckController {
-  private case class ECResponseHolder(response: Option[EligibilityCheckResult])
-
-  private object ECResponseHolder {
-    implicit val format: Format[ECResponseHolder] = Json.format[ECResponseHolder]
-  }
 }
