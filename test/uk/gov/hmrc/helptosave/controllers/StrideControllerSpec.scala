@@ -38,12 +38,12 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     val ninoEncoded = "QUUxMjM0NTZE" //base64 Encoded
 
     val eligibilityConnector = mock[EligibilityCheckConnector]
-    val payDetailsConnector = mock[PayePersonalDetailsConnector]
+    val payeDetailsConnector = mock[PayePersonalDetailsConnector]
 
     def doEligibilityRequest(controller: StrideController): Future[PlayResult] =
       controller.eligibilityCheck(ninoEncoded)(FakeRequest())
 
-    def doPayDetailsRequest(controller: StrideController): Future[PlayResult] =
+    def doPayeDetailsRequest(controller: StrideController): Future[PlayResult] =
       controller.getPayePersonalDetails(ninoEncoded)(FakeRequest())
 
     def mockEligibilityConnector(nino: NINO)(result: Either[String, Option[EligibilityCheckResult]]): Unit =
@@ -51,12 +51,12 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
-    def mockPayDetailsConnector(nino: NINO)(result: Either[String, Option[PayePersonalDetails]]): Unit =
-      (payDetailsConnector.getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+    def mockPayeDetailsConnector(nino: NINO)(result: Either[String, Option[PayePersonalDetails]]): Unit =
+      (payeDetailsConnector.getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
-    val controller = new StrideController(eligibilityConnector, payDetailsConnector, mockAuthConnector)
+    val controller = new StrideController(eligibilityConnector, payeDetailsConnector, mockAuthConnector)
   }
 
   "The StrideController" when {
@@ -94,30 +94,30 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
 
     }
 
-    "handling requests to Get pay-personal-details from DES" must {
+    "handling requests to Get paye-personal-details from DES" must {
 
-      "ask the payDetailsService for the personal details and return successful result for a valid nino" in new TestApparatus {
+      "ask the payeDetailsService for the personal details and return successful result for a valid nino" in new TestApparatus {
         mockSuccessfulAuthorisation()
-        mockPayDetailsConnector(nino)(Right(Some(ppDetails)))
+        mockPayeDetailsConnector(nino)(Right(Some(ppDetails)))
 
-        val result = doPayDetailsRequest(controller)
+        val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 200
-        contentAsJson(result) \ "payDetails" shouldBe JsDefined(Json.toJson(ppDetails))
+        contentAsJson(result) \ "payeDetails" shouldBe JsDefined(Json.toJson(ppDetails))
       }
 
-      "return with a status 500 if the pay-personal-details call fails" in new TestApparatus {
+      "return with a status 500 if the paye-personal-details call fails" in new TestApparatus {
         mockSuccessfulAuthorisation()
-        mockPayDetailsConnector(nino)(Left("The pay-personal-details service is unavailable"))
+        mockPayeDetailsConnector(nino)(Left("The paye-personal-details service is unavailable"))
 
-        val result = doPayDetailsRequest(controller)
+        val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500
       }
 
       "return with a status 200 and empty json if the nino is NOT_FOUND in DES" in new TestApparatus {
         mockSuccessfulAuthorisation()
-        mockPayDetailsConnector(nino)(Right(None))
+        mockPayeDetailsConnector(nino)(Right(None))
 
-        val result = doPayDetailsRequest(controller)
+        val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 200
         contentAsJson(result) shouldBe Json.parse("{ }")
       }

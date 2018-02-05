@@ -85,7 +85,7 @@ class StrideController @Inject() (eligibilityCheckConnector:    EligibilityCheck
 
 object StrideController {
 
-  private case class PayeDetailsHolder(payDetails: Option[PayePersonalDetails])
+  private case class PayeDetailsHolder(payeDetails: Option[PayePersonalDetails])
 
   private object PayeDetailsHolder {
     implicit val format: Format[PayeDetailsHolder] = Json.format[PayeDetailsHolder]
