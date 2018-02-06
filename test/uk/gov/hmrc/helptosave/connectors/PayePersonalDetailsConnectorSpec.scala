@@ -35,8 +35,6 @@ class PayePersonalDetailsConnectorSpec
   with MockPagerDuty
   with TestData {
 
-  MdcLoggingExecutionContext
-
   lazy val connector = new PayePersonalDetailsConnectorImpl(mockHttp, mockMetrics, mockPagerDuty)
 
   def mockGet(url: String)(response: Option[HttpResponse]) =
@@ -54,14 +52,15 @@ class PayePersonalDetailsConnectorSpec
 
       mockGet(url)(Some(HttpResponse(200, Some(Json.parse(payeDetails(nino)))))) // scalastyle:ignore magic.number
 
-      Await.result(connector.getPersonalDetails(nino).value, 5.seconds) shouldBe Right(Some(ppDetails))
+      Await.result(connector.getPersonalDetails(nino).value, 5.seconds) shouldBe Right(ppDetails)
     }
 
     "handle 404 resposne when a nino is not found in DES" in {
 
       val url = connector.payePersonalDetailsUrl(nino)
       mockGet(url)(Some(HttpResponse(404, None))) // scalastyle:ignore magic.number
-      Await.result(connector.getPersonalDetails(nino).value, 5.seconds) shouldBe Right(None)
+      mockPagerDutyAlert("Received unexpected http status in response to paye-personal-details")
+      Await.result(connector.getPersonalDetails(nino).value, 5.seconds).isLeft shouldBe true
     }
 
     "handle errors when parsing invalid json" in {

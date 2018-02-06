@@ -20,16 +20,16 @@ import java.util.Base64
 
 import cats.instances.future._
 import com.google.inject.Inject
-import play.api.libs.json.{Format, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, PayePersonalDetailsConnector}
-import uk.gov.hmrc.helptosave.controllers.StrideController.PayeDetailsHolder
-import uk.gov.hmrc.helptosave.models.{EligibilityResponseHolder, PayePersonalDetails}
+import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, toFuture}
 
+import scala.concurrent.Future
 import scala.util.Try
 
 class StrideController @Inject() (eligibilityCheckConnector:    EligibilityCheckConnector,
@@ -42,53 +42,41 @@ class StrideController @Inject() (eligibilityCheckConnector:    EligibilityCheck
 
   def eligibilityCheck(ninoParam: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
 
-    Try(new String(base64Decoder.decode(ninoParam))).fold(
-      { error ⇒
-        logger.warn(s"Could not decode nino from encrypted param: $error")
-        InternalServerError
-      }, { decodedNino ⇒
-        eligibilityCheckConnector.isEligible(decodedNino).fold(
-          {
-            e ⇒
-              logger.warn(s"Could not check eligibility: $e", decodedNino)
-              InternalServerError
-          }, {
-            r ⇒
-              Ok(Json.toJson(EligibilityResponseHolder(r)))
-          }
-        )
-      }
-    )
+    withBase64DecodedNINO(ninoParam) { decodedNino ⇒
+      eligibilityCheckConnector.isEligible(decodedNino).fold(
+        {
+          e ⇒
+            logger.warn(s"Could not check eligibility: $e", decodedNino)
+            InternalServerError
+        }, {
+          r ⇒
+            Ok(Json.toJson(EligibilityResponseHolder(r)))
+        }
+      )
+    }
   }
 
   def getPayePersonalDetails(ninoParam: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
 
+    withBase64DecodedNINO(ninoParam) { decodedNino ⇒
+      payePersonalDetailsConnector.getPersonalDetails(decodedNino)
+        .fold(
+          { error ⇒
+            logger.warn(s"Could not retrieve paye-personal-details from DES: $error")
+            InternalServerError
+          }, {
+            r ⇒
+              Ok(Json.toJson(r))
+          }
+        )
+    }
+  }
+
+  private def withBase64DecodedNINO(ninoParam: String)(f: NINO ⇒ Future[Result])(implicit request: Request[AnyContent]): Future[Result] =
     Try(new String(base64Decoder.decode(ninoParam))).fold(
       { error ⇒
         logger.warn(s"Could not decode nino from encrypted param: $error")
         InternalServerError
-      }, { decodedNino ⇒
-        payePersonalDetailsConnector.getPersonalDetails(decodedNino)
-          .fold(
-            { error ⇒
-              logger.warn(s"Could not retrieve paye-personal-details from DES: $error")
-              InternalServerError
-            }, {
-              r ⇒
-                Ok(Json.toJson(PayeDetailsHolder(r)))
-            }
-          )
-      }
+      }, f
     )
-  }
-}
-
-object StrideController {
-
-  private case class PayeDetailsHolder(payeDetails: Option[PayePersonalDetails])
-
-  private object PayeDetailsHolder {
-    implicit val format: Format[PayeDetailsHolder] = Json.format[PayeDetailsHolder]
-  }
-
 }

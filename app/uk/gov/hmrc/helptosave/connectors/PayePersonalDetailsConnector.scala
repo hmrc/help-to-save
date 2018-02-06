@@ -17,9 +17,6 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import cats.data.EitherT
-import cats.instances.either._
-import cats.instances.option._
-import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import uk.gov.hmrc.helptosave.config.WSHttp
@@ -37,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[PayePersonalDetailsConnectorImpl])
 trait PayePersonalDetailsConnector {
 
-  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[PayePersonalDetails]]
+  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails]
 
 }
 
@@ -53,8 +50,8 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
 
   type EitherStringOr[A] = Either[String, A]
 
-  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[PayePersonalDetails]] =
-    EitherT[Future, String, Option[PayePersonalDetails]](
+  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] =
+    EitherT[Future, String, PayePersonalDetails](
       {
         val timerContext = metrics.payePersonalDetailsTimer.time()
 
@@ -62,7 +59,7 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
           .map { response ⇒
             val time = timerContext.stop()
 
-            val res: Option[Either[String, PayePersonalDetails]] = response.status match {
+            response.status match {
               case Status.OK ⇒
                 val result = response.parseJson[PayePersonalDetails]
                 result.fold({
@@ -73,21 +70,16 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                 }, _ ⇒
                   logger.info(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino)
                 )
-                Some(result)
-
-              case Status.NOT_FOUND ⇒
-                logger.info(s"the given nino has not been found in DES, so could not retrieve the paye-personal-details ${timeString(time)}", nino)
-                None
+                result
 
               case other ⇒
                 logger.warn(s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}", nino)
                 metrics.payePersonalDetailsErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
-                Some(Left(s"Received unexpected status $other"))
+                Left(s"Received unexpected status $other")
 
             }
 
-            res.traverse[EitherStringOr, PayePersonalDetails](identity)
           }.recover {
             case e ⇒
               val time = timerContext.stop()

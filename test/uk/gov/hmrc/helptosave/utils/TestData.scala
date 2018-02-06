@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
 
-import uk.gov.hmrc.helptosave.models.{Address, Name, PayePersonalDetails, TelePhoneNumber}
+import uk.gov.hmrc.helptosave.models.{Address, Name, PayePersonalDetails}
 
 trait TestData {
 
@@ -68,9 +68,7 @@ trait TestData {
        |}""".stripMargin
 
   val ppDetails = PayePersonalDetails(
-    Name(None, "A", None, "Smith"),
+    Name("A", "Smith"),
     LocalDate.parse("1980-01-01"),
-    Address("1 Station Road", "Town Centre", Some("Sometown"), Some("Anyshire"), Some("UK"), "AB12 3CD", None),
-    Some(TelePhoneNumber("01999123456", 1)))
-
+    Address("1 Station Road", "Town Centre", Some("Sometown"), Some("Anyshire"), Some("UK"), "AB12 3CD"))
 }

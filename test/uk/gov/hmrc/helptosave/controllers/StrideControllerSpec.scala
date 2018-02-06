@@ -51,7 +51,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
-    def mockPayeDetailsConnector(nino: NINO)(result: Either[String, Option[PayePersonalDetails]]): Unit =
+    def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =
       (payeDetailsConnector.getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
@@ -98,11 +98,11 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
 
       "ask the payeDetailsService for the personal details and return successful result for a valid nino" in new TestApparatus {
         mockSuccessfulAuthorisation()
-        mockPayeDetailsConnector(nino)(Right(Some(ppDetails)))
+        mockPayeDetailsConnector(nino)(Right(ppDetails))
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 200
-        contentAsJson(result) \ "payeDetails" shouldBe JsDefined(Json.toJson(ppDetails))
+        contentAsJson(result) shouldBe Json.toJson(ppDetails)
       }
 
       "return with a status 500 if the paye-personal-details call fails" in new TestApparatus {
@@ -113,13 +113,12 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
         status(result) shouldBe 500
       }
 
-      "return with a status 200 and empty json if the nino is NOT_FOUND in DES" in new TestApparatus {
+      "return with a status 200 and empty json if the pay details is NOT_FOUND in DES" in new TestApparatus {
         mockSuccessfulAuthorisation()
-        mockPayeDetailsConnector(nino)(Right(None))
+        mockPayeDetailsConnector(nino)(Left("no paye details found"))
 
         val result = doPayeDetailsRequest(controller)
-        status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.parse("{ }")
+        status(result) shouldBe 500
       }
     }
   }

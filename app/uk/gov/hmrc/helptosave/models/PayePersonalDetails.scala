@@ -25,22 +25,18 @@ import play.api.libs.json._
 
 case class PayePersonalDetails(name:        Name,
                                dateOfBirth: LocalDate,
-                               address:     Address,
-                               phoneNumber: Option[TelePhoneNumber])
+                               address:     Address)
 
-case class Name(title:                   Option[String],
-                firstForenameOrInitial:  String,
-                secondForenameOrInitial: Option[String],
-                surname:                 String
+case class Name(firstForenameOrInitial: String,
+                surname:                String
 )
 
-case class Address(line1:       String,
-                   line2:       String,
-                   line3:       Option[String],
-                   line4:       Option[String],
-                   line5:       Option[String],
-                   postcode:    String,
-                   countryCode: Option[String]
+case class Address(line1:    String,
+                   line2:    String,
+                   line3:    Option[String],
+                   line4:    Option[String],
+                   line5:    Option[String],
+                   postcode: String
 )
 
 case class TelePhoneNumber(telephoneNumber: String, telephoneType: Int)
@@ -96,16 +92,12 @@ object PayePersonalDetails {
         def readAddress(): JsResult[Address] =
           readData[Address](List(readSeq("addresses", "2"), readSeq("addresses", "1")), "Address") // 1–Residential Address, 2–Correspondence Address
 
-        def readPhoneNumber(): JsResult[TelePhoneNumber] =
-          readData[TelePhoneNumber](List(readSeq("phoneNumbers", "7"), readSeq("phoneNumbers", "1")), "TelePhoneNumber") //7 =  mobile number, 1 - Daytime Telephone number
-
       for {
         name ← readName()
         dob ← readDob()
         address ← readAddress()
-        phoneNumber ← readPhoneNumber()
       } yield {
-        PayePersonalDetails(name, dob, address, Some(phoneNumber))
+        PayePersonalDetails(name, dob, address)
       }
     }
 
