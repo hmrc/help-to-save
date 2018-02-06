@@ -39,15 +39,11 @@ case class Address(line1:    String,
                    postcode: String
 )
 
-case class TelePhoneNumber(telephoneNumber: String, telephoneType: Int)
-
 object PayePersonalDetails {
 
   implicit val nameFormat: Format[Name] = Json.format[Name]
 
   implicit val addressFormat: Format[Address] = Json.format[Address]
-
-  implicit val phoneNumberFormat: Format[TelePhoneNumber] = Json.format[TelePhoneNumber]
 
   implicit val dateFormat: Format[LocalDate] = {
     val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
