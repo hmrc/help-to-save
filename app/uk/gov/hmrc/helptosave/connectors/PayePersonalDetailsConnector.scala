@@ -48,8 +48,6 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
-  type EitherStringOr[A] = Either[String, A]
-
   override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] =
     EitherT[Future, String, PayePersonalDetails](
       {
