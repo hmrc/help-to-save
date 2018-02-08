@@ -16,7 +16,7 @@ object MicroServiceBuild extends Build with MicroService {
     "uk.gov.hmrc" %% "domain" % "5.1.0",
     "org.typelevel" %% "cats" % "0.9.0",
     "com.github.kxbmap" %% "configs" % "0.4.4",
-    "uk.gov.hmrc" %% "play-reactivemongo" % "6.1.0",
+    "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
     "uk.gov.hmrc" %% "crypto" % "4.5.0"
   )
 
