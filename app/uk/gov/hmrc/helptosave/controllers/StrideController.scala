@@ -23,8 +23,9 @@ import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Request, Result}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
-import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, PayePersonalDetailsConnector}
+import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
 import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
+import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, toFuture}
@@ -32,7 +33,7 @@ import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, to
 import scala.concurrent.Future
 import scala.util.Try
 
-class StrideController @Inject() (eligibilityCheckConnector:    EligibilityCheckConnector,
+class StrideController @Inject() (eligibilityCheckService:      EligibilityCheckService,
                                   payePersonalDetailsConnector: PayePersonalDetailsConnector,
                                   htsAuthConnector:             HtsAuthConnector)(implicit transformer: NINOLogMessageTransformer)
 
@@ -43,7 +44,7 @@ class StrideController @Inject() (eligibilityCheckConnector:    EligibilityCheck
   def eligibilityCheck(ninoParam: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
 
     withBase64DecodedNINO(ninoParam) { decodedNino ⇒
-      eligibilityCheckConnector.isEligible(decodedNino).fold(
+      eligibilityCheckService.getEligibility(decodedNino).fold(
         {
           e ⇒
             logger.warn(s"Could not check eligibility: $e", decodedNino)

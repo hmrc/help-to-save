@@ -56,6 +56,8 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
 
   implicit lazy val ec: ExecutionContext = fakeApplication.injector.instanceOf[ExecutionContext]
 
+  implicit lazy val configuration: Configuration = fakeApplication.injector.instanceOf[Configuration]
+
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val mockHttp: WSHttp = mock[WSHttp]

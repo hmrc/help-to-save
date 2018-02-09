@@ -21,12 +21,12 @@ import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
-import uk.gov.hmrc.helptosave.connectors.EligibilityCheckConnector
 import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
+import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer}
 
-class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckConnector,
+class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckService,
                                             htsAuthConnector:        HtsAuthConnector)(
     implicit
     transformer: NINOLogMessageTransformer
@@ -34,10 +34,10 @@ class EligibilityCheckController @Inject() (eligibilityCheckService: Eligibility
   extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
   def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
-    eligibilityCheckService.isEligible(nino).fold(
+    eligibilityCheckService.getEligibility(nino).fold(
       {
         e ⇒
-          logger.warn(s"Could not check eligibility: $e", nino)
+          logger.warn(s"Could not check eligibility due to $e", nino)
           InternalServerError
       }, {
         r ⇒
