@@ -103,7 +103,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport {
 
       val txnId = UUID.randomUUID()
       val nino = "AE123456C"
-      val uCResponse = UCResponse("Y", Some("Y"))
+      val uCResponse = UCResponse(true, true)
 
       val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
 

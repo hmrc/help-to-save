@@ -16,10 +16,32 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json._
 
-case class UCResponse(ucClaimant: String, withinThreshold: Option[String])
+case class UCResponse(ucClaimant: Boolean, withinThreshold: Boolean)
 
 object UCResponse {
-  implicit val format: Format[UCResponse] = Json.format[UCResponse]
+
+  implicit val reads: Format[UCResponse] = new Format[UCResponse] {
+
+    override def reads(json: JsValue): JsResult[UCResponse] = {
+      ((json \ "ucClaimant").as[String], (json \ "withinThreshold").asOpt[String]) match {
+        case ("Y", Some("Y")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = true))
+        case ("Y", Some("N")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = false))
+        case ("N", _)         ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = false))
+        case _                ⇒ JsError(s"unable to parse UCResponse from proxy, json=$json")
+      }
+    }
+
+    override def writes(response: UCResponse): JsValue = {
+
+      val (a, b) = response match {
+        case UCResponse(true, true)  ⇒ ("Y", "Y")
+        case UCResponse(true, false) ⇒ ("Y", "N")
+        case _                       ⇒ ("N", "N")
+      }
+
+      JsObject(List("ucClaimant" -> JsString(a), "withinThreshold" -> JsString(b)))
+    }
+  }
 }

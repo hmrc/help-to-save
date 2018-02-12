@@ -45,7 +45,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
   private def mockUCClaimantCheck(nino: String)(response: Either[String, UCResponse]) = {
     (mockProxyConnector.ucClaimantCheck(_: String, _: UUID)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(where { (ninoP, _, _, _) ⇒ ninoP === "QUUxMjM0NTZD" })
+      .expects(where { (ninoP, _, _, _) ⇒ ninoP === nino })
       .returning {
         EitherT.fromEither(response)
       }
@@ -56,7 +56,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
     val nino = "AE123456C"
     val ninoEncoded = "QUUxMjM0NTZD" //base64 Encoded
     val txnId = UUID.randomUUID()
-    val uCResponse = UCResponse("Y", Some("Y"))
+    val uCResponse = UCResponse(true, true)
 
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
