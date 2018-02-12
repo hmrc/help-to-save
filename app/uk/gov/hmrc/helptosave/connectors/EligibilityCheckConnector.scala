@@ -25,7 +25,7 @@ import play.api.http.Status
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
+import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, PagerDutyAlerting, Result, maskNino}
@@ -36,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[EligibilityCheckConnectorImpl])
 trait EligibilityCheckConnector {
-  def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]]
+  def isEligible(nino: String, ucResponse: Option[UCResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]]
 }
 
 @Singleton
@@ -47,17 +47,21 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
 
   val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
 
-  def url(nino: String): String =
-    s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
+  def url(nino: String, ucResponse: Option[UCResponse]): String = {
+    ucResponse match {
+      case Some(UCResponse(a, b)) ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino?ucClaimant=$a${b.map(x ⇒ s"&withinThreshold=$x").getOrElse("")}"
+      case _                      ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
+    }
+  }
 
   type EitherStringOr[A] = Either[String, A]
 
-  override def isEligible(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] =
+  override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] =
     EitherT[Future, String, Option[EligibilityCheckResult]](
       {
         val timerContext = metrics.itmpEligibilityCheckTimer.time()
 
-        http.get(url(nino), desHeaders)(hc.copy(authorization = None), ec)
+        http.get(url(nino, ucResponse), desHeaders)(hc.copy(authorization = None), ec)
           .map { response ⇒
             val time = timerContext.stop()
 

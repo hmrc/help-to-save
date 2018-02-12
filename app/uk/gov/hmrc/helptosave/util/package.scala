@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave
 
+import java.util.Base64
+
 import cats.data.EitherT
 
 import scala.concurrent.Future
@@ -37,5 +39,7 @@ package object util {
       case None       ⇒ original
     }
   }
+
+  def base64Encode(input: String): Array[Byte] = Base64.getEncoder.encode(input.getBytes)
 
 }

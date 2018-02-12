@@ -22,7 +22,7 @@ import org.joda.time.LocalDate
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
+import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -52,17 +52,33 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
   "check eligibility" must {
     val nino = randomNINO()
 
+    lazy val urlWithoutUC = connector.url(nino, None)
+      def urlWithUC(withinThreshold: Option[Boolean] = Some(true)) = connector.url(nino, Some(UCResponse(true, withinThreshold)))
+
     "return with the eligibility check result unchanged from ITMP" in {
       forAll { result: EligibilityCheckResult ⇒
-        mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
+        mockGet(urlWithoutUC)(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
         Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(Some(result))
       }
+    }
 
+    "pass the UC params to DES if they are provided" in {
+      forAll { result: EligibilityCheckResult ⇒
+        mockGet(urlWithUC())(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
+        Await.result(connector.isEligible(nino, Some(UCResponse(true, Some(true)))).value, 5.seconds) shouldBe Right(Some(result))
+      }
+    }
+
+    "do not pass the UC withinThreshold param to DES if its not set" in {
+      forAll { result: EligibilityCheckResult ⇒
+        mockGet(urlWithUC(None))(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
+        Await.result(connector.isEligible(nino, Some(UCResponse(true, None))).value, 5.seconds) shouldBe Right(Some(result))
+      }
     }
 
     "handle errors when parsing invalid json" in {
-      inSequence{
-        mockGet(connector.url(nino))(Some(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}"""))))) // scalastyle:ignore magic.number
+      inSequence {
+        mockGet(urlWithoutUC)(Some(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}"""))))) // scalastyle:ignore magic.number
         // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
         mockPagerDutyAlert("Could not parse JSON in eligibility check response")
       }
@@ -71,8 +87,8 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
     }
 
     "handle 404 responses when nino is not found when an eligibility check is made" in {
-      inSequence{
-        mockGet(connector.url(nino))(Some(HttpResponse(404, None))) // scalastyle:ignore magic.number
+      inSequence {
+        mockGet(urlWithoutUC)(Some(HttpResponse(404, None))) // scalastyle:ignore magic.number
       }
 
       Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(None)
@@ -80,8 +96,8 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
 
     "return with an error" when {
       "the call fails" in {
-        inSequence{
-          mockGet(connector.url(nino))(None)
+        inSequence {
+          mockGet(urlWithoutUC)(None)
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("Failed to make call to check eligibility")
         }
@@ -90,10 +106,10 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
       }
 
       "the call comes back with an unexpected http status" in {
-        forAll{ status: Int ⇒
-          whenever(status > 0 && status =!= 200 && status =!= 404){
-            inSequence{
-              mockGet(connector.url(nino))(Some(HttpResponse(status)))
+        forAll { status: Int ⇒
+          whenever(status > 0 && status =!= 200 && status =!= 404) {
+            inSequence {
+              mockGet(urlWithoutUC)(Some(HttpResponse(status)))
               // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
               mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
             }
