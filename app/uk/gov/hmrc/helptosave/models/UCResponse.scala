@@ -18,27 +18,38 @@ package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json._
 
-case class UCResponse(ucClaimant: Boolean, withinThreshold: Boolean)
+case class UCResponse(ucClaimant: Boolean, withinThreshold: Option[Boolean])
 
 object UCResponse {
 
   implicit val reads: Format[UCResponse] = new Format[UCResponse] {
 
     override def reads(json: JsValue): JsResult[UCResponse] = {
-      ((json \ "ucClaimant").as[String], (json \ "withinThreshold").asOpt[String]) match {
-        case ("Y", Some("Y")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = true))
-        case ("Y", Some("N")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = false))
-        case ("N", _)         ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = false))
-        case _                ⇒ JsError(s"unable to parse UCResponse from proxy, json=$json")
-      }
+
+      (json \ "ucClaimant").validate[String]
+        .fold(
+          errors ⇒ JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
+          a ⇒
+            (json \ "withinThreshold").validateOpt[String]
+              .fold(
+                errors ⇒ JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
+                b ⇒
+                  (a, b) match {
+                    case ("Y", Some("Y")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(true)))
+                    case ("Y", Some("N")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(false)))
+                    case ("N", _)         ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = Some(false)))
+                    case _                ⇒ JsError(s"unable to parse UCResponse from proxy, json=$json")
+                  }
+              )
+        )
     }
 
     override def writes(response: UCResponse): JsValue = {
 
       val (a, b) = response match {
-        case UCResponse(true, true)  ⇒ ("Y", "Y")
-        case UCResponse(true, false) ⇒ ("Y", "N")
-        case _                       ⇒ ("N", "N")
+        case UCResponse(true, Some(true))  ⇒ ("Y", "Y")
+        case UCResponse(true, Some(false)) ⇒ ("Y", "N")
+        case _                             ⇒ ("N", "N")
       }
 
       JsObject(List("ucClaimant" -> JsString(a), "withinThreshold" -> JsString(b)))

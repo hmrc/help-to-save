@@ -56,7 +56,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
     val nino = "AE123456C"
     val ninoEncoded = "QUUxMjM0NTZD" //base64 Encoded
     val txnId = UUID.randomUUID()
-    val uCResponse = UCResponse(true, true)
+    val uCResponse = UCResponse(true, Some(true))
 
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
