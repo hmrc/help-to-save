@@ -120,7 +120,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
 
         test(UCResponse(true, Some(true)))
         test(UCResponse(true, Some(false)))
-        test(UCResponse(false, Some(false)))
+        test(UCResponse(false, None))
 
       }
 

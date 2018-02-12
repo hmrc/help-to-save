@@ -37,7 +37,7 @@ object UCResponse {
                   (a, b) match {
                     case ("Y", Some("Y")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(true)))
                     case ("Y", Some("N")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(false)))
-                    case ("N", None)      ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = Some(false)))
+                    case ("N", None)      ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = None))
                     case _                ⇒ JsError(s"unable to parse UCResponse from proxy, json=$json")
                   }
               )
