@@ -37,7 +37,7 @@ object UCResponse {
                   (a, b) match {
                     case ("Y", Some("Y")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(true)))
                     case ("Y", Some("N")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(false)))
-                    case ("N", _)         ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = Some(false)))
+                    case ("N", None)      ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = Some(false)))
                     case _                ⇒ JsError(s"unable to parse UCResponse from proxy, json=$json")
                   }
               )
@@ -47,12 +47,17 @@ object UCResponse {
     override def writes(response: UCResponse): JsValue = {
 
       val (a, b) = response match {
-        case UCResponse(true, Some(true))  ⇒ ("Y", "Y")
-        case UCResponse(true, Some(false)) ⇒ ("Y", "N")
-        case _                             ⇒ ("N", "N")
+        case UCResponse(true, Some(true))  ⇒ ("Y", Some("Y"))
+        case UCResponse(true, Some(false)) ⇒ ("Y", Some("N"))
+        case _                             ⇒ ("N", None)
       }
 
-      JsObject(List("ucClaimant" -> JsString(a), "withinThreshold" -> JsString(b)))
+      val fields = {
+        val f = List("ucClaimant" -> JsString(a))
+        b.fold(f)(value ⇒ ("withinThreshold" → JsString(value)) :: f)
+      }
+
+      JsObject(fields)
     }
   }
 }

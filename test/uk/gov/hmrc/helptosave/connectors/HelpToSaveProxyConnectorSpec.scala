@@ -19,6 +19,7 @@ package uk.gov.hmrc.helptosave.connectors
 import java.time.LocalDate
 import java.util.UUID
 
+import org.scalatest.EitherValues
 import play.api.libs.json.{Json, Writes}
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
@@ -30,7 +31,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class HelpToSaveProxyConnectorSpec extends TestSupport {
+class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
 
   lazy val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
@@ -107,7 +108,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport {
 
       val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
 
-      "handle success response from frontend" in {
+      "handle success response from proxy" in {
 
         mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.toJson(uCResponse)))))
 
@@ -122,6 +123,15 @@ class HelpToSaveProxyConnectorSpec extends TestSupport {
         val result = await(proxyConnector.ucClaimantCheck(nino, txnId).value)
 
         result shouldBe Left("Received unexpected status(400) from UniversalCredit check")
+      }
+
+      "handles failures due to invalid json" in {
+
+        mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.parse("""{"foo": "bar"}""")))))
+
+        val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId).value, 5.seconds)
+
+        result.left.value contains "unable to parse UCResponse from proxy"
       }
 
       "handle unexpected errors" in {

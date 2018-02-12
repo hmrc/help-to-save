@@ -49,7 +49,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
 
   def url(nino: String, ucResponse: Option[UCResponse]): String = {
     ucResponse match {
-      case Some(UCResponse(a, b)) ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino?ucClaimant=$a&withinThreshold=${b.getOrElse(false)}"
+      case Some(UCResponse(a, b)) ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino?ucClaimant=$a${b.map(x ⇒ s"&withinThreshold=$x").getOrElse("")}"
       case _                      ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
     }
   }
