@@ -45,6 +45,8 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
 
   private val isUCEnabled: Boolean = configuration.underlying.getBoolean("microservice.uc-enabled")
 
+  logger.info(s"UniversalCredits checks enabled = $isUCEnabled")
+
   override def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] = {
 
     if (isUCEnabled) {

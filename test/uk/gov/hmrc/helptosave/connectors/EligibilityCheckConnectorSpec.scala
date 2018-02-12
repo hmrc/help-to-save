@@ -53,7 +53,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
     val nino = randomNINO()
 
     lazy val urlWithNoUC = connector.url(nino, None)
-    lazy val urlWithUC = connector.url(nino, Some(UCResponse("Y", "Y")))
+    lazy val urlWithUC = connector.url(nino, Some(UCResponse("Y", Some("Y"))))
 
     "return with the eligibility check result unchanged from ITMP" in {
       forAll { result: EligibilityCheckResult ⇒
@@ -65,7 +65,7 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
     "pass the UC params to DES if they are provided" in {
       forAll { result: EligibilityCheckResult ⇒
         mockGet(urlWithUC)(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        Await.result(connector.isEligible(nino, Some(UCResponse("Y", "Y"))).value, 5.seconds) shouldBe Right(Some(result))
+        Await.result(connector.isEligible(nino, Some(UCResponse("Y", Some("Y")))).value, 5.seconds) shouldBe Right(Some(result))
       }
     }
 

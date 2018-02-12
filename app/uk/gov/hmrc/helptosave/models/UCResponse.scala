@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json.{Format, Json}
 
-case class UCResponse(ucClaimant: String, withinThreshold: String = "N")
+case class UCResponse(ucClaimant: String, withinThreshold: Option[String])
 
 object UCResponse {
   implicit val format: Format[UCResponse] = Json.format[UCResponse]
