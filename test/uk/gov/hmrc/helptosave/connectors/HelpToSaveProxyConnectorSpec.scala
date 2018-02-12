@@ -104,17 +104,24 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
 
       val txnId = UUID.randomUUID()
       val nino = "AE123456C"
-      val uCResponse = UCResponse(true, Some(true))
 
       val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
 
       "handle success response from proxy" in {
 
-        mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.toJson(uCResponse)))))
+          def test(uCResponse: UCResponse): Unit = {
 
-        val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId).value, 5.seconds)
+            mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.toJson(uCResponse)))))
 
-        result shouldBe Right(uCResponse)
+            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId).value, 5.seconds)
+
+            result shouldBe Right(uCResponse)
+          }
+
+        test(UCResponse(true, Some(true)))
+        test(UCResponse(true, Some(false)))
+        test(UCResponse(false, Some(false)))
+
       }
 
       "handle bad_request response from frontend" in {
@@ -127,11 +134,16 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
 
       "handles failures due to invalid json" in {
 
-        mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.parse("""{"foo": "bar"}""")))))
+          def test(json: String) = {
+            mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.parse(json)))))
 
-        val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId).value, 5.seconds)
+            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId).value, 5.seconds)
 
-        result.left.value contains "unable to parse UCResponse from proxy"
+            result.left.value contains "unable to parse UCResponse from proxy"
+          }
+
+        test("""{"foo": "bar"}""")
+        test("""{"ucClaimant":"foo", "withinThreshold":"bar"}""")
       }
 
       "handle unexpected errors" in {
