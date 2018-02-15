@@ -16,26 +16,43 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import cats.syntax.eq._
+import cats.instances.int._
 import com.google.inject.Inject
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
-import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
+import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmentConnector}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
+import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
-import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, toFuture}
+import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-class CreateDEAccountController @Inject() (frontendConnector: HelpToSaveProxyConnector) extends BaseController with Logging with WithMdcExecutionContext {
+import scala.util.{Failure, Success}
+
+class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
+                                           val itmpConnector:  ITMPEnrolmentConnector,
+                                           proxyConnector:     HelpToSaveProxyConnector)(
+    implicit
+    transformer: NINOLogMessageTransformer)
+  extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
 
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒
       request.body.asJson.map(_.validate[NSIUserInfo]) match {
         case Some(JsSuccess(userInfo, _)) ⇒
-          frontendConnector.createAccount(userInfo)
-            .map(response ⇒
-              Option(response.body).fold[Result](
-                Status(response.status)
-              )(body ⇒ Status(response.status)(body)))
+          proxyConnector.createAccount(userInfo)
+            .map { response ⇒
+              if (response.status === CREATED) {
+                enrolUser(userInfo.nino).value.onComplete{
+                  case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino)
+                  case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino)
+                  case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino)
+                }
+              }
+              Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
+            }
 
         case Some(error: JsError) ⇒
           val errorString = error.prettyPrint()

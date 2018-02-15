@@ -26,20 +26,20 @@ import play.mvc.Http.Status.{BAD_REQUEST, CREATED}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.models.NSIUserInfo
 import uk.gov.hmrc.helptosave.util.toFuture
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{TestEnrolmentBehaviour, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.ExecutionContext
 
 // scalastyle:off magic.number
-class CreateDEAccountControllerSpec extends TestSupport {
+class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehaviour {
 
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
   class TestApparatus {
     val proxyConnector = mock[HelpToSaveProxyConnector]
 
-    val controller = new CreateDEAccountController(proxyConnector)
+    val controller = new CreateDEAccountController(enrolmentStore, itmpConnector, proxyConnector)
   }
 
   "The CreateAccountController" when {
@@ -47,9 +47,16 @@ class CreateDEAccountControllerSpec extends TestSupport {
     "creating an account for a DE user" must {
 
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
-        (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
-          .expects(*, *, *)
-          .returning(toFuture(HttpResponse(CREATED)))
+        inSequence {
+
+          (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(*, *, *)
+            .returning(toFuture(HttpResponse(CREATED)))
+
+          mockEnrolmentStoreUpdate("nino", false)(Right(()))
+          mockITMPConnector("nino")(Right(()))
+          mockEnrolmentStoreUpdate("nino", true)(Right(()))
+        }
 
         val requestBody = Json.parse(jsonString("20200101"))
         val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
@@ -57,7 +64,23 @@ class CreateDEAccountControllerSpec extends TestSupport {
         status(result) shouldBe CREATED
       }
 
-      "return bad request reposne if the request body is not a valid NSIUserInfo json" in new TestApparatus {
+      "create account if the request is valid NSIUserInfo json even if write to mongo fails" in new TestApparatus {
+        inSequence {
+
+          (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(*, *, *)
+            .returning(toFuture(HttpResponse(CREATED)))
+
+          mockEnrolmentStoreUpdate("nino", false)(Left(""))
+        }
+
+        val requestBody = Json.parse(jsonString("20200101"))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
+
+        status(result) shouldBe CREATED
+      }
+
+      "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
 
         val requestBody = Json.parse(jsonString("\"123456\""))
         val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
