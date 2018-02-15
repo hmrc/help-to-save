@@ -101,7 +101,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
     })
 
   override def update(nino: NINO, itmpFlag: Boolean): EitherT[Future, String, Unit] = {
-    log.info(s"Updating entry into enrolment store (itmpFlag = $itmpFlag)", nino)
+    log.debug(s"Updating entry into enrolment store (itmpFlag = $itmpFlag)", nino)
     EitherT({
       val timerContext = metrics.enrolmentStoreUpdateTimer.time()
 
@@ -112,7 +112,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
           metrics.enrolmentStoreUpdateErrorCounter.inc()
           Left(s"For NINO [$nino]: Could not update enrolment store (round-trip time: ${nanosToPrettyString(time)})")
         }{ _ ⇒
-          log.info(s"Successfully updated enrolment store (round-trip time: ${nanosToPrettyString(time)})", nino)
+          log.debug(s"Successfully updated enrolment store (round-trip time: ${nanosToPrettyString(time)})", nino)
           Right(())
         }
       }.recover{

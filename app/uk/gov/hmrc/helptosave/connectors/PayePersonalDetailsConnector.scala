@@ -66,7 +66,7 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                     logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino)
                     pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
                 }, _ ⇒
-                  logger.info(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino)
+                  logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino)
                 )
                 result
 

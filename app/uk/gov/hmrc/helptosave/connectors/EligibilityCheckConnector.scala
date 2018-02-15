@@ -65,7 +65,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
           .map { response ⇒
             val time = timerContext.stop()
 
-            logger.info(s"eligibility response body from DES is: ${maskNino(response.body)}", nino)
+            logger.debug(s"eligibility response body from DES is: ${maskNino(response.body)}", nino)
 
             val res: Option[Either[String, EligibilityCheckResult]] = response.status match {
               case Status.OK ⇒
@@ -76,7 +76,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
                     logger.warn(s"Could not parse JSON response from eligibility check, received 200 (OK): $e ${timeString(time)}", nino)
                     pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
                 }, _ ⇒
-                  logger.info(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino)
+                  logger.debug(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino)
                 )
                 Some(result)
 
