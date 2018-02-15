@@ -65,7 +65,7 @@ class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
         logger.warn(s"Could not $description: $e", nino)
         InternalServerError
       }, { a ⇒
-        logger.info(s"$description successful", nino)
+        logger.debug(s"$description successful", nino)
         Ok(Json.toJson(a))
       }
     )

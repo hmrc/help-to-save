@@ -100,7 +100,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
     find("nino" → JsString(nino)).map { res ⇒
       val time = timerContext.stop()
-      log.info(s"GET on email store took ${nanosToPrettyString(time)}", nino)
+      log.debug(s"GET on email store took ${nanosToPrettyString(time)}", nino)
 
       val decryptedEmail = res.headOption
         .map(data ⇒ crypto.decrypt(data.email))
