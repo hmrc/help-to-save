@@ -87,7 +87,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
       find("nino" → JsString(nino)).map { res ⇒
         val time = timerContext.stop()
-        log.info(s"GET on enrolment store took ${nanosToPrettyString(time)}", nino)
+        log.debug(s"GET on enrolment store took ${nanosToPrettyString(time)}", nino)
 
         Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
       }.recover{
