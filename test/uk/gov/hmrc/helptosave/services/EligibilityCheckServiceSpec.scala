@@ -102,16 +102,18 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
       }
 
-      "handle errors during UC claimant check" in {
-
-        mockUCClaimantCheck(ninoEncoded)(Left("unexpected error during UCClaimant check"))
+      "call DES even if there is an errors during UC claimant check" in {
+        inSequence {
+          mockUCClaimantCheck(ninoEncoded)(Left("unexpected error during UCClaimant check"))
+          mockDESEligibilityCheck(nino, None)(Right(Some(eligibilityCheckResponse)))
+        }
 
         val ucEnabledConfig = fakeApplication.configuration.++(Configuration("microservice.uc-enabled" -> "true"))
         val eligibilityCheckService = new EligibilityCheckServiceImpl(mockProxyConnector, mockEligibilityConnector, ucEnabledConfig)
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
 
-        result shouldBe Left("unexpected error during UCClaimant check")
+        result shouldBe Right(Some(eligibilityCheckResponse))
 
       }
 
