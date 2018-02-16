@@ -18,16 +18,18 @@ package uk.gov.hmrc.helptosave.services
 
 import java.util.UUID
 
+import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, HelpToSaveProxyConnector}
-import uk.gov.hmrc.helptosave.models.EligibilityCheckResult
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, Result, base64Encode}
+import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, Result, base64Encode}
+import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[EligibilityCheckServiceImpl])
@@ -40,24 +42,31 @@ trait EligibilityCheckService {
 @Singleton
 class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSaveProxyConnector,
                                              eligibilityCheckConnector: EligibilityCheckConnector,
-                                             configuration:             Configuration)
+                                             configuration:             Configuration
+)(implicit ninoLogMessageTransformer: NINOLogMessageTransformer)
   extends EligibilityCheckService with Logging with ServicesConfig {
 
   private val isUCEnabled: Boolean = configuration.underlying.getBoolean("microservice.uc-enabled")
 
   logger.info(s"UniversalCredits checks enabled = $isUCEnabled")
 
-  override def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] = {
-
+  override def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] =
     if (isUCEnabled) {
-      val txnId = UUID.randomUUID()
       for {
-        ucResponse ← helpToSaveProxyConnector.ucClaimantCheck(new String(base64Encode(nino)), txnId)
-        result ← eligibilityCheckConnector.isEligible(nino, Some(ucResponse))
+        ucResponse ← EitherT.liftT(getUCDetails(nino, UUID.randomUUID()))
+        result ← eligibilityCheckConnector.isEligible(nino, ucResponse)
       } yield result
     } else {
       eligibilityCheckConnector.isEligible(nino, None)
     }
-  }
+
+  private def getUCDetails(nino: NINO, txnId: UUID)(implicit hc: HeaderCarrier): Future[Option[UCResponse]] =
+    helpToSaveProxyConnector.ucClaimantCheck(new String(base64Encode(nino)), txnId)
+      .fold({ e ⇒
+        logger.warn(s"Error while retrieving UC details: $e", nino)
+        None
+      }, Some(_)
+      )
+
 }
 

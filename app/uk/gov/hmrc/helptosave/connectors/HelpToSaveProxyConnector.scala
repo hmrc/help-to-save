@@ -56,30 +56,25 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
       }
   }
 
-  override def ucClaimantCheck(ninoEncoded: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse] = {
-
-      def url(nino: NINO, txnId: UUID) =
-        s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
+  override def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse] = {
+    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
 
     EitherT[Future, String, UCResponse](
-      http.get(url(ninoEncoded, txnId)).map {
+      http.get(url).map {
         response ⇒
-          {
+          logger.info(s"response body from UniversalCredit check is: ${response.body}", nino)
+          response.status match {
+            case Status.OK ⇒
+              val result = response.parseJson[UCResponse]
+              result.fold(
+                e ⇒ logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", nino),
+                _ ⇒ logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino)
+              )
+              result
 
-            logger.info(s"response body from UniversalCredit check is: ${response.body}", ninoEncoded)
-            response.status match {
-              case Status.OK ⇒
-                val result = response.parseJson[UCResponse]
-                result.fold(
-                  e ⇒ logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", ninoEncoded),
-                  _ ⇒ logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", ninoEncoded)
-                )
-                result
-
-              case other ⇒
-                logger.warn(s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other", ninoEncoded)
-                Left(s"Received unexpected status($other) from UniversalCredit check")
-            }
+            case other ⇒
+              logger.warn(s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other", nino)
+              Left(s"Received unexpected status($other) from UniversalCredit check")
           }
       }.recover {
         case e ⇒
