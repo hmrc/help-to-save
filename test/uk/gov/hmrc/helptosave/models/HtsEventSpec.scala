@@ -50,6 +50,13 @@ class HtsEventSpec extends TestSupport with AppName {
       event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe false
     }
 
+    "contain only the isUCClaimant param in the details but not isWithinUCThreshold" in {
+      val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)))(new HeaderCarrier)
+      event.value.detail.size shouldBe 3
+      event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "true") shouldBe true
+      event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "false") shouldBe true
+    }
+
     "read UC params if they are present when the user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))))(new HeaderCarrier)
       event.value.detail.size shouldBe 5

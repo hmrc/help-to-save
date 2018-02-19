@@ -40,37 +40,28 @@ case class EligibilityCheckEvent(nino:              NINO,
                                  ucResponse:        Option[UCResponse])(implicit hc: HeaderCarrier) extends HTSEvent {
 
   val value: DataEvent = {
-    val details =
-      if (eligibilityResult.resultCode === 1) {
+    val details = {
+      val result =
+        if (eligibilityResult.resultCode === 1) {
+          Map[String, String]("nino" → nino, "eligible" → "true")
+        } else {
+          val reason = "Response: " +
+            s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
+            s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
 
-        val result = Map[String, String]("nino" → nino, "eligible" → "true")
+          Map[String, String]("nino" → nino, "eligible" → "false", "reason" -> reason)
 
-        ucResponse match {
-          case Some(ucR) ⇒ result +
-            ("isUCClaimant" → ucR.ucClaimant.toString,
-              "isWithinUCThreshold" → ucR.withinThreshold.getOrElse(false).toString
-            )
-
-          case _ ⇒ result
         }
-      } else {
-
-        val reason = "Response: " +
-          s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
-          s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
-
-        val result = Map[String, String]("nino" → nino, "eligible" → "false", "reason" -> reason)
-
-        ucResponse match {
-          case Some(ucR) ⇒ result + (
-            "isUCClaimant" → ucR.ucClaimant.toString,
-            "isWithinUCThreshold" → ucR.withinThreshold.getOrElse(false).toString
-          )
-
-          case _ ⇒ result
-        }
-      }
+      result ++ ucData(ucResponse)
+    }
 
     HTSEvent("EligibilityResult", details)
+  }
+
+  def ucData(ucResponse: Option[UCResponse]): Map[String, String] = ucResponse match {
+    case Some(UCResponse(isClaimant, Some(withinThreshold))) ⇒
+      Map("isUCClaimant" -> isClaimant.toString, "isWithinUCThreshold" -> withinThreshold.toString)
+    case Some(UCResponse(isClaimant, None)) ⇒ Map("isUCClaimant" -> isClaimant.toString)
+    case None                               ⇒ Map.empty[String, String]
   }
 }
