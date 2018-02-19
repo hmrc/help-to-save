@@ -124,6 +124,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
         inSequence {
           mockUCClaimantCheck(ninoEncoded)(Left("unexpected error during UCClaimant check"))
           mockDESEligibilityCheck(nino, None)(Right(Some(eligibilityCheckResponse)))
+          mockAuditEligibilityEvent()
         }
 
         val ucEnabledConfig = fakeApplication.configuration.++(Configuration("microservice.uc-enabled" -> "true"))

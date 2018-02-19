@@ -41,11 +41,11 @@ trait EligibilityCheckService {
 }
 
 @Singleton
-class EligibilityCheckServiceImpl @Inject()(helpToSaveProxyConnector: HelpToSaveProxyConnector,
-                                            eligibilityCheckConnector: EligibilityCheckConnector,
-                                            configuration: Configuration,
-                                            auditor: HTSAuditor
-                                           )(implicit ninoLogMessageTransformer: NINOLogMessageTransformer)
+class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSaveProxyConnector,
+                                             eligibilityCheckConnector: EligibilityCheckConnector,
+                                             configuration:             Configuration,
+                                             auditor:                   HTSAuditor
+)(implicit ninoLogMessageTransformer: NINOLogMessageTransformer)
   extends EligibilityCheckService with Logging with ServicesConfig {
 
   private val isUCEnabled: Boolean = configuration.underlying.getBoolean("microservice.uc-enabled")

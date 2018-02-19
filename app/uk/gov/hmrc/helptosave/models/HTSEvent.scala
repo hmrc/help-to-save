@@ -42,15 +42,16 @@ case class EligibilityCheckEvent(nino:              NINO,
   val value: DataEvent = {
     val details =
       if (eligibilityResult.resultCode === 1) {
-        ucResponse match {
-          case Some(ucR) ⇒ Map[String, String](
-            "nino" → nino,
-            "eligible" → "true",
-            "isUCClaimant" → ucR.ucClaimant.toString,
-            "isWithinUCThreshold" → ucR.withinThreshold.getOrElse(false).toString
-          )
 
-          case _ ⇒ Map[String, String]("nino" → nino, "eligible" → "true")
+        val result = Map[String, String]("nino" → nino, "eligible" → "true")
+
+        ucResponse match {
+          case Some(ucR) ⇒ result +
+            ("isUCClaimant" → ucR.ucClaimant.toString,
+              "isWithinUCThreshold" → ucR.withinThreshold.getOrElse(false).toString
+            )
+
+          case _ ⇒ result
         }
       } else {
 
@@ -58,17 +59,15 @@ case class EligibilityCheckEvent(nino:              NINO,
           s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
           s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
 
+        val result = Map[String, String]("nino" → nino, "eligible" → "false", "reason" -> reason)
+
         ucResponse match {
-          case Some(ucR) ⇒ Map[String, String](
-            "nino" → nino,
-            "eligible" → "false",
+          case Some(ucR) ⇒ result + (
             "isUCClaimant" → ucR.ucClaimant.toString,
-            "isWithinUCThreshold" → ucR.withinThreshold.getOrElse(false).toString,
-            "reason" -> reason
+            "isWithinUCThreshold" → ucR.withinThreshold.getOrElse(false).toString
           )
 
-          case _ ⇒
-            Map[String, String]("nino" → nino, "eligible" → "false", "reason" -> reason)
+          case _ ⇒ result
         }
       }
 
