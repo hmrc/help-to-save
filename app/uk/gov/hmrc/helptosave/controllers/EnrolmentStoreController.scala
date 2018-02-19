@@ -30,25 +30,18 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 
-class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
-                                          itmpConnector:    ITMPEnrolmentConnector,
-                                          htsAuthConnector: HtsAuthConnector)(
+class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
+                                          val itmpConnector:  ITMPEnrolmentConnector,
+                                          htsAuthConnector:   HtsAuthConnector)(
     implicit
     transformer: NINOLogMessageTransformer
 )
-  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
+  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
 
   import EnrolmentStoreController._
 
   def enrol(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
-    handle(
-      for {
-        _ ← enrolmentStore.update(nino, itmpFlag = false)
-        _ ← setITMPFlagAndUpdateMongo(nino)
-      } yield (),
-      "enrol user",
-      nino
-    )
+    handle(enrolUser(nino), "enrol user", nino)
   }
 
   def setITMPFlag(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
@@ -69,11 +62,6 @@ class EnrolmentStoreController @Inject() (enrolmentStore:   EnrolmentStore,
         Ok(Json.toJson(a))
       }
     )
-
-  private def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = for {
-    _ ← itmpConnector.setFlag(nino)
-    _ ← enrolmentStore.update(nino, itmpFlag = true)
-  } yield ()
 
 }
 

@@ -16,41 +16,19 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import cats.data.EitherT
-import cats.instances.future._
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
+import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.util.NINO
-import uk.gov.hmrc.http.HeaderCarrier
-import HelpToSaveAuth._
+import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
-class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPropertyChecks {
-
-  val enrolmentStore: EnrolmentStore = mock[EnrolmentStore]
-  val itmpConnector: ITMPEnrolmentConnector = mock[ITMPEnrolmentConnector]
-
-  def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.update(_: NINO, _: Boolean))
-      .expects(nino, itmpFlag)
-      .returning(EitherT.fromEither[Future](result))
-
-  def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
-    (enrolmentStore.get(_: NINO))
-      .expects(nino)
-      .returning(EitherT.fromEither[Future](result))
-
-  def mockITMPConnector(nino: NINO)(result: Either[String, Unit]): Unit =
-    (itmpConnector.setFlag(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(nino, *, *)
-      .returning(EitherT.fromEither[Future](result))
+class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPropertyChecks with TestEnrolmentBehaviour {
 
   implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
     Arbitrary(Gen.oneOf[EnrolmentStore.Status](
