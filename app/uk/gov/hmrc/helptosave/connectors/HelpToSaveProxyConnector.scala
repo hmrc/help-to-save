@@ -26,7 +26,7 @@ import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, Result, base64Encode}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -37,7 +37,7 @@ trait HelpToSaveProxyConnector {
 
   def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
-  def ucClaimantCheck(ninoEncoded: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
+  def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 }
 
 @Singleton
@@ -57,7 +57,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
   }
 
   override def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse] = {
-    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
+    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=${base64Encode(nino)}&transactionId=$txnId"
 
     EitherT[Future, String, UCResponse](
       http.get(url).map {
