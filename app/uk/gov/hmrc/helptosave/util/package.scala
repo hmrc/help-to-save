@@ -40,6 +40,6 @@ package object util {
     }
   }
 
-  def base64Encode(input: String): Array[Byte] = Base64.getEncoder.encode(input.getBytes)
+  def base64Encode(input: String): String = new String(Base64.getEncoder.encode(input.getBytes))
 
 }

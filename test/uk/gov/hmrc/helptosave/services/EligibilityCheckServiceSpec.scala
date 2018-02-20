@@ -67,8 +67,6 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
   "EligibilityCheckService" when {
 
     val nino = "AE123456C"
-    val ninoEncoded = "QUUxMjM0NTZD" //base64 Encoded
-    val txnId = UUID.randomUUID()
     val uCResponse = UCResponse(true, Some(true))
 
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
@@ -106,7 +104,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
       "handle happy path and return result as expected" in {
 
         inSequence {
-          mockUCClaimantCheck(ninoEncoded)(Right(uCResponse))
+          mockUCClaimantCheck(nino)(Right(uCResponse))
           mockDESEligibilityCheck(nino, Some(uCResponse))(Right(Some(eligibilityCheckResponse)))
           mockAuditEligibilityEvent()
         }
@@ -122,7 +120,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
       "call DES even if there is an errors during UC claimant check" in {
         inSequence {
-          mockUCClaimantCheck(ninoEncoded)(Left("unexpected error during UCClaimant check"))
+          mockUCClaimantCheck(nino)(Left("unexpected error during UCClaimant check"))
           mockDESEligibilityCheck(nino, None)(Right(Some(eligibilityCheckResponse)))
           mockAuditEligibilityEvent()
         }
@@ -139,7 +137,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
       "handle errors during DES eligibility check check" in {
 
         inSequence {
-          mockUCClaimantCheck(ninoEncoded)(Right(uCResponse))
+          mockUCClaimantCheck(nino)(Right(uCResponse))
           mockDESEligibilityCheck(nino, Some(uCResponse))(Left("unexpected error during DES eligibility check"))
         }
 

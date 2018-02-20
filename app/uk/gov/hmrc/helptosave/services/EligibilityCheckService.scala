@@ -26,11 +26,10 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckEvent, EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, Result, base64Encode}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, Result}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[EligibilityCheckServiceImpl])
@@ -73,8 +72,8 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
     }
   }
 
-  private def getUCDetails(nino: NINO, txnId: UUID)(implicit hc: HeaderCarrier): Future[Option[UCResponse]] =
-    helpToSaveProxyConnector.ucClaimantCheck(new String(base64Encode(nino)), txnId)
+  private def getUCDetails(nino: NINO, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UCResponse]] =
+    helpToSaveProxyConnector.ucClaimantCheck(nino, txnId)
       .fold({ e ⇒
         logger.warn(s"Error while retrieving UC details: $e", nino)
         None
