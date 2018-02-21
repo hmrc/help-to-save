@@ -48,9 +48,12 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
             .map { response ⇒
               if (response.status === CREATED) {
                 enrolUser(userInfo.nino).value.onComplete{
-                  case Success(Right(_)) ⇒ logger.debug(s"User was successfully enrolled into HTS, correlationId is: $correlationId", userInfo.nino)
-                  case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e, correlationId is: $correlationId", userInfo.nino)
-                  case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}, correlationId is: $correlationId", userInfo.nino)
+                  case Success(Right(_)) ⇒ logger.debug(s"User was successfully enrolled into HTS, correlationId is: " +
+                    s"${correlationId.getOrElse("n/a")}", userInfo.nino)
+                  case Success(Left(e)) ⇒ logger.warn(s"User was not enrolled: $e, correlationId is: ${correlationId.getOrElse("n/a")}",
+                    userInfo.nino)
+                  case Failure(e) ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}, correlationId is: ${correlationId.getOrElse("n/a")}",
+                    userInfo.nino)
                 }
               }
               Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
@@ -58,11 +61,11 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
 
         case Some(error: JsError) ⇒
           val errorString = error.prettyPrint()
-          logger.warn(s"Could not parse JSON in request body: $errorString, correlationId is: $correlationId")
+          logger.warn(s"Could not parse JSON in request body: $errorString, correlationId is: ${correlationId.getOrElse("n/a")}")
           BadRequest(ErrorResponse("Could not parse JSON in request", errorString).toJson())
 
         case None ⇒
-          logger.warn(s"No JSON body found in request, correlationId is: $correlationId")
+          logger.warn(s"No JSON body found in request, correlationId is: ${correlationId.getOrElse("n/a")}")
           BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
       }
   }

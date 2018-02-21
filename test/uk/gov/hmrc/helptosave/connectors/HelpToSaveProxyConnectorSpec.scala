@@ -25,18 +25,17 @@ import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.toFuture
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{TestData, TestSupport}
 import uk.gov.hmrc.helptosave.util.base64Encode
-
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
+class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues with TestData {
 
   lazy val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp)
-  val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
+  val createAccountURL: String = s"http://localhost:7005/help-to-save-proxy/create-account?$correlationId"
 
   val userInfo: NSIUserInfo =
     NSIUserInfo(
@@ -73,7 +72,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
       "handle success response from frontend" in {
 
         mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(CREATED)))
-        val result = await(proxyConnector.createAccount(userInfo))
+        val result = await(proxyConnector.createAccount(userInfo, correlationId))
 
         result.status shouldBe CREATED
       }
@@ -81,7 +80,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
       "handle bad_request response from frontend" in {
 
         mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(BAD_REQUEST)))
-        val result = await(proxyConnector.createAccount(userInfo))
+        val result = await(proxyConnector.createAccount(userInfo, correlationId))
 
         result.status shouldBe BAD_REQUEST
       }
@@ -89,7 +88,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
       "handle unexpected errors" in {
 
         mockFailCreateAccountResponse(userInfo)(new RuntimeException("boom"))
-        val result = await(proxyConnector.createAccount(userInfo))
+        val result = await(proxyConnector.createAccount(userInfo, correlationId))
 
         result.status shouldBe INTERNAL_SERVER_ERROR
         Json.parse(result.body) shouldBe
