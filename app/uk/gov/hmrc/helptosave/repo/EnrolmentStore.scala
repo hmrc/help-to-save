@@ -27,7 +27,7 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{NINO, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{NINO, LogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -56,7 +56,7 @@ object EnrolmentStore {
 }
 
 class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
-                                     metrics: Metrics)(implicit ec: ExecutionContext, transformer: NINOLogMessageTransformer)
+                                     metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
   extends ReactiveRepository[EnrolmentData, BSONObjectID](
     collectionName = "enrolments",
     mongo          = mongo.mongoConnector.db,

@@ -25,7 +25,7 @@ import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, PagerDutyAlerting, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, PagerDutyAlerting, Result}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -41,7 +41,7 @@ trait PayePersonalDetailsConnector {
 @Singleton
 class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                                                   metrics:           Metrics,
-                                                  pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: NINOLogMessageTransformer)
+                                                  pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer)
   extends PayePersonalDetailsConnector with ServicesConfig with DESConnector with Logging {
 
   val payeURL: String = baseUrl("paye-personal-details")
