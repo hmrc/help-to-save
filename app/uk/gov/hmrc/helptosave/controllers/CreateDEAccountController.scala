@@ -44,7 +44,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
     implicit request ⇒
       request.body.asJson.map(_.validate[NSIUserInfo]) match {
         case Some(JsSuccess(userInfo, _)) ⇒
-          proxyConnector.createAccount(userInfo)
+          proxyConnector.createAccount(userInfo, correlationId)
             .map { response ⇒
               if (response.status === CREATED) {
                 enrolUser(userInfo.nino).value.onComplete{

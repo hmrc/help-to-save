@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[HelpToSaveProxyConnectorImpl])
 trait HelpToSaveProxyConnector {
 
-  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def createAccount(userInfo: NSIUserInfo, correlationId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
   def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 }
@@ -46,11 +46,11 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
 
   val proxyURL: String = baseUrl("help-to-save-proxy")
 
-  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-    http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
+  override def createAccount(userInfo: NSIUserInfo, correlationId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+    http.post(s"$proxyURL/help-to-save-proxy/create-account?$correlationId", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}")
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}, correlationId: $correlationId")
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
