@@ -41,6 +41,7 @@ object NSIUserInfo {
                             postcode:                String,
                             countryCode:             Option[String],
                             phoneNumber:             Option[String] = None,
+                            email:                   Option[String] = None,
                             communicationPreference: String)
 
   implicit val dateFormat: Format[LocalDate] = {

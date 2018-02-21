@@ -44,7 +44,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
       "surname",
       LocalDate.now(),
       "nino",
-      ContactDetails("address1", "address2", Some("address3"), Some("address4"), Some("address5"), "postcode", Some("GB"), Some("phoneNumber"), "commPref"),
+      ContactDetails("address1", "address2", Some("address3"), Some("address4"), Some("address5"), "postcode", Some("GB"), Some("phoneNumber"), Some("email"), "commPref"),
       "regChannel"
     )
 
