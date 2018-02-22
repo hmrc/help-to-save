@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.util
 
+import java.util.UUID
+
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.{Configuration, Logger}
 
@@ -29,34 +31,46 @@ object Logging {
 
   implicit class LoggerOps(val logger: Logger) {
 
-    def debug(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+    def debug(message: String, nino: NINO)(implicit transformer: LogMessageTransformer): Unit =
       logger.debug(transformer.transform(message, nino))
 
-    def info(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+    def debug(message: String, nino: NINO, correlationId: Option[UUID])(implicit transformer: LogMessageTransformer): Unit =
+      logger.debug(transformer.transform(message, nino, correlationId))
+
+    def info(message: String, nino: NINO)(implicit transformer: LogMessageTransformer): Unit =
       logger.info(transformer.transform(message, nino))
 
-    def warn(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+    def info(message: String, nino: NINO, correlationId: Option[UUID])(implicit transformer: LogMessageTransformer): Unit =
+      logger.info(transformer.transform(message, nino, correlationId))
+
+    def warn(message: String, nino: NINO)(implicit transformer: LogMessageTransformer): Unit =
       logger.warn(transformer.transform(message, nino))
 
-    def warn(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+    def warn(message: String, nino: NINO, correlationId: Option[UUID])(implicit transformer: LogMessageTransformer): Unit =
+      logger.warn(transformer.transform(message, nino, correlationId))
+
+    def warn(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: LogMessageTransformer): Unit =
       logger.warn(transformer.transform(message, nino), e)
 
-    def error(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+    def warn(message: String, e: ⇒ Throwable, nino: NINO, correlationId: Option[UUID])(implicit transformer: LogMessageTransformer): Unit =
+      logger.warn(transformer.transform(message, nino, correlationId), e)
+
+    def error(message: String, nino: NINO)(implicit transformer: LogMessageTransformer): Unit =
       logger.error(transformer.transform(message, nino))
 
-    def error(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
+    def error(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: LogMessageTransformer): Unit =
       logger.error(transformer.transform(message, nino), e)
 
   }
 }
 
-@ImplementedBy(classOf[NINOLogMessageTransformerImpl])
-trait NINOLogMessageTransformer {
-  def transform(message: String, nino: NINO): String
+@ImplementedBy(classOf[LogMessageTransformerImpl])
+trait LogMessageTransformer {
+  def transform(message: String, nino: NINO, correlationId: Option[UUID] = None): String
 }
 
 @Singleton
-class NINOLogMessageTransformerImpl @Inject() (configuration: Configuration) extends NINOLogMessageTransformer {
+class LogMessageTransformerImpl @Inject() (configuration: Configuration) extends LogMessageTransformer {
 
   private val loggingPrefix: NINO ⇒ String =
     if (configuration.underlying.getBoolean("nino-logging.enabled")) {
@@ -65,6 +79,10 @@ class NINOLogMessageTransformerImpl @Inject() (configuration: Configuration) ext
       _ ⇒ ""
     }
 
-  def transform(message: String, nino: NINO): String = loggingPrefix(nino) + message
+  private val loggingCorrelationId: Option[UUID] ⇒ String =
+    correlationId ⇒ s", For CorrelationId [${correlationId.getOrElse("n/a")}]"
+
+  def transform(message: String, nino: NINO, correlationId: Option[UUID]): String =
+    loggingPrefix(nino) + message + loggingCorrelationId(correlationId)
 
 }

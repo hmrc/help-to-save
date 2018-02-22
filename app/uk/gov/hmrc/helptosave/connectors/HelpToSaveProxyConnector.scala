@@ -26,7 +26,7 @@ import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, Result, base64Encode}
+import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer, Result, base64Encode}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -35,22 +35,22 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[HelpToSaveProxyConnectorImpl])
 trait HelpToSaveProxyConnector {
 
-  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def createAccount(userInfo: NSIUserInfo, correlationId: Option[UUID])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
   def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 }
 
 @Singleton
-class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer: NINOLogMessageTransformer)
+class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer: LogMessageTransformer)
   extends HelpToSaveProxyConnector with ServicesConfig with Logging {
 
   val proxyURL: String = baseUrl("help-to-save-proxy")
 
-  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-    http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
+  override def createAccount(userInfo: NSIUserInfo, correlationId: Option[UUID])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+    http.post(s"$proxyURL/help-to-save-proxy/create-account?$correlationId", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}")
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, correlationId)
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }

@@ -24,12 +24,12 @@ import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer}
 
 class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckService,
                                             htsAuthConnector:        HtsAuthConnector)(
     implicit
-    transformer: NINOLogMessageTransformer
+    transformer: LogMessageTransformer
 )
   extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 

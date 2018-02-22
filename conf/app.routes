@@ -9,7 +9,7 @@ GET /get-email               @uk.gov.hmrc.helptosave.controllers.EmailStoreContr
 GET /account-create-allowed  @uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()
 POST /update-user-count      @uk.gov.hmrc.helptosave.controllers.UserCapController.update()
 
-POST /create-de-account      @uk.gov.hmrc.helptosave.controllers.CreateDEAccountController.createDEAccount()
+POST /create-de-account      @uk.gov.hmrc.helptosave.controllers.CreateDEAccountController.createDEAccount(id: Option[java.util.UUID])
 
 
 GET /stride/eligibility-check       @uk.gov.hmrc.helptosave.controllers.StrideController.eligibilityCheck(nino: String)

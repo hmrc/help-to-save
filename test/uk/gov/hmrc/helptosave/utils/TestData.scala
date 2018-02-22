@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
+import java.util.UUID
 
 import uk.gov.hmrc.helptosave.models.{Address, Name, PayePersonalDetails}
 
@@ -71,4 +72,6 @@ trait TestData {
     Name("A", "Smith"),
     LocalDate.parse("1980-01-01"),
     Address("1 Station Road", "Town Centre", Some("Sometown"), Some("Anyshire"), Some("UK"), "AB12 3CD"))
+
+  val correlationId: Option[UUID] = Option(UUID.fromString("6f20ae18-38e9-4054-ac30-2ef294fa5279"))
 }

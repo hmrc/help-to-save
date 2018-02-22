@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
+import java.util.UUID
 
 import com.codahale.metrics.{Counter, Timer}
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
@@ -29,7 +30,7 @@ import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.util.{NINO, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -78,8 +79,8 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
 
   def randomNINO(): String = hmrcGenerator.nextNino.value
 
-  implicit val transformer: NINOLogMessageTransformer = new NINOLogMessageTransformer {
-    override def transform(message: String, nino: NINO): String = s"$nino - $message"
+  implicit val transformer: LogMessageTransformer = new LogMessageTransformer {
+    override def transform(message: String, nino: NINO, correlationId: Option[UUID] = None): String = s"$nino - $message - $correlationId"
   }
 
 }

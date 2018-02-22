@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import java.util.UUID
+
 import cats.syntax.eq._
 import cats.instances.int._
 import com.google.inject.Inject
@@ -25,7 +27,7 @@ import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmen
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer, toFuture}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
@@ -35,20 +37,20 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
                                            val itmpConnector:  ITMPEnrolmentConnector,
                                            proxyConnector:     HelpToSaveProxyConnector)(
     implicit
-    transformer: NINOLogMessageTransformer)
+    transformer: LogMessageTransformer)
   extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
 
-  def createDEAccount(): Action[AnyContent] = Action.async {
+  def createDEAccount(correlationId: Option[UUID]): Action[AnyContent] = Action.async {
     implicit request ⇒
       request.body.asJson.map(_.validate[NSIUserInfo]) match {
         case Some(JsSuccess(userInfo, _)) ⇒
-          proxyConnector.createAccount(userInfo)
+          proxyConnector.createAccount(userInfo, correlationId)
             .map { response ⇒
               if (response.status === CREATED) {
                 enrolUser(userInfo.nino).value.onComplete{
-                  case Success(Right(_)) ⇒ logger.debug("User was successfully enrolled into HTS", userInfo.nino)
-                  case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino)
-                  case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino)
+                  case Success(Right(_)) ⇒ logger.debug(s"User was successfully enrolled into HTS", userInfo.nino, correlationId)
+                  case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, correlationId)
+                  case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, correlationId)
                 }
               }
               Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
@@ -56,11 +58,11 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
 
         case Some(error: JsError) ⇒
           val errorString = error.prettyPrint()
-          logger.warn(s"Could not parse JSON in request body: $errorString")
+          logger.warn(s"Could not parse JSON in request body: $errorString", "n/a", correlationId)
           BadRequest(ErrorResponse("Could not parse JSON in request", errorString).toJson())
 
         case None ⇒
-          logger.warn("No JSON body found in request")
+          logger.warn(s"No JSON body found in request", "n/a", correlationId)
           BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
       }
   }
