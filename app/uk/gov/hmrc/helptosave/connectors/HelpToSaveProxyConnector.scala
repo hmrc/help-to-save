@@ -19,6 +19,8 @@ package uk.gov.hmrc.helptosave.connectors
 import java.util.UUID
 
 import cats.data.EitherT
+import cats.instances.string._
+import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
@@ -47,6 +49,10 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
   val proxyURL: String = baseUrl("help-to-save-proxy")
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+
+    val correlationId = hc.headers.find(p ⇒ p._1 === "X-CorrelationId").map(_._2)
+    logger.info(s"X-CorrelationId of the user is : ${correlationId.getOrElse("")}")
+
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
