@@ -23,21 +23,21 @@ import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
-import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
-import uk.gov.hmrc.helptosave.util.Logging._
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import reactivemongo.play.json.ImplicitBSONHandlers._
-import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoEnrolmentStore])
 trait EnrolmentStore {
+
   import EnrolmentStore._
 
   def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
@@ -88,40 +88,35 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
       find("nino" → JsString(nino)).map { res ⇒
         val time = timerContext.stop()
-        log.debug(s"GET on enrolment store took ${nanosToPrettyString(time)}", nino)
 
         Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
-      }.recover{
+      }.recover {
         case e ⇒
           val time = timerContext.stop()
           metrics.enrolmentStoreGetErrorCounter.inc()
 
-          log.warn(s"Could not read from enrolment store (round-trip time: ${nanosToPrettyString(time)})", e, nino)
           Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
       }
     })
 
   override def update(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
-    log.debug(s"Updating entry into enrolment store (itmpFlag = $itmpFlag)", nino)
     EitherT({
       val timerContext = metrics.enrolmentStoreUpdateTimer.time()
 
-      doUpdate(nino, itmpFlag).map[Either[String, Unit]]{ result ⇒
+      doUpdate(nino, itmpFlag).map[Either[String, Unit]] { result ⇒
         val time = timerContext.stop()
 
         result.fold[Either[String, Unit]] {
           metrics.enrolmentStoreUpdateErrorCounter.inc()
           Left(s"For NINO [$nino]: Could not update enrolment store (round-trip time: ${nanosToPrettyString(time)})")
-        }{ _ ⇒
-          log.debug(s"Successfully updated enrolment store (round-trip time: ${nanosToPrettyString(time)})", nino)
+        } { _ ⇒
           Right(())
         }
-      }.recover{
+      }.recover {
         case e ⇒
           val time = timerContext.stop()
           metrics.enrolmentStoreUpdateErrorCounter.inc()
 
-          log.error(s"Could not write to enrolment store (round-trip time: ${nanosToPrettyString(time)})", e, nino)
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
       }
     }

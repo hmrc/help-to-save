@@ -27,7 +27,6 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
 import HelpToSaveAuth._
-import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,13 +35,13 @@ class EmailStoreControllerSpec extends AuthSupport {
   val emailStore: EmailStore = mock[EmailStore]
 
   def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
-    (emailStore.storeConfirmedEmail(_: String, _: NINO)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(email, nino, *, *)
+    (emailStore.storeConfirmedEmail(_: String, _: NINO)(_: ExecutionContext))
+      .expects(email, nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit =
-    (emailStore.getConfirmedEmail(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(nino, *, *)
+    (emailStore.getConfirmedEmail(_: NINO)(_: ExecutionContext))
+      .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   "The EmailStoreController" when {

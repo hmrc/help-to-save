@@ -29,7 +29,7 @@ import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.util.{NINO, LogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -78,9 +78,6 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
 
   def randomNINO(): String = hmrcGenerator.nextNino.value
 
-  implicit val transformer: LogMessageTransformer = new LogMessageTransformer {
-    override def transform(message: String, nino: NINO, correlationId: Option[String]): String = s"$nino, ${correlationId.getOrElse("")} - $message"
-  }
-
+  implicit lazy val transformer: LogMessageTransformer = new LogMessageTransformerImpl(configuration)
 }
 

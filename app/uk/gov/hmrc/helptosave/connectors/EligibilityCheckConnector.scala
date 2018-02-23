@@ -65,7 +65,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
           .map { response ⇒
             val time = timerContext.stop()
 
-            logger.info(s"eligibility response body from DES is: ${maskNino(response.body)}", nino)
+            logger.info(s"eligibility response body from DES is: ${maskNino(response.body)}", nino, None)
 
             val res: Option[Either[String, EligibilityCheckResult]] = response.status match {
               case Status.OK ⇒
@@ -73,19 +73,19 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
                 result.fold({
                   e ⇒
                     metrics.itmpEligibilityCheckErrorCounter.inc()
-                    logger.warn(s"Could not parse JSON response from eligibility check, received 200 (OK): $e ${timeString(time)}", nino)
+                    logger.warn(s"Could not parse JSON response from eligibility check, received 200 (OK): $e ${timeString(time)}", nino, None)
                     pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
                 }, _ ⇒
-                  logger.debug(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino)
+                  logger.debug(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino, None)
                 )
                 Some(result)
 
               case Status.NOT_FOUND ⇒
-                logger.info(s"Retrieved nino has not been found in DES, so user is not receiving Working Tax Credit ${timeString(time)}", nino)
+                logger.info(s"Retrieved nino has not been found in DES, so user is not receiving Working Tax Credit ${timeString(time)}", nino, None)
                 None
 
               case other ⇒
-                logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}", nino)
+                logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}", nino, None)
                 metrics.itmpEligibilityCheckErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
                 Some(Left(s"Received unexpected status $other"))

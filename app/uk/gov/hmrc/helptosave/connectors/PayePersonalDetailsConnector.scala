@@ -63,15 +63,15 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                 result.fold({
                   e ⇒
                     metrics.payePersonalDetailsErrorCounter.inc()
-                    logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino)
+                    logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, None)
                     pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
                 }, _ ⇒
-                  logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino)
+                  logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, None)
                 )
                 result
 
               case other ⇒
-                logger.warn(s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}", nino)
+                logger.warn(s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}", nino, None)
                 metrics.payePersonalDetailsErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
                 Left(s"Received unexpected status $other")

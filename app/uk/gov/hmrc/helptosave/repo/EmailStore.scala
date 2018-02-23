@@ -27,16 +27,14 @@ import play.api.libs.json.{Format, JsString, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.{Crypto, LogMessageTransformer, NINO}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
+import uk.gov.hmrc.helptosave.util.{Crypto, LogMessageTransformer, NINO}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import reactivemongo.play.json.ImplicitBSONHandlers._
-import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -45,9 +43,9 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[MongoEmailStore])
 trait EmailStore {
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit]
+  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
 
-  def getConfirmedEmail(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Option[String]]
+  def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]]
 
 }
 
@@ -73,51 +71,46 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
     )
   )
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] =
+  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
       doUpdate(crypto.encrypt(email), nino)
-        .map{ result ⇒
+        .map { result ⇒
           val time = timerContext.stop()
-          log.info(s"Update on email store completed (successful: ${result.isDefined}) (round-trip time: ${nanosToPrettyString(time)})", nino)
 
-          result.fold[Either[String, Unit]]{
+          result.fold[Either[String, Unit]] {
             metrics.emailStoreUpdateErrorCounter.inc()
             Left("Could not update email mongo store")
           }(_ ⇒ Right(()))
         }
-        .recover{
+        .recover {
           case NonFatal(e) ⇒
             val time = timerContext.stop()
             metrics.emailStoreUpdateErrorCounter.inc()
-
-            Left(s"${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
+            Left(s"${e.getMessage}")
         }
     })
 
-  override def getConfirmedEmail(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
+  override def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
 
     find("nino" → JsString(nino)).map { res ⇒
       val time = timerContext.stop()
-      log.debug(s"GET on email store took ${nanosToPrettyString(time)}", nino)
 
       val decryptedEmail = res.headOption
         .map(data ⇒ crypto.decrypt(data.email))
         .traverse[Try, String](identity)
 
-      decryptedEmail.toEither().leftMap{
+      decryptedEmail.toEither().leftMap {
         t ⇒
-          log.warn("Could not decrypt email", t, nino)
+          log.warn("Could not decrypt email", t, nino, None)
           s"Could not decrypt email: ${t.getMessage}"
       }
-    }.recover{
+    }.recover {
       case e ⇒
         val time = timerContext.stop()
         metrics.emailStoreGetErrorCounter.inc()
-
-        log.warn(s"Could not read from email store (round-trip time: ${nanosToPrettyString(time)})", e, nino)
         Left(s"Could not read from email store: ${e.getMessage}")
     }
   })

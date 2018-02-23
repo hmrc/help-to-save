@@ -20,12 +20,12 @@ import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue, Writes}
 import play.mvc.Http.Status.{FORBIDDEN, OK}
-import uk.gov.hmrc.helptosave
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, PagerDutyAlerting, Result, maskNino}
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.Logging._
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -59,15 +59,17 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
         .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 
+          val correlationId = hc.getCorrelationId
+
           response.status match {
             case OK ⇒
-              logger.debug(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino)
+              logger.debug(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino, correlationId)
               Right(())
 
             case FORBIDDEN ⇒
               metrics.itmpSetFlagConflictCounter.inc()
               logger.warn(s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
-                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})", nino)
+                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})", nino, correlationId)
               Right(())
 
             case other ⇒

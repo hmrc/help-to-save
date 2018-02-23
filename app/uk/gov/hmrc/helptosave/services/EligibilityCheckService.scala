@@ -75,7 +75,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
   private def getUCDetails(nino: NINO, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UCResponse]] =
     helpToSaveProxyConnector.ucClaimantCheck(nino, txnId)
       .fold({ e ⇒
-        logger.warn(s"Error while retrieving UC details: $e", nino)
+        logger.warn(s"Error while retrieving UC details: $e", nino, None)
         None
       }, Some(_)
       )

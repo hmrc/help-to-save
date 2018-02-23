@@ -47,7 +47,7 @@ class StrideController @Inject() (eligibilityCheckService:      EligibilityCheck
       eligibilityCheckService.getEligibility(decodedNino).fold(
         {
           e ⇒
-            logger.warn(s"Could not check eligibility: $e", decodedNino)
+            logger.warn(s"Could not check eligibility: $e", decodedNino, None)
             InternalServerError
         }, {
           r ⇒

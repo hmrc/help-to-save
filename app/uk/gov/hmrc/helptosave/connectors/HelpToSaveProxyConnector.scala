@@ -19,16 +19,15 @@ package uk.gov.hmrc.helptosave.connectors
 import java.util.UUID
 
 import cats.data.EitherT
-import cats.instances.string._
-import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer, Result, base64Encode}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, Result, base64Encode}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -53,7 +52,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}")
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, hc.getCorrelationId)
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
@@ -65,18 +64,21 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
     EitherT[Future, String, UCResponse](
       http.get(url).map {
         response ⇒
-          logger.info(s"response body from UniversalCredit check is: ${response.body}", nino)
+
+          val correlationId = hc.getCorrelationId
+          logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
+
           response.status match {
             case Status.OK ⇒
               val result = response.parseJson[UCResponse]
               result.fold(
-                e ⇒ logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", nino),
-                _ ⇒ logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino)
+                e ⇒ logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", nino, correlationId),
+                _ ⇒ logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
               )
               result
 
             case other ⇒
-              logger.warn(s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other", nino)
+              logger.warn(s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other", nino, correlationId)
               Left(s"Received unexpected status($other) from UniversalCredit check")
           }
       }.recover {

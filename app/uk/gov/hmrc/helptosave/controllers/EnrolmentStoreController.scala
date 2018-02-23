@@ -55,10 +55,10 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] =
     f.fold(
       { e ⇒
-        logger.warn(s"Could not $description: $e", nino)
+        logger.warn(s"Could not $description: $e", nino, None)
         InternalServerError
       }, { a ⇒
-        logger.debug(s"$description successful", nino)
+        logger.debug(s"$description successful", nino, None)
         Ok(Json.toJson(a))
       }
     )
