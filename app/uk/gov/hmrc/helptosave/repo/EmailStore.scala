@@ -30,12 +30,13 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.{Crypto, NINO, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{Crypto, LogMessageTransformer, NINO}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import reactivemongo.play.json.ImplicitBSONHandlers._
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -44,9 +45,9 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[MongoEmailStore])
 trait EmailStore {
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
+  def storeConfirmedEmail(email: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit]
 
-  def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]]
+  def getConfirmedEmail(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Option[String]]
 
 }
 
@@ -55,7 +56,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
                                  crypto:  Crypto,
                                  metrics: Metrics)(
     implicit
-    transformer: NINOLogMessageTransformer)
+    transformer: LogMessageTransformer)
   extends ReactiveRepository[EmailData, BSONObjectID](
     collectionName = "emails",
     mongo          = mongo.mongoConnector.db,
@@ -72,7 +73,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
     )
   )
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
+  def storeConfirmedEmail(email: String, nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
@@ -95,7 +96,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
         }
     })
 
-  override def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
+  override def getConfirmedEmail(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
 
     find("nino" → JsString(nino)).map { res ⇒

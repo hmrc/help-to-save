@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.helptosave.util
 
+import cats.instances.string._
+import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.{Configuration, Logger}
+import uk.gov.hmrc.http.HeaderCarrier
 
 trait Logging {
 
@@ -29,42 +32,52 @@ object Logging {
 
   implicit class LoggerOps(val logger: Logger) {
 
-    def debug(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.debug(transformer.transform(message, nino))
+    def debug(message: String, nino: NINO)(implicit transformer: LogMessageTransformer, hc: HeaderCarrier): Unit =
+      logger.debug(transformer.transform(message, nino, getCorrelationId()))
 
-    def info(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.info(transformer.transform(message, nino))
+    def info(message: String, nino: NINO)(implicit transformer: LogMessageTransformer, hc: HeaderCarrier): Unit =
+      logger.info(transformer.transform(message, nino, getCorrelationId()))
 
-    def warn(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.warn(transformer.transform(message, nino))
+    def warn(message: String, nino: NINO)(implicit transformer: LogMessageTransformer, hc: HeaderCarrier): Unit =
+      logger.warn(transformer.transform(message, nino, getCorrelationId()))
 
-    def warn(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.warn(transformer.transform(message, nino), e)
+    def warn(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: LogMessageTransformer, hc: HeaderCarrier): Unit =
+      logger.warn(transformer.transform(message, nino, getCorrelationId()), e)
 
-    def error(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.error(transformer.transform(message, nino))
+    def error(message: String, nino: NINO)(implicit transformer: LogMessageTransformer, hc: HeaderCarrier): Unit =
+      logger.error(transformer.transform(message, nino, getCorrelationId()))
 
-    def error(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.error(transformer.transform(message, nino), e)
+    def error(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: LogMessageTransformer, hc: HeaderCarrier): Unit =
+      logger.error(transformer.transform(message, nino, getCorrelationId()), e)
 
+    def getCorrelationId()(implicit hc: HeaderCarrier): Option[String] =
+      hc.headers.find(p ⇒ p._1 === "X-CorrelationId").map(_._2)
   }
+
 }
 
-@ImplementedBy(classOf[NINOLogMessageTransformerImpl])
-trait NINOLogMessageTransformer {
-  def transform(message: String, nino: NINO): String
+@ImplementedBy(classOf[LogMessageTransformerImpl])
+trait LogMessageTransformer {
+  def transform(message: String, nino: NINO, correlationId: Option[String] = None): String
 }
 
 @Singleton
-class NINOLogMessageTransformerImpl @Inject() (configuration: Configuration) extends NINOLogMessageTransformer {
+class LogMessageTransformerImpl @Inject() (configuration: Configuration) extends LogMessageTransformer {
 
-  private val loggingPrefix: NINO ⇒ String =
+  private val ninoPrefix: NINO ⇒ String =
     if (configuration.underlying.getBoolean("nino-logging.enabled")) {
       nino ⇒ s"For NINO [$nino]: "
     } else {
       _ ⇒ ""
     }
 
-  def transform(message: String, nino: NINO): String = loggingPrefix(nino) + message
+  private val correlationIdPrefix: Option[String] ⇒ String =
+    {
+      case Some(id) ⇒ s", For CorrelationId $id"
+      case None     ⇒ ""
+    }
+
+  def transform(message: String, nino: NINO, correlationId: Option[String]): String =
+    ninoPrefix(nino) + correlationIdPrefix(correlationId) + message
 
 }

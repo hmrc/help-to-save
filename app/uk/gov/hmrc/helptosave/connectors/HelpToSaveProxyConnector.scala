@@ -28,7 +28,7 @@ import uk.gov.hmrc.helptosave.config.WSHttp
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, Result, base64Encode}
+import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer, Result, base64Encode}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -43,15 +43,12 @@ trait HelpToSaveProxyConnector {
 }
 
 @Singleton
-class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer: NINOLogMessageTransformer)
+class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer: LogMessageTransformer)
   extends HelpToSaveProxyConnector with ServicesConfig with Logging {
 
   val proxyURL: String = baseUrl("help-to-save-proxy")
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-
-    val correlationId = hc.headers.find(p ⇒ p._1 === "X-CorrelationId").map(_._2)
-    logger.info(s"X-CorrelationId of the user is : ${correlationId.getOrElse("")}")
 
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {

@@ -25,7 +25,7 @@ import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmen
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer, toFuture}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
@@ -35,7 +35,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
                                            val itmpConnector:  ITMPEnrolmentConnector,
                                            proxyConnector:     HelpToSaveProxyConnector)(
     implicit
-    transformer: NINOLogMessageTransformer)
+    transformer: LogMessageTransformer)
   extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
 
   def createDEAccount(): Action[AnyContent] = Action.async {

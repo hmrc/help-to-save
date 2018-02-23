@@ -24,7 +24,7 @@ import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -34,7 +34,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
                                           val itmpConnector:  ITMPEnrolmentConnector,
                                           htsAuthConnector:   HtsAuthConnector)(
     implicit
-    transformer: NINOLogMessageTransformer
+    transformer: LogMessageTransformer
 )
   extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
 

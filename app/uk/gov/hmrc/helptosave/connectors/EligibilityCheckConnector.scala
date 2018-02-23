@@ -28,7 +28,7 @@ import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer, PagerDutyAlerting, Result, maskNino}
+import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -42,7 +42,7 @@ trait EligibilityCheckConnector {
 @Singleton
 class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
                                                metrics:           Metrics,
-                                               pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: NINOLogMessageTransformer)
+                                               pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer)
   extends EligibilityCheckConnector with ServicesConfig with DESConnector with Logging {
 
   val itmpBaseURL: String = baseUrl("itmp-eligibility-check")

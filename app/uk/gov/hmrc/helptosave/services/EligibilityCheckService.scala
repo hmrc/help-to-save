@@ -26,7 +26,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckEvent, EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, Result}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -44,7 +44,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
                                              eligibilityCheckConnector: EligibilityCheckConnector,
                                              configuration:             Configuration,
                                              auditor:                   HTSAuditor
-)(implicit ninoLogMessageTransformer: NINOLogMessageTransformer)
+)(implicit ninoLogMessageTransformer: LogMessageTransformer)
   extends EligibilityCheckService with Logging with ServicesConfig {
 
   private val isUCEnabled: Boolean = configuration.underlying.getBoolean("microservice.uc-enabled")

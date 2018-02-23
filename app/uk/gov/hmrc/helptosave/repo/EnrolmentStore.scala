@@ -27,11 +27,12 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{NINO, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import reactivemongo.play.json.ImplicitBSONHandlers._
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -39,9 +40,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait EnrolmentStore {
   import EnrolmentStore._
 
-  def get(nino: NINO): EitherT[Future, String, Status]
+  def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
 
-  def update(nino: NINO, itmpFlag: Boolean): EitherT[Future, String, Unit]
+  def update(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
 }
 
@@ -56,7 +57,7 @@ object EnrolmentStore {
 }
 
 class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
-                                     metrics: Metrics)(implicit ec: ExecutionContext, transformer: NINOLogMessageTransformer)
+                                     metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
   extends ReactiveRepository[EnrolmentData, BSONObjectID](
     collectionName = "enrolments",
     mongo          = mongo.mongoConnector.db,
@@ -81,7 +82,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
       upsert         = true
     ).map(_.result[EnrolmentData])
 
-  override def get(nino: String): EitherT[Future, String, EnrolmentStore.Status] = EitherT(
+  override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] = EitherT(
     {
       val timerContext = metrics.enrolmentStoreGetTimer.time()
 
@@ -100,7 +101,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
       }
     })
 
-  override def update(nino: NINO, itmpFlag: Boolean): EitherT[Future, String, Unit] = {
+  override def update(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
     log.debug(s"Updating entry into enrolment store (itmpFlag = $itmpFlag)", nino)
     EitherT({
       val timerContext = metrics.enrolmentStoreUpdateTimer.time()

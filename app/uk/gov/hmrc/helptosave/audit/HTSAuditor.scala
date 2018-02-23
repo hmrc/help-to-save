@@ -21,17 +21,18 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.helptosave.config.HtsAuditConnector
 import uk.gov.hmrc.helptosave.models.HTSEvent
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.control.NonFatal
 
 @Singleton
-class HTSAuditor @Inject() (implicit transformer: NINOLogMessageTransformer) extends Logging {
+class HTSAuditor @Inject() (implicit transformer: LogMessageTransformer) extends Logging {
   val auditConnector: AuditConnector = HtsAuditConnector
 
-  def sendEvent(event: HTSEvent, nino: NINO): Unit = {
+  def sendEvent(event: HTSEvent, nino: NINO)(implicit hc: HeaderCarrier): Unit = {
     val checkEventResult = auditConnector.sendEvent(event.value)
     checkEventResult.onFailure {
       case NonFatal(e) ⇒ logger.warn(s"Unable to post audit event of type ${event.value.auditType} to audit connector - ${e.getMessage}", e, nino)
