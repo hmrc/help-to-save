@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 class HTSAuditor @Inject() (implicit transformer: LogMessageTransformer) extends Logging {
   val auditConnector: AuditConnector = HtsAuditConnector
 
-  def sendEvent(event: HTSEvent, nino: NINO, correlationId: Option[String] = None): Unit = {
+  def sendEvent(event: HTSEvent, nino: NINO, correlationId: Option[String]): Unit = {
     val checkEventResult = auditConnector.sendEvent(event.value)
     checkEventResult.onFailure {
       case NonFatal(e) ⇒

@@ -66,7 +66,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
 
     r.map {
       case (Some(ecR), ucR) ⇒
-        auditor.sendEvent(EligibilityCheckEvent(nino, ecR, ucR), nino)
+        auditor.sendEvent(EligibilityCheckEvent(nino, ecR, ucR), nino, None)
         Some(ecR)
       case _ ⇒ None
     }
