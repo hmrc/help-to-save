@@ -39,6 +39,8 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
     transformer: LogMessageTransformer)
   extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour with ServicesConfig {
 
+  lazy val correlationIdHeaderName: String = getString("microservice.correlationIdHeaderName")
+
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒
       request.body.asJson.map(_.validate[NSIUserInfo]) match {
@@ -47,7 +49,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
             .map { response ⇒
               if (response.status === CREATED) {
 
-                val correlationId = request.headers.get(getString("microservice.correlationIdHeaderName"))
+                val correlationId = request.headers.get(correlationIdHeaderName)
 
                 enrolUser(userInfo.nino).value.onComplete {
                   case Success(Right(_)) ⇒ logger.debug("User was successfully enrolled into HTS", userInfo.nino, correlationId)
