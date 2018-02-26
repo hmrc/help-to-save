@@ -25,7 +25,7 @@ import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.TryOps._
-import uk.gov.hmrc.helptosave.util.{Logging, NINOLogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
 
 import scala.concurrent.Future
@@ -33,7 +33,7 @@ import scala.util.Try
 
 class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: HtsAuthConnector)(
     implicit
-    transformer: NINOLogMessageTransformer
+    transformer: LogMessageTransformer
 )
   extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
@@ -44,12 +44,12 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
   def store(email: String): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     Try(new String(base64Decoder.decode(email))).fold(
       { error ⇒
-        logger.warn(s"Could not store email. Could not decode email: $error", nino)
+        logger.warn(s"Could not store email. Could not decode email: $error", nino, None)
         Future.successful(InternalServerError)
       }, { decodedEmail ⇒
         emailStore.storeConfirmedEmail(decodedEmail, nino).fold(
           { e ⇒
-            logger.error(s"Could not store email: $e", nino)
+            logger.error(s"Could not store email: $e", nino, None)
             InternalServerError
           }, { _ ⇒
             Ok
@@ -62,7 +62,7 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
   def get(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     emailStore.getConfirmedEmail(nino).fold(
       { e ⇒
-        logger.warn(e, nino)
+        logger.warn(e, nino, None)
         InternalServerError
       },
       maybeEmail ⇒ Ok(Json.toJson(EmailGetResponse(maybeEmail)))

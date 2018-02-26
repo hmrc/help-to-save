@@ -26,7 +26,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckEvent, EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, Result}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, Result}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -44,7 +44,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
                                              eligibilityCheckConnector: EligibilityCheckConnector,
                                              configuration:             Configuration,
                                              auditor:                   HTSAuditor
-)(implicit ninoLogMessageTransformer: NINOLogMessageTransformer)
+)(implicit ninoLogMessageTransformer: LogMessageTransformer)
   extends EligibilityCheckService with Logging with ServicesConfig {
 
   private val isUCEnabled: Boolean = configuration.underlying.getBoolean("microservice.uc-enabled")
@@ -66,7 +66,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
 
     r.map {
       case (Some(ecR), ucR) ⇒
-        auditor.sendEvent(EligibilityCheckEvent(nino, ecR, ucR), nino)
+        auditor.sendEvent(EligibilityCheckEvent(nino, ecR, ucR), nino, None)
         Some(ecR)
       case _ ⇒ None
     }
@@ -75,7 +75,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
   private def getUCDetails(nino: NINO, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UCResponse]] =
     helpToSaveProxyConnector.ucClaimantCheck(nino, txnId)
       .fold({ e ⇒
-        logger.warn(s"Error while retrieving UC details: $e", nino)
+        logger.warn(s"Error while retrieving UC details: $e", nino, None)
         None
       }, Some(_)
       )

@@ -29,42 +29,49 @@ object Logging {
 
   implicit class LoggerOps(val logger: Logger) {
 
-    def debug(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.debug(transformer.transform(message, nino))
+    def debug(message: String, nino: NINO, correlationId: Option[String])(implicit transformer: LogMessageTransformer): Unit =
+      logger.debug(transformer.transform(message, nino, correlationId))
 
-    def info(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.info(transformer.transform(message, nino))
+    def info(message: String, nino: NINO, correlationId: Option[String])(implicit transformer: LogMessageTransformer): Unit =
+      logger.info(transformer.transform(message, nino, correlationId))
 
-    def warn(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.warn(transformer.transform(message, nino))
+    def warn(message: String, nino: NINO, correlationId: Option[String])(implicit transformer: LogMessageTransformer): Unit =
+      logger.warn(transformer.transform(message, nino, correlationId))
 
-    def warn(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.warn(transformer.transform(message, nino), e)
+    def warn(message: String, e: ⇒ Throwable, nino: NINO, correlationId: Option[String])(implicit transformer: LogMessageTransformer): Unit =
+      logger.warn(transformer.transform(message, nino, correlationId), e)
 
-    def error(message: String, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.error(transformer.transform(message, nino))
+    def error(message: String, nino: NINO, correlationId: Option[String])(implicit transformer: LogMessageTransformer): Unit =
+      logger.error(transformer.transform(message, nino, correlationId))
 
-    def error(message: String, e: ⇒ Throwable, nino: NINO)(implicit transformer: NINOLogMessageTransformer): Unit =
-      logger.error(transformer.transform(message, nino), e)
+    def error(message: String, e: ⇒ Throwable, nino: NINO, correlationId: Option[String])(implicit transformer: LogMessageTransformer): Unit =
+      logger.error(transformer.transform(message, nino, correlationId), e)
 
   }
+
 }
 
-@ImplementedBy(classOf[NINOLogMessageTransformerImpl])
-trait NINOLogMessageTransformer {
-  def transform(message: String, nino: NINO): String
+@ImplementedBy(classOf[LogMessageTransformerImpl])
+trait LogMessageTransformer {
+  def transform(message: String, nino: NINO, correlationId: Option[String] = None): String
 }
 
 @Singleton
-class NINOLogMessageTransformerImpl @Inject() (configuration: Configuration) extends NINOLogMessageTransformer {
+class LogMessageTransformerImpl @Inject() (configuration: Configuration) extends LogMessageTransformer {
 
-  private val loggingPrefix: NINO ⇒ String =
+  private val ninoPrefix: NINO ⇒ String =
     if (configuration.underlying.getBoolean("nino-logging.enabled")) {
-      nino ⇒ s"For NINO [$nino]: "
+      nino ⇒ s"For NINO [$nino], "
     } else {
       _ ⇒ ""
     }
 
-  def transform(message: String, nino: NINO): String = loggingPrefix(nino) + message
+  private val correlationIdPrefix: Option[String] ⇒ String = {
+    case Some(id) ⇒ s"for CorrelationId $id, "
+    case None     ⇒ ""
+  }
+
+  def transform(message: String, nino: NINO, correlationId: Option[String]): String =
+    ninoPrefix(nino) + correlationIdPrefix(correlationId) + message
 
 }

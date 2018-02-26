@@ -46,19 +46,13 @@ class StrideAuthSpec extends TestSupport {
       .expects(expectedPredicate, expectedRetrieval, *, *)
       .returning(result.fold(Future.failed, Future.successful))
 
-  class TestStrideAuth(roles: List[String]) extends StrideAuth(mockAuthConnector) {
-
-    override val authConnector: AuthConnector = mockAuthConnector
-
-  }
-
   "StrideAuth" must {
 
     val call = Call("GET", "url")
 
-    lazy val test = new TestStrideAuth(roles)
+    lazy val strideAuth = new StrideAuth(mockAuthConnector)
 
-    lazy val action = test.authorisedFromStride { _ ⇒ Ok }
+    lazy val action = strideAuth.authorisedFromStride { _ ⇒ Ok }
 
     "provide a authorised method" which {
 

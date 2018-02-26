@@ -33,13 +33,13 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val enrolmentBehaviour: EnrolmentBehaviour = mock[EnrolmentBehaviour]
 
   def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.update(_: NINO, _: Boolean))
-      .expects(nino, itmpFlag)
+    (enrolmentStore.update(_: NINO, _: Boolean)(_: HeaderCarrier))
+      .expects(nino, itmpFlag, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
-    (enrolmentStore.get(_: NINO))
-      .expects(nino)
+    (enrolmentStore.get(_: NINO)(_: HeaderCarrier))
+      .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockITMPConnector(nino: NINO)(result: Either[String, Unit]): Unit =

@@ -28,14 +28,14 @@ import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, NINOLogMessageTransformer, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, toFuture}
 
 import scala.concurrent.Future
 import scala.util.Try
 
 class StrideController @Inject() (eligibilityCheckService:      EligibilityCheckService,
                                   payePersonalDetailsConnector: PayePersonalDetailsConnector,
-                                  htsAuthConnector:             HtsAuthConnector)(implicit transformer: NINOLogMessageTransformer)
+                                  htsAuthConnector:             HtsAuthConnector)(implicit transformer: LogMessageTransformer)
 
   extends StrideAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
 
@@ -47,7 +47,7 @@ class StrideController @Inject() (eligibilityCheckService:      EligibilityCheck
       eligibilityCheckService.getEligibility(decodedNino).fold(
         {
           e ⇒
-            logger.warn(s"Could not check eligibility: $e", decodedNino)
+            logger.warn(s"Could not check eligibility: $e", decodedNino, None)
             InternalServerError
         }, {
           r ⇒
