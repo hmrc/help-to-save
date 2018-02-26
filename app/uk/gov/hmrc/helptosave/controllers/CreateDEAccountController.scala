@@ -52,7 +52,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
                 val correlationId = request.headers.get(correlationIdHeaderName)
 
                 enrolUser(userInfo.nino).value.onComplete {
-                  case Success(Right(_)) ⇒ logger.debug("User was successfully enrolled into HTS", userInfo.nino, correlationId)
+                  case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, correlationId)
                   case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, correlationId)
                   case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, correlationId)
                 }

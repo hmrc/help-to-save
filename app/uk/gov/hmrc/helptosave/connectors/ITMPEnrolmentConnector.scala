@@ -63,7 +63,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
 
           response.status match {
             case OK ⇒
-              logger.debug(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino, correlationId)
+              logger.info(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino, correlationId)
               Right(())
 
             case FORBIDDEN ⇒

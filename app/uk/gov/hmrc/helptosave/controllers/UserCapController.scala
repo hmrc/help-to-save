@@ -23,8 +23,6 @@ import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.Logging
 
-import scala.concurrent.ExecutionContext
-
 class UserCapController @Inject() (userCapService:   UserCapService,
                                    htsAuthConnector: HtsAuthConnector)
   extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {

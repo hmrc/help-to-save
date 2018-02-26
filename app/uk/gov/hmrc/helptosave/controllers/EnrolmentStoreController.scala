@@ -27,6 +27,7 @@ import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 
 import scala.concurrent.Future
 
@@ -52,16 +53,18 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
     handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 
-  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] =
+  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] = {
+    val correlationId = hc.getCorrelationId
     f.fold(
       { e ⇒
-        logger.warn(s"Could not $description: $e", nino, None)
+        logger.warn(s"Could not $description: $e", nino, correlationId)
         InternalServerError
       }, { a ⇒
-        logger.debug(s"$description successful", nino, None)
+        logger.info(s"$description successful", nino, correlationId)
         Ok(Json.toJson(a))
       }
     )
+  }
 
 }
 
