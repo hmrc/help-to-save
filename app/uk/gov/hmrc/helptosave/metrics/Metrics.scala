@@ -32,33 +32,33 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   val itmpEligibilityCheckTimer: Timer = timer("backend.itmp-eligibility-check-time")
 
-  val itmpEligibilityCheckErrorCounter: Counter = counter("backend.itmp-eligibility-check-error-counter")
+  val itmpEligibilityCheckErrorCounter: Counter = counter("backend.itmp-eligibility-check-error.count")
 
   val itmpSetFlagTimer: Timer = timer("backend.itmp-set-flag-time")
 
-  val itmpSetFlagConflictCounter: Counter = counter("backend.itmp-set-flag-conflict-counter")
+  val itmpSetFlagConflictCounter: Counter = counter("backend.itmp-set-flag-conflict.count")
 
-  val itmpSetFlagErrorCounter: Counter = counter("backend.itmp-set-flag-error-counter")
+  val itmpSetFlagErrorCounter: Counter = counter("backend.itmp-set-flag-error.count")
 
   val emailStoreUpdateTimer: Timer = timer("backend.email-store-update-time")
 
-  val emailStoreUpdateErrorCounter: Counter = counter("backend.email-store-update-error-counter")
+  val emailStoreUpdateErrorCounter: Counter = counter("backend.email-store-update-error.count")
 
   val emailStoreGetTimer: Timer = timer("backend.email-store-get-time")
 
-  val emailStoreGetErrorCounter: Counter = counter("backend.email-store-get-error-counter")
+  val emailStoreGetErrorCounter: Counter = counter("backend.email-store-get-error.count")
 
   val enrolmentStoreGetTimer: Timer = timer("backend.enrolment-store-get-time")
 
-  val enrolmentStoreGetErrorCounter: Counter = counter("backend.enrolment-store-get-error-counter")
+  val enrolmentStoreGetErrorCounter: Counter = counter("backend.enrolment-store-get-error.count")
 
   val enrolmentStoreUpdateTimer: Timer = timer("backend.enrolment-store-update-time")
 
-  val enrolmentStoreUpdateErrorCounter: Counter = counter("backend.enrolment-store-update-error-counter")
+  val enrolmentStoreUpdateErrorCounter: Counter = counter("backend.enrolment-store-update-error.count")
 
   val payePersonalDetailsTimer: Timer = timer("backend.paye-personal-details.time")
 
-  val payePersonalDetailsErrorCounter: Counter = counter("backend.paye-personal-details-error-counter")
+  val payePersonalDetailsErrorCounter: Counter = counter("backend.paye-personal-details-error.count")
 
 }
 
