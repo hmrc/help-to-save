@@ -20,35 +20,35 @@ import java.util.UUID
 
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.libs.json.{JsDefined, Json}
+import play.api.libs.json.{JsDefined, JsSuccess, Json}
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.Helpers.contentAsJson
 import play.api.test.{DefaultAwaitTimeout, FakeRequest}
 import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestData
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout with TestData {
 
   class TestApparatus {
     val nino = "AE123456D"
-    val ninoEncoded = "QUUxMjM0NTZE" //base64 Encoded
     val txnId = UUID.randomUUID()
 
     val eligibilityServiceConnector = mock[EligibilityCheckService]
     val payeDetailsConnector = mock[PayePersonalDetailsConnector]
+    val enrolmentStore = mock[EnrolmentStore]
 
     def doEligibilityRequest(controller: StrideController): Future[PlayResult] =
-      controller.eligibilityCheck(ninoEncoded)(FakeRequest())
+      controller.eligibilityCheck(nino)(FakeRequest())
 
     def doPayeDetailsRequest(controller: StrideController): Future[PlayResult] =
-      controller.getPayePersonalDetails(ninoEncoded)(FakeRequest())
+      controller.getPayePersonalDetails(nino)(FakeRequest())
 
     def mockEligibilityService(nino: NINO)(result: Either[String, Option[EligibilityCheckResult]]): Unit =
       (eligibilityServiceConnector.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
@@ -60,19 +60,54 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
-    val controller = new StrideController(eligibilityServiceConnector, payeDetailsConnector, mockAuthConnector)
+    def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
+      (enrolmentStore.get(_: NINO)(_: HeaderCarrier))
+        .expects(nino, *)
+        .returning(EitherT.fromEither[Future](result))
+
+    val controller = new StrideController(eligibilityServiceConnector, payeDetailsConnector, mockAuthConnector, enrolmentStore)
   }
 
   "The StrideController" when {
 
-    "handling requests to perform eligibility checks" must {
+    "handling requests to get enrolment status" must {
 
-        def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
+      "ask the enrolment store for the enrolment status and return the result" in new TestApparatus {
+        List[EnrolmentStore.Status](
+          EnrolmentStore.Enrolled(true),
+          EnrolmentStore.Enrolled(false),
+          EnrolmentStore.NotEnrolled
+        ).foreach{ status ⇒
+            inSequence {
+              mockSuccessfulAuthorisation()
+              mockEnrolmentStoreGet(nino)(Right(status))
+            }
+
+            val result = controller.getEnrolmentStatus(nino)(FakeRequest())
+            contentAsJson(result).validate[EnrolmentStore.Status] shouldBe JsSuccess(status)
+          }
+      }
+
+      "return an error if there is a problem getting the enrolment status" in new TestApparatus {
+        inSequence {
+          mockSuccessfulAuthorisation()
+          mockEnrolmentStoreGet(nino)(Left(""))
+        }
+
+        val result = controller.getEnrolmentStatus(nino)(FakeRequest())
+        status(result) shouldBe 500
+      }
+
+    }
+
+    "handling requests to perform eligibility checks" must {
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
         val eligibility = EligibilityCheckResult("x", 0, "y", 0)
-        mockSuccessfulAuthorisation()
-        mockEligibilityService(nino)(Right(Some(eligibility)))
+        inSequence {
+          mockSuccessfulAuthorisation()
+          mockEligibilityService(nino)(Right(Some(eligibility)))
+        }
 
         val result = doEligibilityRequest(controller)
         status(result) shouldBe 200
@@ -80,16 +115,20 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
       }
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
-        mockSuccessfulAuthorisation()
-        mockEligibilityService(nino)(Left("The Eligibility Check service is unavailable"))
+        inSequence {
+          mockSuccessfulAuthorisation()
+          mockEligibilityService(nino)(Left("The Eligibility Check service is unavailable"))
+        }
 
         val result = doEligibilityRequest(controller)
         status(result) shouldBe 500
       }
 
       "return with a status 200 and empty json if the nino is NOT_FOUND as its not in receipt of Tax Credit" in new TestApparatus {
-        mockSuccessfulAuthorisation()
-        mockEligibilityService(nino)(Right(None))
+        inSequence {
+          mockSuccessfulAuthorisation()
+          mockEligibilityService(nino)(Right(None))
+        }
 
         val result = doEligibilityRequest(controller)
         status(result) shouldBe 200
@@ -101,8 +140,10 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     "handling requests to Get paye-personal-details from DES" must {
 
       "ask the payeDetailsService for the personal details and return successful result for a valid nino" in new TestApparatus {
-        mockSuccessfulAuthorisation()
-        mockPayeDetailsConnector(nino)(Right(ppDetails))
+        inSequence {
+          mockSuccessfulAuthorisation()
+          mockPayeDetailsConnector(nino)(Right(ppDetails))
+        }
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 200
@@ -110,16 +151,20 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
       }
 
       "return with a status 500 if the paye-personal-details call fails" in new TestApparatus {
-        mockSuccessfulAuthorisation()
-        mockPayeDetailsConnector(nino)(Left("The paye-personal-details service is unavailable"))
+        inSequence {
+          mockSuccessfulAuthorisation()
+          mockPayeDetailsConnector(nino)(Left("The paye-personal-details service is unavailable"))
+        }
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500
       }
 
       "return with a status 200 and empty json if the pay details is NOT_FOUND in DES" in new TestApparatus {
-        mockSuccessfulAuthorisation()
-        mockPayeDetailsConnector(nino)(Left("no paye details found"))
+        inSequence {
+          mockSuccessfulAuthorisation()
+          mockPayeDetailsConnector(nino)(Left("no paye details found"))
+        }
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500

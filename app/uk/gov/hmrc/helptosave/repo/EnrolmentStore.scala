@@ -54,6 +54,27 @@ object EnrolmentStore {
 
   case object NotEnrolled extends Status
 
+  object Status {
+
+    private case class EnrolmentStatusJSON(enrolled: Boolean, itmpHtSFlag: Boolean)
+
+    private implicit val enrolmentStatusJSONFormat: Format[EnrolmentStatusJSON] = Json.format[EnrolmentStatusJSON]
+
+    implicit val enrolmentStatusFormat: Format[Status] = new Format[Status] {
+
+      override def writes(o: Status): JsValue = o match {
+        case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = true, itmpHtSFlag = itmpHtSFlag))
+        case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = false, itmpHtSFlag = false))
+      }
+
+      override def reads(json: JsValue): JsResult[Status] = json.validate[EnrolmentStatusJSON].map{
+        case EnrolmentStatusJSON(true, flag) ⇒ Enrolled(flag)
+        case EnrolmentStatusJSON(false, _)   ⇒ NotEnrolled
+      }
+    }
+
+  }
+
 }
 
 class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
