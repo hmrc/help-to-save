@@ -26,7 +26,6 @@ import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.TestSupport
-import uk.gov.hmrc.helptosave.util.base64Encode
 
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
@@ -107,7 +106,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
       val txnId = UUID.randomUUID()
       val nino = "AE123456C"
 
-      val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=${base64Encode(nino)}&transactionId=$txnId"
+      val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
 
       "handle success response from proxy" in {
 
