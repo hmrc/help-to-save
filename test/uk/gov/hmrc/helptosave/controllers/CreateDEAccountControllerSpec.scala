@@ -25,11 +25,12 @@ import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.models.NSIUserInfo
+import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.{TestEnrolmentBehaviour, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 // scalastyle:off magic.number
 class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehaviour {
@@ -39,43 +40,92 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
   class TestApparatus {
     val proxyConnector = mock[HelpToSaveProxyConnector]
 
-    val controller = new CreateDEAccountController(enrolmentStore, itmpConnector, proxyConnector)
+    val userCapService = mock[UserCapService]
+
+    val controller = new CreateDEAccountController(enrolmentStore, itmpConnector, proxyConnector, userCapService)
+
+    def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
+      (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(expectedPayload, *, *)
+        .returning(toFuture(response))
+
+    def mockUserCapServiceUpdate(result: Either[String, Unit]) = (
+      (userCapService.update _)
+      .expects()
+      .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
+    )
   }
 
   "The CreateAccountController" when {
 
+      def jsonString(dobValue: String): String =
+        s"""{
+         | "nino" : "nino",
+         | "forename" : "name",
+         | "surname" : "surname",
+         | "dateOfBirth" : $dobValue,
+         | "contactDetails" : {
+         |     "address1" : "1",
+         |     "address2" : "2",
+         |     "postcode": "postcode",
+         |     "countryCode" : "country",
+         |     "communicationPreference" : "preference"
+         | },
+         | "registrationChannel" : "channel"
+         |}
+           """.stripMargin
+
     "creating an account for a DE user" must {
+
+      val validJSONPayload = Json.parse(jsonString("20200101"))
+      val validNSIUserInfo = validJSONPayload.validate[NSIUserInfo].getOrElse(sys.error("Could not parse NSIUserInfo"))
 
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
-
-          (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(*, *, *)
-            .returning(toFuture(HttpResponse(CREATED)))
-
-          mockEnrolmentStoreUpdate("nino", false)(Right(()))
-          mockITMPConnector("nino")(Right(()))
-          mockEnrolmentStoreUpdate("nino", true)(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          inAnyOrder {
+            inSequence {
+              mockEnrolmentStoreUpdate("nino", false)(Right(()))
+              mockITMPConnector("nino")(Right(()))
+              mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            }
+            mockUserCapServiceUpdate(Right(()))
+          }
         }
 
-        val requestBody = Json.parse(jsonString("20200101"))
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
         status(result) shouldBe CREATED
       }
 
-      "create account if the request is valid NSIUserInfo json even if write to mongo fails" in new TestApparatus {
+      "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
         inSequence {
-
-          (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(*, *, *)
-            .returning(toFuture(HttpResponse(CREATED)))
-
-          mockEnrolmentStoreUpdate("nino", false)(Left(""))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          inAnyOrder {
+            mockEnrolmentStoreUpdate("nino", false)(Left(""))
+            mockUserCapServiceUpdate(Right(()))
+          }
         }
 
-        val requestBody = Json.parse(jsonString("20200101"))
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
+
+        status(result) shouldBe CREATED
+      }
+
+      "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
+        inSequence {
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          inAnyOrder {
+            inSequence {
+              mockEnrolmentStoreUpdate("nino", false)(Right(()))
+              mockITMPConnector("nino")(Right(()))
+              mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            }
+            mockUserCapServiceUpdate(Left(""))
+          }
+        }
+
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
         status(result) shouldBe CREATED
       }
@@ -93,23 +143,6 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetails":""}"""
       }
-
-        def jsonString(dobValue: String): String =
-          s"""{
-           | "nino" : "nino",
-           | "forename" : "name",
-           | "surname" : "surname",
-           | "dateOfBirth" : $dobValue,
-           | "contactDetails" : {
-           |     "address1" : "1",
-           |     "address2" : "2",
-           |     "postcode": "postcode",
-           |     "countryCode" : "country",
-           |     "communicationPreference" : "preference"
-           | },
-           | "registrationChannel" : "channel"
-           |}
-           """.stripMargin
 
     }
   }
