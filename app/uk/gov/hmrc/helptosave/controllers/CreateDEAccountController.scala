@@ -23,7 +23,8 @@ import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmentConnector}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
-import uk.gov.hmrc.helptosave.repo.EnrolmentStore
+import uk.gov.hmrc.helptosave.repo.{EnrolmentStore, UserCapStore}
+import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, toFuture}
@@ -34,7 +35,8 @@ import scala.util.{Failure, Success}
 
 class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
                                            val itmpConnector:  ITMPEnrolmentConnector,
-                                           proxyConnector:     HelpToSaveProxyConnector)(
+                                           proxyConnector:     HelpToSaveProxyConnector,
+                                           userCapService:     UserCapService)(
     implicit
     transformer: LogMessageTransformer)
   extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour with ServicesConfig {
@@ -56,6 +58,12 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
                   case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, correlationId)
                   case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, correlationId)
                 }
+
+                userCapService.update().onComplete {
+                  case Success(_) ⇒ logger.debug("Sucessfully updated user cap counts after DE account created", userInfo.nino, correlationId)
+                  case Failure(e)  ⇒ logger.warn(s"Could not update user cap counts after DE account created: ${e.getMessage}", userInfo.nino, correlationId)
+                }
+
               }
               Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
             }
