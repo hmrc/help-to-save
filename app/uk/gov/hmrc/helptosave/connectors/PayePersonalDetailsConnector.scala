@@ -53,7 +53,7 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
       {
         val timerContext = metrics.payePersonalDetailsTimer.time()
 
-        http.get(payePersonalDetailsUrl(nino), desHeaders)(hc.copy(authorization = None), ec)
+        http.get(payePersonalDetailsUrl(nino), payeHeaders)(hc.copy(authorization = None), ec)
           .map { response ⇒
             val time = timerContext.stop()
 

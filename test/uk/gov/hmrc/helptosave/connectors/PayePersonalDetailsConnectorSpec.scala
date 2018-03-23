@@ -23,7 +23,6 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -39,7 +38,7 @@ class PayePersonalDetailsConnectorSpec
 
   def mockGet(url: String)(response: Option[HttpResponse]) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(url, connector.desHeaders, *, *)
+      .expects(url, connector.payeHeaders, *, *)
       .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
   "PayePersonalDetailsConnector" must {

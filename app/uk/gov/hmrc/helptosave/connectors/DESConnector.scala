@@ -18,11 +18,18 @@ package uk.gov.hmrc.helptosave.connectors
 
 import uk.gov.hmrc.play.config.ServicesConfig
 
-trait DESConnector { this: ServicesConfig ⇒
+trait DESConnector {
+  this: ServicesConfig ⇒
+
+  private val authHeader = "Authorization" → s"Bearer ${getString("microservice.services.des.token")}"
 
   val desHeaders: Map[String, String] = Map(
     "Environment" → getString("microservice.services.des.environment"),
-    "Authorization" → s"Bearer ${getString("microservice.services.des.token")}"
+    authHeader
   )
 
+  val payeHeaders: Map[String, String] = Map(
+    "Environment" → getString("microservice.services.des.paye-personal-details.environment"),
+    authHeader
+  )
 }
