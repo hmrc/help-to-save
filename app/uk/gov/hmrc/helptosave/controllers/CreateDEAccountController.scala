@@ -61,7 +61,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
 
                 userCapService.update().onComplete {
                   case Success(_) ⇒ logger.debug("Sucessfully updated user cap counts after DE account created", userInfo.nino, correlationId)
-                  case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after DE account created: ${e.getMessage}", userInfo.nino, correlationId)
+                  case Failure(e)  ⇒ logger.warn(s"Could not update user cap counts after DE account created: ${e.getMessage}", userInfo.nino, correlationId)
                 }
 
               }
