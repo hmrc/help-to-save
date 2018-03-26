@@ -24,5 +24,4 @@ trait DESConnector { this: ServicesConfig ⇒
     "Environment" → getString("microservice.services.des.environment"),
     "Authorization" → s"Bearer ${getString("microservice.services.des.token")}"
   )
-
 }
