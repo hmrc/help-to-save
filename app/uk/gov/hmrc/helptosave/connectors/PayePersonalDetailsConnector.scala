@@ -44,7 +44,7 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                                                   pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer)
   extends PayePersonalDetailsConnector with ServicesConfig with DESConnector with Logging {
 
-  val payeURL: String = baseUrl("paye-personal-details")
+  val payeURL: String = baseUrl("pay-as-you-earn")
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
