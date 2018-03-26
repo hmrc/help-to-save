@@ -46,6 +46,8 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
 
   val payeURL: String = baseUrl("paye-personal-details")
 
+  val originatorIdHeader: (String, String) = "Originator-Id" → getString("microservice.services.paye-personal-details.originatorId")
+
   val headers: Map[String, String] = desHeaders.+(originatorIdHeader)
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"

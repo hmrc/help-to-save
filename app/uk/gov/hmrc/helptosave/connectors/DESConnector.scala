@@ -24,7 +24,4 @@ trait DESConnector { this: ServicesConfig ⇒
     "Environment" → getString("microservice.services.des.environment"),
     "Authorization" → s"Bearer ${getString("microservice.services.des.token")}"
   )
-
-  val originatorIdHeader: (String, String) = "Originator-Id" → getString("microservice.services.paye-personal-details.originatorId")
-
 }
