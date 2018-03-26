@@ -25,7 +25,7 @@ import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, PagerDutyAlerting, Result}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -44,7 +44,9 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                                                   pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer)
   extends PayePersonalDetailsConnector with ServicesConfig with DESConnector with Logging {
 
-  val payeURL: String = baseUrl("paye-personal-details")
+  val payeURL: String = baseUrl("pay-as-you-earn")
+
+  val headers: Map[String, String] = desHeaders.+(originatorIdHeader)
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
@@ -53,7 +55,7 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
       {
         val timerContext = metrics.payePersonalDetailsTimer.time()
 
-        http.get(payePersonalDetailsUrl(nino), desHeaders)(hc.copy(authorization = None), ec)
+        http.get(payePersonalDetailsUrl(nino), headers)(hc.copy(authorization = None), ec)
           .map { response ⇒
             val time = timerContext.stop()
 
