@@ -36,7 +36,8 @@ case class Address(line1:    String,
                    line3:    Option[String],
                    line4:    Option[String],
                    line5:    Option[String],
-                   postcode: String
+                   postcode: String,
+                   countryCode: Option[String]
 )
 
 object PayePersonalDetails {
@@ -93,7 +94,7 @@ object PayePersonalDetails {
         dob ← readDob()
         address ← readAddress()
       } yield {
-        PayePersonalDetails(name, dob, address)
+        PayePersonalDetails(name, dob, address.copy(countryCode = CountryCode.getCodeFor(address.countryCode)))
       }
     }
 
