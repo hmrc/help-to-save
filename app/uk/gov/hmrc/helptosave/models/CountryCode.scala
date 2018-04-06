@@ -20,33 +20,21 @@ import play.api.libs.json._
 
 import scala.collection.Map
 import scala.io.Source
-import scala.util.{Failure, Success, Try}
 
 case class CountryCode(code: Option[String])
 
 object CountryCode {
 
-  implicit def int2Str(id: Int): String = id.toString
-
   private val countryCodes: Map[String, Option[String]] = {
-    val is = getClass.getResourceAsStream("/resources/country.json")
-    Try {
-      val content = Source.fromInputStream(is).mkString
-      Json.parse(content) match {
-        case JsObject(fields) ⇒ fields.mapValues {
-          v ⇒ (v \ "alpha_two_code").asOpt[String]
-        }
-        case _ ⇒ Map.empty[String, Option[String]]
+    val content = Source.fromInputStream(getClass.getResourceAsStream("/resources/country.json")).mkString
+    Json.parse(content) match {
+      case JsObject(fields) ⇒ fields.mapValues {
+        v ⇒ (v \ "alpha_two_code").asOpt[String]
       }
-
-    } match {
-      case Success(codes) ⇒ codes
-      case Failure(ex) ⇒
-        is.close()
-        sys.error(s"unexpected error parsing country.json, error: ${ex.getMessage}")
+      case _ ⇒ Map.empty[String, Option[String]]
     }
   }
 
-  def getCodeFor(id: Option[String]): Option[String] =
-    id.flatMap(v ⇒ countryCodes.getOrElse(v, None))
+  def getCodeFor(id: String): Option[String] =
+    countryCodes.getOrElse(id, None)
 }

@@ -14,27 +14,29 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave
+package uk.gov.hmrc.helptosave.models
 
-import cats.data.EitherT
+import cats.instances.int._
+import cats.syntax.eq._
 
-import scala.concurrent.Future
-import scala.util.matching.Regex
+import scala.collection.Map
+import scala.io.Source
 
-package object util {
+object CallingCodes {
 
-  type NINO = String
-
-  type Result[A] = EitherT[Future, String, A]
-
-  implicit def toFuture[A](a: A): Future[A] = Future.successful(a)
-
-  private val ninoRegex: Regex = """[A-Za-z]{2}[0-9]{6}[A-Za-z]{1}""".r
-
-  def maskNino(original: String): String = {
-    Option(original) match {
-      case Some(text) ⇒ ninoRegex.replaceAllIn(text, "<NINO>")
-      case None       ⇒ original
+  private val callingCodes: Map[Int, String] = {
+    var codes = Map[Int, String]()
+    val content = Source.fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt")).getLines()
+    content.foreach {
+      row ⇒
+        val arr = row.split("-")
+        if (arr.size === 2) {
+          codes.+=(arr(0).trim.toInt -> arr(1).trim)
+        }
     }
+    codes
   }
+
+  def getCodeFor(id: Int): Option[String] =
+    callingCodes.get(id)
 }
