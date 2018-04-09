@@ -87,7 +87,7 @@ object PayePersonalDetails {
           readData[LocalDate](List(read("dateOfBirth")), "DateOfBirth")
 
         def readAddress(): JsResult[Address] = {
-          List(readSeq("addresses", "2"), readSeq("addresses", "1")) //7–Mobile Telephone Number, 1–Daytime Home Telephone Number
+          List(readSeq("addresses", "2"), readSeq("addresses", "1")) //1–Residential Address, 2–Correspondence Address
             .find(_.isDefined)
             .fold[JsResult[Address]](
               JsError("PayePersonalDetails : could not retrieve Address for user")
@@ -121,9 +121,8 @@ object PayePersonalDetails {
                     val convertedAreaDiallingCode = (v \ "convertedAreaDiallingCode").asOpt[String]
                     val telephoneNumber = (v \ "telephoneNumber").asOpt[String]
 
-                    (callingCode, convertedAreaDiallingCode, telephoneNumber) match {
-                      case (Some(ccKey), Some(cadc), Some(t)) ⇒
-                        val cc = callingCodes.getOrElse(ccKey, "")
+                    (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
+                      case (Some(cc), Some(cadc), Some(t)) ⇒
                         JsSuccess(Some(s"+$cc${cadc.stripPrefix("0")}$t"))
                       case (None, Some(cadc), Some(t)) ⇒
                         JsSuccess(Some(s"$cadc$t"))
