@@ -114,22 +114,23 @@ object PayePersonalDetails {
             .fold[JsResult[Option[String]]](
               JsSuccess(None)
             ) { x ⇒
-                x.fold[JsResult[Option[String]]](
-                  JsSuccess(None)
+                val mayBePhoneNumber = x.fold[Option[String]](
+                  None
                 ) { v ⇒
-                    val callingCode = (v \ "callingCode").asOpt[Int]
-                    val convertedAreaDiallingCode = (v \ "convertedAreaDiallingCode").asOpt[String]
-                    val telephoneNumber = (v \ "telephoneNumber").asOpt[String]
+                  val callingCode = (v \ "callingCode").asOpt[Int]
+                  val convertedAreaDiallingCode = (v \ "convertedAreaDiallingCode").asOpt[String]
+                  val telephoneNumber = (v \ "telephoneNumber").asOpt[String]
 
-                    (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
-                      case (Some(cc), Some(cadc), Some(t)) ⇒
-                        JsSuccess(Some(s"+$cc${cadc.stripPrefix("0")}$t"))
-                      case (None, Some(cadc), Some(t)) ⇒
-                        JsSuccess(Some(s"$cadc$t"))
-                      case _ ⇒
-                        JsSuccess(None)
-                    }
+                  (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
+                    case (Some(cc), Some(cadc), Some(t)) ⇒
+                      Some(s"+$cc${cadc.stripPrefix("0")}$t")
+                    case (None, Some(cadc), Some(t)) ⇒
+                      Some(s"$cadc$t")
+                    case _ ⇒
+                      None
                   }
+                }
+                JsSuccess(mayBePhoneNumber)
               }
         }
 
