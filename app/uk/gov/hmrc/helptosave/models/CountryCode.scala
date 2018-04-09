@@ -14,27 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave
+package uk.gov.hmrc.helptosave.models
 
-import cats.data.EitherT
+import play.api.libs.json._
 
-import scala.concurrent.Future
-import scala.util.matching.Regex
+import scala.collection.Map
+import scala.io.Source
 
-package object util {
+object CountryCode {
 
-  type NINO = String
-
-  type Result[A] = EitherT[Future, String, A]
-
-  implicit def toFuture[A](a: A): Future[A] = Future.successful(a)
-
-  private val ninoRegex: Regex = """[A-Za-z]{2}[0-9]{6}[A-Za-z]{1}""".r
-
-  def maskNino(original: String): String = {
-    Option(original) match {
-      case Some(text) ⇒ ninoRegex.replaceAllIn(text, "<NINO>")
-      case None       ⇒ original
+  val countryCodes: Map[Int, String] = {
+    val content = Source.fromInputStream(getClass.getResourceAsStream("/resources/country.json")).mkString
+    Json.parse(content) match {
+      case JsObject(fields) ⇒
+        fields
+          .map(x ⇒ (x._1.toInt, (x._2 \ "alpha_two_code").asOpt[String]))
+          .collect { case (id, Some(value)) ⇒ id -> value }
+      case _ ⇒ sys.error("no country codes were found, terminating the service")
     }
   }
 }

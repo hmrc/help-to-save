@@ -22,22 +22,23 @@ import java.time.format.DateTimeFormatter
 import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
+import uk.gov.hmrc.helptosave.models.CallingCodes.callingCodes
+import uk.gov.hmrc.helptosave.models.CountryCode.countryCodes
 
 case class PayePersonalDetails(name:        Name,
                                dateOfBirth: LocalDate,
-                               address:     Address)
+                               address:     Address,
+                               phoneNumber: Option[String])
 
-case class Name(firstForenameOrInitial: String,
-                surname:                String
-)
+case class Name(firstForenameOrInitial: String, surname: String)
 
-case class Address(line1:    String,
-                   line2:    String,
-                   line3:    Option[String],
-                   line4:    Option[String],
-                   line5:    Option[String],
-                   postcode: String
-)
+case class Address(line1:       String,
+                   line2:       String,
+                   line3:       Option[String],
+                   line4:       Option[String],
+                   line5:       Option[String],
+                   postcode:    String,
+                   countryCode: Option[String])
 
 object PayePersonalDetails {
 
@@ -85,15 +86,61 @@ object PayePersonalDetails {
         def readDob(): JsResult[LocalDate] =
           readData[LocalDate](List(read("dateOfBirth")), "DateOfBirth")
 
-        def readAddress(): JsResult[Address] =
-          readData[Address](List(readSeq("addresses", "2"), readSeq("addresses", "1")), "Address") // 1–Residential Address, 2–Correspondence Address
+        def readAddress(): JsResult[Address] = {
+          List(readSeq("addresses", "2"), readSeq("addresses", "1")) //1–Residential Address, 2–Correspondence Address
+            .find(_.isDefined)
+            .fold[JsResult[Address]](
+              JsError("PayePersonalDetails : could not retrieve Address for user")
+            ) { x ⇒
+                x.fold[JsResult[Address]](
+                  JsError("PayePersonalDetails : could not retrieve Address for user")
+                ) { v ⇒
+                    val line1 = (v \ "line1").as[String]
+                    val line2 = (v \ "line2").as[String]
+                    val line3 = (v \ "line3").asOpt[String]
+                    val line4 = (v \ "line4").asOpt[String]
+                    val line5 = (v \ "line5").asOpt[String]
+                    val postcode = (v \ "postcode").as[String]
+                    val countryCode = (v \ "countryCode").as[Int]
+
+                    JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCodes.get(countryCode)))
+                  }
+              }
+        }
+
+        def readPhoneNumber(): JsResult[Option[String]] = {
+          List(readSeq("phoneNumbers", "7"), readSeq("phoneNumbers", "1")) //7–Mobile Telephone Number, 1–Daytime Home Telephone Number
+            .find(_.isDefined)
+            .fold[JsResult[Option[String]]](
+              JsSuccess(None)
+            ) { x ⇒
+                val mayBePhoneNumber = x.fold[Option[String]](
+                  None
+                ) { v ⇒
+                  val callingCode = (v \ "callingCode").asOpt[Int]
+                  val convertedAreaDiallingCode = (v \ "convertedAreaDiallingCode").asOpt[String]
+                  val telephoneNumber = (v \ "telephoneNumber").asOpt[String]
+
+                  (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
+                    case (Some(cc), Some(cadc), Some(t)) ⇒
+                      Some(s"+$cc${cadc.stripPrefix("0")}$t")
+                    case (None, Some(cadc), Some(t)) ⇒
+                      Some(s"$cadc$t")
+                    case _ ⇒
+                      None
+                  }
+                }
+                JsSuccess(mayBePhoneNumber)
+              }
+        }
 
       for {
         name ← readName()
         dob ← readDob()
         address ← readAddress()
+        phoneNumber ← readPhoneNumber()
       } yield {
-        PayePersonalDetails(name, dob, address)
+        PayePersonalDetails(name, dob, address, phoneNumber)
       }
     }
 

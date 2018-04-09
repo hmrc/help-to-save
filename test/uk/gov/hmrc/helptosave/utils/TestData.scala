@@ -44,15 +44,19 @@ trait TestData {
        |      "line3": "Sometown",
        |      "line4": "Anyshire",
        |      "postcode": "AB12 3CD",
+       |      "countryCode": 1,
        |      "line5": "UK",
        |      "sequenceNumber": 1,
        |      "startDate": "2000-01-01"
        |    }
        |  },
-       |  "phoneNumbers": {
+       | "phoneNumbers": {
        |    "1": {
-       |      "telephoneNumber": "01999123456",
-       |      "telephoneType": 1
+       |	     "callingCode": 1,
+       |       "telephoneType": 1,
+       |	     "areaDiallingCode": "03000",
+       |	     "telephoneNumber": "599614",
+       |	     "convertedAreaDiallingCode": "020"
        |    }
        |  },
        |  "accountStatus": 0,
@@ -70,5 +74,5 @@ trait TestData {
   val ppDetails = PayePersonalDetails(
     Name("A", "Smith"),
     LocalDate.parse("1980-01-01"),
-    Address("1 Station Road", "Town Centre", Some("Sometown"), Some("Anyshire"), Some("UK"), "AB12 3CD"))
+    Address("1 Station Road", "Town Centre", Some("Sometown"), Some("Anyshire"), Some("UK"), "AB12 3CD", Some("GB")), Some("+4420599614"))
 }
