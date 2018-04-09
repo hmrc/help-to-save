@@ -21,20 +21,16 @@ import play.api.libs.json._
 import scala.collection.Map
 import scala.io.Source
 
-case class CountryCode(code: Option[String])
-
 object CountryCode {
 
-  private val countryCodes: Map[String, Option[String]] = {
+  val countryCodes: Map[Int, String] = {
     val content = Source.fromInputStream(getClass.getResourceAsStream("/resources/country.json")).mkString
     Json.parse(content) match {
-      case JsObject(fields) ⇒ fields.mapValues {
-        v ⇒ (v \ "alpha_two_code").asOpt[String]
-      }
-      case _ ⇒ Map.empty[String, Option[String]]
+      case JsObject(fields) ⇒
+        fields
+          .filter(x ⇒ (x._2 \ "alpha_two_code").asOpt[String].isDefined)
+          .map(x ⇒ (x._1.toInt, (x._2 \ "alpha_two_code").as[String]))
+      case _ ⇒ Map.empty[Int, String]
     }
   }
-
-  def getCodeFor(id: String): Option[String] =
-    countryCodes.getOrElse(id, None)
 }

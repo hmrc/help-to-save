@@ -16,27 +16,20 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import cats.instances.int._
-import cats.syntax.eq._
-
 import scala.collection.Map
 import scala.io.Source
 
 object CallingCodes {
 
-  private val callingCodes: Map[Int, String] = {
-    var codes = Map[Int, String]()
-    val content = Source.fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt")).getLines()
-    content.foreach {
-      row ⇒
-        val arr = row.split("-")
-        if (arr.size === 2) {
-          codes.+=(arr(0).trim.toInt -> arr(1).trim)
-        }
-    }
-    codes
+  val callingCodes: Map[Int, String] = {
+    Source.fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt"))
+      .getLines()
+      .foldLeft(Map.empty[Int, String]) {
+        case (acc, curr) ⇒
+          curr.split("-").toList match {
+            case key :: value :: Nil ⇒ acc.updated(key.trim.toInt, value.trim)
+            case _                   ⇒ acc
+          }
+      }
   }
-
-  def getCodeFor(id: Int): Option[String] =
-    callingCodes.get(id)
 }

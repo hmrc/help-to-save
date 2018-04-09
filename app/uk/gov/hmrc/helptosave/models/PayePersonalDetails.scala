@@ -22,6 +22,8 @@ import java.time.format.DateTimeFormatter
 import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
+import uk.gov.hmrc.helptosave.models.CallingCodes.callingCodes
+import uk.gov.hmrc.helptosave.models.CountryCode.countryCodes
 
 case class PayePersonalDetails(name:        Name,
                                dateOfBirth: LocalDate,
@@ -101,7 +103,7 @@ object PayePersonalDetails {
                     val postcode = (v \ "postcode").as[String]
                     val countryCode = (v \ "countryCode").as[Int]
 
-                    JsSuccess(Address(line1, line2, line3, line4, line5, postcode, CountryCode.getCodeFor(countryCode.toString)))
+                    JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCodes.get(countryCode)))
                   }
               }
         }
@@ -121,8 +123,8 @@ object PayePersonalDetails {
 
                     (callingCode, convertedAreaDiallingCode, telephoneNumber) match {
                       case (Some(ccKey), Some(cadc), Some(t)) ⇒
-                        val cc = CallingCodes.getCodeFor(ccKey).getOrElse("")
-                        JsSuccess(Some(s"+$cc${cadc.replaceFirst("^0+(?!$)", "")}$t"))
+                        val cc = callingCodes.getOrElse(ccKey, "")
+                        JsSuccess(Some(s"+$cc${cadc.stripPrefix("0")}$t"))
                       case (None, Some(cadc), Some(t)) ⇒
                         JsSuccess(Some(s"$cadc$t"))
                       case _ ⇒
