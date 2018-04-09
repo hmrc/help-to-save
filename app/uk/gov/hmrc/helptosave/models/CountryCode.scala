@@ -28,8 +28,8 @@ object CountryCode {
     Json.parse(content) match {
       case JsObject(fields) ⇒
         fields
-          .filter(x ⇒ (x._2 \ "alpha_two_code").asOpt[String].isDefined)
-          .map(x ⇒ (x._1.toInt, (x._2 \ "alpha_two_code").as[String]))
+          .map(x ⇒ (x._1.toInt, (x._2 \ "alpha_two_code").asOpt[String]))
+          .collect { case (id, Some(value)) ⇒ id -> value }
       case _ ⇒ Map.empty[Int, String]
     }
   }
