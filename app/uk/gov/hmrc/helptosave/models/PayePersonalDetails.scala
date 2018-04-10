@@ -126,6 +126,8 @@ object PayePersonalDetails {
                       Some(s"+$cc${cadc.stripPrefix("0")}$t")
                     case (None, Some(cadc), Some(t)) ⇒
                       Some(s"$cadc$t")
+                    case (None, None, Some(t)) ⇒
+                      Some(t)
                     case _ ⇒
                       None
                   }
