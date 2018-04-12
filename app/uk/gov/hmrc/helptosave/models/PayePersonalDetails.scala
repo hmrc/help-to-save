@@ -59,92 +59,84 @@ object PayePersonalDetails {
 
     override def reads(json: JsValue): JsResult[PayePersonalDetails] = {
 
-        def readSeq(field: String, sequence: String): Option[JsValue] = (json \ field \ sequence).asOpt[JsValue]
-
-        def read(field: String): Option[JsValue] = (json \ field).asOpt[JsValue]
-
-        def readData[T](fields: List[Option[JsValue]], fieldLabel: String)(implicit tjs: Format[T]): JsResult[T] = {
-          fields
-            .find(_.isDefined)
-            .fold[JsResult[T]](
-              JsError(s"PayePersonalDetails : could not retrieve $fieldLabel for user")
-            ) { x ⇒
-                x.fold[JsResult[T]](
-                  JsError(s"PayePersonalDetails : $fieldLabel not found for user")
-                ) {
-                    _.validate[T].fold[JsResult[T]](
-                      errors ⇒ JsError(s"could not read $fieldLabel from PayePersonalDetails response, errors: $errors"),
-                      name ⇒ JsSuccess(name)
-                    )
-                  }
-              }
-        }
-
-        def readName(): JsResult[Name] =
-          readData[Name](List(readSeq("names", "1"), readSeq("names", "2"), readSeq("names", "3")), "Name")
-
-        def readDob(): JsResult[LocalDate] =
-          readData[LocalDate](List(read("dateOfBirth")), "DateOfBirth")
-
-        def readAddress(): JsResult[Address] = {
-          List(readSeq("addresses", "2"), readSeq("addresses", "1")) //1–Residential Address, 2–Correspondence Address
-            .find(_.isDefined)
-            .fold[JsResult[Address]](
-              JsError("PayePersonalDetails : could not retrieve Address for user")
-            ) { x ⇒
-                x.fold[JsResult[Address]](
-                  JsError("PayePersonalDetails : could not retrieve Address for user")
-                ) { v ⇒
-                    val line1 = (v \ "line1").as[String]
-                    val line2 = (v \ "line2").as[String]
-                    val line3 = (v \ "line3").asOpt[String]
-                    val line4 = (v \ "line4").asOpt[String]
-                    val line5 = (v \ "line5").asOpt[String]
-                    val postcode = (v \ "postcode").as[String]
-                    val countryCode = (v \ "countryCode").as[Int]
-
-                    JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCodes.get(countryCode)))
-                  }
-              }
-        }
-
-        def readPhoneNumber(): JsResult[Option[String]] = {
-          List(readSeq("phoneNumbers", "7"), readSeq("phoneNumbers", "1")) //7–Mobile Telephone Number, 1–Daytime Home Telephone Number
-            .find(_.isDefined)
-            .fold[JsResult[Option[String]]](
-              JsSuccess(None)
-            ) { x ⇒
-                val mayBePhoneNumber = x.fold[Option[String]](
-                  None
-                ) { v ⇒
-                  val callingCode = (v \ "callingCode").asOpt[Int]
-                  val convertedAreaDiallingCode = (v \ "convertedAreaDiallingCode").asOpt[String]
-                  val telephoneNumber = (v \ "telephoneNumber").asOpt[String]
-
-                  (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
-                    case (Some(cc), Some(cadc), Some(t)) ⇒
-                      Some(s"+$cc${cadc.stripPrefix("0")}$t")
-                    case (None, Some(cadc), Some(t)) ⇒
-                      Some(s"$cadc$t")
-                    case (None, None, Some(t)) ⇒
-                      Some(t)
-                    case _ ⇒
-                      None
-                  }
-                }
-                JsSuccess(mayBePhoneNumber)
-              }
-        }
-
       for {
-        name ← readName()
-        dob ← readDob()
-        address ← readAddress()
-        phoneNumber ← readPhoneNumber()
+        name ← readName(json)
+        dob ← readDob(json)
+        address ← readAddress(json)
+        phoneNumber ← readPhoneNumber(json)
       } yield {
         PayePersonalDetails(name, dob, address, phoneNumber)
       }
     }
 
+    def readSeq(json: JsValue, field: String, sequence: String): Option[JsValue] = (json \ field \ sequence).asOpt[JsValue]
+
+    def read(json: JsValue, field: String): Option[JsValue] = (json \ field).asOpt[JsValue]
+
+    def readName(json: JsValue): JsResult[Name] = {
+      readSeq(json, "names", "1").orElse(readSeq(json, "names", "2")).orElse(readSeq(json, "names", "3"))
+        .fold[JsResult[Name]](
+          JsError("No Name found in the DES response")
+        ) { x ⇒
+            x.validate[Name].fold[JsResult[Name]](
+              errors ⇒ JsError(s"could not read Name from PayePersonalDetails response, errors: $errors"),
+              name ⇒ JsSuccess(name)
+            )
+          }
+    }
+
+    def readDob(json: JsValue): JsResult[LocalDate] = {
+      read(json, "dateOfBirth")
+        .fold[JsResult[LocalDate]](
+          JsError("No DateOfBirth found in the DES response")
+        ) { x ⇒
+            x.validate[LocalDate].fold[JsResult[LocalDate]](
+              errors ⇒ JsError(s"could not read DateOfBirth from PayePersonalDetails response, errors: $errors"),
+              dob ⇒ JsSuccess(dob)
+            )
+          }
+    }
+
+    def readAddress(json: JsValue): JsResult[Address] = {
+      readSeq(json, "addresses", "2").orElse(readSeq(json, "addresses", "1")) //1–Residential Address, 2–Correspondence Address
+        .fold[JsResult[Address]](
+          JsError("No Address found in the DES response")
+        )(v ⇒ {
+            val line1 = (v \ "line1").as[String]
+            val line2 = (v \ "line2").as[String]
+            val line3 = (v \ "line3").asOpt[String]
+            val line4 = (v \ "line4").asOpt[String]
+            val line5 = (v \ "line5").asOpt[String]
+            val postcode = (v \ "postcode").as[String]
+            val countryCode = (v \ "countryCode").as[Int]
+
+            JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCodes.get(countryCode)))
+          }
+          )
+    }
+
+    def readPhoneNumber(json: JsValue): JsResult[Option[String]] = {
+      readSeq(json, "phoneNumbers", "7").orElse(readSeq(json, "phoneNumbers", "1")) //7–Mobile Telephone Number, 1–Daytime Home Telephone Number
+        .fold[JsResult[Option[String]]](
+          JsSuccess(None)
+        )(v ⇒ {
+            val callingCode = (v \ "callingCode").asOpt[Int]
+            val convertedAreaDiallingCode = (v \ "convertedAreaDiallingCode").asOpt[String]
+            val telephoneNumber = (v \ "telephoneNumber").asOpt[String]
+
+            JsSuccess {
+              (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
+                case (Some(cc), Some(cadc), Some(t)) ⇒
+                  Some(s"+$cc${cadc.stripPrefix("0")}$t")
+                case (None, Some(cadc), Some(t)) ⇒
+                  Some(s"$cadc$t")
+                case (None, None, Some(t)) ⇒
+                  Some(t)
+                case _ ⇒
+                  None
+              }
+            }
+          })
+    }
   }
 }
