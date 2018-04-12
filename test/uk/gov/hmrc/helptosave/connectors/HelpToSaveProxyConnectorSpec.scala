@@ -26,7 +26,6 @@ import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.TestSupport
-
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.duration._

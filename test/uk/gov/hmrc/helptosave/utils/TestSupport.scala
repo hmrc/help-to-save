@@ -20,6 +20,7 @@ import java.time.LocalDate
 
 import com.codahale.metrics.{Counter, Timer}
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
+import com.typesafe.config.ConfigFactory
 import hmrc.smartstub._
 import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
@@ -27,9 +28,9 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
-import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl, NINO}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -39,10 +40,19 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
 
   lazy val additionalConfig = Configuration()
 
-  lazy val fakeApplication: Application =
+  def buildFakeApplication(additionalConfig: Configuration): Application = {
     new GuiceApplicationBuilder()
-      .configure(Configuration("metrics.enabled" → false) ++ additionalConfig)
+      .configure(Configuration(
+        ConfigFactory.parseString(
+          """
+            | metrics.enabled       = false
+            | play.modules.disabled = [ "uk.gov.hmrc.helptosaveproxy.config.HealthCheckModule" ]
+          """.stripMargin)
+      ) ++ additionalConfig)
       .build()
+  }
+
+  lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
 
   override def beforeAll() {
     Play.start(fakeApplication)
@@ -79,5 +89,7 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
   def randomNINO(): String = hmrcGenerator.nextNino.value
 
   implicit lazy val transformer: LogMessageTransformer = new LogMessageTransformerImpl(configuration)
+
+  implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
 }
 

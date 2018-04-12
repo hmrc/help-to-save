@@ -23,6 +23,7 @@ import cats.instances.future._
 import org.scalatest.EitherValues
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.utils.TestSupport
@@ -30,8 +31,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.audit.model.DataEvent
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
@@ -39,9 +40,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
   private val mockAuditConnector = mock[AuditConnector]
 
-  val htsAuditor = new HTSAuditor {
-    override val auditConnector: AuditConnector = mockAuditConnector
-  }
+  val htsAuditor = new HTSAuditor(mockAuditConnector)
 
   private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: Either[String, Option[EligibilityCheckResult]]) = {
     (mockEligibilityConnector.isEligible(_: String, _: Option[UCResponse])(_: HeaderCarrier, _: ExecutionContext))
@@ -64,6 +63,11 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
       .expects(where { (dataEvent, _, _) ⇒ dataEvent.auditType === "EligibilityResult" })
       .returning(Future.successful(AuditResult.Success))
 
+  def newEligibilityCheckService(config: (String, Any)*) = {
+    implicit val appConfig: AppConfig = buildFakeApplication(Configuration.from(config.toMap)).injector.instanceOf[AppConfig]
+    new EligibilityCheckServiceImpl(mockProxyConnector, mockEligibilityConnector, htsAuditor)
+  }
+
   "EligibilityCheckService" when {
 
     val nino = "AE123456C"
@@ -73,7 +77,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
     "handling eligibility calls when UC is disabled" must {
 
-      lazy val eligibilityCheckService = new EligibilityCheckServiceImpl(mockProxyConnector, mockEligibilityConnector, configuration, htsAuditor)
+      lazy val eligibilityCheckService = newEligibilityCheckService()
 
       "handle happy path and return result as expected" in {
 
@@ -109,8 +113,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
           mockAuditEligibilityEvent()
         }
 
-        val ucEnabledConfig = fakeApplication.configuration.++(Configuration("microservice.uc-enabled" -> true))
-        val eligibilityCheckService = new EligibilityCheckServiceImpl(mockProxyConnector, mockEligibilityConnector, ucEnabledConfig, htsAuditor)
+        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
 
@@ -125,8 +128,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
           mockAuditEligibilityEvent()
         }
 
-        val ucEnabledConfig = fakeApplication.configuration.++(Configuration("microservice.uc-enabled" -> "true"))
-        val eligibilityCheckService = new EligibilityCheckServiceImpl(mockProxyConnector, mockEligibilityConnector, ucEnabledConfig, htsAuditor)
+        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
 
@@ -141,8 +143,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
           mockDESEligibilityCheck(nino, Some(uCResponse))(Left("unexpected error during DES eligibility check"))
         }
 
-        val ucEnabledConfig = fakeApplication.configuration.++(Configuration("microservice.uc-enabled" -> "true"))
-        val eligibilityCheckService = new EligibilityCheckServiceImpl(mockProxyConnector, mockEligibilityConnector, ucEnabledConfig, htsAuditor)
+        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
 

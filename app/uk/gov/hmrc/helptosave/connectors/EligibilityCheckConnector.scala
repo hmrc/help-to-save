@@ -22,15 +22,14 @@ import cats.instances.option._
 import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
-import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer, PagerDutyAlerting, Result, maskNino}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,10 +41,10 @@ trait EligibilityCheckConnector {
 @Singleton
 class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
                                                metrics:           Metrics,
-                                               pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer)
-  extends EligibilityCheckConnector with ServicesConfig with DESConnector with Logging {
+                                               pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+  extends EligibilityCheckConnector with Logging {
 
-  val itmpBaseURL: String = baseUrl("itmp-eligibility-check")
+  val itmpBaseURL: String = appConfig.baseUrl("itmp-eligibility-check")
 
   def url(nino: String, ucResponse: Option[UCResponse]): String = {
     ucResponse match {
@@ -61,7 +60,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
       {
         val timerContext = metrics.itmpEligibilityCheckTimer.time()
 
-        http.get(url(nino, ucResponse), desHeaders)(hc.copy(authorization = None), ec)
+        http.get(url(nino, ucResponse), appConfig.desHeaders)(hc.copy(authorization = None), ec)
           .map { response ⇒
             val time = timerContext.stop()
 

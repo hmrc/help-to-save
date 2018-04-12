@@ -21,15 +21,15 @@ import cats.syntax.eq._
 import com.google.inject.Inject
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmentConnector}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
-import uk.gov.hmrc.helptosave.repo.{EnrolmentStore, UserCapStore}
+import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, toFuture}
-import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.util.{Failure, Success}
 
@@ -38,10 +38,8 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
                                            proxyConnector:     HelpToSaveProxyConnector,
                                            userCapService:     UserCapService)(
     implicit
-    transformer: LogMessageTransformer)
-  extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour with ServicesConfig {
-
-  lazy val correlationIdHeaderName: String = getString("microservice.correlationIdHeaderName")
+    transformer: LogMessageTransformer, appConfig: AppConfig)
+  extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
 
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒
@@ -51,7 +49,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
             .map { response ⇒
               if (response.status === CREATED) {
 
-                val correlationId = request.headers.get(correlationIdHeaderName)
+                val correlationId = request.headers.get(appConfig.correlationIdHeaderName)
 
                 enrolUser(userInfo.nino).value.onComplete {
                   case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, correlationId)

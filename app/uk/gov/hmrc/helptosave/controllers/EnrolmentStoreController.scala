@@ -21,23 +21,23 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Result}
-import uk.gov.hmrc.helptosave.config.HtsAuthConnector
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getCorrelationId
 import uk.gov.hmrc.helptosave.util.Logging._
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 
 import scala.concurrent.Future
 
 class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
                                           val itmpConnector:  ITMPEnrolmentConnector,
-                                          htsAuthConnector:   HtsAuthConnector)(
+                                          authConnector:      AuthConnector)(
     implicit
-    transformer: LogMessageTransformer
-)
-  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
+    transformer: LogMessageTransformer, appConfig: AppConfig)
+  extends HelpToSaveAuth(authConnector) with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
 
   import EnrolmentStoreController._
 
@@ -54,7 +54,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
   }
 
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] = {
-    val correlationId = hc.getCorrelationId
+    val correlationId = getCorrelationId(hc, appConfig.correlationIdHeaderName)
     f.fold(
       { e ⇒
         logger.warn(s"Could not $description: $e", nino, correlationId)

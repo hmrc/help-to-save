@@ -20,18 +20,18 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.helptosave.config.HtsAuthConnector
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
 class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckService,
-                                            htsAuthConnector:        HtsAuthConnector)(
+                                            authConnector:           AuthConnector)(
     implicit
-    transformer: LogMessageTransformer
-)
-  extends HelpToSaveAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
+    transformer: LogMessageTransformer, appConfig: AppConfig)
+  extends HelpToSaveAuth(authConnector) with Logging with WithMdcExecutionContext {
 
   def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     eligibilityCheckService.getEligibility(nino).fold(

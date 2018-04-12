@@ -18,10 +18,10 @@ package uk.gov.hmrc.helptosave.repo
 
 import play.api.libs.json.Json
 import reactivemongo.api.indexes.Index
-import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.util.NINO
+import uk.gov.hmrc.helptosave.utils.TestSupport
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}

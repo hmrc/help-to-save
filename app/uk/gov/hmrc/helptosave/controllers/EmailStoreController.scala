@@ -22,16 +22,16 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.helptosave.config.HtsAuthConnector
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.repo.EmailStore
-import uk.gov.hmrc.helptosave.util.TryOps._
-import uk.gov.hmrc.helptosave.util.{Logging, LogMessageTransformer}
 import uk.gov.hmrc.helptosave.util.Logging._
+import uk.gov.hmrc.helptosave.util.TryOps._
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
 import scala.concurrent.Future
 import scala.util.Try
 
-class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: HtsAuthConnector)(
+class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: AuthConnector)(
     implicit
     transformer: LogMessageTransformer
 )

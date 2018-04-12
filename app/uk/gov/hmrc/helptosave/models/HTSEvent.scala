@@ -18,26 +18,26 @@ package uk.gov.hmrc.helptosave.models
 
 import cats.instances.int._
 import cats.syntax.eq._
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
 import uk.gov.hmrc.play.audit.model.DataEvent
-import uk.gov.hmrc.play.config.AppName
 
 trait HTSEvent {
   val value: DataEvent
 }
 
-object HTSEvent extends AppName {
-  def apply(auditType: String,
+object HTSEvent {
+  def apply(appName:   String,
+            auditType: String,
             detail:    Map[String, String])(implicit hc: HeaderCarrier): DataEvent =
     DataEvent(appName, auditType = auditType, detail = detail, tags = hc.toAuditTags("", "N/A"))
-
 }
 
 case class EligibilityCheckEvent(nino:              NINO,
                                  eligibilityResult: EligibilityCheckResult,
-                                 ucResponse:        Option[UCResponse])(implicit hc: HeaderCarrier) extends HTSEvent {
+                                 ucResponse:        Option[UCResponse])(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
   val value: DataEvent = {
     val details = {
@@ -55,7 +55,7 @@ case class EligibilityCheckEvent(nino:              NINO,
       result ++ ucData(ucResponse)
     }
 
-    HTSEvent("EligibilityResult", details)
+    HTSEvent(appConfig.appName, "EligibilityResult", details)
   }
 
   def ucData(ucResponse: Option[UCResponse]): Map[String, String] = ucResponse match {

@@ -19,15 +19,14 @@ package uk.gov.hmrc.helptosave.connectors
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
-import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, PagerDutyAlerting, Result}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,15 +40,15 @@ trait PayePersonalDetailsConnector {
 @Singleton
 class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                                                   metrics:           Metrics,
-                                                  pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer)
-  extends PayePersonalDetailsConnector with ServicesConfig with DESConnector with Logging {
+                                                  pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+  extends PayePersonalDetailsConnector with Logging {
 
-  val payeURL: String = baseUrl("paye-personal-details")
+  val payeURL: String = appConfig.baseUrl("paye-personal-details")
 
   val ppdHeaders: Map[String, String] = Map(
-    "Environment" → getString("microservice.services.paye-personal-details.environment"),
-    "Authorization" → s"Bearer ${getString("microservice.services.paye-personal-details.token")}",
-    "Originator-Id" → getString("microservice.services.paye-personal-details.originatorId")
+    "Environment" → appConfig.getString("microservice.services.paye-personal-details.environment"),
+    "Authorization" → s"Bearer ${appConfig.getString("microservice.services.paye-personal-details.token")}",
+    "Originator-Id" → appConfig.getString("microservice.services.paye-personal-details.originatorId")
   )
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"

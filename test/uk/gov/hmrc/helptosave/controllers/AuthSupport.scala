@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve._
-import uk.gov.hmrc.helptosave.config.HtsAuthConnector
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http._
 
@@ -30,7 +30,7 @@ trait AuthSupport extends TestSupport {
 
   val mockedNinoRetrieval = Some(nino)
 
-  val mockAuthConnector: HtsAuthConnector = mock[HtsAuthConnector]
+  val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   def mockAuthResultWithFail(predicate: Predicate)(ex: Throwable): Unit =
     (mockAuthConnector.authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))

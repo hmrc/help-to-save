@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import javax.inject.Singleton
-
 import cats.instances.int._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject}
-import play.api.Configuration
+import javax.inject.Singleton
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
@@ -41,15 +40,15 @@ trait UserCapService {
 }
 
 @Singleton
-class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, configuration: Configuration) extends UserCapService with Logging {
+class UserCapServiceImpl @Inject() (userCapStore: UserCapStore)(implicit appConfig: AppConfig) extends UserCapService with Logging {
 
-  private val isDailyCapEnabled = configuration.underlying.getBoolean("microservice.user-cap.daily.enabled")
+  private val isDailyCapEnabled = appConfig.getBoolean("microservice.user-cap.daily.enabled")
 
-  private val isTotalCapEnabled = configuration.underlying.getBoolean("microservice.user-cap.total.enabled")
+  private val isTotalCapEnabled = appConfig.getBoolean("microservice.user-cap.total.enabled")
 
-  private val dailyCap = configuration.underlying.getInt("microservice.user-cap.daily.limit")
+  private val dailyCap = appConfig.getInt("microservice.user-cap.daily.limit")
 
-  private val totalCap = configuration.underlying.getInt("microservice.user-cap.total.limit")
+  private val totalCap = appConfig.getInt("microservice.user-cap.total.limit")
 
   require(dailyCap >= 0 && totalCap >= 0)
 

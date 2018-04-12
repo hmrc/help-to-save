@@ -18,28 +18,13 @@ package uk.gov.hmrc.helptosave.config
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.Writes
-import uk.gov.hmrc.auth.core.PlayAuthConnector
-import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.play.audit.http.HttpAuditing
-import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.config.{AppName, ServicesConfig}
 import uk.gov.hmrc.play.http.ws._
-import uk.gov.hmrc.play.microservice.config.LoadAuditingConfig
 
 import scala.concurrent.{ExecutionContext, Future}
-
-object HtsAuditConnector extends AuditConnector with AppName {
-  override lazy val auditingConfig: AuditingConfig = LoadAuditingConfig("auditing")
-}
-
-@Singleton
-class HtsAuthConnector @Inject() (wsHttp: WSHttp) extends PlayAuthConnector with ServicesConfig {
-  override lazy val serviceUrl: String = baseUrl("auth")
-
-  override def http: WSHttp = wsHttp
-}
 
 @ImplementedBy(classOf[WSHttpExtension])
 trait WSHttp
@@ -63,7 +48,7 @@ trait WSHttp
 }
 
 @Singleton
-class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
+class WSHttpExtension @Inject() (override val auditConnector: AuditConnector, appConfig: AppConfig) extends WSHttp with HttpAuditing {
 
   val httpReads: HttpReads[HttpResponse] = new HttpReads[HttpResponse] {
     override def read(method: String, url: String, response: HttpResponse) = response
@@ -71,9 +56,7 @@ class WSHttpExtension extends WSHttp with HttpAuditing with ServicesConfig {
 
   override val hooks: Seq[HttpHook] = NoneRequired
 
-  override def auditConnector: AuditConnector = HtsAuditConnector
-
-  override def appName: String = getString("appName")
+  override def appName: String = appConfig.getString("appName")
 
   override def mapErrors(httpMethod: String, url: String, f: Future[HttpResponse])(implicit ec: ExecutionContext): Future[HttpResponse] = f
 

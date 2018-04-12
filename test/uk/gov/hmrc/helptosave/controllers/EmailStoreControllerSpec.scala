@@ -24,9 +24,9 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
-import HelpToSaveAuth._
 
 import scala.concurrent.{ExecutionContext, Future}
 
