@@ -19,6 +19,8 @@ package uk.gov.hmrc.helptosave.services
 import java.util.UUID
 
 import cats.data.EitherT
+import cats.syntax.eq._
+import cats.instances.int._
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
@@ -58,7 +60,18 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
       } else {
         for {
           result ← eligibilityCheckConnector.isEligible(nino, None)
-        } yield (result, None)
+        } yield {
+          val newResult: Option[EligibilityCheckResult] = result.map {
+            res ⇒
+              if (res.resultCode === 4) {
+                logger.info("[EligibilityCheckService][getEligibility] Received result code 4 mapping to result code 2", nino, None)
+                res.copy(resultCode = 2, result = "Ineligible to HtS Account")
+              } else {
+                res
+              }
+          }
+          (newResult, None)
+        }
       }
 
     r.map {

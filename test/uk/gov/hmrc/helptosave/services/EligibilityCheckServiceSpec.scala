@@ -75,6 +75,8 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
+    val eligibilityCheckResponseUC4 = EligibilityCheckResult("undetermined", 4, "tax credits", 1)
+
     "handling eligibility calls when UC is disabled" must {
 
       lazy val eligibilityCheckService = newEligibilityCheckService()
@@ -100,6 +102,20 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
         result shouldBe Left("unexpected error during DES eligibility check")
 
+      }
+
+      "return a resultCode of 2 after the eligibility check" in {
+
+        inSequence {
+          mockDESEligibilityCheck(nino, None)(Right(Some(eligibilityCheckResponseUC4)))
+          mockAuditEligibilityEvent()
+        }
+
+        val result = await(eligibilityCheckService.getEligibility(nino).value)
+
+        val newEligibilityCheckResponseUC4 = eligibilityCheckResponseUC4.copy(resultCode = 2, result = "Ineligible to HtS Account")
+
+        result shouldBe Right(Some(newEligibilityCheckResponseUC4))
       }
     }
 
