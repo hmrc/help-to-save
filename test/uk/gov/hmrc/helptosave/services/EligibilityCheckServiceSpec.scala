@@ -113,7 +113,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
 
-        val newEligibilityCheckResponseUC4 = eligibilityCheckResponseUC4.copy(resultCode = 2)
+        val newEligibilityCheckResponseUC4 = eligibilityCheckResponseUC4.copy(resultCode = 2, result = "Ineligible to HtS Account")
 
         result shouldBe Right(Some(newEligibilityCheckResponseUC4))
       }

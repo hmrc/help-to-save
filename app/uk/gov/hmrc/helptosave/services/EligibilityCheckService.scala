@@ -64,7 +64,8 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
           val newResult: Option[EligibilityCheckResult] = result.map {
             res ⇒
               if (res.resultCode === 4) {
-                res.copy(resultCode = 2)
+                logger.info("[EligibilityCheckService][getEligibility] Received result code 4 mapping to result code 2", nino, None)
+                res.copy(resultCode = 2, result = "Ineligible to HtS Account")
               } else {
                 res
               }
