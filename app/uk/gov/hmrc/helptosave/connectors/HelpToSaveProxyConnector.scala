@@ -45,13 +45,14 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
   extends HelpToSaveProxyConnector with Logging {
 
   val proxyURL: String = appConfig.baseUrl("help-to-save-proxy")
+  implicit val correlationIdHeaderName: String = appConfig.correlationIdHeaderName
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
 
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, getCorrelationId(hc, appConfig.correlationIdHeaderName))
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, getCorrelationId)
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
@@ -64,7 +65,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
       http.get(url).map {
         response ⇒
 
-          val correlationId = getCorrelationId(hc, appConfig.correlationIdHeaderName)
+          val correlationId = getCorrelationId
           logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
 
           response.status match {

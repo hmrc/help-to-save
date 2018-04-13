@@ -41,6 +41,8 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
 
   import EnrolmentStoreController._
 
+  implicit val correlationIdHeaderName: String = appConfig.correlationIdHeaderName
+
   def enrol(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     handle(enrolUser(nino), "enrol user", nino)
   }
@@ -54,7 +56,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
   }
 
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] = {
-    val correlationId = getCorrelationId(hc, appConfig.correlationIdHeaderName)
+    val correlationId = getCorrelationId
     f.fold(
       { e ⇒
         logger.warn(s"Could not $description: $e", nino, correlationId)

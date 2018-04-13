@@ -46,6 +46,8 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
 
   val itmpEnrolmentURL: String = appConfig.baseUrl("itmp-enrolment")
 
+  implicit val correlationIdHeaderName: String = appConfig.correlationIdHeaderName
+
   val body: JsValue = JsNull
 
   def url(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"
@@ -58,7 +60,7 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
         .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 
-          val correlationId = getCorrelationId(hc, appConfig.correlationIdHeaderName)
+          val correlationId = getCorrelationId
 
           response.status match {
             case OK ⇒
