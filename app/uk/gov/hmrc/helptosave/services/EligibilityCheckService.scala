@@ -21,14 +21,13 @@ import java.util.UUID
 import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Configuration
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckEvent, EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, LogMessageTransformer, Result}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, Result}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,12 +41,10 @@ trait EligibilityCheckService {
 @Singleton
 class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSaveProxyConnector,
                                              eligibilityCheckConnector: EligibilityCheckConnector,
-                                             configuration:             Configuration,
-                                             auditor:                   HTSAuditor
-)(implicit ninoLogMessageTransformer: LogMessageTransformer)
-  extends EligibilityCheckService with Logging with ServicesConfig {
+                                             auditor:                   HTSAuditor)(implicit ninoLogMessageTransformer: LogMessageTransformer, appConfig: AppConfig)
+  extends EligibilityCheckService with Logging {
 
-  private val isUCEnabled: Boolean = configuration.underlying.getBoolean("microservice.uc-enabled")
+  private val isUCEnabled: Boolean = appConfig.getBoolean("microservice.uc-enabled")
 
   logger.info(s"UniversalCredits checks enabled = $isUCEnabled")
 

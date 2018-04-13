@@ -20,14 +20,13 @@ import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue, Writes}
 import play.mvc.Http.Status.{FORBIDDEN, OK}
-import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getCorrelationId
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
@@ -42,10 +41,12 @@ trait ITMPEnrolmentConnector {
 @Singleton
 class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, pagerDutyAlerting: PagerDutyAlerting)(
     implicit
-    transformer: LogMessageTransformer)
-  extends ITMPEnrolmentConnector with ServicesConfig with DESConnector with Logging {
+    transformer: LogMessageTransformer, appConfig: AppConfig)
+  extends ITMPEnrolmentConnector with Logging {
 
-  val itmpEnrolmentURL: String = baseUrl("itmp-enrolment")
+  val itmpEnrolmentURL: String = appConfig.baseUrl("itmp-enrolment")
+
+  implicit val correlationIdHeaderName: String = appConfig.correlationIdHeaderName
 
   val body: JsValue = JsNull
 
@@ -55,11 +56,11 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
     EitherT({
       val timerContext = metrics.itmpSetFlagTimer.time()
 
-      http.put(url(nino), body, desHeaders)(Writes.JsValueWrites, hc.copy(authorization = None), ec)
+      http.put(url(nino), body, appConfig.desHeaders)(Writes.JsValueWrites, hc.copy(authorization = None), ec)
         .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 
-          val correlationId = hc.getCorrelationId
+          val correlationId = getCorrelationId
 
           response.status match {
             case OK ⇒

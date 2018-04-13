@@ -23,20 +23,21 @@ import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.Retrievals.allEnrolments
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
-import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class StrideAuth(htsAuthConnector: AuthConnector)
-  extends BaseController with AuthorisedFunctions with ServicesConfig with Logging {
+class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppConfig)
+  extends BaseController with AuthorisedFunctions with Logging {
 
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private val requiredRoles: List[String] = runModeConfiguration.underlying.getStringList("stride.roles").asScala.toList
+  private val requiredRoles: List[String] =
+    appConfig.runModeConfiguration.underlying.getStringList("stride.roles").asScala.toList
 
   def authorisedFromStride(action: Request[AnyContent] ⇒ Future[Result]): Action[AnyContent] =
     Action.async { implicit request ⇒

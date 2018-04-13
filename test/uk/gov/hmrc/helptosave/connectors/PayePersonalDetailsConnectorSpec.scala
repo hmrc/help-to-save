@@ -22,7 +22,6 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -30,7 +29,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 class PayePersonalDetailsConnectorSpec
   extends TestSupport
   with GeneratorDrivenPropertyChecks
-  with ServicesConfig
   with MockPagerDuty
   with TestData {
 

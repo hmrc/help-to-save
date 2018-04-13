@@ -19,21 +19,9 @@ package uk.gov.hmrc.helptosave.util
 import cats.instances.string._
 import cats.syntax.eq._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.config.ServicesConfig
 
 object HeaderCarrierOps {
 
-  implicit def headerCarrierOps(hc: HeaderCarrier): HeaderCarrierOps = new HeaderCarrierOps(hc)
-
-}
-
-class HeaderCarrierOps(val hc: HeaderCarrier) extends ServicesConfig {
-
-  val correlationIdHeaderName: String = getString("microservice.correlationIdHeaderName")
-
-  def getCorrelationId: Option[String] = {
+  def getCorrelationId(implicit hc: HeaderCarrier, correlationIdHeaderName: String): Option[String] =
     hc.headers.find(p ⇒ p._1 === correlationIdHeaderName).map(_._2)
-  }
-
 }
-

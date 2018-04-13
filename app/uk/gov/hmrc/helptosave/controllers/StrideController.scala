@@ -22,7 +22,8 @@ import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.helptosave.config.HtsAuthConnector
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
 import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
@@ -32,10 +33,10 @@ import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
 class StrideController @Inject() (eligibilityCheckService:      EligibilityCheckService,
                                   payePersonalDetailsConnector: PayePersonalDetailsConnector,
-                                  htsAuthConnector:             HtsAuthConnector,
-                                  enrolmentStore:               EnrolmentStore)(implicit transformer: LogMessageTransformer)
+                                  authConnector:                AuthConnector,
+                                  enrolmentStore:               EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig)
 
-  extends StrideAuth(htsAuthConnector) with Logging with WithMdcExecutionContext {
+  extends StrideAuth(authConnector) with Logging with WithMdcExecutionContext {
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 

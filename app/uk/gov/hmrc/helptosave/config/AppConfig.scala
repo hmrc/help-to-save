@@ -14,14 +14,25 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.connectors
+package uk.gov.hmrc.helptosave.config
 
+import com.google.inject.Singleton
+import javax.inject.Inject
+import play.api.Mode.Mode
+import play.api.{Configuration, Environment}
 import uk.gov.hmrc.play.config.ServicesConfig
 
-trait DESConnector { this: ServicesConfig ⇒
+@Singleton
+class AppConfig @Inject() (override val runModeConfiguration: Configuration, val environment: Environment) extends ServicesConfig {
+
+  override protected def mode: Mode = environment.mode
+
+  val appName: String = getString("appName")
 
   val desHeaders: Map[String, String] = Map(
     "Environment" → getString("microservice.services.des.environment"),
     "Authorization" → s"Bearer ${getString("microservice.services.des.token")}"
   )
+
+  val correlationIdHeaderName: String = getString("microservice.correlationIdHeaderName")
 }

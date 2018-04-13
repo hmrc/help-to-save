@@ -22,14 +22,13 @@ import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
-import uk.gov.hmrc.helptosave.config.WSHttp
+import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, Result}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,17 +41,18 @@ trait HelpToSaveProxyConnector {
 }
 
 @Singleton
-class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer: LogMessageTransformer)
-  extends HelpToSaveProxyConnector with ServicesConfig with Logging {
+class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+  extends HelpToSaveProxyConnector with Logging {
 
-  val proxyURL: String = baseUrl("help-to-save-proxy")
+  val proxyURL: String = appConfig.baseUrl("help-to-save-proxy")
+  implicit val correlationIdHeaderName: String = appConfig.correlationIdHeaderName
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
 
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, hc.getCorrelationId)
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, getCorrelationId)
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
@@ -65,7 +65,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
       http.get(url).map {
         response ⇒
 
-          val correlationId = hc.getCorrelationId
+          val correlationId = getCorrelationId
           logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
 
           response.status match {

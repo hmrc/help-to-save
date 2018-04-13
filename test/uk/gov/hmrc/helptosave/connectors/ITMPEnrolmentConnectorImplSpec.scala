@@ -30,7 +30,7 @@ class ITMPEnrolmentConnectorImplSpec extends TestSupport with GeneratorDrivenPro
 
   def mockPut[A](url: String, body: A)(result: Option[HttpResponse]): Unit =
     (mockHttp.put(_: String, _: A, _: Map[String, String])(_: Writes[A], _: HeaderCarrier, _: ExecutionContext))
-      .expects(url, body, connector.desHeaders, *, *, *)
+      .expects(url, body, appConfig.desHeaders, *, *, *)
       .returning(result.fold[Future[HttpResponse]](Future.failed(new Exception("")))(Future.successful))
 
   "The ITMPConnectorImpl" when {

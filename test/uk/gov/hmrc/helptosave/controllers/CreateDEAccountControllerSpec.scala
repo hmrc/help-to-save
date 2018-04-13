@@ -49,11 +49,11 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
-    def mockUserCapServiceUpdate(result: Either[String, Unit]) = (
+    def mockUserCapServiceUpdate(result: Either[String, Unit]) = {
       (userCapService.update _)
-      .expects()
-      .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
-    )
+        .expects()
+        .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
+    }
   }
 
   "The CreateAccountController" when {

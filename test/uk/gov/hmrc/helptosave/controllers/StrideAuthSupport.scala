@@ -22,18 +22,14 @@ import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
 import uk.gov.hmrc.auth.core.retrieve.Retrievals.allEnrolments
 import uk.gov.hmrc.auth.core.{AuthProviders, Enrolment, Enrolments}
-import uk.gov.hmrc.helptosave.config.HtsAuthConnector
-import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
-trait StrideAuthSupport extends TestSupport {
+trait StrideAuthSupport extends AuthSupport {
 
   lazy val roles: List[String] = fakeApplication.configuration.underlying.getStringList("stride.roles").asScala.toList
-
-  val mockAuthConnector: HtsAuthConnector = mock[HtsAuthConnector]
 
   def mockAuthorised[A](expectedPredicate: Predicate,
                         expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
