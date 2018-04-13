@@ -58,8 +58,8 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
 
   "The CreateAccountController" when {
 
-      def jsonString(dobValue: String): String =
-        s"""{
+    def jsonString(dobValue: String): String =
+      s"""{
          | "nino" : "nino",
          | "forename" : "name",
          | "surname" : "surname",
@@ -83,12 +83,10 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          mockEnrolmentStoreUpdate("nino", false)(Right(()))
           inAnyOrder {
-            inSequence {
-              mockEnrolmentStoreUpdate("nino", false)(Right(()))
-              mockITMPConnector("nino")(Right(()))
-              mockEnrolmentStoreUpdate("nino", true)(Right(()))
-            }
+            mockITMPConnector("nino")(Right(()))
+            mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
           }
         }
@@ -115,13 +113,13 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
         inSequence {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          mockEnrolmentStoreUpdate("nino", false)(Right(()))
           inAnyOrder {
             inSequence {
-              mockEnrolmentStoreUpdate("nino", false)(Right(()))
               mockITMPConnector("nino")(Right(()))
               mockEnrolmentStoreUpdate("nino", true)(Right(()))
+              mockUserCapServiceUpdate(Left(""))
             }
-            mockUserCapServiceUpdate(Left(""))
           }
         }
 
