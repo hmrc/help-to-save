@@ -44,7 +44,7 @@ trait TestData {
        |      "line3": "Sometown",
        |      "line4": "Anyshire",
        |      "postcode": "AB12 3CD",
-       |      "countryCode": 1,
+       |      "countryCode": 8,
        |      "line5": "UK",
        |      "sequenceNumber": 1,
        |      "startDate": "2000-01-01"
