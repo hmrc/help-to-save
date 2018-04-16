@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
+import cats.Show
 import cats.data.EitherT
 import cats.instances.either._
 import cats.instances.option._
+import cats.syntax.show._
 import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
@@ -46,16 +48,19 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
 
   val itmpBaseURL: String = appConfig.baseUrl("itmp-eligibility-check")
 
+  implicit val booleanShow: Show[Boolean] = Show.show(if (_) "Y" else "N")
+
   def url(nino: String, ucResponse: Option[UCResponse]): String = {
     ucResponse match {
-      case Some(UCResponse(a, b)) ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino?ucClaimant=$a${b.map(x ⇒ s"&withinThreshold=$x").getOrElse("")}"
-      case _                      ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
+      case Some(UCResponse(a, Some(b))) ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino?universalCreditClaimant=${a.show}&withinThreshold=${b.show}"
+      case Some(UCResponse(a, None))    ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino?universalCreditClaimant=${a.show}"
+      case _                            ⇒ s"$itmpBaseURL/help-to-save/eligibility-check/$nino"
     }
   }
 
   type EitherStringOr[A] = Either[String, A]
 
-  override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] =
+  override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] = // scalastyle:ignore
     EitherT[Future, String, Option[EligibilityCheckResult]](
       {
         val timerContext = metrics.itmpEligibilityCheckTimer.time()
