@@ -110,7 +110,7 @@ object PayePersonalDetails {
             val postcode = (v \ "postcode").as[String]
             val countryCode = (v \ "countryCode").as[Int]
 
-            JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCodes.get(countryCode)))
+            JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCodes.get(countryCode).map(_.take(2))))
           }
           )
     }
