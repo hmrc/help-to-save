@@ -104,6 +104,28 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
         readAddress(Json.parse(addressJson(10, 15))) shouldBe JsError("No Address found in the DES response")
       }
 
+      "handle gracefully in case countryCode is not found in the DES response" in {
+        val json =
+          s"""{
+             |  "addresses": {
+             |    "1": {
+             |      "line1": "Residential line1",
+             |      "line2": "Residential line2",
+             |      "line3": "Residential line3",
+             |      "line4": "Residential line4",
+             |      "postcode": "Residential Postcode",
+             |      "line5": "Residential line5",
+             |      "sequenceNumber": 1,
+             |      "startDate": "2000-01-01"
+             |    }
+             |  }
+             |  }
+         """.stripMargin
+
+        readAddress(Json.parse(json)) shouldBe JsSuccess(Address("Residential line1",
+          "Residential line2", Some("Residential line3"), Some("Residential line4"), Some("Residential line5"), "Residential Postcode", None))
+      }
+
     }
 
     "parsing DateOfBirth" must {

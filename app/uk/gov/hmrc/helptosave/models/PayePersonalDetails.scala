@@ -109,9 +109,9 @@ object PayePersonalDetails {
           val line4 = (v \ "line4").asOpt[String]
           val line5 = (v \ "line5").asOpt[String]
           val postcode = (v \ "postcode").as[String]
-          val countryCode = (v \ "countryCode").as[Int]
+          val countryCode = (v \ "countryCode").asOpt[Int]
 
-          JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCodes.get(countryCode).map(_.take(2))))
+          JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCode.flatMap(countryCodes.get).map(_.take(2))))
         }
         )
   }
