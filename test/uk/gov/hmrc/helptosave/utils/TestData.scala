@@ -18,11 +18,11 @@ package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
 
-import uk.gov.hmrc.helptosave.models.{Address, Name, PayePersonalDetails}
+import uk.gov.hmrc.helptosave.models._
 
 trait TestData {
 
-  def payeDetails(nino: String): String =
+  def payeDetails(nino: String, phoneJson: Option[String] = None): String =
     s"""{
        |  "nino": "${nino.dropRight(1)}",
        |  "ninoSuffix": "${nino.takeRight(1)}",
@@ -51,24 +51,14 @@ trait TestData {
        |    }
        |  },
        | "phoneNumbers": {
-       |    "1": {
-       |	     "callingCode": 1,
-       |       "telephoneType": 1,
-       |	     "areaDiallingCode": "03000",
-       |	     "telephoneNumber": "599614",
-       |	     "convertedAreaDiallingCode": "020"
+       |   "1": {
+       |      "callingCode": 1,
+       |      "telephoneType": 1,
+       |      "areaDiallingCode": "03000",
+       |      "telephoneNumber": "599614",
+       |      "convertedAreaDiallingCode": "020"
        |    }
-       |  },
-       |  "accountStatus": 0,
-       |  "manualCorrespondenceInd": false,
-       |  "dateOfEntry": "2000-01-01",
-       |  "dateOfRegistration": "2000-01-01",
-       |  "registrationType": 0,
-       |  "hasSelfAssessmentAccount": false,
-       |  "audioOutputRequired": false,
-       |  "brailleOutputRequired": false,
-       |  "largePrintOutputRequired": false,
-       |  "welshOutputRequired": false
+       |  }
        |}""".stripMargin
 
   val ppDetails = PayePersonalDetails(
