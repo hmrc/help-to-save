@@ -45,11 +45,7 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
 
   val payeURL: String = appConfig.baseUrl("paye-personal-details")
 
-  val ppdHeaders: Map[String, String] = Map(
-    "Environment" → appConfig.getString("microservice.services.paye-personal-details.environment"),
-    "Authorization" → s"Bearer ${appConfig.getString("microservice.services.paye-personal-details.token")}",
-    "Originator-Id" → appConfig.getString("microservice.services.paye-personal-details.originatorId")
-  )
+  val originatorIdHeader: (String, String) = "Originator-Id" → appConfig.getString("microservice.services.paye-personal-details.originatorId")
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
@@ -58,7 +54,7 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
       {
         val timerContext = metrics.payePersonalDetailsTimer.time()
 
-        http.get(payePersonalDetailsUrl(nino), ppdHeaders)(hc.copy(authorization = None), ec)
+        http.get(payePersonalDetailsUrl(nino), appConfig.desHeaders + originatorIdHeader)(hc.copy(authorization = None), ec)
           .map { response ⇒
             val time = timerContext.stop()
 
