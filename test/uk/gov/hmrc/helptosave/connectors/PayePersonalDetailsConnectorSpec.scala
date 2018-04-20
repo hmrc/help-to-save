@@ -36,7 +36,7 @@ class PayePersonalDetailsConnectorSpec
 
   def mockGet(url: String)(response: Option[HttpResponse]) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(url, connector.ppdHeaders, *, *)
+      .expects(url, appConfig.desHeaders + connector.originatorIdHeader, *, *)
       .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
   "PayePersonalDetailsConnector" must {
