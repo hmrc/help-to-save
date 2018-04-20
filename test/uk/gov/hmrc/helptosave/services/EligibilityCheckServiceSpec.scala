@@ -79,7 +79,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
     "handling eligibility calls when UC is disabled" must {
 
-      lazy val eligibilityCheckService = newEligibilityCheckService()
+      lazy val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> false)
 
       "handle happy path and return result as expected" in {
 
