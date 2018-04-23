@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import java.util.Base64
+
+import configs.syntax._
 import org.scalamock.handlers.CallHandler4
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core.authorise.Predicate
@@ -24,12 +27,15 @@ import uk.gov.hmrc.auth.core.retrieve.Retrievals.allEnrolments
 import uk.gov.hmrc.auth.core.{AuthProviders, Enrolment, Enrolments}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
 trait StrideAuthSupport extends AuthSupport {
 
-  lazy val roles: List[String] = fakeApplication.configuration.underlying.getStringList("stride.roles").asScala.toList
+  lazy val roles: List[String] =
+    fakeApplication.configuration.underlying
+      .get[List[String]]("stride.base64-encoded-roles")
+      .value
+      .map(s ⇒ new String(Base64.getDecoder.decode(s)))
 
   def mockAuthorised[A](expectedPredicate: Predicate,
                         expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =

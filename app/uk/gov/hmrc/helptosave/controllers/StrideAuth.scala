@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import java.util.Base64
+
+import configs.syntax._
 import cats.instances.list._
 import cats.instances.option._
 import cats.syntax.traverse._
@@ -27,17 +30,21 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
-import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppConfig)
   extends BaseController with AuthorisedFunctions with Logging {
 
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private val requiredRoles: List[String] =
-    appConfig.runModeConfiguration.underlying.getStringList("stride.roles").asScala.toList
+  private val requiredRoles: List[String] = {
+    val decoder = Base64.getDecoder
+    appConfig.runModeConfiguration.underlying
+      .get[List[String]]("stride.base64-encoded-roles")
+      .value
+      .map(s ⇒ new String(decoder.decode(s)))
+  }
 
   def authorisedFromStride(action: Request[AnyContent] ⇒ Future[Result]): Action[AnyContent] =
     Action.async { implicit request ⇒
