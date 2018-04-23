@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import java.util.Base64
+
 import play.api.Configuration
 import play.api.mvc.Results._
 import play.api.mvc.{AnyContentAsEmpty, Call}
@@ -36,7 +38,8 @@ class StrideAuthSpec extends TestSupport {
 
   val roles = List("a", "b")
 
-  override lazy val additionalConfig: Configuration = Configuration("stride.roles" → roles)
+  override lazy val additionalConfig: Configuration =
+    Configuration("stride.base64-encoded-roles" → roles.map(r ⇒ new String(Base64.getEncoder().encode(r.getBytes))))
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
