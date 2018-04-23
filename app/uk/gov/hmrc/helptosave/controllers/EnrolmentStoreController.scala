@@ -25,7 +25,7 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getCorrelationId
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -56,13 +56,13 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
   }
 
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] = {
-    val correlationId = getCorrelationId
+    val apiCorrelationId = getApiCorrelationId
     f.fold(
       { e ⇒
-        logger.warn(s"Could not $description: $e", nino, correlationId)
+        logger.warn(s"Could not $description: $e", nino, apiCorrelationId)
         InternalServerError
       }, { a ⇒
-        logger.info(s"$description successful", nino, correlationId)
+        logger.info(s"$description successful", nino, apiCorrelationId)
         Ok(Json.toJson(a))
       }
     )

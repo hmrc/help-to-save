@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.util
+package uk.gov.hmrc.helptosave.connectors
 
-import cats.instances.string._
-import cats.syntax.eq._
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpResponse
 
-object HeaderCarrierOps {
-
-  def getApiCorrelationId(implicit hc: HeaderCarrier, correlationIdHeaderName: String): Option[String] =
-    hc.headers.find(p ⇒ p._1 === correlationIdHeaderName).map(_._2)
+trait DESConnector {
+  def desCorrelationId(response: HttpResponse): String = response.header("CorrelationId").getOrElse("NOT_FOUND")
 }

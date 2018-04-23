@@ -41,7 +41,7 @@ trait PayePersonalDetailsConnector {
 class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                                                   metrics:           Metrics,
                                                   pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends PayePersonalDetailsConnector with Logging {
+  extends PayePersonalDetailsConnector with DESConnector with Logging {
 
   val payeURL: String = appConfig.baseUrl("paye-personal-details")
 
@@ -57,6 +57,8 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
         http.get(payePersonalDetailsUrl(nino), appConfig.desHeaders + originatorIdHeader)(hc.copy(authorization = None), ec)
           .map { response ⇒
             val time = timerContext.stop()
+
+            logger.info(s"DES correlationID from the PayePersonalDetails response is: [${desCorrelationId(response)}]", nino, None)
 
             response.status match {
               case Status.OK ⇒

@@ -44,7 +44,7 @@ trait EligibilityCheckConnector {
 class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
                                                metrics:           Metrics,
                                                pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends EligibilityCheckConnector with Logging {
+  extends EligibilityCheckConnector with DESConnector with Logging {
 
   val itmpBaseURL: String = appConfig.baseUrl("itmp-eligibility-check")
 
@@ -69,7 +69,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
           .map { response ⇒
             val time = timerContext.stop()
 
-            logger.info(s"eligibility response body from DES is: ${maskNino(response.body)}", nino, None)
+            logger.info(s"eligibility response from DES is: ${maskNino(response.body)}, and correlationId is: [${desCorrelationId(response)}]", nino, None)
 
             val res: Option[Either[String, EligibilityCheckResult]] = response.status match {
               case Status.OK ⇒

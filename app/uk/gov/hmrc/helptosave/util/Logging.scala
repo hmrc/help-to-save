@@ -66,12 +66,12 @@ class LogMessageTransformerImpl @Inject() (configuration: Configuration) extends
       _ ⇒ ""
     }
 
-  private val correlationIdPrefix: Option[String] ⇒ String = {
-    case Some(id) ⇒ s"for CorrelationId $id, "
+  private val apiCorrelationIdPrefix: Option[String] ⇒ String = {
+    case Some(id) ⇒ s"for ApiCorrelationId $id, "
     case None     ⇒ ""
   }
 
   def transform(message: String, nino: NINO, correlationId: Option[String]): String =
-    ninoPrefix(nino) + correlationIdPrefix(correlationId) + message
+    ninoPrefix(nino) + apiCorrelationIdPrefix(correlationId) + message
 
 }
