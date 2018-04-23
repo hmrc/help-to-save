@@ -41,7 +41,7 @@ trait PayePersonalDetailsConnector {
 class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
                                                   metrics:           Metrics,
                                                   pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends PayePersonalDetailsConnector with Logging {
+  extends PayePersonalDetailsConnector with DESConnector with Logging {
 
   val payeURL: String = appConfig.baseUrl("paye-personal-details")
 
@@ -58,21 +58,23 @@ class PayePersonalDetailsConnectorImpl @Inject() (http:              WSHttp,
           .map { response ⇒
             val time = timerContext.stop()
 
+            val additionalParams = "DesCorrelationId" -> desCorrelationId(response)
+
             response.status match {
               case Status.OK ⇒
                 val result = response.parseJson[PayePersonalDetails]
                 result.fold({
                   e ⇒
                     metrics.payePersonalDetailsErrorCounter.inc()
-                    logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, None)
+                    logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, additionalParams)
                     pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
                 }, _ ⇒
-                  logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, None)
+                  logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
                 )
                 result
 
               case other ⇒
-                logger.warn(s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}", nino, None)
+                logger.warn(s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}", nino, additionalParams)
                 metrics.payePersonalDetailsErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
                 Left(s"Received unexpected status $other")

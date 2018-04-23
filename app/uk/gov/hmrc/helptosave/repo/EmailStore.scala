@@ -104,7 +104,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
       decryptedEmail.toEither().leftMap {
         t ⇒
-          log.warn("Could not decrypt email", t, nino, None)
+          log.warn("Could not decrypt email", t, nino)
           s"Could not decrypt email: ${t.getMessage}"
       }
     }.recover {

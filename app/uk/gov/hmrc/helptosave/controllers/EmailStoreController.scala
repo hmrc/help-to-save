@@ -44,12 +44,12 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
   def store(email: String): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     Try(new String(base64Decoder.decode(email))).fold(
       { error ⇒
-        logger.warn(s"Could not store email. Could not decode email: $error", nino, None)
+        logger.warn(s"Could not store email. Could not decode email: $error", nino)
         Future.successful(InternalServerError)
       }, { decodedEmail ⇒
         emailStore.storeConfirmedEmail(decodedEmail, nino).fold(
           { e ⇒
-            logger.error(s"Could not store email: $e", nino, None)
+            logger.error(s"Could not store email: $e", nino)
             InternalServerError
           }, { _ ⇒
             Ok
@@ -62,7 +62,7 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
   def get(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     emailStore.getConfirmedEmail(nino).fold(
       { e ⇒
-        logger.warn(e, nino, None)
+        logger.warn(e, nino)
         InternalServerError
       },
       maybeEmail ⇒ Ok(Json.toJson(EmailGetResponse(maybeEmail)))

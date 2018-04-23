@@ -49,17 +49,17 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
             .map { response ⇒
               if (response.status === CREATED) {
 
-                val correlationId = request.headers.get(appConfig.correlationIdHeaderName)
+                val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("NOT_FOUND")
 
                 enrolUser(userInfo.nino).value.onComplete {
-                  case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, correlationId)
-                  case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, correlationId)
-                  case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, correlationId)
+                  case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)
+                  case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, additionalParams)
+                  case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, additionalParams)
                 }
 
                 userCapService.update().onComplete {
-                  case Success(_) ⇒ logger.debug("Sucessfully updated user cap counts after DE account created", userInfo.nino, correlationId)
-                  case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after DE account created: ${e.getMessage}", userInfo.nino, correlationId)
+                  case Success(_) ⇒ logger.debug("Sucessfully updated user cap counts after DE account created", userInfo.nino, additionalParams)
+                  case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after DE account created: ${e.getMessage}", userInfo.nino, additionalParams)
                 }
 
               }

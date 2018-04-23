@@ -37,7 +37,7 @@ class EligibilityCheckController @Inject() (eligibilityCheckService: Eligibility
     eligibilityCheckService.getEligibility(nino).fold(
       {
         e ⇒
-          logger.warn(s"Could not check eligibility due to $e", nino, None)
+          logger.warn(s"Could not check eligibility due to $e", nino)
           InternalServerError
       }, {
         r ⇒

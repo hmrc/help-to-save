@@ -23,7 +23,7 @@ import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getCorrelationId
+import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -42,7 +42,7 @@ trait ITMPEnrolmentConnector {
 class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, pagerDutyAlerting: PagerDutyAlerting)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends ITMPEnrolmentConnector with Logging {
+  extends ITMPEnrolmentConnector with DESConnector with Logging {
 
   val itmpEnrolmentURL: String = appConfig.baseUrl("itmp-enrolment")
 
@@ -60,17 +60,17 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
         .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 
-          val correlationId = getCorrelationId
+          val additionalParams = Seq("DesCorrelationId" -> desCorrelationId(response), "apiCorrelationId" -> getApiCorrelationId)
 
           response.status match {
             case OK ⇒
-              logger.info(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino, correlationId)
+              logger.info(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino, additionalParams: _*)
               Right(())
 
             case FORBIDDEN ⇒
               metrics.itmpSetFlagConflictCounter.inc()
               logger.warn(s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
-                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})", nino, correlationId)
+                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})", nino, additionalParams: _*)
               Right(())
 
             case other ⇒
