@@ -60,19 +60,17 @@ class ITMPEnrolmentConnectorImpl @Inject() (http: WSHttp, metrics: Metrics, page
         .map[Either[String, Unit]] { response ⇒
           val time = timerContext.stop()
 
-          logger.info(s"DES correlationID from the ITMP response is: [${desCorrelationId(response)}]", nino, None)
-
-          val apiCorrelationId = getApiCorrelationId
+          val additionalParams = Seq("DesCorrelationId" -> desCorrelationId(response), "apiCorrelationId" -> getApiCorrelationId)
 
           response.status match {
             case OK ⇒
-              logger.info(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino, apiCorrelationId)
+              logger.info(s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})", nino, additionalParams: _*)
               Right(())
 
             case FORBIDDEN ⇒
               metrics.itmpSetFlagConflictCounter.inc()
               logger.warn(s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
-                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})", nino, apiCorrelationId)
+                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})", nino, additionalParams: _*)
               Right(())
 
             case other ⇒

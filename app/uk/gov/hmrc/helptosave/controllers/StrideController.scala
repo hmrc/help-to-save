@@ -44,7 +44,7 @@ class StrideController @Inject() (eligibilityCheckService:      EligibilityCheck
     enrolmentStore.get(nino).fold(
       {
         e ⇒
-          logger.warn(s"Could not get enrolments status: $e")
+          logger.warn(s"Could not get enrolments status: $e", nino)
           InternalServerError
       }, { status ⇒
         Ok(Json.toJson(status))
@@ -56,7 +56,7 @@ class StrideController @Inject() (eligibilityCheckService:      EligibilityCheck
     eligibilityCheckService.getEligibility(nino).fold(
       {
         e ⇒
-          logger.warn(s"Could not check eligibility: $e", nino, None)
+          logger.warn(s"Could not check eligibility: $e", nino)
           InternalServerError
       }, {
         r ⇒
@@ -70,7 +70,7 @@ class StrideController @Inject() (eligibilityCheckService:      EligibilityCheck
     payePersonalDetailsConnector.getPersonalDetails(nino)
       .fold(
         { error ⇒
-          logger.warn(s"Could not retrieve paye-personal-details from DES: $error")
+          logger.warn(s"Could not retrieve paye-personal-details from DES: $error", nino)
           InternalServerError
         }, {
           r ⇒

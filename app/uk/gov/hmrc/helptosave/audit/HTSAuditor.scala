@@ -28,11 +28,11 @@ import scala.util.control.NonFatal
 @Singleton
 class HTSAuditor @Inject() (val auditConnector: AuditConnector)(implicit transformer: LogMessageTransformer) extends Logging {
 
-  def sendEvent(event: HTSEvent, nino: NINO, correlationId: Option[String]): Unit = {
+  def sendEvent(event: HTSEvent, nino: NINO): Unit = {
     val checkEventResult = auditConnector.sendEvent(event.value)
     checkEventResult.onFailure {
       case NonFatal(e) ⇒
-        logger.warn(s"Unable to post audit event of type ${event.value.auditType} to audit connector - ${e.getMessage}", e, nino, correlationId)
+        logger.warn(s"Unable to post audit event of type ${event.value.auditType} to audit connector - ${e.getMessage}", e, nino)
     }
   }
 }

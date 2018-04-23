@@ -56,13 +56,13 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
   }
 
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] = {
-    val apiCorrelationId = getApiCorrelationId
+    val additionalParams = "apiCorrelationId" -> getApiCorrelationId
     f.fold(
       { e ⇒
-        logger.warn(s"Could not $description: $e", nino, apiCorrelationId)
+        logger.warn(s"Could not $description: $e", nino, additionalParams)
         InternalServerError
       }, { a ⇒
-        logger.info(s"$description successful", nino, apiCorrelationId)
+        logger.info(s"$description successful", nino, additionalParams)
         Ok(Json.toJson(a))
       }
     )

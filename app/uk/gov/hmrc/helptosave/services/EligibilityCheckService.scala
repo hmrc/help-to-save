@@ -64,7 +64,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
           val newResult: Option[EligibilityCheckResult] = result.map {
             res ⇒
               if (res.resultCode === 4) {
-                logger.info("[EligibilityCheckService][getEligibility] Received result code 4 mapping to result code 2", nino, None)
+                logger.info("[EligibilityCheckService][getEligibility] Received result code 4 mapping to result code 2", nino)
                 res.copy(resultCode = 2, result = "Ineligible to HtS Account")
               } else {
                 res
@@ -76,7 +76,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
 
     r.map {
       case (Some(ecR), ucR) ⇒
-        auditor.sendEvent(EligibilityCheckEvent(nino, ecR, ucR), nino, None)
+        auditor.sendEvent(EligibilityCheckEvent(nino, ecR, ucR), nino)
         Some(ecR)
       case _ ⇒ None
     }
@@ -85,7 +85,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
   private def getUCDetails(nino: NINO, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UCResponse]] =
     helpToSaveProxyConnector.ucClaimantCheck(nino, txnId)
       .fold({ e ⇒
-        logger.warn(s"Error while retrieving UC details: $e", nino, None)
+        logger.warn(s"Error while retrieving UC details: $e", nino)
         None
       }, Some(_)
       )

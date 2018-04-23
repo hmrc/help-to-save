@@ -52,7 +52,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, getApiCorrelationId)
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, "apiCorrelationId" -> getApiCorrelationId)
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
@@ -65,7 +65,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
       http.get(url).map {
         response ⇒
 
-          val correlationId = getApiCorrelationId
+          val correlationId = "apiCorrelationId" -> getApiCorrelationId
           logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
 
           response.status match {

@@ -22,6 +22,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 object HeaderCarrierOps {
 
-  def getApiCorrelationId(implicit hc: HeaderCarrier, correlationIdHeaderName: String): Option[String] =
-    hc.headers.find(p ⇒ p._1 === correlationIdHeaderName).map(_._2)
+  def getApiCorrelationId(implicit hc: HeaderCarrier, correlationIdHeaderName: String): String =
+    hc.headers.find(p ⇒ p._1 === correlationIdHeaderName).map(_._2).getOrElse("NOT_FOUND")
 }
