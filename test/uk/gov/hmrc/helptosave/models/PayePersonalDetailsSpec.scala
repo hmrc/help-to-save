@@ -106,7 +106,7 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
 
       "handle gracefully in case countryCode is not found in the DES response" in {
         val json =
-          s"""{
+          """{
              |  "addresses": {
              |    "1": {
              |      "line1": "Residential line1",
