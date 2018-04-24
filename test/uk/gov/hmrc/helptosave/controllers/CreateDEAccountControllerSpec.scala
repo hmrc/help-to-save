@@ -31,6 +31,7 @@ import uk.gov.hmrc.helptosave.utils.{TestEnrolmentBehaviour, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 // scalastyle:off magic.number
 class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehaviour {
@@ -91,7 +92,7 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))(10.seconds)
 
         status(result) shouldBe CREATED
       }
@@ -105,7 +106,7 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))(10.seconds)
 
         status(result) shouldBe CREATED
       }
@@ -121,7 +122,7 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))(10.seconds)
 
         status(result) shouldBe CREATED
       }
