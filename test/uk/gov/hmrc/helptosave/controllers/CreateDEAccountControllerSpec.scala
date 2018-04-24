@@ -92,9 +92,9 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))(10.seconds)
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
-        status(result) shouldBe CREATED
+        status(result)(10.seconds) shouldBe CREATED
       }
 
       "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
@@ -106,9 +106,9 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))(10.seconds)
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
-        status(result) shouldBe CREATED
+        status(result)(10.seconds) shouldBe CREATED
       }
 
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
@@ -122,9 +122,9 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))(10.seconds)
+        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
-        status(result) shouldBe CREATED
+        status(result)(10.seconds) shouldBe CREATED
       }
 
       "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
