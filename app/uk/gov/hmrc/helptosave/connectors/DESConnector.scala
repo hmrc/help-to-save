@@ -19,5 +19,5 @@ package uk.gov.hmrc.helptosave.connectors
 import uk.gov.hmrc.http.HttpResponse
 
 trait DESConnector {
-  def desCorrelationId(response: HttpResponse): String = response.header("CorrelationId").getOrElse("NOT_FOUND")
+  def desCorrelationId(response: HttpResponse): String = response.header("CorrelationId").getOrElse("-")
 }
