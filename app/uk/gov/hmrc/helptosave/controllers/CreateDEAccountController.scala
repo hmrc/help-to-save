@@ -49,7 +49,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
             .map { response ⇒
               if (response.status === CREATED) {
 
-                val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("UNKNOWN")
+                val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
 
                 enrolUser(userInfo.nino).value.onComplete {
                   case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)
