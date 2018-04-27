@@ -36,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[EligibilityCheckServiceImpl])
 trait EligibilityCheckService {
 
-  def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]]
+  def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult]
 
 }
 
@@ -50,37 +50,23 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
 
   logger.info(s"UniversalCredits checks enabled = $isUCEnabled")
 
-  override def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] = {
-    val r: EitherT[Future, String, (Option[EligibilityCheckResult], Option[UCResponse])] =
-      if (isUCEnabled) {
-        for {
-          ucResponse ← EitherT.liftT(getUCDetails(nino, UUID.randomUUID()))
-          result ← eligibilityCheckConnector.isEligible(nino, ucResponse)
-        } yield (result, ucResponse)
-      } else {
-        for {
-          result ← eligibilityCheckConnector.isEligible(nino, None)
-        } yield {
-          val newResult: Option[EligibilityCheckResult] = result.map {
-            res ⇒
-              if (res.resultCode === 4) {
-                logger.info("[EligibilityCheckService][getEligibility] Received result code 4 mapping to result code 2", nino)
-                res.copy(resultCode = 2, result = "Ineligible to HtS Account")
-              } else {
-                res
-              }
-          }
-          (newResult, None)
-        }
-      }
-
-    r.map {
-      case (Some(ecR), ucR) ⇒
-        auditor.sendEvent(EligibilityCheckEvent(nino, ecR, ucR), nino)
-        Some(ecR)
-      case _ ⇒ None
+  override def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
+    for {
+      ucResponse ← EitherT.liftT(getUCDetails(nino, UUID.randomUUID()))
+      result ← getEligibility(nino, ucResponse)
+    } yield {
+      auditor.sendEvent(EligibilityCheckEvent(nino, result, ucResponse), nino)
+      result
     }
-  }
+
+  private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
+    eligibilityCheckConnector.isEligible(nino, ucResponse).subflatMap { result ⇒
+      if (result.resultCode === 4) {
+        Left(s"Received result code 4 from DES eligibility check interface. Result was '${result.result}'. Reason was '${result.reason}'")
+      } else {
+        Right(result)
+      }
+    }
 
   private def getUCDetails(nino: NINO, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UCResponse]] =
     helpToSaveProxyConnector.ucClaimantCheck(nino, txnId)

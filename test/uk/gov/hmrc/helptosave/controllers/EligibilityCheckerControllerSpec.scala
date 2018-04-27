@@ -42,7 +42,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
     def doRequest(controller: EligibilityCheckController): Future[PlayResult] =
       controller.eligibilityCheck()(FakeRequest())
 
-    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, Option[EligibilityCheckResult]]): Unit =
+    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
       (eligibilityService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
@@ -60,12 +60,6 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
 
         def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 
-      "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockEligibilityCheckerService(nino)(Right(None))
-        await(doRequest(controller))
-      }
-
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
         mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
@@ -78,21 +72,12 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
         "successful" in new TestApparatus {
           val eligibility = EligibilityCheckResult("x", 0, "y", 0)
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockEligibilityCheckerService(nino)(Right(Some(eligibility)))
+          mockEligibilityCheckerService(nino)(Right(eligibility))
 
           val result = doRequest(controller)
           status(result) shouldBe 200
-          contentAsJson(result) \ "response" shouldBe JsDefined(Json.toJson(eligibility))
+          contentAsJson(result) shouldBe Json.toJson(eligibility)
         }
-
-      "return with a status 200 and empty json if the nino is NOT_FOUND as its not in receipt of Tax Credit" in new TestApparatus {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockEligibilityCheckerService(nino)(Right(None))
-
-        val result = doRequest(controller)
-        status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.parse("{ }")
-      }
 
     }
   }

@@ -42,7 +42,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
   val htsAuditor = new HTSAuditor(mockAuditConnector)
 
-  private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: Either[String, Option[EligibilityCheckResult]]) = {
+  private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: Either[String, EligibilityCheckResult]) = {
     (mockEligibilityConnector.isEligible(_: String, _: Option[UCResponse])(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, uCResponse, *, *)
       .returning {
@@ -75,57 +75,13 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
-    val eligibilityCheckResponseUC4 = EligibilityCheckResult("undetermined", 4, "tax credits", 1)
-
-    "handling eligibility calls when UC is disabled" must {
-
-      lazy val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> false)
-
-      "handle happy path and return result as expected" in {
-
-        inSequence {
-          mockDESEligibilityCheck(nino, None)(Right(Some(eligibilityCheckResponse)))
-          mockAuditEligibilityEvent()
-        }
-
-        val result = await(eligibilityCheckService.getEligibility(nino).value)
-
-        result shouldBe Right(Some(eligibilityCheckResponse))
-
-      }
-
-      "handle errors during DES eligibility check check" in {
-
-        mockDESEligibilityCheck(nino, None)(Left("unexpected error during DES eligibility check"))
-
-        val result = await(eligibilityCheckService.getEligibility(nino).value)
-
-        result shouldBe Left("unexpected error during DES eligibility check")
-
-      }
-
-      "return a resultCode of 2 after the eligibility check" in {
-
-        inSequence {
-          mockDESEligibilityCheck(nino, None)(Right(Some(eligibilityCheckResponseUC4)))
-          mockAuditEligibilityEvent()
-        }
-
-        val result = await(eligibilityCheckService.getEligibility(nino).value)
-
-        val newEligibilityCheckResponseUC4 = eligibilityCheckResponseUC4.copy(resultCode = 2, result = "Ineligible to HtS Account")
-
-        result shouldBe Right(Some(newEligibilityCheckResponseUC4))
-      }
-    }
-
-    "handling eligibility calls when UC is enabled" must {
+    "handling eligibility calls" must {
 
       "handle happy path and return result as expected" in {
 
         inSequence {
           mockUCClaimantCheck(nino)(Right(uCResponse))
-          mockDESEligibilityCheck(nino, Some(uCResponse))(Right(Some(eligibilityCheckResponse)))
+          mockDESEligibilityCheck(nino, Some(uCResponse))(Right(eligibilityCheckResponse))
           mockAuditEligibilityEvent()
         }
 
@@ -133,14 +89,14 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
 
-        result shouldBe Right(Some(eligibilityCheckResponse))
+        result shouldBe Right(eligibilityCheckResponse)
 
       }
 
       "call DES even if there is an errors during UC claimant check" in {
         inSequence {
           mockUCClaimantCheck(nino)(Left("unexpected error during UCClaimant check"))
-          mockDESEligibilityCheck(nino, None)(Right(Some(eligibilityCheckResponse)))
+          mockDESEligibilityCheck(nino, None)(Right(eligibilityCheckResponse))
           mockAuditEligibilityEvent()
         }
 
@@ -148,8 +104,19 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
 
-        result shouldBe Right(Some(eligibilityCheckResponse))
+        result shouldBe Right(eligibilityCheckResponse)
+      }
 
+      "map DES responses with result code 4 to an error" in {
+        inSequence {
+          mockUCClaimantCheck(nino)(Right(uCResponse))
+          mockDESEligibilityCheck(nino, Some(uCResponse))(Right(eligibilityCheckResponse.copy(resultCode = 4)))
+        }
+
+        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
+
+        val result = await(eligibilityCheckService.getEligibility(nino).value)
+        result.isLeft shouldBe true
       }
 
       "handle errors during DES eligibility check check" in {

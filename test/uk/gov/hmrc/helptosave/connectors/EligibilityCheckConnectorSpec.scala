@@ -57,21 +57,21 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
     "return with the eligibility check result unchanged from ITMP" in {
       forAll { result: EligibilityCheckResult ⇒
         mockGet(urlWithoutUC)(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(Some(result))
+        Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(result)
       }
     }
 
     "pass the UC params to DES if they are provided" in {
       forAll { result: EligibilityCheckResult ⇒
         mockGet(urlWithUC())(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        Await.result(connector.isEligible(nino, Some(UCResponse(true, Some(true)))).value, 5.seconds) shouldBe Right(Some(result))
+        Await.result(connector.isEligible(nino, Some(UCResponse(true, Some(true)))).value, 5.seconds) shouldBe Right(result)
       }
     }
 
     "do not pass the UC withinThreshold param to DES if its not set" in {
       forAll { result: EligibilityCheckResult ⇒
         mockGet(urlWithUC(None))(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        Await.result(connector.isEligible(nino, Some(UCResponse(true, None))).value, 5.seconds) shouldBe Right(Some(result))
+        Await.result(connector.isEligible(nino, Some(UCResponse(true, None))).value, 5.seconds) shouldBe Right(result)
       }
     }
 
@@ -83,14 +83,6 @@ class EligibilityCheckConnectorSpec extends TestSupport with GeneratorDrivenProp
       }
 
       Await.result(connector.isEligible(nino).value, 5.seconds).isLeft shouldBe true
-    }
-
-    "handle 404 responses when nino is not found when an eligibility check is made" in {
-      inSequence {
-        mockGet(urlWithoutUC)(Some(HttpResponse(404, None))) // scalastyle:ignore magic.number
-      }
-
-      Await.result(connector.isEligible(nino).value, 5.seconds) shouldBe Right(None)
     }
 
     "return with an error" when {

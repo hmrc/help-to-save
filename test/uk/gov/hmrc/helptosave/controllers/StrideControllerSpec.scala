@@ -50,7 +50,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     def doPayeDetailsRequest(controller: StrideController): Future[PlayResult] =
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
-    def mockEligibilityService(nino: NINO)(result: Either[String, Option[EligibilityCheckResult]]): Unit =
+    def mockEligibilityService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
       (eligibilityServiceConnector.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
@@ -106,12 +106,12 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
         val eligibility = EligibilityCheckResult("x", 0, "y", 0)
         inSequence {
           mockSuccessfulAuthorisation()
-          mockEligibilityService(nino)(Right(Some(eligibility)))
+          mockEligibilityService(nino)(Right(eligibility))
         }
 
         val result = doEligibilityRequest(controller)
         status(result) shouldBe 200
-        contentAsJson(result) \ "response" shouldBe JsDefined(Json.toJson(eligibility))
+        contentAsJson(result) shouldBe Json.toJson(eligibility)
       }
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
@@ -122,17 +122,6 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
 
         val result = doEligibilityRequest(controller)
         status(result) shouldBe 500
-      }
-
-      "return with a status 200 and empty json if the nino is NOT_FOUND as its not in receipt of Tax Credit" in new TestApparatus {
-        inSequence {
-          mockSuccessfulAuthorisation()
-          mockEligibilityService(nino)(Right(None))
-        }
-
-        val result = doEligibilityRequest(controller)
-        status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.parse("{ }")
       }
 
     }
