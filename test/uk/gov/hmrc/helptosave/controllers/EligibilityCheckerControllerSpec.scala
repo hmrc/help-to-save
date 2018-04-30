@@ -16,13 +16,11 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.UUID
-
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import play.api.libs.json.{JsDefined, Json}
-import play.api.mvc.{Result ⇒ PlayResult}
+import play.api.libs.json.Json
+import play.api.mvc.{Result => PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
@@ -31,8 +29,7 @@ import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenPropertyChecks {
 
@@ -52,13 +49,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
 
   "The EligibilityCheckerController" when {
 
-    val txnId = UUID.randomUUID()
-
     "handling requests to perform eligibility checks" must {
-
-      val userDetailsURI = "user-details-uri"
-
-        def await[T](f: Future[T]): T = Await.result(f, 5.seconds)
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
