@@ -25,7 +25,6 @@ import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
-import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging._
@@ -60,7 +59,7 @@ class StrideController @Inject() (eligibilityCheckService:      EligibilityCheck
           InternalServerError
       }, {
         r ⇒
-          Ok(Json.toJson(EligibilityResponseHolder(r)))
+          Ok(Json.toJson(r))
       }
     )
 

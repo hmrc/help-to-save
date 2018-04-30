@@ -37,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[EligibilityCheckConnectorImpl])
 trait EligibilityCheckConnector {
-  def isEligible(nino: String, ucResponse: Option[UCResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]]
+  def isEligible(nino: String, ucResponse: Option[UCResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult]
 }
 
 @Singleton
@@ -60,8 +60,8 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
 
   type EitherStringOr[A] = Either[String, A]
 
-  override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[EligibilityCheckResult]] = // scalastyle:ignore
-    EitherT[Future, String, Option[EligibilityCheckResult]](
+  override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] = // scalastyle:ignore
+    EitherT[Future, String, EligibilityCheckResult](
       {
         val timerContext = metrics.itmpEligibilityCheckTimer.time()
 
@@ -73,7 +73,7 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
 
             logger.info(s"eligibility response from DES is: ${maskNino(response.body)}", nino, additionalParams)
 
-            val res: Option[Either[String, EligibilityCheckResult]] = response.status match {
+            response.status match {
               case Status.OK ⇒
                 val result = response.parseJson[EligibilityCheckResult]
                 result.fold({
@@ -84,21 +84,17 @@ class EligibilityCheckConnectorImpl @Inject() (http:              WSHttp,
                 }, _ ⇒
                   logger.debug(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
                 )
-                Some(result)
-
-              case Status.NOT_FOUND ⇒
-                logger.info(s"Retrieved nino has not been found in DES, so user is not receiving Working Tax Credit ${timeString(time)}", nino, additionalParams)
-                None
+                result
 
               case other ⇒
-                logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}", nino, additionalParams)
+                logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}. " +
+                  s"Body was: ${response.body}", nino, additionalParams)
                 metrics.itmpEligibilityCheckErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
-                Some(Left(s"Received unexpected status $other"))
+                Left(s"Received unexpected status $other")
 
             }
 
-            res.traverse[EitherStringOr, EligibilityCheckResult](identity)
           }.recover {
             case e ⇒
               val time = timerContext.stop()

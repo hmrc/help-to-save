@@ -22,7 +22,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.models.EligibilityResponseHolder
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
@@ -39,10 +38,7 @@ class EligibilityCheckController @Inject() (eligibilityCheckService: Eligibility
         e ⇒
           logger.warn(s"Could not check eligibility due to $e", nino)
           InternalServerError
-      }, {
-        r ⇒
-          Ok(Json.toJson(EligibilityResponseHolder(r)))
-      }
+      }, r ⇒ Ok(Json.toJson(r))
     )
   }
 
