@@ -20,6 +20,7 @@ import java.util.UUID
 
 import cats.data.EitherT
 import cats.instances.future._
+import org.scalamock.handlers.CallHandler3
 import org.scalatest.EitherValues
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
@@ -58,15 +59,13 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
       }
   }
 
-  def mockAuditEligibilityEvent() =
+  def mockAuditEligibilityEvent(): CallHandler3[DataEvent, HeaderCarrier, ExecutionContext, Future[AuditResult]] =
     (mockAuditConnector.sendEvent(_: DataEvent)(_: HeaderCarrier, _: ExecutionContext))
       .expects(where { (dataEvent, _, _) ⇒ dataEvent.auditType === "EligibilityResult" })
       .returning(Future.successful(AuditResult.Success))
 
-  def newEligibilityCheckService(config: (String, Any)*) = {
-    implicit val appConfig: AppConfig = buildFakeApplication(Configuration.from(config.toMap)).injector.instanceOf[AppConfig]
+  val eligibilityCheckService: EligibilityCheckServiceImpl =
     new EligibilityCheckServiceImpl(mockProxyConnector, mockEligibilityConnector, htsAuditor)
-  }
 
   "EligibilityCheckService" when {
 
@@ -85,12 +84,8 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
           mockAuditEligibilityEvent()
         }
 
-        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
-
         val result = await(eligibilityCheckService.getEligibility(nino).value)
-
         result shouldBe Right(eligibilityCheckResponse)
-
       }
 
       "call DES even if there is an errors during UC claimant check" in {
@@ -100,10 +95,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
           mockAuditEligibilityEvent()
         }
 
-        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
-
         val result = await(eligibilityCheckService.getEligibility(nino).value)
-
         result shouldBe Right(eligibilityCheckResponse)
       }
 
@@ -112,8 +104,6 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
           mockUCClaimantCheck(nino)(Right(uCResponse))
           mockDESEligibilityCheck(nino, Some(uCResponse))(Right(eligibilityCheckResponse.copy(resultCode = 4)))
         }
-
-        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
 
         val result = await(eligibilityCheckService.getEligibility(nino).value)
         result.isLeft shouldBe true
@@ -126,10 +116,7 @@ class EligibilityCheckServiceSpec extends TestSupport with EitherValues {
           mockDESEligibilityCheck(nino, Some(uCResponse))(Left("unexpected error during DES eligibility check"))
         }
 
-        val eligibilityCheckService = newEligibilityCheckService("microservice.uc-enabled" -> true)
-
         val result = await(eligibilityCheckService.getEligibility(nino).value)
-
         result shouldBe Left("unexpected error during DES eligibility check")
 
       }

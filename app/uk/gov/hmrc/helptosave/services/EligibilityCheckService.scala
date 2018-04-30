@@ -46,10 +46,6 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
                                              auditor:                   HTSAuditor)(implicit ninoLogMessageTransformer: LogMessageTransformer, appConfig: AppConfig)
   extends EligibilityCheckService with Logging {
 
-  private val isUCEnabled: Boolean = appConfig.getBoolean("microservice.uc-enabled")
-
-  logger.info(s"UniversalCredits checks enabled = $isUCEnabled")
-
   override def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     for {
       ucResponse ← EitherT.liftT(getUCDetails(nino, UUID.randomUUID()))
