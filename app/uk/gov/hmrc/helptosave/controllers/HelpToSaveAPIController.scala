@@ -33,13 +33,13 @@ import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.util.{Failure, Success}
 
-class HelpToSaveAPIController @Inject()(val enrolmentStore: EnrolmentStore,
-                                        val itmpConnector: ITMPEnrolmentConnector,
-                                        proxyConnector: HelpToSaveProxyConnector,
-                                        userCapService: UserCapService,
-                                        val eligibilityCheckService: EligibilityCheckService)(
-                                         implicit
-                                         transformer: LogMessageTransformer, appConfig: AppConfig)
+class HelpToSaveAPIController @Inject() (val enrolmentStore:          EnrolmentStore,
+                                         val itmpConnector:           ITMPEnrolmentConnector,
+                                         proxyConnector:              HelpToSaveProxyConnector,
+                                         userCapService:              UserCapService,
+                                         val eligibilityCheckService: EligibilityCheckService)(
+    implicit
+    transformer: LogMessageTransformer, appConfig: AppConfig)
   extends BaseController with EligibilityBase with WithMdcExecutionContext with EnrolmentBehaviour {
 
   def createDEAccount(): Action[AnyContent] = Action.async {
@@ -54,8 +54,8 @@ class HelpToSaveAPIController @Inject()(val enrolmentStore: EnrolmentStore,
 
                 enrolUser(userInfo.nino).value.onComplete {
                   case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)
-                  case Success(Left(e)) ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, additionalParams)
-                  case Failure(e) ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, additionalParams)
+                  case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, additionalParams)
+                  case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, additionalParams)
                 }
 
                 userCapService.update().onComplete {

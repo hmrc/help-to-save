@@ -20,7 +20,7 @@ import cats.data.EitherT
 import cats.instances.future._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
-import play.api.mvc.{Result => PlayResult}
+import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._

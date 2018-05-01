@@ -68,8 +68,8 @@ class HelpToSaveAPIControllerSpec extends TestSupport with TestEnrolmentBehaviou
 
   "The CreateAccountController" when {
 
-    def jsonString(dobValue: String): String =
-      s"""{
+      def jsonString(dobValue: String): String =
+        s"""{
          | "nino" : "nino",
          | "forename" : "name",
          | "surname" : "surname",
@@ -156,8 +156,8 @@ class HelpToSaveAPIControllerSpec extends TestSupport with TestEnrolmentBehaviou
 
       val nino = "AE123456"
 
-      def doRequest(controller: HelpToSaveAPIController) =
-        controller.checkEligibility(nino)(FakeRequest())
+        def doRequest(controller: HelpToSaveAPIController) =
+          controller.checkEligibility(nino)(FakeRequest())
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
         mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
@@ -168,13 +168,13 @@ class HelpToSaveAPIControllerSpec extends TestSupport with TestEnrolmentBehaviou
 
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
-        val eligibility = EligibilityCheckResult("x", 0, "y", 0)
-        mockEligibilityCheckerService(nino)(Right(eligibility))
+          val eligibility = EligibilityCheckResult("x", 0, "y", 0)
+          mockEligibilityCheckerService(nino)(Right(eligibility))
 
-        val result = doRequest(controller)
-        status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.toJson(eligibility)
-      }
+          val result = doRequest(controller)
+          status(result) shouldBe 200
+          contentAsJson(result) shouldBe Json.toJson(eligibility)
+        }
     }
   }
 

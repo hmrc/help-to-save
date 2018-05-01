@@ -23,15 +23,14 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 
-class EligibilityCheckController @Inject()(val eligibilityCheckService: EligibilityCheckService,
-                                           authConnector: AuthConnector)(
-                                            implicit
-                                            transformer: LogMessageTransformer, appConfig: AppConfig)
+class EligibilityCheckController @Inject() (val eligibilityCheckService: EligibilityCheckService,
+                                            authConnector:               AuthConnector)(
+    implicit
+    transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveAuth(authConnector) with EligibilityBase with WithMdcExecutionContext {
 
-  def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒
-    implicit nino ⇒
-      checkForNino(nino)
+  def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
+    checkForNino(nino)
   }
 
 }
