@@ -9,8 +9,8 @@ GET /get-email               @uk.gov.hmrc.helptosave.controllers.EmailStoreContr
 GET /account-create-allowed  @uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()
 POST /update-user-count      @uk.gov.hmrc.helptosave.controllers.UserCapController.update()
 
-POST /create-de-account      @uk.gov.hmrc.helptosave.controllers.HelpToSaveAPIController.createDEAccount()
-GET  /api/eligibility-check/:nino  @uk.gov.hmrc.helptosave.controllers.HelpToSaveAPIController.checkEligibility(nino: String)
+POST /create-de-account            @uk.gov.hmrc.helptosave.controllers.HelpToSaveNonDigitalController.createDEAccount()
+GET  /api/eligibility-check/:nino  @uk.gov.hmrc.helptosave.controllers.HelpToSaveNonDigitalController.checkEligibility(nino: String)
 
 
 GET /stride/enrolment-status      @uk.gov.hmrc.helptosave.controllers.StrideController.getEnrolmentStatus(nino: String)

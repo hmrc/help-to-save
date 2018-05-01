@@ -18,8 +18,9 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.instances.future._
 import play.api.libs.json.Json
-import play.api.mvc.Result
 import play.api.mvc.Results._
+import play.api.mvc.{Request, Result}
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
@@ -31,11 +32,16 @@ trait EligibilityBase extends Logging {
 
   val eligibilityCheckService: EligibilityCheckService
 
-  def checkForNino(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext, transformer: LogMessageTransformer): Future[Result] =
+  def checkEligibility(nino: String)(implicit request: Request[_],
+                                     hc:          HeaderCarrier,
+                                     ec:          ExecutionContext,
+                                     transformer: LogMessageTransformer,
+                                     appConfig:   AppConfig): Future[Result] =
     eligibilityCheckService.getEligibility(nino).fold(
       {
         e ⇒
-          logger.warn(s"Could not check eligibility due to $e", nino)
+          val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
+          logger.warn(s"Could not check eligibility due to $e", nino, additionalParams)
           InternalServerError
       }, r ⇒ Ok(Json.toJson(r))
     )

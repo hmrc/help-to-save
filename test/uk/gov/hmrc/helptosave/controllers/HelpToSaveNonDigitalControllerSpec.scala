@@ -36,7 +36,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 // scalastyle:off magic.number
-class HelpToSaveAPIControllerSpec extends TestSupport with TestEnrolmentBehaviour {
+class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentBehaviour {
 
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
@@ -47,7 +47,7 @@ class HelpToSaveAPIControllerSpec extends TestSupport with TestEnrolmentBehaviou
 
     val eligibilityCheckService = mock[EligibilityCheckService]
 
-    val controller = new HelpToSaveAPIController(enrolmentStore, itmpConnector, proxyConnector, userCapService, eligibilityCheckService)
+    val controller = new HelpToSaveNonDigitalController(enrolmentStore, itmpConnector, proxyConnector, userCapService, eligibilityCheckService)
 
     def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
       (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
@@ -156,7 +156,7 @@ class HelpToSaveAPIControllerSpec extends TestSupport with TestEnrolmentBehaviou
 
       val nino = "AE123456"
 
-        def doRequest(controller: HelpToSaveAPIController) =
+        def doRequest(controller: HelpToSaveNonDigitalController) =
           controller.checkEligibility(nino)(FakeRequest())
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {

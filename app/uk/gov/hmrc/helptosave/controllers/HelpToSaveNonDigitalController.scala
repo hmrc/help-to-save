@@ -33,11 +33,11 @@ import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.util.{Failure, Success}
 
-class HelpToSaveAPIController @Inject() (val enrolmentStore:          EnrolmentStore,
-                                         val itmpConnector:           ITMPEnrolmentConnector,
-                                         proxyConnector:              HelpToSaveProxyConnector,
-                                         userCapService:              UserCapService,
-                                         val eligibilityCheckService: EligibilityCheckService)(
+class HelpToSaveNonDigitalController @Inject() (val enrolmentStore:          EnrolmentStore,
+                                                val itmpConnector:           ITMPEnrolmentConnector,
+                                                proxyConnector:              HelpToSaveProxyConnector,
+                                                userCapService:              UserCapService,
+                                                val eligibilityCheckService: EligibilityCheckService)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
   extends BaseController with EligibilityBase with WithMdcExecutionContext with EnrolmentBehaviour {
@@ -79,6 +79,6 @@ class HelpToSaveAPIController @Inject() (val enrolmentStore:          EnrolmentS
   }
 
   def checkEligibility(nino: String): Action[AnyContent] = Action.async {
-    implicit request ⇒ checkForNino(nino)
+    implicit request ⇒ checkEligibility(nino)
   }
 }
