@@ -27,15 +27,15 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
+import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
-class StrideController @Inject() (eligibilityCheckService:      EligibilityCheckService,
+class StrideController @Inject() (val eligibilityCheckService:  EligibilityCheckService,
                                   payePersonalDetailsConnector: PayePersonalDetailsConnector,
                                   authConnector:                AuthConnector,
                                   enrolmentStore:               EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig)
 
-  extends StrideAuth(authConnector) with Logging with WithMdcExecutionContext {
+  extends StrideAuth(authConnector) with EligibilityBase with WithMdcExecutionContext {
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
@@ -52,17 +52,7 @@ class StrideController @Inject() (eligibilityCheckService:      EligibilityCheck
   }
 
   def eligibilityCheck(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
-    eligibilityCheckService.getEligibility(nino).fold(
-      {
-        e ⇒
-          logger.warn(s"Could not check eligibility: $e", nino)
-          InternalServerError
-      }, {
-        r ⇒
-          Ok(Json.toJson(r))
-      }
-    )
-
+    checkEligibility(nino)
   }
 
   def getPayePersonalDetails(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒

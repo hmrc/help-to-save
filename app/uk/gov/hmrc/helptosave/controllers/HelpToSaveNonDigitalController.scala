@@ -25,21 +25,22 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmentConnector}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.services.UserCapService
+import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, toFuture}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.util.{Failure, Success}
 
-class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
-                                           val itmpConnector:  ITMPEnrolmentConnector,
-                                           proxyConnector:     HelpToSaveProxyConnector,
-                                           userCapService:     UserCapService)(
+class HelpToSaveNonDigitalController @Inject() (val enrolmentStore:          EnrolmentStore,
+                                                val itmpConnector:           ITMPEnrolmentConnector,
+                                                proxyConnector:              HelpToSaveProxyConnector,
+                                                userCapService:              UserCapService,
+                                                val eligibilityCheckService: EligibilityCheckService)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends BaseController with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
+  extends BaseController with EligibilityBase with WithMdcExecutionContext with EnrolmentBehaviour {
 
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒
@@ -58,7 +59,7 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
                 }
 
                 userCapService.update().onComplete {
-                  case Success(_) ⇒ logger.debug("Sucessfully updated user cap counts after DE account created", userInfo.nino, additionalParams)
+                  case Success(_) ⇒ logger.debug("Successfully updated user cap counts after DE account created", userInfo.nino, additionalParams)
                   case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after DE account created: ${e.getMessage}", userInfo.nino, additionalParams)
                 }
 
@@ -75,5 +76,9 @@ class CreateDEAccountController @Inject() (val enrolmentStore: EnrolmentStore,
           logger.warn("No JSON body found in request")
           BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
       }
+  }
+
+  def checkEligibility(nino: String): Action[AnyContent] = Action.async {
+    implicit request ⇒ checkEligibility(nino)
   }
 }

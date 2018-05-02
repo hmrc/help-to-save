@@ -22,7 +22,7 @@ import uk.gov.hmrc.helptosave.models._
 
 trait TestData {
 
-  def payeDetails(nino: String, phoneJson: Option[String] = None): String =
+  def payeDetails(nino: String): String =
     s"""{
        |  "nino": "${nino.dropRight(1)}",
        |  "ninoSuffix": "${nino.takeRight(1)}",

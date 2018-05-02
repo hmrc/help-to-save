@@ -52,7 +52,7 @@ class PayePersonalDetailsConnectorSpec
       Await.result(connector.getPersonalDetails(nino).value, 5.seconds) shouldBe Right(ppDetails)
     }
 
-    "handle 404 resposne when a nino is not found in DES" in {
+    "handle 404 response when a nino is not found in DES" in {
 
       val url = connector.payePersonalDetailsUrl(nino)
       mockGet(url)(Some(HttpResponse(404, None))) // scalastyle:ignore magic.number

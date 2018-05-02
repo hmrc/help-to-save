@@ -16,30 +16,21 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import cats.instances.future._
 import com.google.inject.Inject
-import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
-import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
+import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 
-class EligibilityCheckController @Inject() (eligibilityCheckService: EligibilityCheckService,
-                                            authConnector:           AuthConnector)(
+class EligibilityCheckController @Inject() (val eligibilityCheckService: EligibilityCheckService,
+                                            authConnector:               AuthConnector)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends HelpToSaveAuth(authConnector) with Logging with WithMdcExecutionContext {
+  extends HelpToSaveAuth(authConnector) with EligibilityBase with WithMdcExecutionContext {
 
   def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
-    eligibilityCheckService.getEligibility(nino).fold(
-      {
-        e ⇒
-          logger.warn(s"Could not check eligibility due to $e", nino)
-          InternalServerError
-      }, r ⇒ Ok(Json.toJson(r))
-    )
+    checkEligibility(nino)
   }
 
 }

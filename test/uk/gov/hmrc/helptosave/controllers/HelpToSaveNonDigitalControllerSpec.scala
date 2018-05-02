@@ -19,22 +19,24 @@ package uk.gov.hmrc.helptosave.controllers
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
+import cats.data.EitherT
+import cats.instances.future._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
-import uk.gov.hmrc.helptosave.models.NSIUserInfo
-import uk.gov.hmrc.helptosave.services.UserCapService
-import uk.gov.hmrc.helptosave.util.toFuture
+import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, NSIUserInfo}
+import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
+import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.{TestEnrolmentBehaviour, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 // scalastyle:off magic.number
-class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehaviour {
+class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentBehaviour {
 
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
@@ -43,7 +45,9 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
 
     val userCapService = mock[UserCapService]
 
-    val controller = new CreateDEAccountController(enrolmentStore, itmpConnector, proxyConnector, userCapService)
+    val eligibilityCheckService = mock[EligibilityCheckService]
+
+    val controller = new HelpToSaveNonDigitalController(enrolmentStore, itmpConnector, proxyConnector, userCapService, eligibilityCheckService)
 
     def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
       (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
@@ -55,6 +59,11 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
         .expects()
         .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
     }
+
+    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
+      (eligibilityCheckService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(nino, *, *)
+        .returning(EitherT.fromEither[Future](result))
   }
 
   "The CreateAccountController" when {
@@ -141,6 +150,31 @@ class CreateDEAccountControllerSpec extends TestSupport with TestEnrolmentBehavi
         contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetails":""}"""
       }
 
+    }
+
+    "checking eligibility for an API User" must {
+
+      val nino = "AE123456"
+
+        def doRequest(controller: HelpToSaveNonDigitalController) =
+          controller.checkEligibility(nino)(FakeRequest())
+
+      "return with a status 500 if the eligibility check service fails" in new TestApparatus {
+        mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
+
+        val result = doRequest(controller)
+        status(result) shouldBe 500
+      }
+
+      "return the eligibility status returned from the eligibility check service if " +
+        "successful" in new TestApparatus {
+          val eligibility = EligibilityCheckResult("x", 0, "y", 0)
+          mockEligibilityCheckerService(nino)(Right(eligibility))
+
+          val result = doRequest(controller)
+          status(result) shouldBe 200
+          contentAsJson(result) shouldBe Json.toJson(eligibility)
+        }
     }
   }
 
