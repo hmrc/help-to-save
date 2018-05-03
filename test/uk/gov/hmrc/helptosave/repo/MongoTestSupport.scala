@@ -37,6 +37,8 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
     def get(): Future[Option[Data]]
 
     def remove(data: Data): Future[Option[Data]]
+
+    def findAll(): Future[List[Data]]
   }
 
   val mockDBFunctions = mock[MockDBFunctions]
@@ -64,6 +66,11 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
   def mockFind(id: String)(result: ⇒ Future[List[Data]]): Unit =
     (mockDBFunctions.get[Json.JsValueWrapper](_: Json.JsValueWrapper))
       .expects(toJsFieldJsValueWrapper(JsString(id)))
+      .returning(result)
+
+  def mockFindAll()(result: ⇒ Future[List[Data]]): Unit =
+    (mockDBFunctions.findAll: () ⇒ Future[List[Data]])
+      .expects()
       .returning(result)
 
   def mockGet()(result: ⇒ Future[Option[Data]]): Unit =
