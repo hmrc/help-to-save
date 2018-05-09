@@ -17,10 +17,9 @@
 package uk.gov.hmrc.helptosave.audit
 
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.helptosave.controllers.WithMdcExecutionContext
 import uk.gov.hmrc.helptosave.models.HTSEvent
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, WithMdcExecutionContext}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 
 import scala.concurrent.ExecutionContext

@@ -21,11 +21,10 @@ import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject}
 import javax.inject.Singleton
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.controllers.WithMdcExecutionContext
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
-import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.helptosave.util.{WithMdcExecutionContext, _}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
