@@ -23,8 +23,7 @@ import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait EnrolmentBehaviour {
 
@@ -32,12 +31,12 @@ trait EnrolmentBehaviour {
 
   val itmpConnector: ITMPEnrolmentConnector
 
-  def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = for {
+  def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = for {
     _ ← itmpConnector.setFlag(nino)
     _ ← enrolmentStore.update(nino, itmpFlag = true)
   } yield ()
 
-  def enrolUser(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
+  def enrolUser(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
     for {
       _ ← enrolmentStore.update(nino, itmpFlag = false)
       _ ← setITMPFlagAndUpdateMongo(nino)

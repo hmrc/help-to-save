@@ -28,7 +28,7 @@ import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, toFuture}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.util.{Failure, Success}
@@ -40,7 +40,7 @@ class HelpToSaveNonDigitalController @Inject() (val enrolmentStore:          Enr
                                                 val eligibilityCheckService: EligibilityCheckService)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends BaseController with EligibilityBase with WithMdcExecutionContext with EnrolmentBehaviour {
+  extends BaseController with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {
 
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒

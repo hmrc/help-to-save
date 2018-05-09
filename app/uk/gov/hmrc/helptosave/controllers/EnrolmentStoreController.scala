@@ -27,7 +27,7 @@ import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -37,7 +37,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
                                           authConnector:      AuthConnector)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends HelpToSaveAuth(authConnector) with Logging with WithMdcExecutionContext with EnrolmentBehaviour {
+  extends HelpToSaveAuth(authConnector) with EnrolmentBehaviour {
 
   import EnrolmentStoreController._
 

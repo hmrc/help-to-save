@@ -26,16 +26,15 @@ import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.util._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[UserCapServiceImpl])
 trait UserCapService {
 
-  def isAccountCreateAllowed(): Future[UserCapResponse]
+  def isAccountCreateAllowed()(implicit ec: ExecutionContext): Future[UserCapResponse]
 
-  def update(): Future[Unit]
+  def update()(implicit ec: ExecutionContext): Future[Unit]
 
 }
 
@@ -91,7 +90,7 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore)(implicit appConf
     }
   }
 
-  override def isAccountCreateAllowed(): Future[UserCapResponse] = {
+  override def isAccountCreateAllowed()(implicit ec: ExecutionContext): Future[UserCapResponse] = {
     if (totalCap === 0 && dailyCap === 0) {
       toFuture(UserCapResponse(isDailyCapDisabled = true, isTotalCapDisabled = true))
     } else if (totalCap === 0) {
@@ -120,11 +119,11 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore)(implicit appConf
     }
   }
 
-  override def update(): Future[Unit] =
+  override def update()(implicit ec: ExecutionContext): Future[Unit] =
     userCapStore.get().flatMap {
       userCap ⇒
-        userCapStore.upsert(calculateUserCap(userCap)).map{ updatedUserCap ⇒
-          val logMessage = "Updated user cap - " + updatedUserCap.fold("could not retrieve user cap data"){ cap ⇒
+        userCapStore.upsert(calculateUserCap(userCap)).map { updatedUserCap ⇒
+          val logMessage = "Updated user cap - " + updatedUserCap.fold("could not retrieve user cap data") { cap ⇒
             s"counts are now (daily: ${cap.dailyCount}, total: ${cap.totalCount})"
           }
           logger.info(logMessage)

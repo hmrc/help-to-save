@@ -27,7 +27,7 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.EligibilityCheckService
-import uk.gov.hmrc.helptosave.util.LogMessageTransformer
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext}
 import uk.gov.hmrc.helptosave.util.Logging._
 
 class StrideController @Inject() (val eligibilityCheckService:  EligibilityCheckService,
