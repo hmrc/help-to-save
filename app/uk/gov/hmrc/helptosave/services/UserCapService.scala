@@ -24,7 +24,7 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
-import uk.gov.hmrc.helptosave.util.{WithMdcExecutionContext, _}
+import uk.gov.hmrc.helptosave.util._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -39,7 +39,7 @@ trait UserCapService {
 }
 
 @Singleton
-class UserCapServiceImpl @Inject() (userCapStore: UserCapStore)(implicit appConfig: AppConfig) extends UserCapService with Logging with WithMdcExecutionContext {
+class UserCapServiceImpl @Inject() (userCapStore: UserCapStore)(implicit appConfig: AppConfig) extends UserCapService with Logging {
 
   private val isDailyCapEnabled = appConfig.getBoolean("microservice.user-cap.daily.enabled")
 
