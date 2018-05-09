@@ -24,7 +24,6 @@ import uk.gov.hmrc.auth.core.retrieve.Retrievals
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object HelpToSaveAuth {
@@ -35,7 +34,7 @@ object HelpToSaveAuth {
 
 }
 
-class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController with AuthorisedFunctions with Logging {
+class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController with AuthorisedFunctions with Logging with WithMdcExecutionContext {
 
   import HelpToSaveAuth._
 

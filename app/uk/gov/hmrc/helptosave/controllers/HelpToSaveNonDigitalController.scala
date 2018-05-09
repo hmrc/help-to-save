@@ -40,7 +40,7 @@ class HelpToSaveNonDigitalController @Inject() (val enrolmentStore:          Enr
                                                 val eligibilityCheckService: EligibilityCheckService)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends BaseController with EligibilityBase with WithMdcExecutionContext with EnrolmentBehaviour {
+  extends BaseController with EligibilityBase with EnrolmentBehaviour {
 
   def createDEAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒

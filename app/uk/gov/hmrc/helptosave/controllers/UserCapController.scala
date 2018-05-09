@@ -21,11 +21,10 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.services.UserCapService
-import uk.gov.hmrc.helptosave.util.Logging
 
 class UserCapController @Inject() (userCapService: UserCapService,
                                    authConnector:  AuthConnector)
-  extends HelpToSaveAuth(authConnector) with Logging with WithMdcExecutionContext {
+  extends HelpToSaveAuth(authConnector) {
 
   def isAccountCreateAllowed: Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     userCapService.isAccountCreateAllowed().map(userCapResponse ⇒ Ok(Json.toJson(userCapResponse)))

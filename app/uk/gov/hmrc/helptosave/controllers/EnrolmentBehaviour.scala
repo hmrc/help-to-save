@@ -23,10 +23,9 @@ import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-trait EnrolmentBehaviour {
+trait EnrolmentBehaviour extends WithMdcExecutionContext {
 
   val enrolmentStore: EnrolmentStore
 

@@ -28,7 +28,7 @@ import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.toFuture
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 // scalastyle:off magic.number
 class UserCapControllerSpec extends AuthSupport {
@@ -43,7 +43,8 @@ class UserCapControllerSpec extends AuthSupport {
 
     "checking if account creation is allowed " should {
       "return successful result" in {
-        (userCapService.isAccountCreateAllowed: () ⇒ Future[UserCapResponse]).expects()
+        (userCapService.isAccountCreateAllowed()(_: ExecutionContext))
+          .expects(*)
           .returning(toFuture(UserCapResponse()))
 
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
@@ -56,7 +57,8 @@ class UserCapControllerSpec extends AuthSupport {
 
     "updating account cap" should {
       "successfully update the counts" in {
-        (userCapService.update: () ⇒ Future[Unit]).expects()
+        (userCapService.update()(_: ExecutionContext))
+          .expects(*)
           .returning(toFuture(()))
 
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)

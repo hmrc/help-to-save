@@ -55,8 +55,8 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
         .returning(toFuture(response))
 
     def mockUserCapServiceUpdate(result: Either[String, Unit]) = {
-      (userCapService.update _)
-        .expects()
+      (userCapService.update()(_: ExecutionContext))
+        .expects(*)
         .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
     }
 

@@ -17,18 +17,19 @@
 package uk.gov.hmrc.helptosave.audit
 
 import javax.inject.{Inject, Singleton}
+import uk.gov.hmrc.helptosave.controllers.WithMdcExecutionContext
 import uk.gov.hmrc.helptosave.models.HTSEvent
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 @Singleton
-class HTSAuditor @Inject() (val auditConnector: AuditConnector)(implicit transformer: LogMessageTransformer) extends Logging {
+class HTSAuditor @Inject() (val auditConnector: AuditConnector)(implicit transformer: LogMessageTransformer) extends WithMdcExecutionContext with Logging {
 
-  def sendEvent(event: HTSEvent, nino: NINO): Unit = {
+  def sendEvent(event: HTSEvent, nino: NINO)(implicit ec: ExecutionContext): Unit = {
     val checkEventResult = auditConnector.sendEvent(event.value)
     checkEventResult.onFailure {
       case NonFatal(e) ⇒

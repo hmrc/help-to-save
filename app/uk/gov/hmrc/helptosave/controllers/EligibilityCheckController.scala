@@ -27,7 +27,7 @@ class EligibilityCheckController @Inject() (val eligibilityCheckService: Eligibi
                                             authConnector:               AuthConnector)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends HelpToSaveAuth(authConnector) with EligibilityBase with WithMdcExecutionContext {
+  extends HelpToSaveAuth(authConnector) with EligibilityBase {
 
   def eligibilityCheck(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
     checkEligibility(nino)
