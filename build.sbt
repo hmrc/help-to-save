@@ -19,7 +19,7 @@ val dependencies = Seq(
   "uk.gov.hmrc" %% "auth-client" % "2.5.0",
   "uk.gov.hmrc" %% "play-config" % "4.3.0",
   "uk.gov.hmrc" %% "domain" % "5.1.0",
-  "org.typelevel" %% "cats" % "0.9.0",
+  "org.typelevel" %% "cats-core" % "1.1.0",
   "com.github.kxbmap" %% "configs" % "0.4.4",
   "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
   "uk.gov.hmrc" %% "crypto" % "4.5.0",
@@ -33,7 +33,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "com.github.tomakehurst" % "wiremock" % "2.5.1" % scope,
   "org.scalamock" %% "scalamock" % "4.1.0" % scope,
-  "hmrc" %% "stub-data-generator" % "0.2.0" % scope,
+  "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % scope
 )
 
