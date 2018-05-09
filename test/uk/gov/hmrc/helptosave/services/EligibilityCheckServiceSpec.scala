@@ -22,9 +22,7 @@ import cats.data.EitherT
 import cats.instances.future._
 import org.scalamock.handlers.CallHandler3
 import org.scalatest.EitherValues
-import play.api.Configuration
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
-import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{EligibilityCheckConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse}
 import uk.gov.hmrc.helptosave.utils.TestSupport
