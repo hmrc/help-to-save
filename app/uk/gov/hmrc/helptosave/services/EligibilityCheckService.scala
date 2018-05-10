@@ -48,7 +48,7 @@ class EligibilityCheckServiceImpl @Inject() (helpToSaveProxyConnector:  HelpToSa
 
   override def getEligibility(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     for {
-      ucResponse ← EitherT.liftT(getUCDetails(nino, UUID.randomUUID()))
+      ucResponse ← EitherT.liftF(getUCDetails(nino, UUID.randomUUID()))
       result ← getEligibility(nino, ucResponse)
     } yield {
       auditor.sendEvent(EligibilityCheckEvent(nino, result, ucResponse), nino)
