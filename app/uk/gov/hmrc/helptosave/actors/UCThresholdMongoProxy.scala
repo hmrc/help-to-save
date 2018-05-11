@@ -19,15 +19,15 @@ package uk.gov.hmrc.helptosave.actors
 import akka.pattern.pipe
 import akka.actor.{Actor, Props}
 import cats.syntax.either._
-import uk.gov.hmrc.helptosave.actors.ThresholdMongoProxy._
+import uk.gov.hmrc.helptosave.actors.UCThresholdMongoProxy._
 import uk.gov.hmrc.helptosave.repo.ThresholdStore
 
-class ThresholdMongoProxy(thresholdStore: ThresholdStore) extends Actor {
+class UCThresholdMongoProxy(thresholdStore: ThresholdStore) extends Actor {
   import context.dispatcher
 
-  def retrieveThreshold() = thresholdStore.getThreshold().value
+  def retrieveThreshold() = thresholdStore.getUCThreshold().value
 
-  def storeThreshold(amount: Double) = thresholdStore.storeThreshold(amount).value
+  def storeThreshold(amount: Double) = thresholdStore.storeUCThreshold(amount).value
 
   override def receive: Receive = {
     case GetThresholdValue ⇒
@@ -39,7 +39,7 @@ class ThresholdMongoProxy(thresholdStore: ThresholdStore) extends Actor {
 
 }
 
-object ThresholdMongoProxy {
+object UCThresholdMongoProxy {
 
   case object GetThresholdValue
 
@@ -50,6 +50,6 @@ object ThresholdMongoProxy {
   case class StoreThresholdValueResponse(result: Either[String, Double])
 
   def props(thresholdStore: ThresholdStore): Props =
-    Props(new ThresholdMongoProxy(thresholdStore))
+    Props(new UCThresholdMongoProxy(thresholdStore))
 
 }

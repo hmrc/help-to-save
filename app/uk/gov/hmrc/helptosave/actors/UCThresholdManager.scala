@@ -28,6 +28,10 @@ import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting, WithExponentialB
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
+import UCThresholdConnectorProxy.{GetThresholdValue ⇒ GetDESThresholdValue, GetThresholdValueResponse ⇒ GetDESThresholdValueResponse}
+import UCThresholdMongoProxy.{GetThresholdValue ⇒ GetMongoThresholdValue, GetThresholdValueResponse ⇒ GetMongoThresholdValueResponse}
+import UCThresholdMongoProxy.{StoreThresholdValue ⇒ StoreMongoThresholdValue, StoreThresholdValueResponse ⇒ StoreMongoThresholdValueResponse}
+
 class UCThresholdManager(thresholdConnectorProxy: ActorRef,
                          thresholdMongoProxy:     ActorRef,
                          pagerDutyAlerting:       PagerDutyAlerting,
@@ -35,9 +39,6 @@ class UCThresholdManager(thresholdConnectorProxy: ActorRef,
                          config:                  Config) extends Actor with WithExponentialBackoffRetry with Stash with Logging {
 
   import context.dispatcher
-  import ThresholdConnectorProxy.{GetThresholdValue ⇒ GetDESThresholdValue, GetThresholdValueResponse ⇒ GetDESThresholdValueResponse}
-  import ThresholdMongoProxy.{GetThresholdValue ⇒ GetMongoThresholdValue, GetThresholdValueResponse ⇒ GetMongoThresholdValueResponse}
-  import ThresholdMongoProxy.{StoreThresholdValue ⇒ StoreMongoThresholdValue, StoreThresholdValueResponse ⇒ StoreMongoThresholdValueResponse}
 
   val thresholdConfig = config.get[Config]("uc-threshold").value
 
@@ -83,14 +84,14 @@ class UCThresholdManager(thresholdConnectorProxy: ActorRef,
   def notReady: Receive = {
 
     case GetDESThresholdValue ⇒
-      logger.info("Trying to get threshold from DES")
+      logger.info("Trying to get UC threshold value from DES")
       getValueFromDES() pipeTo self
 
     case GetDESThresholdValueResponse(result) ⇒
       handleDESThresholdValue(result)
 
     case GetMongoThresholdValue ⇒
-      logger.info("Trying to get threshold from mongo")
+      logger.info("Trying to get UC threshold value from mongo")
       getValueFromMongo() pipeTo self
 
     case GetMongoThresholdValueResponse(result) ⇒
@@ -107,20 +108,20 @@ class UCThresholdManager(thresholdConnectorProxy: ActorRef,
 
     case _: StoreMongoThresholdValue ⇒
       // write value to mongo
-      logger.info("Trying to store threshold value in mongo")
+      logger.info("Trying to store UC threshold value in mongo")
       storeValue(thresholdValue) pipeTo self
 
     case StoreMongoThresholdValueResponse(result) ⇒
       result.fold({
         e ⇒
           storeMongoRetries.retry(thresholdValue).fold(
-            logger.warn("Error while trying to store threshold value in mongo: retry job already active, new retry not scheduled")
+            logger.warn("Error while trying to store UC threshold value in mongo: retry job already active, new retry not scheduled")
           ){ time ⇒
-              logger.warn(s"Error while trying to store threshold value in mongo: $e. Retrying in ${time.toString()}")
+              logger.warn(s"Error while trying to store UC threshold value in mongo: $e. Retrying in ${time.toString()}")
             }
       }, {
         value ⇒
-          logger.info(s"Threshold was successfully saved in mongo, value: $value")
+          logger.info(s"UC threshold was successfully saved in mongo, value: $value")
           storeMongoRetries.cancelAndReset()
       })
 
@@ -128,12 +129,12 @@ class UCThresholdManager(thresholdConnectorProxy: ActorRef,
 
   def handleDESThresholdValue(result: Either[String, Double]): Unit = result.fold(
     { e ⇒
-      logger.warn(s"Could not obtain the threshold value from DES: $e")
+      logger.warn(s"Could not obtain the UC threshold value from DES: $e")
       //If Des is down, try mongo
       self ! GetMongoThresholdValue
     }, {
       value ⇒
-        logger.info(s"Successfully obtained the threshold value $value from DES")
+        logger.info(s"Successfully obtained the UC threshold value $value from DES")
         context become ready(value)
         self ! StoreMongoThresholdValue(value)
         unstashAll()
@@ -143,7 +144,7 @@ class UCThresholdManager(thresholdConnectorProxy: ActorRef,
   def handleMongoThresholdValue(result: Either[String, Option[Double]]): Unit = {
       def handleError(): Unit = {
         getDESRetries.retry(())
-        pagerDutyAlerting.alert("Could not initialise threshold value")
+        pagerDutyAlerting.alert("Could not initialise UC threshold value from mongo")
       }
 
     result.fold({

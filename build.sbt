@@ -119,9 +119,8 @@ lazy val microservice = Project(appName, file("."))
       (baseDirectory.value ** "*.sc").get ++
       Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
       (baseDirectory.value ** "UCThresholdManager.scala").get ++
-      (baseDirectory.value ** "ThresholdConnectorProxy.scala").get ++
-      (baseDirectory.value ** "ThresholdMongoProxy.scala").get
-
+      (baseDirectory.value ** "UCThresholdConnectorProxy.scala").get ++
+      (baseDirectory.value ** "UCThresholdMongoProxy.scala").get
   )
   .settings(
     libraryDependencies ++= appDependencies,

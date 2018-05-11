@@ -43,7 +43,7 @@ class MongoThresholdStoreSpec extends TestSupport with MongoTestSupport[UCThresh
       val data = UCThreshold(amount)
 
         def update(amount: Double): Either[String, Unit] =
-          Await.result(mongoStore.storeThreshold(amount).value, 5.seconds)
+          Await.result(mongoStore.storeUCThreshold(amount).value, 5.seconds)
 
       "store the new threshold in the mongo database" in {
         mockUpdate(data)(Right(None))
@@ -68,7 +68,7 @@ class MongoThresholdStoreSpec extends TestSupport with MongoTestSupport[UCThresh
     "getting the threshold from mongo" must {
 
         def get(): Either[String, Option[Double]] =
-          Await.result(mongoStore.getThreshold().value, 5.seconds)
+          Await.result(mongoStore.getUCThreshold().value, 5.seconds)
 
       "get the threshold currently held in mongo" in {
         mockFindAll()(Future.successful(List(UCThreshold(amount))))

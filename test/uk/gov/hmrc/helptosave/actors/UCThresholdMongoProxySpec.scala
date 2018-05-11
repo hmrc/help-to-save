@@ -22,45 +22,45 @@ import uk.gov.hmrc.helptosave.repo.ThresholdStore
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ThresholdMongoProxySpec extends ActorTestSupport("ThresholdMongoProxySpec") {
+class UCThresholdMongoProxySpec extends ActorTestSupport("UCThresholdMongoProxySpec") {
   import system.dispatcher
 
   val thresholdStore = mock[ThresholdStore]
 
-  val actor = system.actorOf(ThresholdMongoProxy.props(thresholdStore))
+  val actor = system.actorOf(UCThresholdMongoProxy.props(thresholdStore))
 
   def mockGetValueFromMongo(result: Either[String, Option[Double]]) =
-    (thresholdStore.getThreshold()(_: ExecutionContext))
+    (thresholdStore.getUCThreshold()(_: ExecutionContext))
       .expects(*)
       .returning(EitherT.fromEither[Future](result))
 
   def mockStoreValueInMongo(amount: Double)(result: Either[String, Unit]) =
-    (thresholdStore.storeThreshold(_: Double)(_: ExecutionContext))
+    (thresholdStore.storeUCThreshold(_: Double)(_: ExecutionContext))
       .expects(amount, *)
       .returning(EitherT.fromEither[Future](result))
 
-  "The ThresholdMongoProxy" when {
+  "The UCThresholdMongoProxy" when {
 
     "asked for the threshold" must {
       "return a value from mongo successfully if there is a threshold value stored in mongo" in {
         mockGetValueFromMongo(Right(Some(100.0)))
 
-        actor ! ThresholdMongoProxy.GetThresholdValue
-        expectMsg(ThresholdMongoProxy.GetThresholdValueResponse(Right(Some(100.0))))
+        actor ! UCThresholdMongoProxy.GetThresholdValue
+        expectMsg(UCThresholdMongoProxy.GetThresholdValueResponse(Right(Some(100.0))))
       }
 
       "return None from mongo if there is no threshold value stored" in {
         mockGetValueFromMongo(Right(None))
 
-        actor ! ThresholdMongoProxy.GetThresholdValue
-        expectMsg(ThresholdMongoProxy.GetThresholdValueResponse(Right(None)))
+        actor ! UCThresholdMongoProxy.GetThresholdValue
+        expectMsg(UCThresholdMongoProxy.GetThresholdValueResponse(Right(None)))
       }
 
       "return a Left if the value has not been retrieved from mongo" in {
         mockGetValueFromMongo(Left("An error occurred"))
 
-        actor ! ThresholdMongoProxy.GetThresholdValue
-        expectMsg(ThresholdMongoProxy.GetThresholdValueResponse(Left("An error occurred")))
+        actor ! UCThresholdMongoProxy.GetThresholdValue
+        expectMsg(UCThresholdMongoProxy.GetThresholdValueResponse(Left("An error occurred")))
       }
 
     }
@@ -69,15 +69,15 @@ class ThresholdMongoProxySpec extends ActorTestSupport("ThresholdMongoProxySpec"
       "return a Right if the value that has been stored successfully in mongo" in {
         mockStoreValueInMongo(100.0)(Right(()))
 
-        actor ! ThresholdMongoProxy.StoreThresholdValue(100.0)
-        expectMsg(ThresholdMongoProxy.StoreThresholdValueResponse(Right(100.0)))
+        actor ! UCThresholdMongoProxy.StoreThresholdValue(100.0)
+        expectMsg(UCThresholdMongoProxy.StoreThresholdValueResponse(Right(100.0)))
       }
 
       "return a Left if the value has not been stored in mongo" in {
         mockStoreValueInMongo(100.0)(Left("An error occurred"))
 
-        actor ! ThresholdMongoProxy.StoreThresholdValue(100.0)
-        expectMsg(ThresholdMongoProxy.StoreThresholdValueResponse(Left("An error occurred")))
+        actor ! UCThresholdMongoProxy.StoreThresholdValue(100.0)
+        expectMsg(UCThresholdMongoProxy.StoreThresholdValueResponse(Left("An error occurred")))
       }
     }
 

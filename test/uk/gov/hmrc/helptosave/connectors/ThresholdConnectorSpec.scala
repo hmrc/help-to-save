@@ -26,14 +26,14 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 class ThresholdConnectorSpec extends TestSupport with MockPagerDuty {
 
-  lazy val connector = new ThresholdConnectorImpl(mockHttp, mockPagerDuty)
+  lazy val connector = new UCThresholdConnectorImpl(mockHttp, mockPagerDuty)
 
   def mockGet(url: String)(response: Option[HttpResponse]) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
       .expects(url, appConfig.desHeaders, *, *)
       .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
-  "getThreshold" must {
+  "getUCThreshold" must {
 
     "return OK status with the threshold from ITMP" in {
       val result = UCThreshold(500.50)
@@ -45,8 +45,7 @@ class ThresholdConnectorSpec extends TestSupport with MockPagerDuty {
       val result = 500.50
       inSequence {
         mockGet(connector.itmpThresholdURL)(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        mockPagerDutyAlert("Could not parse JSON in threshold response")
-        //mockPagerDuty.alert("Failed to make call to get threshold")
+        mockPagerDutyAlert("Could not parse JSON in UC threshold response")
       }
 
       Await.result(connector.getThreshold().value, 5.seconds).isLeft shouldBe true
@@ -56,7 +55,7 @@ class ThresholdConnectorSpec extends TestSupport with MockPagerDuty {
       "the call fails" in {
         inSequence {
           mockGet(connector.itmpThresholdURL)(None)
-          mockPagerDutyAlert("Failed to make call to get threshold")
+          mockPagerDutyAlert("Failed to make call to get UC threshold from DES")
         }
 
         Await.result(connector.getThreshold().value, 5.seconds).isLeft shouldBe true

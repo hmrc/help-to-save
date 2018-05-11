@@ -33,9 +33,9 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[MongoThresholdStore])
 trait ThresholdStore {
 
-  def storeThreshold(amount: Double)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
+  def storeUCThreshold(amount: Double)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
 
-  def getThreshold()(implicit ec: ExecutionContext): EitherT[Future, String, Option[Double]]
+  def getUCThreshold()(implicit ec: ExecutionContext): EitherT[Future, String, Option[Double]]
 }
 
 @Singleton
@@ -49,13 +49,13 @@ class MongoThresholdStore @Inject() (mongo: ReactiveMongoComponent)(implicit tra
 
   val log: Logger = new Logger(logger)
 
-  def storeThreshold(amount: Double)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
+  def storeUCThreshold(amount: Double)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
       doUpdate(amount)
         .map {
           res ⇒
             res.fold[Either[String, Unit]] {
-              Left("Could not update the threshold mongo store")
+              Left("Could not update the threshold mongo store with new UC threshold value")
             }(_ ⇒ Right(()))
         }.recover {
           case NonFatal(e) ⇒
@@ -63,14 +63,14 @@ class MongoThresholdStore @Inject() (mongo: ReactiveMongoComponent)(implicit tra
         }
     })
 
-  def getThreshold()(implicit ec: ExecutionContext): EitherT[Future, String, Option[Double]] =
+  def getUCThreshold()(implicit ec: ExecutionContext): EitherT[Future, String, Option[Double]] =
     EitherT[Future, String, Option[Double]]({
       findAll().map { res ⇒
         Right(res.headOption
           .map(data ⇒ data.thresholdAmount))
       }.recover {
         case e ⇒
-          Left(s"Could not read from threshold store: ${e.getMessage}")
+          Left(s"Could not read UC threshold value from threshold store: ${e.getMessage}")
       }
     })
 

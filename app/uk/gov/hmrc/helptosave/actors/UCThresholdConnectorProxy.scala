@@ -18,13 +18,13 @@ package uk.gov.hmrc.helptosave.actors
 
 import akka.pattern.pipe
 import akka.actor.{Actor, Props}
-import uk.gov.hmrc.helptosave.actors.ThresholdConnectorProxy.{GetThresholdValue, GetThresholdValueResponse}
-import uk.gov.hmrc.helptosave.connectors.ThresholdConnector
+import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxy.{GetThresholdValue, GetThresholdValueResponse}
+import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ThresholdConnectorProxy(thresholdConnector: ThresholdConnector) extends Actor {
+class UCThresholdConnectorProxy(thresholdConnector: UCThresholdConnector) extends Actor {
   import context.dispatcher
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -36,13 +36,13 @@ class ThresholdConnectorProxy(thresholdConnector: ThresholdConnector) extends Ac
   }
 }
 
-object ThresholdConnectorProxy {
+object UCThresholdConnectorProxy {
 
   case object GetThresholdValue
 
   case class GetThresholdValueResponse(result: Either[String, Double])
 
-  def props(thresholdConnector: ThresholdConnector): Props =
-    Props(new ThresholdConnectorProxy(thresholdConnector))
+  def props(thresholdConnector: UCThresholdConnector): Props =
+    Props(new UCThresholdConnectorProxy(thresholdConnector))
 
 }

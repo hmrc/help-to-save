@@ -18,24 +18,24 @@ package uk.gov.hmrc.helptosave.actors
 
 import cats.data.EitherT
 import cats.instances.future._
-import uk.gov.hmrc.helptosave.connectors.ThresholdConnector
+import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ThresholdConnectorProxySpec extends ActorTestSupport("ThresholdConnectorProxySpec") {
+class UCThresholdConnectorProxySpec extends ActorTestSupport("UCThresholdConnectorProxySpec") {
   import system.dispatcher
 
-  val connector = mock[ThresholdConnector]
+  val connector = mock[UCThresholdConnector]
 
-  val actor = system.actorOf(ThresholdConnectorProxy.props(connector))
+  val actor = system.actorOf(UCThresholdConnectorProxy.props(connector))
 
   def mockConnectorGetValue(result: Either[String, Double]) =
     (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *)
       .returning(EitherT.fromEither[Future](result))
 
-  "The ThresholdConnectorProxy" when {
+  "The UCThresholdConnectorProxy" when {
 
     "asked for the threshold value" must {
 
@@ -43,16 +43,16 @@ class ThresholdConnectorProxySpec extends ActorTestSupport("ThresholdConnectorPr
 
         mockConnectorGetValue(Right(100.0))
 
-        actor ! ThresholdConnectorProxy.GetThresholdValue
-        expectMsg(ThresholdConnectorProxy.GetThresholdValueResponse(Right(100.0)))
+        actor ! UCThresholdConnectorProxy.GetThresholdValue
+        expectMsg(UCThresholdConnectorProxy.GetThresholdValueResponse(Right(100.0)))
       }
 
       "ask for and return an error from the threshold connector if an error occurs" in {
 
         mockConnectorGetValue(Left("error occurred"))
 
-        actor ! ThresholdConnectorProxy.GetThresholdValue
-        expectMsg(ThresholdConnectorProxy.GetThresholdValueResponse(Left("error occurred")))
+        actor ! UCThresholdConnectorProxy.GetThresholdValue
+        expectMsg(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("error occurred")))
       }
 
     }

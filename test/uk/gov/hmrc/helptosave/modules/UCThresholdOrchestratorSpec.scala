@@ -24,7 +24,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdManager}
-import uk.gov.hmrc.helptosave.connectors.ThresholdConnector
+import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
 import uk.gov.hmrc.helptosave.repo.ThresholdStore
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 import uk.gov.hmrc.http.HeaderCarrier
@@ -38,7 +38,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
   implicit val timeout: Timeout = Timeout(10.seconds)
 
-  val connector = mock[ThresholdConnector]
+  val connector = mock[UCThresholdConnector]
   val store = mock[ThresholdStore]
   val pagerDutyAlert = mock[PagerDutyAlerting]
 
@@ -61,7 +61,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Left[String, Double]("")))
 
-      (store.getThreshold()(_: ExecutionContext))
+      (store.getUCThreshold()(_: ExecutionContext))
         .expects(*)
         .returning(EitherT.fromEither[Future](Left[String, Option[Double]]("")))
 
@@ -73,7 +73,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Right[String, Double](threshold)))
 
-      (store.storeThreshold(_: Double)(_: ExecutionContext))
+      (store.storeUCThreshold(_: Double)(_: ExecutionContext))
         .expects(threshold, *)
         .returning(EitherT.fromEither[Future](Right[String, Unit](())))
 
@@ -83,7 +83,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .mapTo[UCThresholdManager.GetThresholdValueResponse]
 
       Await.result(response, 10.seconds).result shouldBe threshold
-      // sleep here to ensure the mock ThresholdStore's storeThreshold method
+      // sleep here to ensure the mock ThresholdStore's storeUCThreshold method
       // definitely gets called since it happens asynchronously
       Thread.sleep(1000L)
     }
