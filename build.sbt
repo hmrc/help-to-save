@@ -34,7 +34,9 @@ def testDependencies(scope: String = "test,it") = Seq(
   "com.github.tomakehurst" % "wiremock" % "2.5.1" % scope,
   "org.scalamock" %% "scalamock" % "4.1.0" % scope,
   "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % scope
+  "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % scope,
+  "com.miguno.akka" % "akka-mock-scheduler_2.11" % "0.5.1" % scope,
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.11" % scope
 )
 
 lazy val scoverageSettings = {
@@ -115,11 +117,14 @@ lazy val microservice = Project(appName, file("."))
   .settings(wartremoverExcluded ++=
     routes.in(Compile).value ++
       (baseDirectory.value ** "*.sc").get ++
-      Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala")
+      Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
+      (baseDirectory.value ** "UCThresholdManager.scala").get ++
+      (baseDirectory.value ** "UCThresholdConnectorProxy.scala").get ++
+      (baseDirectory.value ** "UCThresholdMongoProxy.scala").get
   )
   .settings(
     libraryDependencies ++= appDependencies,
-    retrieveManaged := true,
+    retrieveManaged := false,
     evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
     routesGenerator := StaticRoutesGenerator
   )
