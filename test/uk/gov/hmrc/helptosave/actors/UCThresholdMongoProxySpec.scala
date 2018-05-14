@@ -23,7 +23,6 @@ import uk.gov.hmrc.helptosave.repo.ThresholdStore
 import scala.concurrent.{ExecutionContext, Future}
 
 class UCThresholdMongoProxySpec extends ActorTestSupport("UCThresholdMongoProxySpec") {
-  import system.dispatcher
 
   val thresholdStore = mock[ThresholdStore]
 

@@ -41,7 +41,7 @@ trait ThresholdStore {
 @Singleton
 class MongoThresholdStore @Inject() (mongo: ReactiveMongoComponent)(implicit transformer: LogMessageTransformer)
   extends ReactiveRepository[UCThreshold, BSONObjectID](
-    collectionName = "threshold",
+    collectionName = "uc-threshold",
     mongo          = mongo.mongoConnector.db,
     UCThreshold.format,
     ReactiveMongoFormats.objectIdFormats)
