@@ -23,17 +23,19 @@ import org.scalatest.EitherValues
 import play.api.libs.json.{Json, Writes}
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
+import uk.gov.hmrc.helptosave.models.account.{Account, Blocking, BonusTerm}
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.toFuture
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
+// scalastyle:off magic.number
+class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with EitherValues {
 
-  lazy val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp)
+  lazy val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
 
   val userInfo: NSIUserInfo =
@@ -66,9 +68,14 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
       .expects(url, *, *, *)
       .returning(Future.failed(ex))
 
-  "The FrontendConnector" when {
+  private def mockGetAccountResponse(url: String)(response: Option[HttpResponse]) =
+    (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(url, Map.empty[String, String], *, *)
+      .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
+
+  "The HelpToSaveProxyConnector" when {
     "creating account" must {
-      "handle success response from frontend" in {
+      "handle success response from the help-to-save-proxy" in {
 
         mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(CREATED)))
         val result = await(proxyConnector.createAccount(userInfo))
@@ -152,6 +159,150 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with EitherValues {
         val result = await(proxyConnector.ucClaimantCheck(nino, txnId).value)
 
         result shouldBe Left("Call to UniversalCredit check unsuccessful: boom")
+      }
+    }
+
+    "retrieving NsiAccount" must {
+
+      val nino = randomNINO()
+      val correlationId = UUID.randomUUID()
+
+      val queryString = s"nino=$nino&correlationId=$correlationId&systemId=123"
+
+      val getAccountUrl: String = s"http://localhost:7005/help-to-save-proxy/nsi-services/account?$queryString"
+
+      "handle success response with Accounts having Terms" in {
+
+        val json = Json.parse(
+          """
+            |{
+            |  "accountBalance": "200.34",
+            |  "accountClosedFlag": "",
+            |  "accountBlockingCode": "00",
+            |  "clientBlockingCode": "00",
+            |  "currentInvestmentMonth": {
+            |    "investmentRemaining": "15.50",
+            |    "investmentLimit": "50.00",
+            |    "endDate": "2018-02-28"
+            |  },
+            |  "terms": [
+            |     {
+            |       "termNumber":2,
+            |       "endDate":"2021-12-31",
+            |       "bonusEstimate":"67.00",
+            |       "bonusPaid":"0.00"
+            |    },
+            |    {
+            |       "termNumber":1,
+            |       "endDate":"2019-12-31",
+            |       "bonusEstimate":"123.45",
+            |       "bonusPaid":"123.45"
+            |    }
+            |  ]
+            |}
+          """.stripMargin)
+
+        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
+
+        val result = await(proxyConnector.getAccount(nino, queryString).value)
+
+        result shouldBe Right(Some(Account(false,
+          Blocking(false),
+          200.34,
+          34.50,
+          15.50,
+          50.00,
+          LocalDate.parse("2018-02-28"),
+          List(BonusTerm(123.45, 123.45, LocalDate.parse("2019-12-31"), LocalDate.parse("2020-01-01")),
+               BonusTerm(67.00, 0.00, LocalDate.parse("2021-12-31"), LocalDate.parse("2022-01-01"))),
+          None,
+          None)
+        ))
+      }
+
+      "handle success response when the Account is cloned and there are no Terms in the json" in {
+        val json = Json.parse(
+          """
+            |{
+            |  "accountBalance": "0.00",
+            |  "accountClosedFlag": "C",
+            |  "accountBlockingCode": "T1",
+            |  "clientBlockingCode": "client blocking test",
+            |  "accountClosureDate": "2018-04-09",
+            |  "accountClosingBalance": "10.11",
+            |  "currentInvestmentMonth": {
+            |    "endDate": "2018-04-30",
+            |    "investmentRemaining": "12.34",
+            |    "investmentLimit": "150.42"
+            |  },
+            |  "terms": []
+            |}
+          """.stripMargin)
+
+        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
+
+        val result = await(proxyConnector.getAccount(nino, queryString).value)
+
+        result shouldBe Right(Some(Account(true,
+          Blocking(true),
+          0.00,
+          138.08,
+          12.34,
+          150.42,
+          LocalDate.parse("2018-04-30"),
+          List.empty,
+          Some(LocalDate.parse("2018-04-09")),
+          Some(10.11))
+        ))
+      }
+
+      "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
+        val json = Json.parse(
+          // invalid because required field bonusPaid is omitted from first term
+          """
+            |{
+            |  "accountBalance": "123.45",
+            |  "currentInvestmentMonth": {
+            |    "investmentRemaining": "15.50",
+            |    "investmentLimit": "50.00"
+            |  },
+            |  "terms": [
+            |     {
+            |       "termNumber":1,
+            |       "endDate":"2019-12-31",
+            |       "bonusEstimate":"90.99"
+            |    },
+            |    {
+            |       "termNumber":2,
+            |       "endDate":"2021-12-31",
+            |       "bonusEstimate":"12.00",
+            |       "bonusPaid":"00.00"
+            |    }
+            |  ]
+            |}""".stripMargin)
+
+        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
+        mockPagerDutyAlert("Could not parse JSON in the getAccount response")
+
+        val result = await(proxyConnector.getAccount(nino, queryString).value)
+
+        result.isLeft shouldBe true
+      }
+
+      "handle non 200 responses from help-to-save-proxy" in {
+        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(400)))
+        mockPagerDutyAlert("Received unexpected http status in response to getAccount")
+
+        val result = await(proxyConnector.getAccount(nino, queryString).value)
+        result shouldBe Left("Received unexpected status(400) from getNsiAccount call")
+      }
+
+      "handle unexpected server errors" in {
+        mockGetAccountResponse(getAccountUrl)(None)
+        mockPagerDutyAlert("Failed to make call to getAccount")
+
+        val result = await(proxyConnector.getAccount(nino, queryString).value)
+        result.isLeft shouldBe true
       }
     }
   }

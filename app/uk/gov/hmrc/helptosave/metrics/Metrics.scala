@@ -60,6 +60,9 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   val payePersonalDetailsErrorCounter: Counter = counter("backend.paye-personal-details-error.count")
 
+  val getAccountTimer: Timer = timer("backend.get-account.time")
+
+  val getAccountErrorCounter: Counter = counter("backend.get-account-error.count")
 }
 
 object Metrics {
