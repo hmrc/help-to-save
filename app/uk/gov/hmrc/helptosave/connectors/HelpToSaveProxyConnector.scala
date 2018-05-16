@@ -19,18 +19,22 @@ package uk.gov.hmrc.helptosave.connectors
 import java.util.UUID
 
 import cats.data.EitherT
+import cats.syntax.either._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
+import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, Result}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[HelpToSaveProxyConnectorImpl])
 trait HelpToSaveProxyConnector {
@@ -38,10 +42,14 @@ trait HelpToSaveProxyConnector {
   def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
   def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
+
+  def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]]
 }
 
 @Singleton
-class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
+                                              metrics:           Metrics,
+                                              pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveProxyConnector with Logging {
 
   val proxyURL: String = appConfig.baseUrl("help-to-save-proxy")
@@ -86,5 +94,50 @@ class HelpToSaveProxyConnectorImpl @Inject() (http: WSHttp)(implicit transformer
           Left(s"Call to UniversalCredit check unsuccessful: ${e.getMessage}")
       }
     )
+  }
+
+  override def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]] = {
+
+    val url = s"$proxyURL/help-to-save-proxy/nsi-services/account?$queryString"
+    val timerContext = metrics.getAccountTimer.time()
+    EitherT[Future, String, Option[Account]](
+      http.get(url).map[Either[String, Option[Account]]] {
+        response ⇒
+          val time = timerContext.stop()
+          val correlationId = "correlationId" -> getCorrelationId(queryString)
+          response.status match {
+            case Status.OK ⇒
+              val result = response.parseJson[NsiAccount].map(Account(_))
+
+              result.fold(
+                e ⇒ {
+                  logger.warn(s"Could not parse getNsiAccount response, received 200 (OK), error=$e, response = ${maskNino(response.body)}", nino, correlationId)
+                  metrics.getAccountErrorCounter.inc()
+                  pagerDutyAlerting.alert("Could not parse JSON in the getAccount response")
+                },
+                _ ⇒ logger.info("Call to getNsiAccount successful", nino, correlationId)
+              )
+              result
+            case other ⇒
+              logger.warn(s"Call to getNsiAccount unsuccessful. Received unexpected status $other", nino, correlationId)
+              metrics.getAccountErrorCounter.inc()
+              pagerDutyAlerting.alert("Received unexpected http status in response to getAccount")
+              Left(s"Received unexpected status($other) from getNsiAccount call")
+          }
+      }.recover {
+        case NonFatal(e) ⇒
+          val time = timerContext.stop()
+          metrics.getAccountErrorCounter.inc()
+          pagerDutyAlerting.alert("Failed to make call to getAccount")
+          Left(s"Call to getNsiAccount unsuccessful: ${e.getMessage}")
+      }
+    )
+  }
+
+  private def getCorrelationId(queryString: String): String = {
+    queryString.split("&")
+      .find(p ⇒ p.contains("correlationId"))
+      .map(p ⇒ p.split("=")(1))
+      .getOrElse("-")
   }
 }

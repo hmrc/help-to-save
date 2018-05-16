@@ -57,6 +57,8 @@
 
     <logger name="shaded.google.common.collect.EvictingQueue" level="ERROR"/>
 
+    <logger name="uk.gov.hmrc.audit.handler.DatastreamHandler" level="WARN"/>
+
     <root level="INFO">
         <appender-ref ref="FILE"/>
         <appender-ref ref="STDOUT"/>
