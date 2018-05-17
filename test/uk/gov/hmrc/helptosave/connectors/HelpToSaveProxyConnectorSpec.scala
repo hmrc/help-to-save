@@ -23,7 +23,7 @@ import org.scalatest.EitherValues
 import play.api.libs.json.{Json, Writes}
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
-import uk.gov.hmrc.helptosave.models.account.{Account, Blocking, BonusTerm}
+import uk.gov.hmrc.helptosave.models.account.{Account, AccountO, Blocking, BonusTerm}
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
@@ -206,7 +206,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val result = await(proxyConnector.getAccount(nino, queryString).value)
 
-        result shouldBe Right(Some(Account(false,
+        result shouldBe Right(AccountO(Some(Account(false,
           Blocking(false),
           200.34,
           34.50,
@@ -217,7 +217,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
                BonusTerm(67.00, 0.00, LocalDate.parse("2021-12-31"), LocalDate.parse("2022-01-01"))),
           None,
           None)
-        ))
+        )))
       }
 
       "handle success response when the Account is cloned and there are no Terms in the json" in {
@@ -243,7 +243,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val result = await(proxyConnector.getAccount(nino, queryString).value)
 
-        result shouldBe Right(Some(Account(true,
+        result shouldBe Right(AccountO(Some(Account(true,
           Blocking(true),
           0.00,
           138.08,
@@ -253,7 +253,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           List.empty,
           Some(LocalDate.parse("2018-04-09")),
           Some(10.11))
-        ))
+        )))
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {

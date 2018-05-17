@@ -25,7 +25,7 @@ import play.api.http.Status
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount}
+import uk.gov.hmrc.helptosave.models.account.{Account, AccountO, NsiAccount}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
@@ -43,7 +43,7 @@ trait HelpToSaveProxyConnector {
 
   def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 
-  def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]]
+  def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[AccountO]
 }
 
 @Singleton
@@ -96,18 +96,18 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
     )
   }
 
-  override def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]] = {
+  override def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[AccountO] = {
 
     val url = s"$proxyURL/help-to-save-proxy/nsi-services/account?$queryString"
     val timerContext = metrics.getAccountTimer.time()
-    EitherT[Future, String, Option[Account]](
-      http.get(url).map[Either[String, Option[Account]]] {
+    EitherT[Future, String, AccountO](
+      http.get(url).map[Either[String, AccountO]] {
         response ⇒
           val time = timerContext.stop()
           val correlationId = "correlationId" -> getCorrelationId(queryString)
           response.status match {
             case Status.OK ⇒
-              val result = response.parseJson[NsiAccount].map(Account(_))
+              val result = response.parseJson[NsiAccount].map(a ⇒ AccountO(Account(a)))
 
               result.fold(
                 e ⇒ {

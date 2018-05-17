@@ -26,7 +26,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, _}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
-import uk.gov.hmrc.helptosave.models.account.{Account, Blocking}
+import uk.gov.hmrc.helptosave.models.account.{Account, AccountO, Blocking}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext
@@ -43,7 +43,7 @@ class AccountControllerSpec extends AuthSupport {
 
   val fakeRequest = FakeRequest("GET", s"/nsi-account?$queryString")
 
-  def mockGetAccount(nino: String, queryString: String)(response: Either[String, Option[Account]]) = {
+  def mockGetAccount(nino: String, queryString: String)(response: Either[String, AccountO]) = {
     (mockProxyConnector.getAccount(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, queryString, *, *)
       .returning(EitherT.fromEither(response))
@@ -55,11 +55,11 @@ class AccountControllerSpec extends AuthSupport {
 
       "handle success responses" in {
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockGetAccount(nino, queryString)(Right(Some(account)))
+        mockGetAccount(nino, queryString)(Right(AccountO(Some(account))))
 
         val result = controller.getAccount()(fakeRequest)
         status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.toJson(account)
+        contentAsJson(result) shouldBe Json.toJson(AccountO(Some(account)))
       }
 
       "handle errors returned by the connector" in {
