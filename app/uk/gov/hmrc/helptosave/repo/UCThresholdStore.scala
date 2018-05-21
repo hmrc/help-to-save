@@ -29,6 +29,7 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 @ImplementedBy(classOf[MongoThresholdStore])
 trait ThresholdStore {
@@ -74,12 +75,17 @@ class MongoThresholdStore @Inject() (mongo: ReactiveMongoComponent)(implicit tra
       }
     })
 
-  private[repo] def doUpdate(amount: Double)(implicit ec: ExecutionContext): Future[Option[UCThreshold]] =
-    collection.findAndUpdate(
-      BSONDocument(),
-      BSONDocument("$set" -> BSONDocument("thresholdAmount" -> amount)),
-      fetchNewObject = true,
-      upsert         = true
-    ).map(_.result[UCThreshold])
-
+  private[repo] def doUpdate(amount: Double)(implicit ec: ExecutionContext): Future[Option[UCThreshold]] = {
+    Try {
+      collection.findAndUpdate(
+        BSONDocument(),
+        BSONDocument("$set" -> BSONDocument("thresholdAmount" -> amount)),
+        fetchNewObject = true,
+        upsert         = true
+      ).map(_.result[UCThreshold])
+    } match {
+      case Success(f) ⇒ f
+      case Failure(e) ⇒ Future.failed(e)
+    }
+  }
 }
