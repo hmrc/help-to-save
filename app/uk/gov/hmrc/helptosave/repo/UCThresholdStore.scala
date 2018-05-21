@@ -76,16 +76,15 @@ class MongoThresholdStore @Inject() (mongo: ReactiveMongoComponent)(implicit tra
     })
 
   private[repo] def doUpdate(amount: Double)(implicit ec: ExecutionContext): Future[Option[UCThreshold]] = {
-    Try {
+    try {
       collection.findAndUpdate(
         BSONDocument(),
         BSONDocument("$set" -> BSONDocument("thresholdAmount" -> amount)),
         fetchNewObject = true,
         upsert         = true
       ).map(_.result[UCThreshold])
-    } match {
-      case Success(f) ⇒ f
-      case Failure(e) ⇒ Future.failed(e)
+    } catch {
+      case e ⇒ Future.failed(e)
     }
   }
 }
