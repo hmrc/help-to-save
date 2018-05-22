@@ -19,10 +19,10 @@ package uk.gov.hmrc.helptosave.modules
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.actors.{UCThresholdConnectorProxy, UCThresholdMongoProxy, UCThresholdManager}
+import uk.gov.hmrc.helptosave.actors.{UCThresholdConnectorProxy, UCThresholdManager, UCThresholdMongoProxy}
 import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
 import uk.gov.hmrc.helptosave.repo.ThresholdStore
-import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
+import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
 class UCThresholdModule extends AbstractModule {
 
@@ -35,17 +35,27 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
                                          pagerDutyAlerting: PagerDutyAlerting,
                                          configuration:     Configuration,
                                          connector:         UCThresholdConnector,
-                                         store:             ThresholdStore) {
+                                         store:             ThresholdStore) extends Logging {
 
-  private val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxy.props(connector))
-  private val mongoProxy: ActorRef = system.actorOf(UCThresholdMongoProxy.props(store))
+  private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxy.props(connector))
+  private lazy val mongoProxy: ActorRef = system.actorOf(UCThresholdMongoProxy.props(store))
 
-  val thresholdHandler: ActorRef = system.actorOf(UCThresholdManager.props(
-    connectorProxy,
-    mongoProxy,
-    pagerDutyAlerting,
-    system.scheduler,
-    configuration.underlying
-  ))
+  val enabled: Boolean = configuration.underlying.getBoolean("uc-threshold.enabled")
+
+  val thresholdHandler: ActorRef = if (enabled) {
+    logger.info("UC threshold DES behaviour enabled: starting UCThresholdManager")
+    system.actorOf(UCThresholdManager.props(
+      connectorProxy,
+      mongoProxy,
+      pagerDutyAlerting,
+      system.scheduler,
+      configuration.underlying
+    ))
+  } else {
+    logger.info("UC threshold DES behaviour not enabled: not starting UCThresholdManager")
+    // ActorRef.noSender is actually null - we're abusing the use of
+    // the value here to support the temporary enabled/disabled behaviour
+    ActorRef.noSender
+  }
 
 }
