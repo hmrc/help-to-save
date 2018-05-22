@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.helptosave.modules
 
+import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import cats.data.EitherT
@@ -42,9 +43,10 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   val store = mock[ThresholdStore]
   val pagerDutyAlert = mock[PagerDutyAlerting]
 
-  val testConfiguration = Configuration(ConfigFactory.parseString(
-    """
+  def testConfiguration(enabled: Boolean) = Configuration(ConfigFactory.parseString(
+    s"""
       |uc-threshold {
+      |enabled = $enabled
       |ask-timeout = 10 seconds
       |min-backoff = 1 second
       |max-backoff = 5 seconds
@@ -77,7 +79,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .expects(threshold, *)
         .returning(EitherT.fromEither[Future](Right[String, Unit](())))
 
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector, store)
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), connector, store)
 
       val response = (orchestrator.thresholdHandler ? UCThresholdManager.GetThresholdValue)
         .mapTo[UCThresholdManager.GetThresholdValueResponse]
@@ -87,5 +89,11 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       // definitely gets called since it happens asynchronously
       Thread.sleep(1000L)
     }
+
+    "not start up an instance of the UCThresholdManager if not enabled" in {
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), connector, store)
+      orchestrator.thresholdHandler shouldBe ActorRef.noSender
+    }
+
   }
 }
