@@ -17,7 +17,7 @@
 package uk.gov.hmrc.helptosave.repo
 
 import cats.data.EitherT
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
@@ -77,6 +77,7 @@ object EnrolmentStore {
 
 }
 
+@Singleton
 class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
                                      metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
   extends ReactiveRepository[EnrolmentData, BSONObjectID](
