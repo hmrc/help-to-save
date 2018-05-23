@@ -19,9 +19,8 @@ package uk.gov.hmrc.helptosave.modules
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.actors.{UCThresholdConnectorProxy, UCThresholdManager, UCThresholdMongoProxy}
+import uk.gov.hmrc.helptosave.actors.{UCThresholdConnectorProxy, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
-import uk.gov.hmrc.helptosave.repo.ThresholdStore
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
 class UCThresholdModule extends AbstractModule {
@@ -34,11 +33,9 @@ class UCThresholdModule extends AbstractModule {
 class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
                                          pagerDutyAlerting: PagerDutyAlerting,
                                          configuration:     Configuration,
-                                         connector:         UCThresholdConnector,
-                                         store:             ThresholdStore) extends Logging {
+                                         connector:         UCThresholdConnector) extends Logging {
 
   private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxy.props(connector))
-  private lazy val mongoProxy: ActorRef = system.actorOf(UCThresholdMongoProxy.props(store))
 
   val enabled: Boolean = configuration.underlying.getBoolean("uc-threshold.enabled")
 
@@ -46,7 +43,6 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
     logger.info("UC threshold DES behaviour enabled: starting UCThresholdManager")
     system.actorOf(UCThresholdManager.props(
       connectorProxy,
-      mongoProxy,
       pagerDutyAlerting,
       system.scheduler,
       configuration.underlying

@@ -22,7 +22,7 @@ import play.api.libs.json.{JsNull, JsValue, Writes}
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
+import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
