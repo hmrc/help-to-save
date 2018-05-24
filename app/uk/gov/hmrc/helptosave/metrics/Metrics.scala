@@ -19,8 +19,6 @@ package uk.gov.hmrc.helptosave.metrics
 import com.codahale.metrics.{Counter, Timer}
 import com.google.inject.{Inject, Singleton}
 
-import scala.annotation.tailrec
-
 @Singleton
 class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 

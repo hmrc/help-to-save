@@ -27,12 +27,12 @@ import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting, Time, WithExpone
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import UCThresholdConnectorProxy.{GetThresholdValue ⇒ GetDESThresholdValue, GetThresholdValueResponse ⇒ GetDESThresholdValueResponse}
+import UCThresholdConnectorProxyActor.{GetThresholdValue ⇒ GetDESThresholdValue, GetThresholdValueResponse ⇒ GetDESThresholdValueResponse}
 
-class UCThresholdManager(thresholdConnectorProxy: ActorRef,
-                         pagerDutyAlerting:       PagerDutyAlerting,
-                         scheduler:               Scheduler,
-                         config:                  Config) extends Actor with WithExponentialBackoffRetry with Logging {
+class UCThresholdManager(thresholdConnectorProxyActor: ActorRef,
+                         pagerDutyAlerting:            PagerDutyAlerting,
+                         scheduler:                    Scheduler,
+                         config:                       Config) extends Actor with WithExponentialBackoffRetry with Logging {
 
   import context.dispatcher
 
@@ -55,7 +55,7 @@ class UCThresholdManager(thresholdConnectorProxy: ActorRef,
     )
 
   def getValueFromDES(): Future[GetDESThresholdValueResponse] =
-    (thresholdConnectorProxy ? GetDESThresholdValue)
+    (thresholdConnectorProxyActor ? GetDESThresholdValue)
       .mapTo[GetDESThresholdValueResponse]
 
   override def receive: Receive = notReady
@@ -108,9 +108,7 @@ class UCThresholdManager(thresholdConnectorProxy: ActorRef,
 
 object UCThresholdManager {
 
-  sealed trait Command
-
-  case object GetThresholdValue extends Command
+  case object GetThresholdValue
 
   case class GetThresholdValueResponse(result: Double)
 

@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.modules
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.actors.{UCThresholdConnectorProxy, UCThresholdManager}
+import uk.gov.hmrc.helptosave.actors.{UCThresholdConnectorProxyActor, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
@@ -35,11 +35,11 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
                                          configuration:     Configuration,
                                          connector:         UCThresholdConnector) extends Logging {
 
-  private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxy.props(connector))
+  private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(connector))
 
   val enabled: Boolean = configuration.underlying.getBoolean("uc-threshold.enabled")
 
-  val thresholdHandler: ActorRef = if (enabled) {
+  val thresholdManager: ActorRef = if (enabled) {
     logger.info("UC threshold DES behaviour enabled: starting UCThresholdManager")
     system.actorOf(UCThresholdManager.props(
       connectorProxy,

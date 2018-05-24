@@ -72,7 +72,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), connector)
 
       eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(1.second)) {
-        val response = (orchestrator.thresholdHandler ? UCThresholdManager.GetThresholdValue)
+        val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
           .mapTo[UCThresholdManager.GetThresholdValueResponse]
 
         Await.result(response, 1.second).result shouldBe threshold
@@ -85,7 +85,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
     "not start up an instance of the UCThresholdManager if not enabled" in {
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), connector)
-      orchestrator.thresholdHandler shouldBe ActorRef.noSender
+      orchestrator.thresholdManager shouldBe ActorRef.noSender
     }
 
   }

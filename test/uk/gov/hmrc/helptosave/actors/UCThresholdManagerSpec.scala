@@ -65,8 +65,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       "ask for the threshold value from the connector and store the value in memory when successful" in new TestApparatus {
         val actor = newThresholdActor()
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-        connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Right(12.0)))
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(12.0)))
 
         // wait until actor replies replies to Identify message to make sure it has changed state
         // before asking for threshold value
@@ -80,8 +80,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         "backoff strategy) and fire pager duty alerts on each failure" in new TestApparatus {
           val actor = newThresholdActor()
 
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
           expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
 
           // make sure actor has actually scheduled the retry before advancing time - send it
@@ -94,16 +94,16 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           time.advance(1.milli)
 
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
           expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
 
           awaitActorReady(actor)
           // make sure retry is done again
           time.advance(10.second)
 
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Right(12.0)))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(12.0)))
 
           // make sure there are no retries after success
           awaitActorReady(actor)
