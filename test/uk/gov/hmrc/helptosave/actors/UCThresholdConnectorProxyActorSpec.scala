@@ -23,19 +23,19 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class UCThresholdConnectorProxySpec extends ActorTestSupport("UCThresholdConnectorProxySpec") {
+class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") {
   import system.dispatcher
 
   val connector = mock[UCThresholdConnector]
 
-  val actor = system.actorOf(UCThresholdConnectorProxy.props(connector))
+  val actor = system.actorOf(UCThresholdConnectorProxyActor.props(connector))
 
   def mockConnectorGetValue(result: Either[String, Double]) =
     (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *)
       .returning(EitherT.fromEither[Future](result))
 
-  "The UCThresholdConnectorProxy" when {
+  "The UCThresholdConnectorProxyActor" when {
 
     "asked for the threshold value" must {
 
@@ -43,16 +43,16 @@ class UCThresholdConnectorProxySpec extends ActorTestSupport("UCThresholdConnect
 
         mockConnectorGetValue(Right(100.0))
 
-        actor ! UCThresholdConnectorProxy.GetThresholdValue
-        expectMsg(UCThresholdConnectorProxy.GetThresholdValueResponse(Right(100.0)))
+        actor ! UCThresholdConnectorProxyActor.GetThresholdValue
+        expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
       }
 
       "ask for and return an error from the threshold connector if an error occurs" in {
 
         mockConnectorGetValue(Left("error occurred"))
 
-        actor ! UCThresholdConnectorProxy.GetThresholdValue
-        expectMsg(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("error occurred")))
+        actor ! UCThresholdConnectorProxyActor.GetThresholdValue
+        expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("error occurred")))
       }
 
     }

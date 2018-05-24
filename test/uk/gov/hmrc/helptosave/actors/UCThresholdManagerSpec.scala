@@ -17,7 +17,7 @@
 package uk.gov.hmrc.helptosave.actors
 
 import akka.pattern.ask
-import akka.actor.{Actor, ActorRef}
+import akka.actor.ActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.miguno.akka.testing.VirtualTime
@@ -36,8 +36,6 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
   class TestApparatus {
     val connectorProxy = TestProbe()
 
-    val mongoProxy = TestProbe()
-
     val time = new VirtualTime()
 
     val config = ConfigFactory.parseString(
@@ -52,7 +50,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
     )
 
     def newThresholdActor(): ActorRef =
-      system.actorOf(UCThresholdManager.props(connectorProxy.ref, mongoProxy.ref, new TestPagerDutyAlerting(self), time.scheduler, config))
+      system.actorOf(UCThresholdManager.props(connectorProxy.ref, new TestPagerDutyAlerting(self), time.scheduler, config))
 
     def askForThresholdValue(thresholdActor: ActorRef): Future[Double] =
       (thresholdActor ? UCThresholdManager.GetThresholdValue)
@@ -64,39 +62,27 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
     "started" must {
 
-      "ask for the threshold value from the connector and return the value when successful" in new TestApparatus {
+      "ask for the threshold value from the connector and store the value in memory when successful" in new TestApparatus {
         val actor = newThresholdActor()
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-        connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Right(12.0)))
-        mongoProxy.expectMsg(UCThresholdMongoProxy.StoreThresholdValue(12.0))
-        mongoProxy.reply(UCThresholdMongoProxy.StoreThresholdValueResponse(Right(12.0)))
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(12.0)))
+
+        // wait until actor replies replies to Identify message to make sure it has changed state
+        // before asking for threshold value
+        awaitActorReady(actor)
 
         await(askForThresholdValue(actor)) shouldBe 12.0
 
       }
 
-      "ask for the threshold value from the connector and ask mongo if the call to DES is unsuccessful and return the value" in new TestApparatus {
-        val actor = newThresholdActor()
-
-        connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-        connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
-        mongoProxy.expectMsg(UCThresholdMongoProxy.GetThresholdValue)
-        mongoProxy.reply(UCThresholdMongoProxy.GetThresholdValueResponse(Right(Some(100.0))))
-
-        await(askForThresholdValue(actor)) shouldBe 100.0
-      }
-
-      "ask for the threshold value from the connector and when the call to DES is unsuccessful, ask mongo and return None, retry twice and then " +
-        "return the threshold from DES and then make sure the retry has stopped" in new TestApparatus {
+      "make multiple attempts to retrieve the threshold from DES until successful (this is done under an exponential " +
+        "backoff strategy) and fire pager duty alerts on each failure" in new TestApparatus {
           val actor = newThresholdActor()
 
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
-          mongoProxy.expectMsg(UCThresholdMongoProxy.GetThresholdValue)
-          mongoProxy.reply(UCThresholdMongoProxy.GetThresholdValueResponse(Right(None)))
-
-          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not initialise UC threshold value from mongo"))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
 
           // make sure actor has actually scheduled the retry before advancing time - send it
           // an `Identify` message and wait for it to respond
@@ -104,22 +90,20 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // make sure retry doesn't happen before it's supposed to
           time.advance(1.second - 1.milli)
-          mongoProxy.expectNoMsg(1.second)
+          connectorProxy.expectNoMsg(1.second)
 
           time.advance(1.milli)
 
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
-          mongoProxy.expectMsg(UCThresholdMongoProxy.GetThresholdValue)
-          mongoProxy.reply(UCThresholdMongoProxy.GetThresholdValueResponse(Right(None)))
-          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not initialise UC threshold value from mongo"))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
 
           awaitActorReady(actor)
           // make sure retry is done again
           time.advance(10.second)
 
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Right(12.0)))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(12.0)))
 
           // make sure there are no retries after success
           awaitActorReady(actor)
@@ -129,102 +113,6 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           expectMsg(UCThresholdManager.GetThresholdValueResponse(12.0))
         }
 
-      "ask for the threshold value from the connector and when the call to DES is unsuccessful, ask mongo and return an error, retry then" +
-        "return the threshold from Mongo and then make sure the retry has stopped" in new TestApparatus {
-          val actor = newThresholdActor()
-
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
-          mongoProxy.expectMsg(UCThresholdMongoProxy.GetThresholdValue)
-          mongoProxy.reply(UCThresholdMongoProxy.GetThresholdValueResponse(Left("No threshold found in Mongo")))
-          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not initialise UC threshold value from mongo"))
-
-          // make sure actor has actually scheduled the retry before advancing time - send it
-          // an `Identify` message and wait for it to respond
-          awaitActorReady(actor)
-
-          // make sure retry doesn't happen before it's supposed to
-          time.advance(1.second - 1.milli)
-          mongoProxy.expectNoMsg(1.second)
-
-          time.advance(1.milli)
-
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
-          mongoProxy.expectMsg(UCThresholdMongoProxy.GetThresholdValue)
-          mongoProxy.reply(UCThresholdMongoProxy.GetThresholdValueResponse(Left("No threshold found in Mongo")))
-          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not initialise UC threshold value from mongo"))
-
-          awaitActorReady(actor)
-          // make sure retry is done again
-          time.advance(10.second)
-
-          connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-          connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Left("No threshold found in DES")))
-          mongoProxy.expectMsg(UCThresholdMongoProxy.GetThresholdValue)
-          mongoProxy.reply(UCThresholdMongoProxy.GetThresholdValueResponse(Right(Some(12.0))))
-
-          // make sure there are no retries after success
-          awaitActorReady(actor)
-          time.advance(10.seconds)
-
-          actor ! UCThresholdManager.GetThresholdValue
-          expectMsg(UCThresholdManager.GetThresholdValueResponse(12.0))
-        }
-
-      "ask for the threshold value from the connector and return an error when there is no response" in new TestApparatus {
-        val actor = newThresholdActor()
-
-        connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-
-        actor ! UCThresholdManager.GetThresholdValue
-        expectNoMsg()
-      }
-
-      "ask for the threshold and retry storing threshold value when mongo is down and stop retrying when mongo is up" in new TestApparatus {
-        val actor = newThresholdActor()
-
-        connectorProxy.expectMsg(UCThresholdConnectorProxy.GetThresholdValue)
-        connectorProxy.reply(UCThresholdConnectorProxy.GetThresholdValueResponse(Right(12.0)))
-
-        mongoProxy.expectMsg(UCThresholdMongoProxy.StoreThresholdValue(12.0))
-        mongoProxy.reply(UCThresholdMongoProxy.StoreThresholdValueResponse(Left("Mongo unavailable, unable to store threshold value")))
-
-        // make sure actor has actually scheduled the retry before advancing time - send it
-        // an `Identify` message and wait for it to respond
-        awaitActorReady(actor)
-
-        // make sure retry doesn't happen before it's supposed to
-        time.advance(1.second - 1.milli)
-        mongoProxy.expectNoMsg(1.second)
-
-        time.advance(1.milli)
-
-        mongoProxy.expectMsg(UCThresholdMongoProxy.StoreThresholdValue(12.0))
-        mongoProxy.reply(UCThresholdMongoProxy.StoreThresholdValueResponse(Left("Mongo unavailable, unable to store threshold value")))
-
-        awaitActorReady(actor)
-        // make sure retry is done again
-        time.advance(10.second)
-
-        mongoProxy.expectMsg(UCThresholdMongoProxy.StoreThresholdValue(12.0))
-        mongoProxy.reply(UCThresholdMongoProxy.StoreThresholdValueResponse(Left("Mongo unavailable, unable to store threshold value")))
-
-        awaitActorReady(actor)
-        time.advance(10.second)
-
-        mongoProxy.expectMsg(UCThresholdMongoProxy.StoreThresholdValue(12.0))
-        mongoProxy.reply(UCThresholdMongoProxy.StoreThresholdValueResponse(Right(12.0)))
-
-        // make sure there are no retries after success
-        awaitActorReady(actor)
-        time.advance(10.seconds)
-
-        mongoProxy.expectNoMsg(1.second)
-
-        actor ! UCThresholdManager.GetThresholdValue
-        expectMsg(UCThresholdManager.GetThresholdValueResponse(12.0))
-      }
     }
 
   }

@@ -21,7 +21,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
+import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._

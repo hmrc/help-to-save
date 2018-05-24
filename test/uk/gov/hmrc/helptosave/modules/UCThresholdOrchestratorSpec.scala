@@ -22,11 +22,10 @@ import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
 import com.typesafe.config.ConfigFactory
-import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
-import uk.gov.hmrc.helptosave.repo.ThresholdStore
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -40,18 +39,17 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   implicit val timeout: Timeout = Timeout(10.seconds)
 
   val connector = mock[UCThresholdConnector]
-  val store = mock[ThresholdStore]
   val pagerDutyAlert = mock[PagerDutyAlerting]
 
   def testConfiguration(enabled: Boolean) = Configuration(ConfigFactory.parseString(
     s"""
-      |uc-threshold {
-      |enabled = $enabled
-      |ask-timeout = 10 seconds
-      |min-backoff = 1 second
-      |max-backoff = 5 seconds
-      |number-of-retries-until-initial-wait-doubles = 5
-      |}
+       |uc-threshold {
+       |enabled = $enabled
+       |ask-timeout = 10 seconds
+       |min-backoff = 1 second
+       |max-backoff = 5 seconds
+       |number-of-retries-until-initial-wait-doubles = 5
+       |}
     """.stripMargin
   ))
 
@@ -63,10 +61,6 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Left[String, Double]("")))
 
-      (store.getUCThreshold()(_: ExecutionContext))
-        .expects(*)
-        .returning(EitherT.fromEither[Future](Left[String, Option[Double]]("")))
-
       (pagerDutyAlert.alert(_: String))
         .expects(*)
         .returning(())
@@ -75,24 +69,23 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Right[String, Double](threshold)))
 
-      (store.storeUCThreshold(_: Double)(_: ExecutionContext))
-        .expects(threshold, *)
-        .returning(EitherT.fromEither[Future](Right[String, Unit](())))
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), connector)
 
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), connector, store)
+      eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(1.second)) {
+        val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
+          .mapTo[UCThresholdManager.GetThresholdValueResponse]
 
-      val response = (orchestrator.thresholdHandler ? UCThresholdManager.GetThresholdValue)
-        .mapTo[UCThresholdManager.GetThresholdValueResponse]
+        Await.result(response, 1.second).result shouldBe threshold
+      }
 
-      Await.result(response, 10.seconds).result shouldBe threshold
       // sleep here to ensure the mock ThresholdStore's storeUCThreshold method
       // definitely gets called since it happens asynchronously
       Thread.sleep(1000L)
     }
 
     "not start up an instance of the UCThresholdManager if not enabled" in {
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), connector, store)
-      orchestrator.thresholdHandler shouldBe ActorRef.noSender
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), connector)
+      orchestrator.thresholdManager shouldBe ActorRef.noSender
     }
 
   }
