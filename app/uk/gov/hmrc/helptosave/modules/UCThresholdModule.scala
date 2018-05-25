@@ -25,15 +25,19 @@ import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
 class UCThresholdModule extends AbstractModule {
 
-  override def configure() = bind(classOf[UCThresholdOrchestrator]).asEagerSingleton()
+  override def configure() = bind(classOf[ThresholdManagerProvider]).to(classOf[UCThresholdOrchestrator]).asEagerSingleton()
 
+}
+
+trait ThresholdManagerProvider {
+  val thresholdManager: ActorRef
 }
 
 @Singleton
 class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
                                          pagerDutyAlerting: PagerDutyAlerting,
                                          configuration:     Configuration,
-                                         connector:         UCThresholdConnector) extends Logging {
+                                         connector:         UCThresholdConnector) extends ThresholdManagerProvider with Logging {
 
   private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(connector))
 

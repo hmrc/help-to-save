@@ -49,10 +49,12 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       """.stripMargin
     )
 
-    def newThresholdActor(): ActorRef =
-      system.actorOf(UCThresholdManager.props(connectorProxy.ref, new TestPagerDutyAlerting(self), time.scheduler, config))
+    val pagerDutyAlertListener = TestProbe()
 
-    def askForThresholdValue(thresholdActor: ActorRef): Future[Double] =
+    def newThresholdActor(): ActorRef =
+      system.actorOf(UCThresholdManager.props(connectorProxy.ref, new TestPagerDutyAlerting(pagerDutyAlertListener.ref), time.scheduler, config))
+
+    def askForThresholdValue(thresholdActor: ActorRef): Future[Option[Double]] =
       (thresholdActor ? UCThresholdManager.GetThresholdValue)
         .mapTo[UCThresholdManager.GetThresholdValueResponse]
         .map(_.result)
@@ -62,7 +64,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
     "started" must {
 
-      "ask for the threshold value from the connector and store the value in memory when successful" in new TestApparatus {
+      "ask DES for the threshold value and store the value in memory when successful" in new TestApparatus {
         val actor = newThresholdActor()
 
         connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
@@ -72,8 +74,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         // before asking for threshold value
         awaitActorReady(actor)
 
-        await(askForThresholdValue(actor)) shouldBe 12.0
-
+        await(askForThresholdValue(actor)) shouldBe Some(12.0)
       }
 
       "make multiple attempts to retrieve the threshold from DES until successful (this is done under an exponential " +
@@ -82,7 +83,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
           connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
-          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
+          pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
 
           // make sure actor has actually scheduled the retry before advancing time - send it
           // an `Identify` message and wait for it to respond
@@ -96,7 +97,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
           connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
-          expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
+          pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
 
           awaitActorReady(actor)
           // make sure retry is done again
@@ -110,9 +111,185 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           time.advance(10.seconds)
 
           actor ! UCThresholdManager.GetThresholdValue
-          expectMsg(UCThresholdManager.GetThresholdValueResponse(12.0))
+          expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(12.0)))
         }
 
+    }
+
+    "handling requests to get the threshold value" must {
+
+      "ask DES for the initial threshold value and return it when successful" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+        pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        //return a Right successful case with value from DES
+        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+
+        time.advance(10.seconds)
+
+        // make sure there are no retries after success
+        connectorProxy.expectNoMsg()
+      }
+
+      "ask DES for the initial threshold value and return None when not successful" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+        pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        //return a Left "error" case from DES
+        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+
+        //check None is returned
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(None))
+      }
+
+      "update the state with the new value when the threshold value received from DES differs from that held locally" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender1: ActorRef = connectorProxy.sender()
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender2: ActorRef = connectorProxy.sender()
+
+        //First call to DES returns the value successfully
+        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+        //Second call to DES also returns a different value successfully to mimick an updated threshold value
+        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(110.0)))
+
+        //make sure the updated value is returned
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(110.0)))
+      }
+
+      "not update the state with the new value when the threshold value received from DES equals from that held locally" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender1: ActorRef = connectorProxy.sender()
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender2: ActorRef = connectorProxy.sender()
+
+        //First call to DES returns the value successfully
+        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+        //Second call to DES also returns the same value successfully
+        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+
+        //make sure the same value is returned
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+      }
+
+      "return None when error responses are returned from two different actors making calls to DES" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender1: ActorRef = connectorProxy.sender()
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender2: ActorRef = connectorProxy.sender()
+
+        //two calls are made to DES, both returning an error
+        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+
+        pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
+        //check that None is returned
+        time.advance(5.seconds)
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(None))
+      }
+
+      "return the threshold when the first call to DES is successful but an error is returned from the second call" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender1: ActorRef = connectorProxy.sender()
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender2: ActorRef = connectorProxy.sender()
+
+        //two calls are made to DES, the first successfully returns the value, the second returns an error
+        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+
+        //check that the value is still returned despite an error being returned by the second call
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+      }
+
+      "stop the retries when a request has successfully returned the threshold from DES" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender1: ActorRef = connectorProxy.sender()
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender2: ActorRef = connectorProxy.sender()
+
+        //first call to DES returns successfully
+        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+
+        //second call to DES returns an error
+        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+
+        //advance time by 10 seconds and then check there are no expected messages as this means no retries have happened
+        time.advance(15.seconds)
+        expectNoMsg
+      }
+
+      "be in ready state when a request has successfully returned the threshold from DES" in new TestApparatus {
+        val actor = newThresholdActor()
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender1: ActorRef = connectorProxy.sender()
+
+        actor ! UCThresholdManager.GetThresholdValue
+
+        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+        val sender2: ActorRef = connectorProxy.sender()
+
+        //first call to DES returns an error
+        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+
+        pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain initial UC threshold value from DES"))
+
+        //second call to DES returns the value
+        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+
+        // make sure we're not getting the threshold value from DES now
+        actor ! UCThresholdManager.GetThresholdValue
+        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+        connectorProxy.expectNoMsg()
+
+        // make sure retries have been cancelled
+        time.advance(10.seconds)
+        expectNoMsg
+      }
     }
 
   }

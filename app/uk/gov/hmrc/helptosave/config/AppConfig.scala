@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.helptosave.config
 
+import configs.syntax._
 import com.google.inject.Singleton
 import javax.inject.Inject
 import play.api.Mode.Mode
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.play.config.ServicesConfig
+
+import scala.concurrent.duration.FiniteDuration
 
 @Singleton
 class AppConfig @Inject() (override val runModeConfiguration: Configuration, val environment: Environment) extends ServicesConfig {
@@ -35,4 +38,11 @@ class AppConfig @Inject() (override val runModeConfiguration: Configuration, val
   )
 
   val correlationIdHeaderName: String = getString("microservice.correlationIdHeaderName")
+
+  val isUCThresholdEnabled: Boolean = getBoolean("uc-threshold.enabled")
+
+  val thresholdAmount: Double = runModeConfiguration.underlying.get[Double]("uc-threshold.threshold-amount").value
+
+  val thresholdAskTimeout: FiniteDuration = runModeConfiguration.underlying.get[FiniteDuration]("uc-threshold.ask-timeout").value
+
 }

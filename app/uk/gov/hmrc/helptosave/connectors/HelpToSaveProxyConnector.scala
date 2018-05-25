@@ -41,7 +41,7 @@ trait HelpToSaveProxyConnector {
 
   def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
-  def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
+  def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 
   def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[AccountO]
 }
@@ -60,14 +60,15 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino, "apiCorrelationId" -> getApiCorrelationId)
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino,
+            "apiCorrelationId" -> getApiCorrelationId)
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
   }
 
-  override def ucClaimantCheck(nino: String, txnId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse] = {
-    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
+  override def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse] = {
+    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId&thresholdValue=$threshold"
 
     EitherT[Future, String, UCResponse](
       http.get(url).map {
