@@ -18,10 +18,11 @@ package uk.gov.hmrc.helptosave.util
 
 import cats.instances.string._
 import cats.syntax.eq._
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.http.HeaderCarrier
 
 object HeaderCarrierOps {
 
-  def getApiCorrelationId(implicit hc: HeaderCarrier, correlationIdHeaderName: String): String =
-    hc.headers.find(p ⇒ p._1 === correlationIdHeaderName).map(_._2).getOrElse("-")
+  def getApiCorrelationId()(implicit hc: HeaderCarrier, appConfig: AppConfig): String =
+    hc.headers.find(p ⇒ p._1 === appConfig.correlationIdHeaderName).map(_._2).getOrElse("-")
 }

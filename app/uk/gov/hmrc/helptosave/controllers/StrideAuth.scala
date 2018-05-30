@@ -56,7 +56,7 @@ class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppCon
       }.recover {
         case _: NoActiveSession ⇒
           logger.warn("user is not logged in via stride, probably a hack?")
-          Forbidden("no stride session found for logged in user")
+          Unauthorized
       }
     }
 }

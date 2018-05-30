@@ -46,10 +46,10 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
         .retrieve(Retrievals.nino) { mayBeNino ⇒
-          mayBeNino.fold(
-            toFuture(InternalServerError("could not find NINO for logged in user"))
+          mayBeNino.fold[Future[Result]](
+            Forbidden
           )(nino ⇒ action(request)(nino)
-            )
+          )
         }.recover {
           handleFailure()
         }
@@ -58,15 +58,15 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   def handleFailure(): PartialFunction[Throwable, Result] = {
     case _: NoActiveSession ⇒
       logger.warn("user is not logged in, probably a hack?")
-      Forbidden("no active session found for logged in user")
+      Unauthorized
 
-    case _: InsufficientConfidenceLevel | _: InsufficientEnrolments ⇒
-      logger.warn("unexpected: not met required ConfidenceLevel for logged in user")
-      Forbidden("not met required ConfidenceLevel for logged in user")
+    case e: InternalError ⇒
+      logger.warn(s"Could not authenticate user due to internal error: ${e.reason}")
+      InternalServerError
 
     case ex: AuthorisationException ⇒
-      logger.warn(s"could not authenticate user due to: $ex")
-      Forbidden(s"could not authenticate user due to: ${ex.reason}")
+      logger.warn(s"could not authenticate user due to: ${ex.reason}")
+      Forbidden
   }
 }
 

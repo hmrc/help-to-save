@@ -18,7 +18,10 @@ package uk.gov.hmrc.helptosave.models.account
 
 import java.time.LocalDate
 
+import cats.data.Validated.{Invalid, Valid}
+import cats.data.{NonEmptyList, ValidatedNel}
 import cats.instances.string._
+import cats.syntax.apply._
 import cats.syntax.eq._
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.util.Logging
@@ -51,40 +54,47 @@ case class Account(isClosed:               Boolean,
 
 object Account extends Logging {
 
-  def apply(nsiAccount: NsiAccount): Option[Account] = {
-    val paidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit - nsiAccount.currentInvestmentMonth.investmentRemaining
-    if (paidInThisMonth >= 0) {
-      Some(Account(
-        isClosed               = nsiAccountClosedFlagToIsClosed(nsiAccount.accountClosedFlag),
-        blocked                = nsiAccountToBlocking(nsiAccount),
-        balance                = nsiAccount.accountBalance,
-        paidInThisMonth        = paidInThisMonth,
-        canPayInThisMonth      = nsiAccount.currentInvestmentMonth.investmentRemaining,
-        maximumPaidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit,
-        thisMonthEndDate       = nsiAccount.currentInvestmentMonth.endDate,
-        bonusTerms             = nsiAccount.terms.sortBy(_.termNumber).map(nsiBonusTermToBonusTerm),
-        closureDate            = nsiAccount.accountClosureDate,
-        closingBalance         = nsiAccount.accountClosingBalance
-      ))
-    } else {
-      // investmentRemaining is unaffected by debits (only credits) so should never exceed investmentLimit
-      logger.warn(
-        s"investmentRemaining = ${nsiAccount.currentInvestmentMonth.investmentRemaining} and investmentLimit = ${nsiAccount.currentInvestmentMonth.investmentLimit} " +
+  def apply(nsiAccount: NsiAccount): ValidatedNel[String, Account] = {
+    val paidInThisMonthValidation: ValidOrErrorString[BigDecimal] = {
+      val paidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit - nsiAccount.currentInvestmentMonth.investmentRemaining
+      if (paidInThisMonth >= 0) {
+        Valid(paidInThisMonth)
+      } else {
+        Invalid(NonEmptyList.one(s"investmentRemaining = ${nsiAccount.currentInvestmentMonth.investmentRemaining} and " +
+          s"investmentLimit = ${nsiAccount.currentInvestmentMonth.investmentLimit} " +
           "values returned by NS&I don't make sense because they imply a negative amount paid in this month"
-      )
-      None
+        ))
+      }
+    }
+
+    val accountClosedValidation: ValidOrErrorString[Boolean] =
+      if (nsiAccount.accountClosedFlag === "C") {
+        Valid(true)
+      } else if (nsiAccount.accountClosedFlag.trim.isEmpty) {
+        Valid(false)
+      } else {
+        Invalid(NonEmptyList.one(s"""Unknown value for accountClosedFlag: "${nsiAccount.accountClosedFlag}""""))
+      }
+
+    (paidInThisMonthValidation, accountClosedValidation).mapN{
+      case (paidInThisMonth, accountClosed) ⇒
+        Account(
+          isClosed               = accountClosed,
+          blocked                = nsiAccountToBlocking(nsiAccount),
+          balance                = nsiAccount.accountBalance,
+          paidInThisMonth        = paidInThisMonth,
+          canPayInThisMonth      = nsiAccount.currentInvestmentMonth.investmentRemaining,
+          maximumPaidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit,
+          thisMonthEndDate       = nsiAccount.currentInvestmentMonth.endDate,
+          bonusTerms             = nsiAccount.terms.sortBy(_.termNumber).map(nsiBonusTermToBonusTerm),
+          closureDate            = nsiAccount.accountClosureDate,
+          closingBalance         = nsiAccount.accountClosingBalance
+        )
+
     }
   }
 
-  private def nsiAccountClosedFlagToIsClosed(accountClosedFlag: String): Boolean =
-    if (accountClosedFlag === "C") {
-      true
-    } else if (accountClosedFlag.trim.isEmpty) {
-      false
-    } else {
-      logger.warn(s"""Unknown value for accountClosedFlag: "$accountClosedFlag"""")
-      false
-    }
+  private type ValidOrErrorString[A] = ValidatedNel[String, A]
 
   private def nsiAccountToBlocking(nsiAccount: NsiAccount): Blocking = Blocking(
     unspecified = nsiAccount.accountBlockingCode != "00" || nsiAccount.clientBlockingCode != "00"
@@ -100,8 +110,3 @@ object Account extends Logging {
   implicit val format: Format[Account] = Json.format[Account]
 }
 
-case class AccountO(account: Option[Account])
-
-object AccountO {
-  implicit val format: Format[AccountO] = Json.format[AccountO]
-}
