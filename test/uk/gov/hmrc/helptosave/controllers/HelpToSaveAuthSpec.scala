@@ -45,29 +45,33 @@ class HelpToSaveAuthSpec extends AuthSupport {
       status(result) shouldBe Status.OK
     }
 
-    "throw error if nino is not found" in {
+    "return a forbidden if nino is not found" in {
       mockAuthResultWithSuccess(AuthWithCL200)(None)
 
       val result = Await.result(callAuth(FakeRequest()), 5.seconds)
-      status(result) shouldBe Status.INTERNAL_SERVER_ERROR
+      status(result) shouldBe Status.FORBIDDEN
     }
 
     "handle various auth related exceptions and throw an error" in {
 
       val exceptions = List(
-        "BearerTokenExpired",
-        "MissingBearerToken",
-        "InvalidBearerToken",
-        "SessionRecordNotFound",
-        "InsufficientEnrolments",
-        "InsufficientConfidenceLevel",
-        "UnsupportedCredentialRole",
-        "unknown-blah")
+        "InsufficientConfidenceLevel" → Status.FORBIDDEN,
+        "InsufficientEnrolments" → Status.FORBIDDEN,
+        "UnsupportedAffinityGroup" → Status.FORBIDDEN,
+        "UnsupportedCredentialRole" → Status.FORBIDDEN,
+        "UnsupportedAuthProvider" → Status.FORBIDDEN,
+        "BearerTokenExpired" → Status.UNAUTHORIZED,
+        "MissingBearerToken" → Status.UNAUTHORIZED,
+        "InvalidBearerToken" → Status.UNAUTHORIZED,
+        "SessionRecordNotFound" → Status.UNAUTHORIZED,
+        "IncorrectCredentialStrength" → Status.FORBIDDEN,
+        "unknown-blah" → Status.INTERNAL_SERVER_ERROR)
 
-      exceptions.foreach { error ⇒
-        mockAuthWith(error)
-        val result = callAuth(FakeRequest())
-        status(result) shouldBe Status.FORBIDDEN
+      exceptions.foreach {
+        case (error, expectedStatus) ⇒
+          mockAuthWith(error)
+          val result = callAuth(FakeRequest())
+          status(result) shouldBe expectedStatus
       }
     }
   }

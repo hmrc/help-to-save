@@ -19,17 +19,22 @@ package uk.gov.hmrc.helptosave.connectors
 import java.util.UUID
 
 import cats.data.EitherT
+import cats.instances.int._
+import cats.instances.string._
 import cats.syntax.either._
+import cats.syntax.eq._
+
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
+import play.api.libs.json.{Format, Json}
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.models.account.{Account, AccountO, NsiAccount}
+import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
+import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
@@ -43,7 +48,10 @@ trait HelpToSaveProxyConnector {
 
   def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 
-  def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[AccountO]
+  /**
+   * If NS&I do not recognise the given NINO return None
+   */
+  def getAccount(nino: String, systemId: String, correlationId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]]
 }
 
 @Singleton
@@ -52,16 +60,22 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
                                               pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveProxyConnector with Logging {
 
+  import HelpToSaveProxyConnectorImpl._
+
   val proxyURL: String = appConfig.baseUrl("help-to-save-proxy")
-  implicit val correlationIdHeaderName: String = appConfig.correlationIdHeaderName
+
+  val getAccountVersion: String = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
+
+  val getAccountNoAccountErrorCode: String = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.no-account-error-message-id")
 
   override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
 
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
-          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}", userInfo.nino,
-            "apiCorrelationId" -> getApiCorrelationId)
+          logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}",
+            userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
+        
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
@@ -74,7 +88,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
       http.get(url).map {
         response ⇒
 
-          val correlationId = "apiCorrelationId" -> getApiCorrelationId
+          val correlationId = "apiCorrelationId" -> getApiCorrelationId()
           logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
 
           response.status match {
@@ -97,37 +111,47 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
     )
   }
 
-  override def getAccount(nino: String, queryString: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[AccountO] = {
+  override def getAccount(nino: String, systemId: String, correlationId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]] = {
 
-    val url = s"$proxyURL/help-to-save-proxy/nsi-services/account?$queryString"
+    val url = s"$proxyURL/help-to-save-proxy/nsi-services/account?nino=$nino&correlationId=$correlationId&version=$getAccountVersion&systemId=$systemId"
     val timerContext = metrics.getAccountTimer.time()
-    EitherT[Future, String, AccountO](
-      http.get(url).map[Either[String, AccountO]] {
+    EitherT[Future, String, Option[Account]](
+      http.get(url).map[Either[String, Option[Account]]] {
         response ⇒
-          val time = timerContext.stop()
-          val correlationId = "correlationId" -> getCorrelationId(queryString)
+          val _ = timerContext.stop()
           response.status match {
             case Status.OK ⇒
-              val result = response.parseJson[NsiAccount].map(a ⇒ AccountO(Account(a)))
+              val result = response.parseJson[NsiAccount].flatMap(a ⇒
+                Account(a).toEither.bimap(s ⇒ s"[${s.toList.mkString(",")}]", Some(_)))
 
               result.fold(
                 e ⇒ {
-                  logger.warn(s"Could not parse getNsiAccount response, received 200 (OK), error=$e, response = ${maskNino(response.body)}", nino, correlationId)
+                  logger.warn(s"Could not parse getNsiAccount response, received 200 (OK), error=$e, response = ${maskNino(response.body)}",
+                    nino, "correlationId" → correlationId)
                   metrics.getAccountErrorCounter.inc()
                   pagerDutyAlerting.alert("Could not parse JSON in the getAccount response")
                 },
-                _ ⇒ logger.info("Call to getNsiAccount successful", nino, correlationId)
+                _ ⇒ logger.info("Call to getNsiAccount successful", nino, "correlationId" → correlationId)
               )
               result
+
             case other ⇒
-              logger.warn(s"Call to getNsiAccount unsuccessful. Received unexpected status $other", nino, correlationId)
-              metrics.getAccountErrorCounter.inc()
-              pagerDutyAlerting.alert("Received unexpected http status in response to getAccount")
-              Left(s"Received unexpected status($other) from getNsiAccount call")
+              if (isAccountDoesntExistResponse(response)) {
+                logger.info("Account didn't exist for getNsiAccount request", nino, "correlationId" → correlationId)
+                Right(None)
+              } else {
+                logger.warn(s"Call to getNsiAccount unsuccessful. Received unexpected status $other. Body was ${response.body}",
+                  nino, "correlationId" → correlationId)
+                metrics.getAccountErrorCounter.inc()
+                pagerDutyAlerting.alert("Received unexpected http status in response to getAccount")
+
+                Left(s"Received unexpected status($other) from getNsiAccount call")
+              }
+
           }
       }.recover {
         case NonFatal(e) ⇒
-          val time = timerContext.stop()
+          val _ = timerContext.stop()
           metrics.getAccountErrorCounter.inc()
           pagerDutyAlerting.alert("Failed to make call to getAccount")
           Left(s"Call to getNsiAccount unsuccessful: ${e.getMessage}")
@@ -135,10 +159,17 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
     )
   }
 
-  private def getCorrelationId(queryString: String): String = {
-    queryString.split("&")
-      .find(p ⇒ p.contains("correlationId"))
-      .map(p ⇒ p.split("=")(1))
-      .getOrElse("-")
+  private def isAccountDoesntExistResponse(response: HttpResponse): Boolean =
+    response.status === Status.BAD_REQUEST &&
+      response.parseJson[GetAccountErrorResponse].toOption.exists(_.errors.exists(_.errorMessageId === getAccountNoAccountErrorCode))
+}
+
+object HelpToSaveProxyConnectorImpl {
+
+  private case class GetAccountErrorResponse(errors: List[ErrorResponse])
+
+  private object GetAccountErrorResponse {
+    implicit val format: Format[GetAccountErrorResponse] = Json.format[GetAccountErrorResponse]
   }
+
 }

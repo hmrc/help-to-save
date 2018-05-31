@@ -23,7 +23,7 @@ import org.scalatest.EitherValues
 import play.api.libs.json.{Json, Writes}
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
-import uk.gov.hmrc.helptosave.models.account.{Account, AccountO, Blocking, BonusTerm}
+import uk.gov.hmrc.helptosave.models.account.{Account, Blocking, BonusTerm}
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
@@ -102,7 +102,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
             """{
               "errorMessageId" : "",
               "errorMessage" : "unexpected error from proxy during /create-de-account",
-              "errorDetails" : "boom"
+              "errorDetail"  : "boom"
             }""")
       }
     }
@@ -166,9 +166,11 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
     "retrieving NsiAccount" must {
 
       val nino = randomNINO()
-      val correlationId = UUID.randomUUID()
+      val correlationId = UUID.randomUUID().toString
+      val systemId = "123"
+      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
 
-      val queryString = s"nino=$nino&correlationId=$correlationId&systemId=123"
+      val queryString = s"nino=$nino&correlationId=$correlationId&version=$version&systemId=$systemId"
 
       val getAccountUrl: String = s"http://localhost:7005/help-to-save-proxy/nsi-services/account?$queryString"
 
@@ -205,9 +207,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
 
-        val result = await(proxyConnector.getAccount(nino, queryString).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result shouldBe Right(AccountO(Some(Account(false,
+        result shouldBe Right(Some(Account(false,
           Blocking(false),
           200.34,
           34.50,
@@ -218,7 +220,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
                BonusTerm(67.00, 0.00, LocalDate.parse("2021-12-31"), LocalDate.parse("2022-01-01"))),
           None,
           None)
-        )))
+        ))
       }
 
       "handle success response when the Account is cloned and there are no Terms in the json" in {
@@ -242,9 +244,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
 
-        val result = await(proxyConnector.getAccount(nino, queryString).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result shouldBe Right(AccountO(Some(Account(true,
+        result shouldBe Right(Some(Account(true,
           Blocking(true),
           0.00,
           138.08,
@@ -254,7 +256,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           List.empty,
           Some(LocalDate.parse("2018-04-09")),
           Some(10.11))
-        )))
+        ))
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
@@ -285,7 +287,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
         mockPagerDutyAlert("Could not parse JSON in the getAccount response")
 
-        val result = await(proxyConnector.getAccount(nino, queryString).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
         result.isLeft shouldBe true
       }
@@ -294,7 +296,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(400)))
         mockPagerDutyAlert("Received unexpected http status in response to getAccount")
 
-        val result = await(proxyConnector.getAccount(nino, queryString).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
         result shouldBe Left("Received unexpected status(400) from getNsiAccount call")
       }
 
@@ -302,9 +304,37 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         mockGetAccountResponse(getAccountUrl)(None)
         mockPagerDutyAlert("Failed to make call to getAccount")
 
-        val result = await(proxyConnector.getAccount(nino, queryString).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
         result.isLeft shouldBe true
       }
+
+      "handle the case where an account does not exist" in {
+        val errorResponse =
+          Json.parse(
+            s"""
+              |{
+              |  "errors" : [
+              |    {
+              |      "errorMessageId" : "id",
+              |      "errorMessage"   : "message",
+              |      "errorDetail"    : "detail"
+              |    },
+              |    {
+              |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString("nsi.get-account.no-account-error-message-id")}",
+              |      "errorMessage"   : "Oh no!",
+              |      "errorDetail"    : "Account doesn't exist"
+              |    }
+              |  ]
+              |}
+          """.stripMargin)
+
+        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(400, Some(errorResponse))))
+
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        result shouldBe Right(None)
+
+      }
+
     }
   }
 }

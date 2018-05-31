@@ -64,7 +64,7 @@ class StrideAuthSpec extends TestSupport {
         mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Left(NotLoggedInException))
 
         val result = action(request)
-        status(result) shouldBe FORBIDDEN
+        status(result) shouldBe UNAUTHORIZED
       }
 
       "returns an Unauthorised status" when {
