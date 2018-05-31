@@ -125,8 +125,8 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
 
               result.fold(
                 e ⇒ {
-                  logger.warn(s"Could not parse getNsiAccount response, received 200 (OK), error=$e, response = ${maskNino(response.body)}",
-                    nino, "correlationId" → correlationId)
+                  // avoid logging PPI here by not logging the response body
+                  logger.warn(s"Could not parse getNsiAccount response, received 200 (OK), error=$e", nino, "correlationId" → correlationId)
                   metrics.getAccountErrorCounter.inc()
                   pagerDutyAlerting.alert("Could not parse JSON in the getAccount response")
                 },
