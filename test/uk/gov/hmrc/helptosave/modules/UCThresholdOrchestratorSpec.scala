@@ -61,10 +61,6 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Left[String, Double]("")))
 
-      (pagerDutyAlert.alert(_: String))
-        .expects(*)
-        .returning(())
-
       (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Right[String, Double](threshold)))
@@ -75,7 +71,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
           .mapTo[UCThresholdManager.GetThresholdValueResponse]
 
-        Await.result(response, 1.second).result shouldBe threshold
+        Await.result(response, 1.second).result shouldBe Some(threshold)
       }
 
       // sleep here to ensure the mock ThresholdStore's storeUCThreshold method

@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.actors
 
+import cats.instances.double._
+import cats.syntax.eq._
 import configs.syntax._
 import akka.actor.{Actor, ActorRef, Props, Scheduler}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager._
@@ -54,9 +56,10 @@ class UCThresholdManager(thresholdConnectorProxyActor: ActorRef,
       scheduler
     )
 
-  def getValueFromDES(): Future[GetDESThresholdValueResponse] =
+  def getValueFromDES(requester: Option[ActorRef]): Future[UCThresholdManager.GetDESThresholdValueResponse] =
     (thresholdConnectorProxyActor ? GetDESThresholdValue)
       .mapTo[GetDESThresholdValueResponse]
+      .map(r ⇒ UCThresholdManager.GetDESThresholdValueResponse(requester, r.result))
 
   override def receive: Receive = notReady
 
@@ -64,34 +67,76 @@ class UCThresholdManager(thresholdConnectorProxyActor: ActorRef,
 
     case GetDESThresholdValue ⇒
       logger.info("Trying to get UC threshold value from DES")
-      getValueFromDES() pipeTo self
+      getValueFromDES(None) pipeTo self
 
-    case GetDESThresholdValueResponse(result) ⇒
-      result.fold(
-        { e ⇒
-          pagerDutyAlerting.alert("Could not obtain initial UC threshold value from DES")
-          //If Des is down, retry
-          getDESRetries.retry(()).fold(
-            logger.warn(s"Could not obtain initial UC threshold value from DES: $e. Job to retry getting value from DES " +
-              "already scheduled - no new job scheduled")
-          ){ t ⇒
-              logger.warn(s"Could not obtain initial UC threshold value from DES: $e. Job to retry getting value from DES " +
-                s"scheduled to run in ${Time.nanosToPrettyString(t.toNanos)}")
-            }
-        }, {
-          value ⇒
-            logger.info(s"Successfully obtained the UC threshold value $value from DES")
-            context become ready(value)
-        }
-      )
+    case GetThresholdValue ⇒
+      getValueFromDES(Some(sender())) pipeTo self
+
+    case UCThresholdManager.GetDESThresholdValueResponse(maybeRequester, result) ⇒
+      maybeRequester match {
+        case None ⇒
+          result.fold ({
+            e ⇒
+              pagerDutyAlerting.alert ("Could not obtain initial UC threshold value from DES")
+              //If Des is down, retry
+              getDESRetries.retry (()).fold (
+                logger.warn (s"Could not obtain initial UC threshold value from DES: $e. Job to retry getting value from DES " +
+                  "already scheduled - no new job scheduled")
+              ) {
+                  t ⇒
+                    logger.warn (s"Could not obtain initial UC threshold value from DES: $e. Job to retry getting value from DES " +
+                      s"scheduled to run in ${
+                        Time.nanosToPrettyString (t.toNanos)
+                      }")
+                }
+          }, {
+            value ⇒
+              logger.info (s"Successfully obtained the UC threshold value $value from DES")
+              context become ready (value)
+          })
+
+        case Some(requester) ⇒
+          result.fold ({
+            e ⇒
+              logger.warn(s"Could not obtain UC threshold value from DES: $e ")
+              requester ! GetThresholdValueResponse(None)
+          }, {
+            value ⇒
+              logger.info (s"Successfully obtained the UC threshold value $value from DES")
+              requester ! GetThresholdValueResponse(Some(value))
+              getDESRetries.cancelAndReset()
+              context become ready (value)
+          })
+      }
 
   }
 
   def ready(thresholdValue: Double): Receive = {
 
     case GetThresholdValue ⇒
-      sender() ! GetThresholdValueResponse(thresholdValue)
+      sender() ! GetThresholdValueResponse(Some(thresholdValue))
 
+    case UCThresholdManager.GetDESThresholdValueResponse(maybeRequester, result) ⇒
+      val value =
+        result.fold(
+          {
+            e ⇒
+              logger.warn (s"Call to get UC threshold value from DES failed: $e. But we already have an initial value from DES")
+              thresholdValue
+          }, {
+            value ⇒
+              logger.info (s"Successfully obtained the UC threshold value $value from DES")
+              value
+          }
+        )
+
+      if (thresholdValue =!= value) {
+        context become ready(value)
+        logger.info(s"UC Threshold has changed, the value is now: $value")
+      }
+
+      getDESRetries.cancelAndReset()
+      maybeRequester.foreach{ _ ! GetThresholdValueResponse(Some(value)) }
   }
 
   override def preStart(): Unit = {
@@ -108,9 +153,11 @@ class UCThresholdManager(thresholdConnectorProxyActor: ActorRef,
 
 object UCThresholdManager {
 
+  case class GetDESThresholdValueResponse(requester: Option[ActorRef], response: Either[String, Double])
+
   case object GetThresholdValue
 
-  case class GetThresholdValueResponse(result: Double)
+  case class GetThresholdValueResponse(result: Option[Double])
 
   def props(thresholdConnectorProxy: ActorRef,
             pagerDutyAlerting:       PagerDutyAlerting,

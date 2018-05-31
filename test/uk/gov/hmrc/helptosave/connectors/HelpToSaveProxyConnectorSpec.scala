@@ -111,8 +111,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
       val txnId = UUID.randomUUID()
       val nino = "AE123456C"
+      val threshold = 650.0
 
-      val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId"
+      val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId&thresholdValue=$threshold"
 
       "handle success response from proxy" in {
 
@@ -120,7 +121,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
             mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.toJson(uCResponse)))))
 
-            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId).value, 5.seconds)
+            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
 
             result shouldBe Right(uCResponse)
           }
@@ -134,7 +135,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       "handle bad_request response from frontend" in {
 
         mockUCClaimantCheck(url)(Some(HttpResponse(BAD_REQUEST)))
-        val result = await(proxyConnector.ucClaimantCheck(nino, txnId).value)
+        val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
 
         result shouldBe Left("Received unexpected status(400) from UniversalCredit check")
       }
@@ -144,7 +145,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           def test(json: String) = {
             mockUCClaimantCheck(url)(Some(HttpResponse(OK, Some(Json.parse(json)))))
 
-            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId).value, 5.seconds)
+            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
 
             result.left.value contains "unable to parse UCResponse from proxy"
           }
@@ -156,7 +157,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       "handle unexpected errors" in {
 
         mockFailUCClaimantCheck(url)(new RuntimeException("boom"))
-        val result = await(proxyConnector.ucClaimantCheck(nino, txnId).value)
+        val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
 
         result shouldBe Left("Call to UniversalCredit check unsuccessful: boom")
       }
