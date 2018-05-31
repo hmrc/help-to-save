@@ -66,7 +66,7 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
         .returning(EitherT.fromEither[Future](result))
   }
 
-  "The CreateAccountController" when {
+  "The HelpToSaveNonDigitalController" when {
 
       def jsonString(dobValue: String): String =
         s"""{
@@ -147,7 +147,7 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
       "return bad request response if there is no json the in the request body" in new TestApparatus {
         val result = controller.createDEAccount()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
-        contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetails":""}"""
+        contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
       }
 
     }

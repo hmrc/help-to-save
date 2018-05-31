@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json.{Format, JsValue, Json}
 
-case class ErrorResponse(errorMessageId: String, errorMessage: String, errorDetails: String)
+case class ErrorResponse(errorMessageId: String, errorMessage: String, errorDetail: String)
 
 object ErrorResponse {
 
