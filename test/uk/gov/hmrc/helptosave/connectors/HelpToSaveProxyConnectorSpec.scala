@@ -328,7 +328,6 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           """.stripMargin)
 
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(400, Some(errorResponse))))
-        mockPagerDutyAlert("Received unexpected http status in response to getAccount")
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
         result shouldBe Right(None)

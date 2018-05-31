@@ -135,14 +135,15 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
               result
 
             case other ⇒
-              logger.warn(s"Call to getNsiAccount unsuccessful. Received unexpected status $other. Body was ${response.body}",
-                nino, "correlationId" → correlationId)
-              metrics.getAccountErrorCounter.inc()
-              pagerDutyAlerting.alert("Received unexpected http status in response to getAccount")
-
               if (isAccountDoesntExistResponse(response)) {
+                logger.info("Account didn't exist for getNsiAccount request", nino, "correlationId" → correlationId)
                 Right(None)
               } else {
+                logger.warn(s"Call to getNsiAccount unsuccessful. Received unexpected status $other. Body was ${response.body}",
+                  nino, "correlationId" → correlationId)
+                metrics.getAccountErrorCounter.inc()
+                pagerDutyAlerting.alert("Received unexpected http status in response to getAccount")
+
                 Left(s"Received unexpected status($other) from getNsiAccount call")
               }
 

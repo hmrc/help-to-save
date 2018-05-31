@@ -46,9 +46,10 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
         .retrieve(Retrievals.nino) { mayBeNino ⇒
-          mayBeNino.fold[Future[Result]](
+          mayBeNino.fold[Future[Result]] {
+            logger.warn("Could not find NINO for logged in user")
             Forbidden
-          )(nino ⇒ action(request)(nino)
+          }(nino ⇒ action(request)(nino)
           )
         }.recover {
           handleFailure()
