@@ -75,14 +75,14 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
         case e ⇒
           logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}",
             userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
-        
+
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
   }
 
   override def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse] = {
-    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId&thresholdValue=$threshold"
+    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId&threshold=$threshold"
 
     EitherT[Future, String, UCResponse](
       http.get(url).map {
