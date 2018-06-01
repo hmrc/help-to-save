@@ -113,7 +113,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       val nino = "AE123456C"
       val threshold = 650.0
 
-      val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId&thresholdValue=$threshold"
+      val url = s"http://localhost:7005/help-to-save-proxy/uc-claimant-check?nino=$nino&transactionId=$txnId&threshold=$threshold"
 
       "handle success response from proxy" in {
 
