@@ -59,5 +59,9 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
   val getAccountTimer: Timer = timer("backend.get-account.time")
 
   val getAccountErrorCounter: Counter = counter("backend.get-account-error.count")
+
+  val getTransactionsTimer: Timer = timer("backend.get-transactions.time")
+
+  val getTransactionsErrorCounter: Counter = counter("backend.get-transactions-error.count")
 }
 

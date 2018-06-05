@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import play.api.libs.json.{JsError, Reads}
+import play.api.libs.json.{JsError, JsSuccess, Reads}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.http.HttpResponse
 
+import scala.language.implicitConversions
 import scala.util.Try
 
 object HttpResponseOps {
@@ -32,21 +33,32 @@ object HttpResponseOps {
 class HttpResponseOps(val response: HttpResponse) extends AnyVal {
 
   def parseJson[A](implicit reads: Reads[A]): Either[String, A] =
+    parseJsonImpl(
+      couldntReadJson  = (response, ex: Throwable) ⇒ s"Could not read http response as JSON (${ex.getMessage}). Response body was ${maskNino(response.body)}",
+      couldntParseJson = (response, e: JsError) ⇒ s"Could not parse http response JSON: ${e.prettyPrint()}. Response body was ${maskNino(response.body)}"
+    )
+
+  def parseJsonWithoutLoggingBody[A](implicit reads: Reads[A]): Either[String, A] =
+    parseJsonImpl(
+      couldntReadJson  = (_, ex: Throwable) ⇒ s"Could not read http response as JSON (${ex.getMessage})",
+      couldntParseJson = (_, e: JsError) ⇒ s"Could not parse http response JSON: ${e.prettyPrint()}"
+    )
+
+  private def parseJsonImpl[A](
+      couldntReadJson:  (HttpResponse, Throwable) ⇒ String,
+      couldntParseJson: (HttpResponse, JsError) ⇒ String
+  )(implicit reads: Reads[A]): Either[String, A] =
     Try(response.json).fold(
-      error ⇒
+      ex ⇒
         // response.json failed in this case - there was no JSON in the response
-        Left(s"Could not read http response as JSON (${error.getMessage}). Response body was ${maskNino(response.body)}"),
+        Left(couldntReadJson(response, ex)),
       jsValue ⇒
         // use Option here to filter out null values
         Option(jsValue).fold[Either[String, A]](
           Left("No JSON found in body of http response")
-        )(_.validate[A].fold[Either[String, A]](
-            errors ⇒
-              // there was JSON in the response but we couldn't read it
-              Left(s"Could not parse http reponse JSON: ${JsError(errors).prettyPrint()}. Response body was ${maskNino(response.body)}"),
-            Right(_)
-          )
-          )
+        )(_.validate[A] match {
+            case JsSuccess(r, _) ⇒ Right(r)
+            case e @ JsError(_)  ⇒ Left(couldntParseJson(response, e))
+          })
     )
-
 }

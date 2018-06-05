@@ -21,6 +21,7 @@ val dependencies = Seq(
   "uk.gov.hmrc" %% "domain" % "5.1.0",
   "org.typelevel" %% "cats-core" % "1.1.0",
   "com.github.kxbmap" %% "configs" % "0.4.4",
+  "io.lemonlabs" %% "scala-uri" % "1.1.1",
   "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
   "uk.gov.hmrc" %% "crypto" % "4.5.0",
   "uk.gov.hmrc" %% "bootstrap-play-25" % "1.4.0"
@@ -101,11 +102,14 @@ lazy val wartRemoverSettings = {
   wartremoverErrors in(Compile, compile) ++= Warts.allBut(excludedWarts: _*)
 }
 
+lazy val catsSettings = scalacOptions += "-Ypartial-unification"
+
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
   .settings(addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17"))
   .settings(playSettings ++ scoverageSettings: _*)
   .settings(scalaSettings: _*)
+  .settings(scalaVersion := "2.11.12")
   .settings(publishingSettings: _*)
   .settings(defaultSettings(): _*)
   .settings(scalariformSettings: _*)
@@ -122,6 +126,7 @@ lazy val microservice = Project(appName, file("."))
       (baseDirectory.value ** "UCThresholdConnectorProxyActor.scala").get ++
       (baseDirectory.value ** "UCThresholdMongoProxy.scala").get
   )
+  .settings(catsSettings)
   .settings(
     libraryDependencies ++= appDependencies,
     retrieveManaged := false,
