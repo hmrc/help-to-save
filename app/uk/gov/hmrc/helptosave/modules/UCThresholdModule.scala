@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.helptosave.modules
 
+import java.time.{Clock, ZoneId}
+
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.actors.{UCThresholdConnectorProxyActor, UCThresholdManager}
+import uk.gov.hmrc.helptosave.actors.{TimeCalculatorImpl, UCThresholdConnectorProxyActor, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
@@ -43,12 +45,18 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
 
   val enabled: Boolean = configuration.underlying.getBoolean("uc-threshold.enabled")
 
+  private val timeCalculator = {
+    val clock = Clock.system(ZoneId.of(configuration.underlying.getString("uc-threshold.update-timezone")))
+    new TimeCalculatorImpl(clock)
+  }
+
   val thresholdManager: ActorRef = if (enabled) {
     logger.info("UC threshold DES behaviour enabled: starting UCThresholdManager")
     system.actorOf(UCThresholdManager.props(
       connectorProxy,
       pagerDutyAlerting,
       system.scheduler,
+      timeCalculator,
       configuration.underlying
     ))
   } else {
