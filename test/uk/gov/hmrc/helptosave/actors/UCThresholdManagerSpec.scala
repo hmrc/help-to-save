@@ -28,7 +28,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestScheduler.JobScheduledOnce
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.{TestScheduler, TestTimeCalculator}
-import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestTimeCalculator.{TimeUntilRequest, TimeUntilResponse}
+import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestTimeCalculator.{IsTimeInBetweenRequest, IsTimeInBetweenResponse, TimeUntilRequest, TimeUntilResponse}
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 
 import scala.concurrent.duration._
@@ -40,9 +40,11 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
   implicit val timeout: Timeout = Timeout(10.seconds)
 
-  val updateTime = LocalTime.MIDNIGHT
+  val updateWindowStartTime = LocalTime.MIDNIGHT
 
   val updateDelay = 30.minutes
+
+  val updateWindowEndTime = updateWindowStartTime.plusSeconds(updateDelay.toSeconds)
 
   class TestApparatus {
     val connectorProxy = TestProbe()
@@ -63,7 +65,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
          |  min-backoff = 1 second
          |  max-backoff = 5 seconds
          |  number-of-retries-until-initial-wait-doubles = 5
-         |  update-time = "${updateTime.format(DateTimeFormatter.ISO_LOCAL_TIME)}"
+         |  update-time = "${updateWindowStartTime.format(DateTimeFormatter.ISO_LOCAL_TIME)}"
          |  update-time-delay = ${updateDelay.toSeconds} seconds
          |}
       """.stripMargin
@@ -114,7 +116,6 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         probe.send(actor, UCThresholdManager.GetThresholdValue)
         connectorProxy.expectNoMsg()
       }
-
   }
 
   "The ThresholdActor" when {
@@ -133,7 +134,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
         // wait until actor replies replies to Identify message to make sure it has changed state
         // before asking for threshold value
-        awaitActorReady(actor)
+        awaitInReadyState()
 
         await(askForThresholdValue(actor)) shouldBe Some(12.0)
       }
@@ -420,6 +421,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           testApparatus.time.advance(1.hour)
 
           // expect the end of the update window to be scheduled
+          testApparatus.timeCalculatorListener.expectMsg(TimeUntilRequest)
+          testApparatus.timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
           testApparatus.schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
 
           testApparatus.actor ! UCThresholdManager.GetThresholdValue
@@ -454,6 +457,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           time.advance(1.second)
 
           // expect the end of the update window to be scheduled
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
           schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
 
           actor ! UCThresholdManager.GetThresholdValue
@@ -487,6 +492,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           // now we should be in update window
           time.advance(1.millisecond)
           // expect the end of the update window to be scheduled
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
           schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
 
           actor ! UCThresholdManager.GetThresholdValue
@@ -745,7 +752,67 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
             test.actor ! UCThresholdManager.GetThresholdValue
             expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(20.0)))
           }
+        }
 
+      "move to the ready state if the actor starts up during the update window and " +
+        "only receives a threshold value from DES after the update window" in new TestApparatus {
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(5.seconds))
+
+          // expect the scheduled update to be scheduled
+          schedulerListener.expectMsg(JobScheduledOnce(5.seconds))
+
+          // expect the initial request to DES to get the threshold value
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+
+          // advance time 5 seconds now
+          time.advance(5.seconds)
+
+          // then reply
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(12.0)))
+
+          // there should be a check now done to see if we're still in the update window
+          timeCalculatorListener.expectMsg(IsTimeInBetweenRequest(updateWindowStartTime, updateWindowEndTime))
+          timeCalculatorListener.reply(IsTimeInBetweenResponse(false))
+
+          // expect the next update window to be scheduled
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(3.hours))
+
+          // we should now be in the ready state
+          awaitInReadyState()
+        }
+
+      "move to the in update window state if the actor starts up during the update window and " +
+        "receives a threshold value from DES within the update window" in new TestApparatus {
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(5.seconds))
+
+          // expect the scheduled update to be scheduled
+          schedulerListener.expectMsg(JobScheduledOnce(5.seconds))
+
+          // expect the initial request to DES to get the threshold value
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+
+          // advance time 5 seconds now
+          time.advance(5.seconds)
+
+          // then reply
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(12.0)))
+
+          // there should be a check now done to see if we're still in the update window
+          timeCalculatorListener.expectMsg(IsTimeInBetweenRequest(updateWindowStartTime, updateWindowEndTime))
+          timeCalculatorListener.reply(IsTimeInBetweenResponse(true))
+
+          // we should now be in the in-update window state
+          // expect the end of the update window to be scheduled
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
+          schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
+          actor ! UCThresholdManager.GetThresholdValue
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(1.0)))
+          expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(1.0)))
         }
 
     }
@@ -770,6 +837,10 @@ object UCThresholdManagerSpec {
 
     override def timeUntil(t: LocalTime): FiniteDuration =
       Await.result((reportTo ? TimeUntilRequest).mapTo[TimeUntilResponse].map(_.timeUntil), 10.seconds)
+
+    override def isNowInBetween(t1: LocalTime, t2: LocalTime): Boolean =
+      Await.result((reportTo ? IsTimeInBetweenRequest(t1, t2)).mapTo[IsTimeInBetweenResponse].map(_.result), 10.seconds)
+
   }
 
   object TestTimeCalculator {
@@ -777,6 +848,10 @@ object UCThresholdManagerSpec {
     case object TimeUntilRequest
 
     case class TimeUntilResponse(timeUntil: FiniteDuration)
+
+    case class IsTimeInBetweenRequest(t1: LocalTime, t2: LocalTime)
+
+    case class IsTimeInBetweenResponse(result: Boolean)
 
   }
 

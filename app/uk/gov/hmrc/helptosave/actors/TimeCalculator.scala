@@ -23,6 +23,7 @@ trait TimeCalculator {
 
   def timeUntil(t: LocalTime): FiniteDuration
 
+  def isNowInBetween(t1: LocalTime, t2: LocalTime): Boolean
 }
 
 class TimeCalculatorImpl(clock: Clock) extends TimeCalculator {
@@ -43,5 +44,11 @@ class TimeCalculatorImpl(clock: Clock) extends TimeCalculator {
 
     seconds.seconds
   }
+
+  def isNowInBetween(t1: LocalTime, t2: LocalTime): Boolean = {
+    val now = LocalTime.now(clock)
+    t1.isBefore(now) && t2.isBefore(now)
+  }
+
 }
 
