@@ -27,7 +27,8 @@ import scala.concurrent.duration._
 
 class ActorTestSupport(name: String) extends TestKit(ActorSystem(
   name,
-  ConfigFactory.defaultApplication().resolve().withValue("akka.test.single-expect-default", ConfigValueFactory.fromAnyRef("10 seconds"))
+  ConfigFactory.defaultApplication().resolve()
+    .withValue("akka.test.single-expect-default", ConfigValueFactory.fromAnyRef("5 seconds"))
 )) with ImplicitSender with TestSupport {
 
   override def afterAll(): Unit = {

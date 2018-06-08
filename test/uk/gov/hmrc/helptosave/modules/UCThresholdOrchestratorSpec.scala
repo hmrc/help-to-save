@@ -34,8 +34,6 @@ import scala.concurrent.duration._
 
 class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestratorSpec") with Eventually {
 
-  import system.dispatcher
-
   implicit val timeout: Timeout = Timeout(10.seconds)
 
   val connector = mock[UCThresholdConnector]
@@ -49,6 +47,9 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
        |min-backoff = 1 second
        |max-backoff = 5 seconds
        |number-of-retries-until-initial-wait-doubles = 5
+       |update-timezone = UTC
+       |update-time = "00:00"
+       |update-time-delay = 1 hour
        |}
     """.stripMargin
   ))
