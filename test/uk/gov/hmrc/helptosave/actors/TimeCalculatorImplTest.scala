@@ -26,17 +26,23 @@ class TimeCalculatorImplTest extends WordSpec with Matchers {
 
   "TimeCalculatorImpl" must {
 
-    "calculate time between two times correctly" in {
-      // create a clock fixed a 1am
-      val clock =
-        Clock.fixed(
-          LocalTime.parse("01:00")
-            .atDate(LocalDate.ofEpochDay(0L))
-            .toInstant(ZoneOffset.UTC),
-          ZoneId.of("Z")
-        )
+    // create a clock fixed a 1am
+    val clock =
+      Clock.fixed(
+        LocalTime.parse("01:00")
+          .atDate(LocalDate.ofEpochDay(0L))
+          .toInstant(ZoneOffset.UTC),
+        ZoneId.of("Z")
+      )
 
-      val calculator = new TimeCalculatorImpl(clock)
+    val calculator = new TimeCalculatorImpl(clock)
+
+    "be able to tell if now is between two times" in {
+      calculator.isNowInBetween(LocalTime.MIDNIGHT, LocalTime.of(2, 0)) shouldBe true
+      calculator.isNowInBetween(LocalTime.of(2, 0), LocalTime.of(3, 0)) shouldBe false
+    }
+
+    "calculate time between two times correctly" in {
 
       val t1 = LocalTime.of(13, 24, 56)
       val timeUntilT1 = 12.hours + 24.minutes + 56.seconds
