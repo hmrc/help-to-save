@@ -23,7 +23,7 @@ import org.scalatest.EitherValues
 import play.api.libs.json.{Json, Writes}
 import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
-import uk.gov.hmrc.helptosave.models.account.{Account, Blocking, BonusTerm}
+import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
 import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
@@ -72,6 +72,11 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
       .expects(url, Map.empty[String, String], *, *)
       .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
+
+  private def mockGetTransactionsResponse(url: String)(response: Option[HttpResponse]) =
+    (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(url, Map.empty[String, String], *, *)
+      .returning(response.fold(Future.failed[HttpResponse](new Exception("Test exception message")))(Future.successful))
 
   "The HelpToSaveProxyConnector" when {
     "creating account" must {
@@ -320,7 +325,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
               |      "errorDetail"    : "detail"
               |    },
               |    {
-              |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString("nsi.get-account.no-account-error-message-id")}",
+              |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString("nsi.no-account-error-message-id")}",
               |      "errorMessage"   : "Oh no!",
               |      "errorDetail"    : "Account doesn't exist"
               |    }
@@ -332,9 +337,274 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
         result shouldBe Right(None)
-
       }
 
+      "handle characters in correlationId and systemId that need to be escaped" in {
+        val needsEscapingCorrelationId = "a&b"
+        val needsEscapingSystemId = "system<>&id"
+        val queryString = s"nino=$nino&correlationId=${java.net.URLEncoder.encode(needsEscapingCorrelationId, "UTF-8")}&version=$version" +
+          s"&systemId=${java.net.URLEncoder.encode(needsEscapingSystemId, "UTF-8")}"
+
+        val needsEscapingGetAccountUrl: String = s"http://localhost:7005/help-to-save-proxy/nsi-services/account?$queryString"
+
+        val json = Json.parse(
+          """
+            |{
+            |  "accountBalance": "200.34",
+            |  "accountClosedFlag": "",
+            |  "accountBlockingCode": "00",
+            |  "clientBlockingCode": "00",
+            |  "currentInvestmentMonth": {
+            |    "investmentRemaining": "15.50",
+            |    "investmentLimit": "50.00",
+            |    "endDate": "2018-02-28"
+            |  },
+            |  "terms": []
+            |}
+          """.stripMargin)
+
+        mockGetAccountResponse(needsEscapingGetAccountUrl)(Some(HttpResponse(200, Some(json))))
+
+        val result = await(proxyConnector.getAccount(nino, needsEscapingSystemId, needsEscapingCorrelationId).value)
+
+        result shouldBe Right(Some(Account(
+          isClosed = false,
+          Blocking(false),
+          200.34,
+          34.50,
+          15.50,
+          50.00,
+          LocalDate.parse("2018-02-28"),
+          List(),
+          None,
+          None)
+        ))
+      }
+
+    }
+
+    "retrieving transactions" must {
+      val nino = randomNINO()
+      val correlationId = UUID.randomUUID().toString
+      val systemId = "123"
+      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")
+
+      val queryString = s"nino=$nino&correlationId=$correlationId&version=$version&systemId=$systemId"
+
+      val getTransactionsUrl: String = s"http://localhost:7005/help-to-save-proxy/nsi-services/transactions?$queryString"
+
+        def transactionMetricChanges[T](body: ⇒ T): (T, Long, Long) = {
+          val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
+          val errorCountBefore = mockMetrics.getTransactionsErrorCounter.getCount
+          val result = body
+          (result, mockMetrics.getTransactionsTimer.getCount - timerCountBefore, mockMetrics.getTransactionsErrorCounter.getCount - errorCountBefore)
+        }
+
+      "handle success response by translating transactions from NS&I domain into MDTP domain" in {
+        val json = Json.parse(
+          """{
+            |  "transactions": [
+            |    {
+            |      "sequence": "1",
+            |      "amount": "11.50",
+            |      "operation": "C",
+            |      "description": "Debit card online deposit",
+            |      "transactionReference": "A1A11AA1A00A0034",
+            |      "transactionDate": "2017-11-20",
+            |      "accountingDate": "2017-11-20"
+            |    },
+            |    {
+            |      "sequence": "2",
+            |      "amount": "1.01",
+            |      "operation": "D",
+            |      "description": "BACS payment",
+            |      "transactionReference": "A1A11AA1A00A000I",
+            |      "transactionDate": "2017-11-27",
+            |      "accountingDate": "2017-11-27"
+            |    },
+            |    {
+            |      "sequence": "3",
+            |      "amount": "1.11",
+            |      "operation": "D",
+            |      "description": "BACS payment",
+            |      "transactionReference": "A1A11AA1A00A000G",
+            |      "transactionDate": "2017-11-27",
+            |      "accountingDate": "2017-11-27"
+            |    },
+            |    {
+            |      "sequence": "4",
+            |      "amount": "1.11",
+            |      "operation": "C",
+            |      "description": "Reinstatement Adjustment",
+            |      "transactionReference": "A1A11AA1A00A000G",
+            |      "transactionDate": "2017-11-27",
+            |      "accountingDate": "2017-12-04"
+            |    },
+            |    {
+            |      "sequence": "1",
+            |      "amount": "50.00",
+            |      "operation": "C",
+            |      "description": "Debit card online deposit",
+            |      "transactionReference": "A1A11AA1A00A0059",
+            |      "transactionDate": "2018-04-10",
+            |      "accountingDate": "2018-04-10"
+            |    }
+            |  ]
+            |}
+            |""".stripMargin
+        )
+
+        mockGetTransactionsResponse(getTransactionsUrl)(Some(HttpResponse(200, Some(json))))
+
+        val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+
+        result shouldBe Right(Some(Transactions(Seq(
+          Transaction(Credit, BigDecimal("11.50"), LocalDate.parse("2017-11-20"), LocalDate.parse("2017-11-20"), "Debit card online deposit", "A1A11AA1A00A0034", BigDecimal("11.50")),
+          Transaction(Debit, BigDecimal("1.01"), LocalDate.parse("2017-11-27"), LocalDate.parse("2017-11-27"), "BACS payment", "A1A11AA1A00A000I", BigDecimal("10.49")),
+          Transaction(Debit, BigDecimal("1.11"), LocalDate.parse("2017-11-27"), LocalDate.parse("2017-11-27"), "BACS payment", "A1A11AA1A00A000G", BigDecimal("9.38")),
+          Transaction(Credit, BigDecimal("1.11"), LocalDate.parse("2017-11-27"), LocalDate.parse("2017-12-04"), "Reinstatement Adjustment", "A1A11AA1A00A000G", BigDecimal("10.49")),
+          Transaction(Credit, BigDecimal(50), LocalDate.parse("2018-04-10"), LocalDate.parse("2018-04-10"), "Debit card online deposit", "A1A11AA1A00A0059", BigDecimal("60.49"))
+        ))))
+        timerMetricChange shouldBe 1
+        errorMetricChange shouldBe 0
+      }
+
+      "return an error when the GET transaction JSON is missing fields that are required according to get_transactions_by_nino_RESP_schema_V1.0.json" in {
+        val json = Json.parse(
+          // invalid because sequence is missing from first transaction
+          """{
+            |  "transactions": [
+            |    {
+            |      "amount": "11.50",
+            |      "operation": "C",
+            |      "description": "Debit card online deposit",
+            |      "transactionReference": "A1A11AA1A00A0034",
+            |      "transactionDate": "2017-11-20",
+            |      "accountingDate": "2017-11-20"
+            |    }
+            |  ]
+            |}
+            |""".stripMargin
+        )
+
+        mockGetTransactionsResponse(getTransactionsUrl)(Some(HttpResponse(200, Some(json))))
+        mockPagerDutyAlert("Could not parse get transactions response")
+
+        val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+
+        result shouldBe Left("Could not parse transactions response from NS&I, received 200 (OK), error=[Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]]")
+        timerMetricChange shouldBe 1
+        errorMetricChange shouldBe 1
+      }
+
+      "return an error when Transaction validation fails due to invalid field values" in {
+        val json = Json.parse(
+          // invalid because sequence is missing from first transaction
+          """{
+            |  "transactions": [
+            |    {
+            |      "sequence": "1",
+            |      "amount": "11.50",
+            |      "operation": "bad",
+            |      "description": "Debit card online deposit",
+            |      "transactionReference": "A1A11AA1A00A0034",
+            |      "transactionDate": "2017-11-20",
+            |      "accountingDate": "2017-11-20"
+            |    }
+            |  ]
+            |}
+            |""".stripMargin
+        )
+
+        mockGetTransactionsResponse(getTransactionsUrl)(Some(HttpResponse(200, Some(json))))
+        mockPagerDutyAlert("Could not parse get transactions response")
+
+        val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+
+        result shouldBe Left("""Could not parse transactions response from NS&I, received 200 (OK), error=[Unknown value for operation: "bad"]""")
+        timerMetricChange shouldBe 1
+        errorMetricChange shouldBe 1
+      }
+
+      "handle non 200 responses from help-to-save-proxy" in {
+        mockGetTransactionsResponse(getTransactionsUrl)(Some(HttpResponse(400)))
+        mockPagerDutyAlert("Received unexpected http status in response to get transactions")
+
+        val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+        result shouldBe Left("Received unexpected status(400) from get transactions call")
+        timerMetricChange shouldBe 1
+        errorMetricChange shouldBe 1
+      }
+
+      "handle unexpected server errors" in {
+        mockGetTransactionsResponse(getTransactionsUrl)(None)
+        mockPagerDutyAlert("Failed to make call to get transactions")
+
+        val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+        result shouldBe Left("Call to get transactions unsuccessful: Test exception message")
+        timerMetricChange shouldBe 1
+        errorMetricChange shouldBe 1
+      }
+
+      "handle the case where an account does not exist by returning Right(None)" in {
+        val errorResponse =
+          Json.parse(
+            s"""
+              |{
+              |  "errors" : [
+              |    {
+              |      "errorMessageId" : "id",
+              |      "errorMessage"   : "message",
+              |      "errorDetail"    : "detail"
+              |    },
+              |    {
+              |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString("nsi.no-account-error-message-id")}",
+              |      "errorMessage"   : "Oh no!",
+              |      "errorDetail"    : "Account doesn't exist"
+              |    }
+              |  ]
+              |}
+          """.stripMargin)
+
+        mockGetTransactionsResponse(getTransactionsUrl)(Some(HttpResponse(400, Some(errorResponse))))
+
+        val result = await(proxyConnector.getTransactions(nino, systemId, correlationId).value)
+        result shouldBe Right(None)
+      }
+
+      "handle characters in correlationId and systemId that need to be escaped" in {
+        val needsEscapingCorrelationId = "a&b"
+        val needsEscapingSystemId = "system<>&id"
+        val queryString = s"nino=$nino&correlationId=${java.net.URLEncoder.encode(needsEscapingCorrelationId, "UTF-8")}&version=$version" +
+          s"&systemId=${java.net.URLEncoder.encode(needsEscapingSystemId, "UTF-8")}"
+
+        val needsEscapingGetTransactionsUrl: String = s"http://localhost:7005/help-to-save-proxy/nsi-services/transactions?$queryString"
+
+        val json = Json.parse(
+          """{
+            |  "transactions": [
+            |    {
+            |      "sequence": "1",
+            |      "amount": "11.50",
+            |      "operation": "C",
+            |      "description": "Debit card online deposit",
+            |      "transactionReference": "A1A11AA1A00A0034",
+            |      "transactionDate": "2017-11-20",
+            |      "accountingDate": "2017-11-20"
+            |    }
+            |  ]
+            |}
+            |""".stripMargin
+        )
+
+        mockGetTransactionsResponse(needsEscapingGetTransactionsUrl)(Some(HttpResponse(200, Some(json))))
+
+        val result = await(proxyConnector.getTransactions(nino, needsEscapingSystemId, needsEscapingCorrelationId).value)
+
+        result shouldBe Right(Some(Transactions(Seq(
+          Transaction(Credit, BigDecimal("11.50"), LocalDate.parse("2017-11-20"), LocalDate.parse("2017-11-20"), "Debit card online deposit", "A1A11AA1A00A0034", BigDecimal("11.50"))
+        ))))
+      }
     }
   }
 }

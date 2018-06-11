@@ -40,6 +40,48 @@ This microservice is deployed as per all MDTP microservices via Jenkins into a D
  If the call is successful, expect a `200` response with JSON containing the eligibility result. If call is not successful expect a `500`
  response.
 
+# GET /:nino/account
+ Returns account data for the specified NINO (National Insurance Number), or 404 if there is no account for that NINO.
+ 
+# GET /:nino/account/transactions
+ Returns transaction for the specified NINO (National Insurance Number), or 404 if there is no account for that NINO.
+ 
+  The JSON format for successful `200` responses is:
+
+```json  
+{
+  "transactions": [
+    {
+      "amount": 3.00,
+      "operation": "credit",
+      "transactionDate": "2018-02-18",
+      "accountingDate": "2018-02-18",
+      "description": "Debit card online deposit",
+      "transactionReference": "A1A11AA1A00A0034",
+      "balanceAfter": 3.00
+    },
+    {
+      "amount": 6.67,
+      "operation": "debit",
+      "transactionDate": "2018-02-20",
+      "accountingDate": "2018-02-22",
+      "description": "BACS payment",
+      "transactionReference": "A1A11AA1A00A000I",
+      "balanceAfter": 9.67
+    },
+    {
+      "amount": 5.00,
+      "operation": "debit",
+      "transactionDate": "2018-02-25",
+      "accountingDate": "2018-02-25",
+      "description": "BACS payment",
+      "transactionReference": "A1A11AA1A00A000G",
+      "balanceAfter": 4.67
+    }
+  ]
+}
+```
+
 # GET /enrolment-status
  Checks whether or not a person is enrolled in help to save. This endpoint requires no parameters.
 
