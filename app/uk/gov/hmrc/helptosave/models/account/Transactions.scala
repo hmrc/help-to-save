@@ -42,7 +42,7 @@ object Operation {
   }
 }
 
-case class ValidNsiTransaction(
+private case class ValidNsiTransaction(
     sequence:             Int,
     operation:            Operation,
     amount:               BigDecimal,
@@ -52,7 +52,7 @@ case class ValidNsiTransaction(
     transactionReference: String
 )
 
-object ValidNsiTransaction {
+private object ValidNsiTransaction {
   private type ValidOrErrorString[A] = ValidatedNel[String, A]
 
   def apply(nsiTransaction: NsiTransaction): ValidatedNel[String, ValidNsiTransaction] = {
