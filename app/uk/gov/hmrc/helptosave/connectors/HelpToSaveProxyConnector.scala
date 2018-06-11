@@ -133,9 +133,9 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
                   pagerDutyAlerting.alert("Could not parse JSON in the getAccount response")
                   s"Could not parse getNsiAccount response, received 200 (OK), error=$e"
                 },
-                { transactions ⇒
+                { account ⇒
                   logger.info("Call to getNsiAccount successful", nino, "correlationId" → correlationId)
-                  transactions
+                  account
                 }
               )
 
