@@ -116,9 +116,7 @@ object Transactions {
   def apply(nsiTransactions: NsiTransactions): ValidatedNel[String, Transactions] = {
     nsiTransactions.transactions.toList
       .traverse[ValidOrErrorString, ValidNsiTransaction](ValidNsiTransaction.apply)
-      .map(sortLikeNsiWeb)
-      .map(runningBalance)
-      .map(Transactions.apply)
+      .map(sortLikeNsiWeb _ andThen runningBalance andThen Transactions.apply)
   }
 
   private implicit val eqLocalDate: Eq[LocalDate] = Eq.fromUniversalEquals
