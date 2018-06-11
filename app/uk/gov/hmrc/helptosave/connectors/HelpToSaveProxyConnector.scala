@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.connectors
 
 import java.util.UUID
 
-import cats.data.EitherT
+import cats.data.{EitherT, NonEmptyList}
 import cats.instances.int._
 import cats.instances.string._
 import cats.syntax.either._
@@ -124,18 +124,20 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
           val _ = timerContext.stop()
           response.status match {
             case Status.OK ⇒
-              val result = response.parseJsonWithoutLoggingBody[NsiAccount].flatMap(a ⇒
-                Account(a).toEither.bimap(s ⇒ s"[${s.toList.mkString(",")}]", Some(_)))
+              val result = for {
+                nsiAccount ← response.parseJsonWithoutLoggingBody[NsiAccount].leftMap(NonEmptyList.one)
+                account ← Account(nsiAccount).toEither
+              } yield account
 
               result.bimap(
-                { e ⇒
+                { errors ⇒
                   metrics.getAccountErrorCounter.inc()
                   pagerDutyAlerting.alert("Could not parse JSON in the getAccount response")
-                  s"Could not parse getNsiAccount response, received 200 (OK), error=$e"
+                  s"Could not parse getNsiAccount response, received 200 (OK), error=[${errors.toList.mkString(",")}]"
                 },
                 { account ⇒
                   logger.info("Call to getNsiAccount successful", nino, "correlationId" → correlationId)
-                  account
+                  Some(account)
                 }
               )
 
@@ -177,19 +179,22 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
           val _ = timerContext.stop()
           response.status match {
             case Status.OK ⇒
-              val result = response.parseJsonWithoutLoggingBody[NsiTransactions].flatMap(nsiTransactions ⇒
-                Transactions(nsiTransactions).toEither.bimap(s ⇒ s"[${s.toList.mkString(",")}]", Some(_)))
+              val result = for {
+                nsiTransactions ← response.parseJsonWithoutLoggingBody[NsiTransactions].leftMap(NonEmptyList.one)
+                transactions ← Transactions(nsiTransactions).toEither
+              } yield transactions
 
               result.bimap(
-                { e ⇒
+                { errors ⇒
                   metrics.getTransactionsErrorCounter.inc()
                   pagerDutyAlerting.alert("Could not parse get transactions response")
-                  s"Could not parse transactions response from NS&I, received 200 (OK), error=$e"
+                  s"""Could not parse transactions response from NS&I, received 200 (OK), error=[${errors.toList.mkString(",")}]"""
                 },
-                { transactions ⇒
+                { transactions: Transactions ⇒
                   logger.info("Call to get transactions successful", nino, "correlationId" → correlationId)
-                  transactions
-                })
+                  Some(transactions)
+                }
+              )
 
             case other ⇒
               if (isAccountDoesntExistResponse(response)) {

@@ -492,7 +492,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
-        result shouldBe Left("Could not parse transactions response from NS&I, received 200 (OK), error=Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]")
+        result shouldBe Left("Could not parse transactions response from NS&I, received 200 (OK), error=[Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]]")
         timerMetricChange shouldBe 1
         errorMetricChange shouldBe 1
       }
