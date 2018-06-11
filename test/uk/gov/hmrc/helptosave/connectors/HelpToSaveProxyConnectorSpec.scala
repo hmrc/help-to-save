@@ -488,11 +488,40 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         )
 
         mockGetTransactionsResponse(getTransactionsUrl)(Some(HttpResponse(200, Some(json))))
-        mockPagerDutyAlert("Could not parse JSON in the get transactions response")
+        mockPagerDutyAlert("Could not parse get transactions response")
 
         val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
         result shouldBe Left("Could not parse transactions response from NS&I, received 200 (OK), error=Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]")
+        timerMetricChange shouldBe 1
+        errorMetricChange shouldBe 1
+      }
+
+      "return an error when Transaction validation fails due to invalid field values" in {
+        val json = Json.parse(
+          // invalid because sequence is missing from first transaction
+          """{
+            |  "transactions": [
+            |    {
+            |      "sequence": "1",
+            |      "amount": "11.50",
+            |      "operation": "bad",
+            |      "description": "Debit card online deposit",
+            |      "transactionReference": "A1A11AA1A00A0034",
+            |      "transactionDate": "2017-11-20",
+            |      "accountingDate": "2017-11-20"
+            |    }
+            |  ]
+            |}
+            |""".stripMargin
+        )
+
+        mockGetTransactionsResponse(getTransactionsUrl)(Some(HttpResponse(200, Some(json))))
+        mockPagerDutyAlert("Could not parse get transactions response")
+
+        val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+
+        result shouldBe Left("""Could not parse transactions response from NS&I, received 200 (OK), error=[Unknown value for operation: "bad"]""")
         timerMetricChange shouldBe 1
         errorMetricChange shouldBe 1
       }

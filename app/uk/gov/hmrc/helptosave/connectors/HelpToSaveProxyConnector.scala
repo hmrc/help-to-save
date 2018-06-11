@@ -183,7 +183,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
               result.bimap(
                 { e ⇒
                   metrics.getTransactionsErrorCounter.inc()
-                  pagerDutyAlerting.alert("Could not parse JSON in the get transactions response")
+                  pagerDutyAlerting.alert("Could not parse get transactions response")
                   s"Could not parse transactions response from NS&I, received 200 (OK), error=$e"
                 },
                 { transactions ⇒
