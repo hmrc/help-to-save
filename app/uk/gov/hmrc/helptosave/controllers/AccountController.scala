@@ -28,7 +28,7 @@ class AccountController @Inject() (proxyConnector: HelpToSaveProxyConnector,
   extends HelpToSaveAuth(authConnector) with WithMdcExecutionContext with AccountQuery {
 
   def getAccount(nino: String, systemId: String, correlationId: Option[String]): Action[AnyContent] =
-    accountQuery(nino, systemId, correlationId) { implicit request ⇒ (nino, systemId, id) ⇒
-      proxyConnector.getAccount(nino, systemId, id)
+    accountQuery(nino, systemId, correlationId) { implicit request ⇒ nsiParams ⇒
+      proxyConnector.getAccount(nsiParams.nino, nsiParams.systemId, nsiParams.correlationId)
     }
 }
