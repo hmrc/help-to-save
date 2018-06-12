@@ -133,6 +133,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
                 { errors ⇒
                   metrics.getAccountErrorCounter.inc()
                   pagerDutyAlerting.alert("Could not parse JSON in the getAccount response")
+                  logger.debug(s"Response body that failed to parse: ${response.body}}")
                   s"Could not parse getNsiAccount response, received 200 (OK), error=[${errors.toList.mkString(",")}]"
                 },
                 { account ⇒
@@ -188,6 +189,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
                 { errors ⇒
                   metrics.getTransactionsErrorCounter.inc()
                   pagerDutyAlerting.alert("Could not parse get transactions response")
+                  logger.debug(s"Response body that failed to parse: ${response.body}}")
                   s"""Could not parse transactions response from NS&I, received 200 (OK), error=[${errors.toList.mkString(",")}]"""
                 },
                 { transactions: Transactions ⇒
