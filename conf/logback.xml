@@ -47,6 +47,8 @@
 
     <logger name="uk.gov" level="INFO"/>
 
+    <logger name="uk.gov.hmrc.helptosave" level="DEBUG"/>
+
     <logger name="uk.gov.hmrc.audit" level="WARN"/>
 
     <logger name="application" level="INFO"/>
