@@ -112,6 +112,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(scalaVersion := "2.11.12")
   .settings(publishingSettings: _*)
   .settings(defaultSettings(): _*)
+  .settings(PlayKeys.playDefaultPort := 7001)
   .settings(scalariformSettings: _*)
   .settings(wartRemoverSettings)
   // disable some wart remover checks in tests - (Any, Null, PublicInference) seems to struggle with
