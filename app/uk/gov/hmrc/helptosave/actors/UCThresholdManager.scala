@@ -256,7 +256,7 @@ class UCThresholdManager(thresholdConnectorProxyActor: ActorRef,
             endUpdateWindow(value)
 
             logger.info(s"[inUpdateWindow] Successfully obtained the UC threshold value $value from DES. End of update window " +
-              s"has been triggered. Changing to ready state")
+              "has been triggered. Changing to ready state")
           } else {
             logger.info(s"[inUpdateWindow] Successfully obtained the UC threshold value $value from DES")
           }

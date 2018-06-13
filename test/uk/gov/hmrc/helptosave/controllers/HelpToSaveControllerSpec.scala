@@ -24,7 +24,7 @@ import cats.instances.future._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
-import play.mvc.Http.Status.{BAD_REQUEST, CREATED}
+import play.mvc.Http.Status.{BAD_REQUEST, CREATED, CONFLICT, OK}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, NSIUserInfo}
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
@@ -36,7 +36,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 // scalastyle:off magic.number
-class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentBehaviour {
+class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
 
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
@@ -47,10 +47,15 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
 
     val eligibilityCheckService = mock[EligibilityCheckService]
 
-    val controller = new HelpToSaveNonDigitalController(enrolmentStore, itmpConnector, proxyConnector, userCapService, eligibilityCheckService)
+    val controller = new HelpToSaveController(enrolmentStore, itmpConnector, proxyConnector, userCapService, eligibilityCheckService)
 
     def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
       (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(expectedPayload, *, *)
+        .returning(toFuture(response))
+
+    def mockUpdateEmail(expectedPayload: NSIUserInfo)(response: HttpResponse) =
+      (proxyConnector.updateEmail(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
@@ -85,10 +90,10 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
          |}
            """.stripMargin
 
-    "creating an account for a DE user" must {
+    val validJSONPayload = Json.parse(jsonString("20200101"))
+    val validNSIUserInfo = validJSONPayload.validate[NSIUserInfo].getOrElse(sys.error("Could not parse NSIUserInfo"))
 
-      val validJSONPayload = Json.parse(jsonString("20200101"))
-      val validNSIUserInfo = validJSONPayload.validate[NSIUserInfo].getOrElse(sys.error("Could not parse NSIUserInfo"))
+    "create account" must {
 
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
@@ -101,7 +106,7 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -115,7 +120,7 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -131,7 +136,7 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
           }
         }
 
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -139,24 +144,63 @@ class HelpToSaveNonDigitalControllerSpec extends TestSupport with TestEnrolmentB
       "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
 
         val requestBody = Json.parse(jsonString("\"123456\""))
-        val result = controller.createDEAccount()(FakeRequest().withJsonBody(requestBody))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")
       }
 
       "return bad request response if there is no json the in the request body" in new TestApparatus {
-        val result = controller.createDEAccount()(FakeRequest())
+        val result = controller.createAccount()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
       }
 
+      "handle 409 response from proxy" in new TestApparatus {
+        inSequence {
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
+          mockEnrolmentStoreUpdate("nino", false)(Right(()))
+          inAnyOrder {
+            mockITMPConnector("nino")(Right(()))
+            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+          }
+        }
+
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
+
+        status(result)(10.seconds) shouldBe CONFLICT
+      }
+
+    }
+
+    "update email" must {
+      "create account if the request is valid NSIUserInfo json" in new TestApparatus {
+        mockUpdateEmail(validNSIUserInfo)(HttpResponse(OK))
+
+        val result = controller.updateEmail()(FakeRequest().withJsonBody(validJSONPayload))
+
+        status(result)(10.seconds) shouldBe OK
+      }
+
+      "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
+
+        val requestBody = Json.parse(jsonString("\"123456\""))
+        val result = controller.updateEmail()(FakeRequest().withJsonBody(requestBody))
+        status(result) shouldBe BAD_REQUEST
+        contentAsJson(result).toString() should include("error.expected.date.isoformat")
+      }
+
+      "return bad request response if there is no json the in the request body" in new TestApparatus {
+        val result = controller.updateEmail()(FakeRequest())
+        status(result) shouldBe BAD_REQUEST
+        contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
+      }
     }
 
     "checking eligibility for an API User" must {
 
       val nino = "AE123456"
 
-        def doRequest(controller: HelpToSaveNonDigitalController) =
+        def doRequest(controller: HelpToSaveController) =
           controller.checkEligibility(nino)(FakeRequest())
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
