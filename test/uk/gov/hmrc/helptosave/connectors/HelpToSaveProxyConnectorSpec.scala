@@ -21,7 +21,7 @@ import java.util.UUID
 
 import org.scalatest.EitherValues
 import play.api.libs.json.{Json, Writes}
-import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK}
+import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK, CONFLICT}
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
@@ -37,6 +37,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
   lazy val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
+  val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
 
   val userInfo: NSIUserInfo =
     NSIUserInfo(
@@ -51,6 +52,11 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
   private def mockCreateAccountResponse(userInfo: NSIUserInfo)(response: Future[HttpResponse]) =
     (mockHttp.post(_: String, _: NSIUserInfo, _: Map[String, String])(_: Writes[NSIUserInfo], _: HeaderCarrier, _: ExecutionContext))
       .expects(createAccountURL, userInfo, Map.empty[String, String], *, *, *)
+      .returning(response)
+
+  private def mockUpdateEmailResponse(userInfo: NSIUserInfo)(response: Future[HttpResponse]) =
+    (mockHttp.put(_: String, _: NSIUserInfo, _: Map[String, String])(_: Writes[NSIUserInfo], _: HeaderCarrier, _: ExecutionContext))
+      .expects(updateEmailURL, userInfo, Map.empty[String, String], *, *, *)
       .returning(response)
 
   private def mockFailCreateAccountResponse(userInfo: NSIUserInfo)(ex: Exception) =
@@ -80,12 +86,20 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
   "The HelpToSaveProxyConnector" when {
     "creating account" must {
-      "handle success response from the help-to-save-proxy" in {
+      "handle 201 response from the help-to-save-proxy" in {
 
         mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(CREATED)))
         val result = await(proxyConnector.createAccount(userInfo))
 
         result.status shouldBe CREATED
+      }
+
+      "handle 409 response from the help-to-save-proxy" in {
+
+        mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(CONFLICT)))
+        val result = await(proxyConnector.createAccount(userInfo))
+
+        result.status shouldBe CONFLICT
       }
 
       "handle bad_request response from frontend" in {
@@ -109,6 +123,16 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
               "errorMessage" : "unexpected error from proxy during /create-de-account",
               "errorDetail"  : "boom"
             }""")
+      }
+    }
+
+    "update email" must {
+
+      "handle 200 response from the help-to-save-proxy" in {
+        mockUpdateEmailResponse(userInfo)(toFuture(HttpResponse(OK)))
+        val result = await(proxyConnector.updateEmail(userInfo))
+
+        result.status shouldBe OK
       }
     }
 

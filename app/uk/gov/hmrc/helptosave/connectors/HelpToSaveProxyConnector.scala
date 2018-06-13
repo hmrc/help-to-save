@@ -46,6 +46,8 @@ trait HelpToSaveProxyConnector {
 
   def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
+  def updateEmail(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+
   def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 
   /**
@@ -80,6 +82,19 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
             userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
 
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
+          HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
+      }
+  }
+
+  override def updateEmail(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+
+    http.put(s"$proxyURL/help-to-save-proxy/update-email", userInfo)
+      .recover {
+        case e ⇒
+          logger.warn(s"unexpected error from proxy during /update-email, message=${e.getMessage}",
+            userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
+
+          val errorJson = ErrorResponse("unexpected error from proxy during /update-email", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
       }
   }
