@@ -19,17 +19,17 @@ package uk.gov.hmrc.helptosave.actors
 import akka.pattern.pipe
 import akka.actor.{Actor, Props}
 import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxyActor.{GetThresholdValue, GetThresholdValueResponse}
-import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class UCThresholdConnectorProxyActor(thresholdConnector: UCThresholdConnector) extends Actor {
+class UCThresholdConnectorProxyActor(helpToSaveService: HelpToSaveService) extends Actor {
   import context.dispatcher
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  def getValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, Double]] = thresholdConnector.getThreshold().value
+  def getValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, Double]] = helpToSaveService.getThreshold().value
 
   override def receive: Receive = {
     case GetThresholdValue ⇒ getValue().map(GetThresholdValueResponse) pipeTo sender
@@ -42,7 +42,7 @@ object UCThresholdConnectorProxyActor {
 
   case class GetThresholdValueResponse(result: Either[String, Double])
 
-  def props(thresholdConnector: UCThresholdConnector): Props =
-    Props(new UCThresholdConnectorProxyActor(thresholdConnector))
+  def props(helpToSaveService: HelpToSaveService): Props =
+    Props(new UCThresholdConnectorProxyActor(helpToSaveService))
 
 }

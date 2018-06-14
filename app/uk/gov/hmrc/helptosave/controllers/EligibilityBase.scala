@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results._
 import play.api.mvc.{Request, Result}
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.services.EligibilityCheckService
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -30,14 +30,14 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait EligibilityBase extends Logging {
 
-  val eligibilityCheckService: EligibilityCheckService
+  val helpToSaveService: HelpToSaveService
 
   def checkEligibility(nino: String)(implicit request: Request[_],
                                      hc:          HeaderCarrier,
                                      ec:          ExecutionContext,
                                      transformer: LogMessageTransformer,
                                      appConfig:   AppConfig): Future[Result] =
-    eligibilityCheckService.getEligibility(nino).fold(
+    helpToSaveService.getEligibility(nino).fold(
       {
         e ⇒
           val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")

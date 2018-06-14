@@ -18,22 +18,26 @@ package uk.gov.hmrc.helptosave.actors
 
 import cats.data.EitherT
 import cats.instances.future._
-import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
+import uk.gov.hmrc.helptosave.connectors.DESConnector
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.helptosave.util._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") {
   import system.dispatcher
 
-  val connector = mock[UCThresholdConnector]
+  val connector = mock[DESConnector]
 
-  val actor = system.actorOf(UCThresholdConnectorProxyActor.props(connector))
+  val service = mock[HelpToSaveService]
 
-  def mockConnectorGetValue(result: Either[String, Double]) =
-    (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+  val actor = system.actorOf(UCThresholdConnectorProxyActor.props(service))
+
+  def mockServiceGetValue(response: Either[String, Double]) =
+    (service.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *)
-      .returning(EitherT.fromEither[Future](result))
+      .returning(EitherT(toFuture(response)))
 
   "The UCThresholdConnectorProxyActor" when {
 
@@ -41,7 +45,7 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
 
       "ask for and return the value from the threshold connector" in {
 
-        mockConnectorGetValue(Right(100.0))
+        mockServiceGetValue(Right(100.0))
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
         expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
@@ -49,7 +53,7 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
 
       "ask for and return an error from the threshold connector if an error occurs" in {
 
-        mockConnectorGetValue(Left("error occurred"))
+        mockServiceGetValue(Left("error occurred"))
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
         expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("error occurred")))

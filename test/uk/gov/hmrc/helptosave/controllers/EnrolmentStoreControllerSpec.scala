@@ -25,6 +25,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
+import uk.gov.hmrc.http.HttpResponse
 
 import scala.concurrent.Future
 
@@ -48,7 +49,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "set the ITMP flag" in {
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockITMPConnector(nino)(Left(""))
+        mockITMPConnector(nino)(HttpResponse(500, None))
 
         await(setFlag())
       }
@@ -56,7 +57,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
       "update the mongo record with the ITMP flag set to true" in {
         inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(Right(()))
+          mockITMPConnector(nino)(HttpResponse(200, None))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
         }
 
@@ -66,7 +67,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
       "return a 200 if all the steps were successful" in {
         inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(Right(()))
+          mockITMPConnector(nino)(HttpResponse(200, None))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
         }
 
@@ -81,12 +82,12 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
         test(inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(Left(""))
+          mockITMPConnector(nino)(HttpResponse(500, None))
         })
 
         test(inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(Right(()))
+          mockITMPConnector(nino)(HttpResponse(200, None))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
         })
       }

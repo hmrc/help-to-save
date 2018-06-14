@@ -24,13 +24,13 @@ import play.api.libs.json.{JsDefined, JsSuccess, Json}
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.Helpers.contentAsJson
 import play.api.test.{DefaultAwaitTimeout, FakeRequest}
-import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
+import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.services.EligibilityCheckService
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestData
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,8 +40,8 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     val nino = "AE123456D"
     val txnId = UUID.randomUUID()
 
-    val eligibilityServiceConnector = mock[EligibilityCheckService]
-    val payeDetailsConnector = mock[PayePersonalDetailsConnector]
+    val helpToSaveService = mock[HelpToSaveService]
+    val payeDetailsConnector = mock[DESConnector]
     val enrolmentStore = mock[EnrolmentStore]
 
     def doEligibilityRequest(controller: StrideController): Future[PlayResult] =
@@ -51,12 +51,12 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
     def mockEligibilityService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
-      (eligibilityServiceConnector.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+      (helpToSaveService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
     def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =
-      (payeDetailsConnector.getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+      (helpToSaveService.getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
@@ -65,7 +65,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
 
-    val controller = new StrideController(eligibilityServiceConnector, payeDetailsConnector, mockAuthConnector, enrolmentStore)
+    val controller = new StrideController(helpToSaveService, payeDetailsConnector, mockAuthConnector, enrolmentStore)
   }
 
   "The StrideController" when {
@@ -142,17 +142,17 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
       "return with a status 500 if the paye-personal-details call fails" in new TestApparatus {
         inSequence {
           mockSuccessfulAuthorisation()
-          mockPayeDetailsConnector(nino)(Left("The paye-personal-details service is unavailable"))
+          mockPayeDetailsConnector(nino)(Left(""))
         }
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500
       }
 
-      "return with a status 200 and empty json if the pay details is NOT_FOUND in DES" in new TestApparatus {
+      "return with a status 500 and empty json if the pay details is NOT_FOUND in DES" in new TestApparatus {
         inSequence {
           mockSuccessfulAuthorisation()
-          mockPayeDetailsConnector(nino)(Left("no paye details found"))
+          mockPayeDetailsConnector(nino)(Left("Could not parse JSON response from paye-personal-details, received 200 (OK)"))
         }
 
         val result = doPayeDetailsRequest(controller)

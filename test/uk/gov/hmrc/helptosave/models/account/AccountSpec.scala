@@ -30,10 +30,13 @@ class AccountSpec extends TestSupport {
     clientBlockingCode     = "00",
     accountBalance         = 0,
     currentInvestmentMonth = NsiCurrentInvestmentMonth(0, 0, LocalDate.of(1900, 1, 1)),
-    terms                  = Seq.empty
+    terms                  = Seq.empty,
+    accountNumber          = "AC01",
+    accountClosureDate     = None,
+    accountClosingBalance  = None
   )
 
-  val account = Account(false, Blocking(false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), List(), None, None)
+  val account = Account("AC01", false, Blocking(false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), List(), None, None)
 
   "Account class" when {
     "creating a new class from NsiAccount class" must {
@@ -66,7 +69,7 @@ class AccountSpec extends TestSupport {
           accountClosingBalance = Some(BigDecimal("123.45"))
         ))
 
-        returnedAccount shouldBe Valid(Account(true, Blocking(false), 0, 0, 0, 0, LocalDate.parse("1900-01-01"), List.empty, Some(LocalDate.of(2018, 2, 16)), Some(123.45)))
+        returnedAccount shouldBe Valid(Account("AC01", true, Blocking(false), 0, 0, 0, 0, LocalDate.parse("1900-01-01"), List.empty, Some(LocalDate.of(2018, 2, 16)), Some(123.45)))
       }
 
       "return details for current month" in {

@@ -22,7 +22,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.{TimeCalculatorImpl, UCThresholdConnectorProxyActor, UCThresholdManager}
-import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
 class UCThresholdModule extends AbstractModule {
@@ -39,9 +39,9 @@ trait ThresholdManagerProvider {
 class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
                                          pagerDutyAlerting: PagerDutyAlerting,
                                          configuration:     Configuration,
-                                         connector:         UCThresholdConnector) extends ThresholdManagerProvider with Logging {
+                                         helpToSaveService: HelpToSaveService) extends ThresholdManagerProvider with Logging {
 
-  private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(connector))
+  private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(helpToSaveService))
 
   val enabled: Boolean = configuration.underlying.getBoolean("uc-threshold.enabled")
 

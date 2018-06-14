@@ -25,7 +25,8 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdManager}
-import uk.gov.hmrc.helptosave.connectors.UCThresholdConnector
+import uk.gov.hmrc.helptosave.connectors.DESConnector
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -36,7 +37,8 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
   implicit val timeout: Timeout = Timeout(10.seconds)
 
-  val connector = mock[UCThresholdConnector]
+  val connector = mock[DESConnector]
+  val service = mock[HelpToSaveService]
   val pagerDutyAlert = mock[PagerDutyAlerting]
 
   def testConfiguration(enabled: Boolean) = Configuration(ConfigFactory.parseString(
@@ -58,15 +60,15 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
 
-      (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+      (service.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Left[String, Double]("")))
 
-      (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+      (service.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
         .returning(EitherT.fromEither[Future](Right[String, Double](threshold)))
 
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), connector)
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), service)
 
       eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(1.second)) {
         val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
@@ -81,7 +83,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
     }
 
     "not start up an instance of the UCThresholdManager if not enabled" in {
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), connector)
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), service)
       orchestrator.thresholdManager shouldBe ActorRef.noSender
     }
 

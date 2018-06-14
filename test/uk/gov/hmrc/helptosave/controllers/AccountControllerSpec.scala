@@ -38,7 +38,7 @@ class AccountControllerSpec extends AuthSupport {
 
   val controller = new AccountController(mockProxyConnector, mockAuthConnector)
 
-  val account = Account(false, Blocking(false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), List(), None, None)
+  val account = Account("AC01", false, Blocking(false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), List(), None, None)
 
   val queryString = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
 

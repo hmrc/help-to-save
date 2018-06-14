@@ -25,7 +25,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.services.EligibilityCheckService
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -34,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenPropertyChecks {
 
   class TestApparatus {
-    val eligibilityService = mock[EligibilityCheckService]
+    val eligibilityService = mock[HelpToSaveService]
 
     def doRequest(controller: EligibilityCheckController): Future[PlayResult] =
       controller.eligibilityCheck()(FakeRequest())

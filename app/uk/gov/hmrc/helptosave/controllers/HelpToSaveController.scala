@@ -23,23 +23,23 @@ import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmentConnector}
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
+import uk.gov.hmrc.helptosave.services.{HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext, toFuture}
 
 import scala.util.{Failure, Success}
 
-class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStore,
-                                      val itmpConnector:           ITMPEnrolmentConnector,
-                                      proxyConnector:              HelpToSaveProxyConnector,
-                                      userCapService:              UserCapService,
-                                      val eligibilityCheckService: EligibilityCheckService,
-                                      override val authConnector:  AuthConnector)(
+class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore,
+                                      val desConnector:           DESConnector,
+                                      proxyConnector:             HelpToSaveProxyConnector,
+                                      userCapService:             UserCapService,
+                                      val helpToSaveService:      HelpToSaveService,
+                                      override val authConnector: AuthConnector)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {

@@ -29,7 +29,7 @@ import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, NSIUserInfo}
-import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
+import uk.gov.hmrc.helptosave.services.{HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -47,7 +47,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     val userCapService = mock[UserCapService]
 
-    val eligibilityCheckService = mock[EligibilityCheckService]
+    val eligibilityCheckService = mock[HelpToSaveService]
 
     val controller = new HelpToSaveController(enrolmentStore, itmpConnector, proxyConnector, userCapService, eligibilityCheckService, mockAuthConnector)
 
@@ -112,7 +112,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
-            mockITMPConnector("nino")(Right(()))
+            mockITMPConnector("nino")(HttpResponse(200, None))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
           }
@@ -142,7 +142,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
-            mockITMPConnector("nino")(Right(()))
+            mockITMPConnector("nino")(HttpResponse(200, None))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Left(""))
           }
@@ -174,7 +174,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
-            mockITMPConnector("nino")(Right(()))
+            mockITMPConnector("nino")(HttpResponse(200, None))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
           }
         }
@@ -182,6 +182,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
 
         status(result)(10.seconds) shouldBe CONFLICT
+        // allow time for asynchronous calls to mocks to be made
+        Thread.sleep(1000L)
       }
 
     }

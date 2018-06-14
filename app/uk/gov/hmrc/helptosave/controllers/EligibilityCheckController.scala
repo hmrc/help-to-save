@@ -20,11 +20,11 @@ import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.services.EligibilityCheckService
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 
-class EligibilityCheckController @Inject() (val eligibilityCheckService: EligibilityCheckService,
-                                            authConnector:               AuthConnector)(
+class EligibilityCheckController @Inject() (val helpToSaveService: HelpToSaveService,
+                                            authConnector:         AuthConnector)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveAuth(authConnector) with EligibilityBase {

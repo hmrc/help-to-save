@@ -18,11 +18,12 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
+import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.http.HeaderCarrier
+import play.api.http.Status
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,12 +31,20 @@ trait EnrolmentBehaviour {
 
   val enrolmentStore: EnrolmentStore
 
-  val itmpConnector: ITMPEnrolmentConnector
+  val desConnector: DESConnector
 
   def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = for {
-    _ ← itmpConnector.setFlag(nino)
+    _ ← setFlag(nino)
     _ ← enrolmentStore.update(nino, itmpFlag = true)
   } yield ()
+
+  private def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] =
+    EitherT(desConnector.setFlag(nino).map{
+      _.status match {
+        case Status.OK ⇒ Right(())
+        case other     ⇒ Left(s"There was an error when trying to setFlag, received unexpected status ${other}")
+      }
+    })
 
   def enrolUser(createAccountRequest: CreateAccountRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
     for {

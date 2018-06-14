@@ -65,4 +65,13 @@ trait TestData {
     Name("A", "Smith"),
     LocalDate.parse("1980-01-01"),
     Address("1 Station Road", "Town Centre", Some("Sometown"), Some("Anyshire"), Some("UK"), "AB12 3CD", Some("GB")), Some("+4420599614"))
+
+  val eligibilityCheckResultJson =
+    """{
+       | "result" : "Yes",
+       | "resultCode" : 1,
+       | "reason" : "Yes",
+       | "reasonCode" : 1
+       |}
+     """.stripMargin
 }
