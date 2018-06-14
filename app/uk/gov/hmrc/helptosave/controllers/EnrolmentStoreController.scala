@@ -43,11 +43,11 @@ class EnrolmentStoreController @Inject() (val enrolmentStore: EnrolmentStore,
 
   implicit val correlationIdHeaderName: String = appConfig.correlationIdHeaderName
 
-  def setITMPFlag(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
+  def setITMPFlag(): Action[AnyContent] = authorisedWithNino { implicit request ⇒ implicit nino ⇒
     handle(setITMPFlagAndUpdateMongo(nino), "set ITMP flag", nino)
   }
 
-  def getEnrolmentStatus(): Action[AnyContent] = authorised { implicit request ⇒ implicit nino ⇒
+  def getEnrolmentStatus(): Action[AnyContent] = authorisedWithNino { implicit request ⇒ implicit nino ⇒
     handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 

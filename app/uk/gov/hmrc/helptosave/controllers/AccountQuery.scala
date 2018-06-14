@@ -29,28 +29,32 @@ import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
 case class NsiAccountQueryParams(nino: String, systemId: String, correlationId: String)
 
-trait AccountQuery extends Logging with Results { this: HelpToSaveAuth ⇒
+trait AccountQuery extends Logging with Results {
+  this: HelpToSaveAuth ⇒
 
   /**
    * Behaviour common to actions that query for Help to Save account data based on NINO
    */
-  protected def accountQuery[A](nino: String, systemId: String, correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A]): Action[AnyContent] = authorised { implicit request ⇒ implicit authNino ⇒
-    if (!uk.gov.hmrc.domain.Nino.isValid(nino)) {
-      logger.warn("NINO in request was not valid")
-      BadRequest
-    } else if (nino =!= authNino) {
-      logger.warn("NINO in request did not match NINO found in auth")
-      Forbidden
-    } else {
-      val id = correlationId.getOrElse(UUID.randomUUID().toString)
-      query(request)(NsiAccountQueryParams(nino, systemId, id))
-        .fold(
-          { errorString ⇒
-            logger.warn(errorString, nino, "correlationId" → id)
-            InternalServerError
-          },
-          _.fold[Result](NotFound)(found ⇒ Ok(Json.toJson(found)))
-        )
+  protected def accountQuery[A](nino:          String,
+                                systemId:      String,
+                                correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A]): Action[AnyContent] =
+    authorisedWithNino { implicit request ⇒ implicit authNino ⇒
+      if (!uk.gov.hmrc.domain.Nino.isValid(nino)) {
+        logger.warn("NINO in request was not valid")
+        BadRequest
+      } else if (nino =!= authNino) {
+        logger.warn("NINO in request did not match NINO found in auth")
+        Forbidden
+      } else {
+        val id = correlationId.getOrElse(UUID.randomUUID().toString)
+        query(request)(NsiAccountQueryParams(nino, systemId, id))
+          .fold(
+            { errorString ⇒
+              logger.warn(errorString, nino, "correlationId" → id)
+              InternalServerError
+            },
+            _.fold[Result](NotFound)(found ⇒ Ok(Json.toJson(found)))
+          )
+      }
     }
-  }
 }
