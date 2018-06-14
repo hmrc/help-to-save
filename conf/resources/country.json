@@ -112,7 +112,7 @@
   "111": {"short_name": "UKRAINE", "alpha_two_code": "UA"},
   "114": {"short_name": "ENGLAND", "alpha_two_code": "GB-ENG"},
   "115": {"short_name": "SCOTLAND", "alpha_two_code": "GB-SCT"},
-  "116": {"short_name": "WALES", "alpha_two_code": "GW-WLS"},
+  "116": {"short_name": "WALES", "alpha_two_code": "GB-WLS"},
   "117": {"short_name": "REPUBLIC OF IRELAND", "alpha_two_code": "IE"},
   "120": {"short_name": "CHANNEL ISLANDS"},
   "121": {"short_name": "ANDORRA", "alpha_two_code": "AD"},
