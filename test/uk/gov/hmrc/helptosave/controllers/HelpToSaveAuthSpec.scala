@@ -33,6 +33,10 @@ class HelpToSaveAuthSpec extends AuthSupport {
     Future.successful(Ok("authSuccess"))
   }
 
+  private def callAuthNoRetrievals = htsAuth.authorised { implicit request ⇒
+    Future.successful(Ok("authSuccess"))
+  }
+
   private def mockAuthWith(error: String) = mockAuthResultWithFail(AuthWithCL200)(fromString(error))
 
   "HelpToSaveAuth" should {
@@ -72,6 +76,16 @@ class HelpToSaveAuthSpec extends AuthSupport {
           mockAuthWith(error)
           val result = callAuth(FakeRequest())
           status(result) shouldBe expectedStatus
+      }
+    }
+
+    "authorised() with no retrievals and multiple providers" must {
+
+      "return after successful auth" in {
+        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+
+        val result = Await.result(callAuthNoRetrievals(FakeRequest()), 5.seconds)
+        status(result) shouldBe Status.OK
       }
     }
   }
