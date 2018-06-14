@@ -45,7 +45,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   private type HtsAction = Request[AnyContent] ⇒ Future[Result]
   private type HtsActionWithNino = Request[AnyContent] ⇒ NINO ⇒ Future[Result]
 
-  def authorisedWithNino(action: HtsActionWithNino): Action[AnyContent] =
+  def ggAuthorisedWithNino(action: HtsActionWithNino): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
         .retrieve(Retrievals.nino) { mayBeNino ⇒
@@ -59,7 +59,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
         }
     }
 
-  def authorised(action: HtsAction): Action[AnyContent] =
+  def ggOrPrivilegedAuthorised(action: HtsAction): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(GGAndPrivilegedProviders) {
         action(request)

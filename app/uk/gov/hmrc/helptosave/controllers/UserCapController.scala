@@ -26,7 +26,7 @@ class UserCapController @Inject() (userCapService: UserCapService,
                                    authConnector:  AuthConnector)
   extends HelpToSaveAuth(authConnector) {
 
-  def isAccountCreateAllowed: Action[AnyContent] = authorisedWithNino { implicit request ⇒ implicit nino ⇒
+  def isAccountCreateAllowed: Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒implicit nino ⇒
     userCapService.isAccountCreateAllowed().map(userCapResponse ⇒ Ok(Json.toJson(userCapResponse)))
   }
 }

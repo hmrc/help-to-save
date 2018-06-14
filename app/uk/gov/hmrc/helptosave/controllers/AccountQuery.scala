@@ -38,7 +38,7 @@ trait AccountQuery extends Logging with Results {
   protected def accountQuery[A](nino:          String,
                                 systemId:      String,
                                 correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A]): Action[AnyContent] =
-    authorisedWithNino { implicit request ⇒ implicit authNino ⇒
+    ggAuthorisedWithNino { implicit request ⇒implicit authNino ⇒
       if (!uk.gov.hmrc.domain.Nino.isValid(nino)) {
         logger.warn("NINO in request was not valid")
         BadRequest

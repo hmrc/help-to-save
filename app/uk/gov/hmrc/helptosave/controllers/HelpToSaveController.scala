@@ -44,7 +44,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStor
     transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {
 
-  def createAccount(): Action[AnyContent] = authorised {
+  def createAccount(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒
       val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
       request.body.asJson.map(_.validate[CreateAccountRequest]) match {
@@ -79,7 +79,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStor
       }
   }
 
-  def updateEmail(): Action[AnyContent] = authorised {
+  def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒
       request.body.asJson.map(_.validate[NSIUserInfo]) match {
         case Some(JsSuccess(userInfo, _)) ⇒
@@ -98,7 +98,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStor
       }
   }
 
-  def checkEligibility(nino: String): Action[AnyContent] = authorised {
+  def checkEligibility(nino: String): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒ checkEligibility(nino)
   }
 }
