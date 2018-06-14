@@ -24,8 +24,9 @@ import cats.instances.future._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
-import play.mvc.Http.Status.{BAD_REQUEST, CREATED, CONFLICT, OK}
+import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
+import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, NSIUserInfo}
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
@@ -73,32 +74,40 @@ class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
 
   "The HelpToSaveNonDigitalController" when {
 
-      def jsonString(dobValue: String): String =
+      def userInfoJson(dobValue: String) =
         s"""{
-         | "nino" : "nino",
-         | "forename" : "name",
-         | "surname" : "surname",
-         | "dateOfBirth" : $dobValue,
-         | "contactDetails" : {
-         |     "address1" : "1",
-         |     "address2" : "2",
-         |     "postcode": "postcode",
-         |     "countryCode" : "country",
-         |     "communicationPreference" : "preference"
-         | },
-         | "registrationChannel" : "channel"
-         |}
-           """.stripMargin
+            "nino" : "nino",
+            "forename" : "name",
+            "surname" : "surname",
+            "dateOfBirth" : $dobValue,
+            "contactDetails" : {
+              "address1" : "1",
+              "address2" : "2",
+              "postcode": "postcode",
+              "countryCode" : "country",
+              "communicationPreference" : "preference"
+            },
+            "registrationChannel" : "online"
+      }""".stripMargin
 
-    val validJSONPayload = Json.parse(jsonString("20200101"))
-    val validNSIUserInfo = validJSONPayload.validate[NSIUserInfo].getOrElse(sys.error("Could not parse NSIUserInfo"))
+      def createAccountJson(dobValue: String): String =
+        s"""{
+           "userInfo":${userInfoJson(dobValue)},
+           "eligibilityReason":7
+          }""".stripMargin
+
+    val validUserInfoPayload = Json.parse(userInfoJson("20200101"))
+
+    val validCreateAccountRequestPayload = Json.parse(createAccountJson("20200101"))
+    val validCreateAccountRequest = validCreateAccountRequestPayload.validate[CreateAccountRequest].getOrElse(sys.error("Could not parse CreateAccountRequest"))
+    val validNSIUserInfo = validCreateAccountRequest.userInfo
 
     "create account" must {
 
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreUpdate("nino", false)(Right(()))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Right(()))
           inAnyOrder {
             mockITMPConnector("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -106,7 +115,7 @@ class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -114,13 +123,11 @@ class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
         inSequence {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          inAnyOrder {
-            mockEnrolmentStoreUpdate("nino", false)(Left(""))
-            mockUserCapServiceUpdate(Right(()))
-          }
+          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Left("error!"))
+          mockUserCapServiceUpdate(Right(()))
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -128,7 +135,7 @@ class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
         inSequence {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreUpdate("nino", false)(Right(()))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Right(()))
           inAnyOrder {
             mockITMPConnector("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -136,14 +143,14 @@ class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
 
         status(result)(10.seconds) shouldBe CREATED
       }
 
-      "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
+      "return bad request response if the request body is not a valid CreateAccountRequest json" in new TestApparatus {
 
-        val requestBody = Json.parse(jsonString("\"123456\""))
+        val requestBody = Json.parse(createAccountJson("\"123456\""))
         val result = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")
@@ -158,14 +165,14 @@ class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
       "handle 409 response from proxy" in new TestApparatus {
         inSequence {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
-          mockEnrolmentStoreUpdate("nino", false)(Right(()))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Right(()))
           inAnyOrder {
             mockITMPConnector("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
 
         status(result)(10.seconds) shouldBe CONFLICT
       }
@@ -176,14 +183,14 @@ class HelpToSaveControllerSpec extends TestSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         mockUpdateEmail(validNSIUserInfo)(HttpResponse(OK))
 
-        val result = controller.updateEmail()(FakeRequest().withJsonBody(validJSONPayload))
+        val result = controller.updateEmail()(FakeRequest().withJsonBody(validUserInfoPayload))
 
         status(result)(10.seconds) shouldBe OK
       }
 
       "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
 
-        val requestBody = Json.parse(jsonString("\"123456\""))
+        val requestBody = Json.parse(userInfoJson("\"123456\""))
         val result = controller.updateEmail()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")

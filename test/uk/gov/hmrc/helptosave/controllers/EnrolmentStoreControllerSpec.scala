@@ -40,63 +40,6 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
     val controller = new EnrolmentStoreController(enrolmentStore, itmpConnector, mockAuthConnector)
     val nino = "AE123456C"
-    val email = "user@test.com"
-
-    "enrolling a user" must {
-
-        def enrol(): Future[Result] = controller.enrol()(FakeRequest())
-
-      "create a mongo record with the ITMP flag set to false" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Left(""))
-
-        await(enrol())
-      }
-
-      "set the ITMP flag" in {
-        inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
-          mockITMPConnector(nino)(Left(""))
-        }
-
-        await(enrol())
-      }
-
-      "update the mongo record with the ITMP flag set to true" in {
-        inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
-          mockITMPConnector(nino)(Right(()))
-          mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
-        }
-
-        await(enrol())
-      }
-
-      "return an OK if all the steps were successful" in {
-        inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
-          mockITMPConnector(nino)(Right(()))
-          mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
-        }
-
-        status(enrol()) shouldBe OK
-      }
-
-      "return a 500 if any of the steps failed" in {
-        inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockEnrolmentStoreUpdate(nino, itmpFlag = false)(Right(()))
-          mockITMPConnector(nino)(Right(()))
-          mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
-        }
-
-        status(enrol()) shouldBe INTERNAL_SERVER_ERROR
-      }
-
-    }
 
     "setting the ITMP flag" must {
 

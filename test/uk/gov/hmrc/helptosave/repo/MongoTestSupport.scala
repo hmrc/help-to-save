@@ -21,6 +21,7 @@ import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.json.{JsString, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.DefaultDB
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.{MongoConnector, ReactiveRepository}
 
@@ -31,6 +32,8 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
 
   trait MockDBFunctions {
     def update(data: Data): Future[Option[Data]]
+
+    def insert(data: Data): Future[WriteResult]
 
     def get[ID](id: ID): Future[List[Data]]
 
@@ -54,6 +57,14 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
     (connector.db _).expects().returning(() ⇒ db)
     newMongoStore()
   }
+
+  def mockInsert(data: Data)(result: Either[String, WriteResult]): Unit =
+    (mockDBFunctions.insert(_: Data))
+      .expects(data)
+      .returning(result.fold(
+        s ⇒ Future.failed(new Exception(s)),
+        Future.successful)
+      )
 
   def mockUpdate(data: Data)(result: Either[String, Option[Data]]): Unit =
     (mockDBFunctions.update(_: Data))

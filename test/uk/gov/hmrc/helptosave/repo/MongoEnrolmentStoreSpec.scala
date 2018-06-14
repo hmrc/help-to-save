@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.repo
 
 import play.api.libs.json.Json
+import reactivemongo.api.commands.{DefaultWriteResult, WriteError, WriteResult}
 import reactivemongo.api.indexes.Index
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
@@ -41,6 +42,9 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
     override def doUpdate(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
       mockDBFunctions.update(EnrolmentData(nino, itmpFlag))
 
+    override def doInsert(nino: NINO, eligibilityReason: Option[Int], channel: String, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[WriteResult] =
+      mockDBFunctions.insert(EnrolmentData(nino, itmpFlag, eligibilityReason, Some(channel)))
+
     override def find(query: (String, Json.JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[EnrolmentData]] =
       query.toList match {
         case (_, value) :: Nil ⇒
@@ -53,6 +57,35 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
   "The MongoEnrolmentStore" when {
 
     val nino = "NINO"
+
+    "creating" must {
+
+        def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String): Either[String, Unit] =
+          Await.result(mongoStore.insert(nino, itmpNeedsUpdate, eligibilityReason, channel).value, 5.seconds)
+
+      "create a new record in the db when inserted" in {
+        mockInsert(EnrolmentData(nino, true, Some(7), Some("online")))(Right(DefaultWriteResult(true, 1, Seq.empty, None, None, None)))
+        val result = create(nino, true, Some(7), "online")
+        result shouldBe Right(())
+      }
+
+      "return an error" when {
+
+        "the update result from mongo is negative" in {
+          mockInsert(EnrolmentData(nino, true, Some(7), Some("online")))(Right(DefaultWriteResult(true, 1, Seq(WriteError(1, 1, "insert failed")), None, None, None)))
+          val result = create(nino, true, Some(7), "online")
+
+          result shouldBe Left("insert failed")
+        }
+
+        "the future returned by mongo fails" in {
+          mockInsert(EnrolmentData(nino, true, Some(7), Some("online")))(Left("future failed"))
+          val result = create(nino, true, Some(7), "online")
+
+          result.isLeft shouldBe true
+        }
+      }
+    }
 
     "updating" must {
 

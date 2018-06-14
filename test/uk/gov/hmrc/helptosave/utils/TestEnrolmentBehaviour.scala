@@ -37,6 +37,11 @@ trait TestEnrolmentBehaviour extends TestSupport {
       .expects(nino, itmpFlag, *)
       .returning(EitherT.fromEither[Future](result))
 
+  def mockEnrolmentStoreInsert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], channel: String)(result: Either[String, Unit]): Unit =
+    (enrolmentStore.insert(_: NINO, _: Boolean, _: Option[Int], _: String)(_: HeaderCarrier))
+      .expects(nino, itmpFlag, eligibilityReason, channel, *)
+      .returning(EitherT.fromEither[Future](result))
+
   def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
     (enrolmentStore.get(_: NINO)(_: HeaderCarrier))
       .expects(nino, *)

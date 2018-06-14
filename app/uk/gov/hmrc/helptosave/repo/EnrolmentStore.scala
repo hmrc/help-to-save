@@ -21,13 +21,14 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
+import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.ReactiveRepository
@@ -43,6 +44,8 @@ trait EnrolmentStore {
   def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
 
   def update(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
+
+  def insert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], channel: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
 }
 
@@ -67,7 +70,7 @@ object EnrolmentStore {
         case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = false, itmpHtSFlag = false))
       }
 
-      override def reads(json: JsValue): JsResult[Status] = json.validate[EnrolmentStatusJSON].map{
+      override def reads(json: JsValue): JsResult[Status] = json.validate[EnrolmentStatusJSON].map {
         case EnrolmentStatusJSON(true, flag) ⇒ Enrolled(flag)
         case EnrolmentStatusJSON(false, _)   ⇒ NotEnrolled
       }
@@ -96,12 +99,18 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
     )
   )
 
+  private[repo] def doInsert(nino:              NINO,
+                             eligibilityReason: Option[Int],
+                             channel:           String,
+                             itmpFlag:          Boolean)(implicit ec: ExecutionContext): Future[WriteResult] =
+    collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag, "eligibilityReason" -> eligibilityReason, "channel" -> channel))
+
   private[repo] def doUpdate(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
     collection.findAndUpdate(
       BSONDocument("nino" -> nino),
       BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
       fetchNewObject = true,
-      upsert         = true
+      upsert         = false
     ).map(_.result[EnrolmentData])
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] = EitherT(
@@ -144,11 +153,29 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
     }
     )
   }
+
+  override def insert(nino:              NINO,
+                      itmpFlag:          Boolean,
+                      eligibilityReason: Option[Int],
+                      channel:           String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
+    EitherT(
+      doInsert(nino, eligibilityReason, channel, itmpFlag)
+        .map[Either[String, Unit]] { writeResult ⇒
+          if (writeResult.writeErrors.nonEmpty) {
+            Left(writeResult.writeErrors.map(_.errmsg).mkString(","))
+          } else {
+            Right(())
+          }
+        }.recover {
+          case e ⇒
+            Left(e.getMessage)
+        }
+    )
 }
 
 object MongoEnrolmentStore {
 
-  private[repo] case class EnrolmentData(nino: String, itmpHtSFlag: Boolean)
+  private[repo] case class EnrolmentData(nino: String, itmpHtSFlag: Boolean, eligibilityReason: Option[Int] = None, channel: Option[String] = None)
 
   private[repo] object EnrolmentData {
     implicit val ninoFormat: Format[EnrolmentData] = Json.format[EnrolmentData]

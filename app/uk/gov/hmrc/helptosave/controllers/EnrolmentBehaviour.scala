@@ -19,6 +19,7 @@ package uk.gov.hmrc.helptosave.controllers
 import cats.data.EitherT
 import cats.instances.future._
 import uk.gov.hmrc.helptosave.connectors.ITMPEnrolmentConnector
+import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -36,10 +37,13 @@ trait EnrolmentBehaviour {
     _ ← enrolmentStore.update(nino, itmpFlag = true)
   } yield ()
 
-  def enrolUser(nino: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
+  def enrolUser(createAccountRequest: CreateAccountRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
     for {
-      _ ← enrolmentStore.update(nino, itmpFlag = false)
-      _ ← setITMPFlagAndUpdateMongo(nino)
+      _ ← enrolmentStore.insert(createAccountRequest.userInfo.nino,
+                                itmpFlag = false,
+                                createAccountRequest.eligibilityReason,
+                                createAccountRequest.userInfo.registrationChannel)
+      _ ← setITMPFlagAndUpdateMongo(createAccountRequest.userInfo.nino)
     } yield ()
   }
 }

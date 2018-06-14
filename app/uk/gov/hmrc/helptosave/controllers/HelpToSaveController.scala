@@ -23,6 +23,7 @@ import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmentConnector}
+import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
@@ -45,11 +46,12 @@ class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStor
   def createAccount(): Action[AnyContent] = Action.async {
     implicit request ⇒
       val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
-      request.body.asJson.map(_.validate[NSIUserInfo]) match {
-        case Some(JsSuccess(userInfo, _)) ⇒
+      request.body.asJson.map(_.validate[CreateAccountRequest]) match {
+        case Some(JsSuccess(createAccountRequest, _)) ⇒
+          val userInfo = createAccountRequest.userInfo
           proxyConnector.createAccount(userInfo).map { response ⇒
             if (response.status === CREATED || response.status === CONFLICT) {
-              enrolUser(userInfo.nino).value.onComplete {
+              enrolUser(createAccountRequest).value.onComplete {
                 case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)
                 case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, additionalParams)
                 case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, additionalParams)
