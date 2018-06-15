@@ -42,5 +42,9 @@ trait AuthSupport extends TestSupport {
       .expects(predicate, Retrievals.nino, *, *)
       .returning(Future.successful(result))
 
+  def mockAuthResultNoRetrievals(predicate: Predicate) =
+    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[_])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(predicate, EmptyRetrieval, *, *)
+      .returning(Future.successful(()))
 }
 

@@ -21,15 +21,16 @@ import cats.syntax.eq._
 import com.google.inject.Inject
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{HelpToSaveProxyConnector, ITMPEnrolmentConnector}
+import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.{EligibilityCheckService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext, toFuture}
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.util.{Failure, Success}
 
@@ -37,19 +38,21 @@ class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStor
                                       val itmpConnector:           ITMPEnrolmentConnector,
                                       proxyConnector:              HelpToSaveProxyConnector,
                                       userCapService:              UserCapService,
-                                      val eligibilityCheckService: EligibilityCheckService)(
+                                      val eligibilityCheckService: EligibilityCheckService,
+                                      override val authConnector:  AuthConnector)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends BaseController with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {
+  extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {
 
-  def createAccount(): Action[AnyContent] = Action.async {
+  def createAccount(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒
       val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
-      request.body.asJson.map(_.validate[NSIUserInfo]) match {
-        case Some(JsSuccess(userInfo, _)) ⇒
+      request.body.asJson.map(_.validate[CreateAccountRequest]) match {
+        case Some(JsSuccess(createAccountRequest, _)) ⇒
+          val userInfo = createAccountRequest.userInfo
           proxyConnector.createAccount(userInfo).map { response ⇒
             if (response.status === CREATED || response.status === CONFLICT) {
-              enrolUser(userInfo.nino).value.onComplete {
+              enrolUser(createAccountRequest).value.onComplete {
                 case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)
                 case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, additionalParams)
                 case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, additionalParams)
@@ -76,7 +79,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStor
       }
   }
 
-  def updateEmail(): Action[AnyContent] = Action.async {
+  def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒
       request.body.asJson.map(_.validate[NSIUserInfo]) match {
         case Some(JsSuccess(userInfo, _)) ⇒
@@ -95,7 +98,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:          EnrolmentStor
       }
   }
 
-  def checkEligibility(nino: String): Action[AnyContent] = Action.async {
+  def checkEligibility(nino: String): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒ checkEligibility(nino)
   }
 }

@@ -54,18 +54,5 @@ class UserCapControllerSpec extends AuthSupport {
         contentAsJson(result) shouldBe Json.parse("""{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}""")
       }
     }
-
-    "updating account cap" should {
-      "successfully update the counts" in {
-        (userCapService.update()(_: ExecutionContext))
-          .expects(*)
-          .returning(toFuture(()))
-
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        val result = controller.update()(FakeRequest())
-
-        status(result) shouldBe OK
-      }
-    }
   }
 }

@@ -29,7 +29,11 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
   val htsAuth = new HelpToSaveAuth(mockAuthConnector)
 
-  private def callAuth = htsAuth.authorised { implicit request ⇒ implicit nino ⇒
+  private def callAuth = htsAuth.ggAuthorisedWithNino { implicit request ⇒implicit nino ⇒
+    Future.successful(Ok("authSuccess"))
+  }
+
+  private def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { implicit request ⇒
     Future.successful(Ok("authSuccess"))
   }
 
@@ -72,6 +76,16 @@ class HelpToSaveAuthSpec extends AuthSupport {
           mockAuthWith(error)
           val result = callAuth(FakeRequest())
           status(result) shouldBe expectedStatus
+      }
+    }
+
+    "authorised() with no retrievals and multiple providers" must {
+
+      "return after successful auth" in {
+        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+
+        val result = Await.result(callAuthNoRetrievals(FakeRequest()), 5.seconds)
+        status(result) shouldBe Status.OK
       }
     }
   }

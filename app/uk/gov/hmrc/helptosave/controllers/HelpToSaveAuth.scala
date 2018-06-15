@@ -17,7 +17,7 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import play.api.mvc._
-import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrievals
@@ -28,9 +28,11 @@ import scala.concurrent.Future
 
 object HelpToSaveAuth {
 
-  val AuthProvider: AuthProviders = AuthProviders(GovernmentGateway)
+  val GGProvider: AuthProviders = AuthProviders(GovernmentGateway)
 
-  val AuthWithCL200: Predicate = AuthProvider and ConfidenceLevel.L200
+  val GGAndPrivilegedProviders: Predicate = AuthProviders(GovernmentGateway, PrivilegedApplication)
+
+  val AuthWithCL200: Predicate = GGProvider and ConfidenceLevel.L200
 
 }
 
@@ -40,9 +42,10 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
 
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private type HtsAction = Request[AnyContent] ⇒ NINO ⇒ Future[Result]
+  private type HtsAction = Request[AnyContent] ⇒ Future[Result]
+  private type HtsActionWithNino = Request[AnyContent] ⇒ NINO ⇒ Future[Result]
 
-  def authorised(action: HtsAction): Action[AnyContent] =
+  def ggAuthorisedWithNino(action: HtsActionWithNino): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
         .retrieve(Retrievals.nino) { mayBeNino ⇒
@@ -54,6 +57,15 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
         }.recover {
           handleFailure()
         }
+    }
+
+  def ggOrPrivilegedAuthorised(action: HtsAction): Action[AnyContent] =
+    Action.async { implicit request ⇒
+      authorised(GGAndPrivilegedProviders) {
+        action(request)
+      }.recover {
+        handleFailure()
+      }
     }
 
   def handleFailure(): PartialFunction[Throwable, Result] = {
