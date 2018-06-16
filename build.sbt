@@ -125,7 +125,8 @@ lazy val microservice = Project(appName, file("."))
       Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
       (baseDirectory.value ** "UCThresholdManager.scala").get ++
       (baseDirectory.value ** "UCThresholdConnectorProxyActor.scala").get ++
-      (baseDirectory.value ** "UCThresholdMongoProxy.scala").get
+      (baseDirectory.value ** "UCThresholdMongoProxy.scala").get ++
+      (baseDirectory.value ** "EligibilityStatsActor.scala").get
   )
   .settings(catsSettings)
   .settings(
