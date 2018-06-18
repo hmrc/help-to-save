@@ -210,7 +210,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         connectorProxy.expectNoMsg()
       }
 
-      "ask DES for the initial threshold value and return None when not successful" in new TestApparatus {
+      "ask DES for the initial threshold value on startup and call DES again for the threshold value " +
+       "if the intial request fails and return an error when the second request fails" in new TestApparatus {
         timeCalculatorListener.expectMsg(TimeUntilRequest)
         timeCalculatorListener.reply(TimeUntilResponse(30.days))
 
@@ -282,35 +283,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
       }
 
-      "return None when error responses are returned from two different actors making calls to DES" in new TestApparatus {
-        timeCalculatorListener.expectMsg(TimeUntilRequest)
-        timeCalculatorListener.reply(TimeUntilResponse(30.days))
-
-        // expect the scheduled update to be scheduled
-        schedulerListener.expectMsg(JobScheduledOnce(30.days))
-
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        val sender1: ActorRef = connectorProxy.sender()
-
-        actor ! UCThresholdManager.GetThresholdValue
-
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        val sender2: ActorRef = connectorProxy.sender()
-
-        //two calls are made to DES, both returning an error
-        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
-        // expect retry to be scheduled
-        schedulerListener.expectMsg(JobScheduledOnce(1.second))
-        pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain UC threshold value from DES"))
-
-        // reply to the threshold request
-        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
-
-        //check that None is returned
-        expectMsg(UCThresholdManager.GetThresholdValueResponse(None))
-      }
-
-      "return the threshold when the first call to DES is successful but an error is returned from the second call" in new TestApparatus {
+      "return the threshold value when the first call to DES on startup is successful but an error is returned from a second call " +
+        "triggered by an eligibility check" in new TestApparatus {
         timeCalculatorListener.expectMsg(TimeUntilRequest)
         timeCalculatorListener.reply(TimeUntilResponse(30.days))
 
@@ -337,7 +311,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
       }
 
-      "stop the retries when a request has successfully returned the threshold from DES" in new TestApparatus {
+      "not schedule retries when a request has successfully returned the threshold from DES" in new TestApparatus {
         timeCalculatorListener.expectMsg(TimeUntilRequest)
         timeCalculatorListener.reply(TimeUntilResponse(30.days))
 
@@ -364,7 +338,8 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         schedulerListener.expectNoMsg()
       }
 
-      "be in ready state when a request has successfully returned the threshold from DES" in new TestApparatus {
+      "store the threshold value from a successful request to DES following a failed call to DES " +
+        "which has been triggered on startup and cancel the scheduled retries" in new TestApparatus {
         timeCalculatorListener.expectMsg(TimeUntilRequest)
         timeCalculatorListener.reply(TimeUntilResponse(30.days))
 
@@ -394,11 +369,10 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         // make sure we're not getting the threshold value from DES now
         actor ! UCThresholdManager.GetThresholdValue
         expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
-        connectorProxy.expectNoMsg()
 
         // make sure retries have been cancelled
         time.advance(10.seconds)
-        expectNoMsg
+        connectorProxy.expectNoMsg()
       }
     }
 
