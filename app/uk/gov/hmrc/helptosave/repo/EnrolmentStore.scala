@@ -45,7 +45,7 @@ trait EnrolmentStore {
 
   def update(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
-  def insert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], channel: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
+  def insert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
 }
 
@@ -101,7 +101,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
   private[repo] def doInsert(nino:              NINO,
                              eligibilityReason: Option[Int],
-                             channel:           String,
+                             source:            String,
                              itmpFlag:          Boolean)(implicit ec: ExecutionContext): Future[WriteResult] =
     collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag))
 
@@ -157,9 +157,9 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
   override def insert(nino:              NINO,
                       itmpFlag:          Boolean,
                       eligibilityReason: Option[Int],
-                      channel:           String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
+                      source:            String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     EitherT(
-      doInsert(nino, eligibilityReason, channel, itmpFlag)
+      doInsert(nino, eligibilityReason, source, itmpFlag)
         .map[Either[String, Unit]] { writeResult ⇒
           if (writeResult.writeErrors.nonEmpty) {
             Left(writeResult.writeErrors.map(_.errmsg).mkString(","))
@@ -175,7 +175,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
 object MongoEnrolmentStore {
 
-  private[repo] case class EnrolmentData(nino: String, itmpHtSFlag: Boolean, eligibilityReason: Option[Int] = None, channel: Option[String] = None)
+  private[repo] case class EnrolmentData(nino: String, itmpHtSFlag: Boolean, eligibilityReason: Option[Int] = None, source: Option[String] = None)
 
   private[repo] object EnrolmentData {
     implicit val ninoFormat: Format[EnrolmentData] = Json.format[EnrolmentData]

@@ -42,7 +42,7 @@ trait EnrolmentBehaviour {
       _ ← enrolmentStore.insert(createAccountRequest.userInfo.nino,
                                 itmpFlag = false,
                                 createAccountRequest.eligibilityReason,
-                                createAccountRequest.userInfo.registrationChannel)
+                                createAccountRequest.source)
       _ ← setITMPFlagAndUpdateMongo(createAccountRequest.userInfo.nino)
     } yield ()
   }

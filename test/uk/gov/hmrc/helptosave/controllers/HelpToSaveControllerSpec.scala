@@ -94,7 +94,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       def createAccountJson(dobValue: String): String =
         s"""{
            "userInfo":${userInfoJson(dobValue)},
-           "eligibilityReason":7
+           "eligibilityReason":7,
+           "source": "Digital"
           }""".stripMargin
 
     val validUserInfoPayload = Json.parse(userInfoJson("20200101"))
@@ -109,7 +110,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Right(()))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockITMPConnector("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -126,7 +127,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Left("error!"))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Left("error!"))
           mockUserCapServiceUpdate(Right(()))
         }
 
@@ -139,7 +140,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Right(()))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockITMPConnector("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -171,7 +172,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "online")(Right(()))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockITMPConnector("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
