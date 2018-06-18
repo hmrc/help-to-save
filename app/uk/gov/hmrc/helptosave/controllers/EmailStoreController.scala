@@ -41,7 +41,7 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
-  def store(email: String): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒implicit nino ⇒
+  def store(email: String): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
     Try(new String(base64Decoder.decode(email))).fold(
       { error ⇒
         logger.warn(s"Could not store email. Could not decode email: $error", nino)
@@ -59,7 +59,7 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
     )
   }
 
-  def get(): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒implicit nino ⇒
+  def get(): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
     emailStore.getConfirmedEmail(nino).fold(
       { e ⇒
         logger.warn(e, nino)

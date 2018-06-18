@@ -103,7 +103,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
                              eligibilityReason: Option[Int],
                              channel:           String,
                              itmpFlag:          Boolean)(implicit ec: ExecutionContext): Future[WriteResult] =
-    collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag, "eligibilityReason" -> eligibilityReason, "channel" -> channel))
+    collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag))
 
   private[repo] def doUpdate(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
     collection.findAndUpdate(

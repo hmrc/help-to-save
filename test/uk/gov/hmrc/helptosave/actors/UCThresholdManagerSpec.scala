@@ -211,29 +211,29 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       }
 
       "ask DES for the initial threshold value on startup and call DES again for the threshold value " +
-       "if the intial request fails and return an error when the second request fails" in new TestApparatus {
-        timeCalculatorListener.expectMsg(TimeUntilRequest)
-        timeCalculatorListener.reply(TimeUntilResponse(30.days))
+        "if the intial request fails and return an error when the second request fails" in new TestApparatus {
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(30.days))
 
-        // expect the scheduled update to be scheduled
-        schedulerListener.expectMsg(JobScheduledOnce(30.days))
+          // expect the scheduled update to be scheduled
+          schedulerListener.expectMsg(JobScheduledOnce(30.days))
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
-        pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain UC threshold value from DES"))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+          pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain UC threshold value from DES"))
 
-        // expect retry to be scheduled
-        schedulerListener.expectMsg(JobScheduledOnce(1.second))
+          // expect retry to be scheduled
+          schedulerListener.expectMsg(JobScheduledOnce(1.second))
 
-        actor ! UCThresholdManager.GetThresholdValue
+          actor ! UCThresholdManager.GetThresholdValue
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        //return a Left "error" case from DES
-        connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          //return a Left "error" case from DES
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
 
-        //check None is returned
-        expectMsg(UCThresholdManager.GetThresholdValueResponse(None))
-      }
+          //check None is returned
+          expectMsg(UCThresholdManager.GetThresholdValueResponse(None))
+        }
 
       "update the state with the new value when the threshold value received from DES differs from that held locally" in new TestApparatus {
         timeCalculatorListener.expectMsg(TimeUntilRequest)
@@ -285,31 +285,31 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
       "return the threshold value when the first call to DES on startup is successful but an error is returned from a second call " +
         "triggered by an eligibility check" in new TestApparatus {
-        timeCalculatorListener.expectMsg(TimeUntilRequest)
-        timeCalculatorListener.reply(TimeUntilResponse(30.days))
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(30.days))
 
-        // expect the scheduled update to be scheduled
-        schedulerListener.expectMsg(JobScheduledOnce(30.days))
+          // expect the scheduled update to be scheduled
+          schedulerListener.expectMsg(JobScheduledOnce(30.days))
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        val sender1: ActorRef = connectorProxy.sender()
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          val sender1: ActorRef = connectorProxy.sender()
 
-        actor ! UCThresholdManager.GetThresholdValue
+          actor ! UCThresholdManager.GetThresholdValue
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        val sender2: ActorRef = connectorProxy.sender()
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          val sender2: ActorRef = connectorProxy.sender()
 
-        //two calls are made to DES, the first successfully returns the value, the second returns an error
-        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
-        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+          //two calls are made to DES, the first successfully returns the value, the second returns an error
+          connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+          connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
 
-        //check that the value is still returned despite an error being returned by the second call
-        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+          //check that the value is still returned despite an error being returned by the second call
+          expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
 
-        // there should be no retries
-        schedulerListener.expectNoMsg()
+          // there should be no retries
+          schedulerListener.expectNoMsg()
 
-      }
+        }
 
       "not schedule retries when a request has successfully returned the threshold from DES" in new TestApparatus {
         timeCalculatorListener.expectMsg(TimeUntilRequest)
@@ -340,40 +340,40 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
       "store the threshold value from a successful request to DES following a failed call to DES " +
         "which has been triggered on startup and cancel the scheduled retries" in new TestApparatus {
-        timeCalculatorListener.expectMsg(TimeUntilRequest)
-        timeCalculatorListener.reply(TimeUntilResponse(30.days))
+          timeCalculatorListener.expectMsg(TimeUntilRequest)
+          timeCalculatorListener.reply(TimeUntilResponse(30.days))
 
-        // expect the scheduled update to be scheduled
-        schedulerListener.expectMsg(JobScheduledOnce(30.days))
+          // expect the scheduled update to be scheduled
+          schedulerListener.expectMsg(JobScheduledOnce(30.days))
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        val sender1: ActorRef = connectorProxy.sender()
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          val sender1: ActorRef = connectorProxy.sender()
 
-        actor ! UCThresholdManager.GetThresholdValue
+          actor ! UCThresholdManager.GetThresholdValue
 
-        connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
-        val sender2: ActorRef = connectorProxy.sender()
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          val sender2: ActorRef = connectorProxy.sender()
 
-        //first call to DES returns an error
-        connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
+          //first call to DES returns an error
+          connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
 
-        // expect retry to be scheduled
-        schedulerListener.expectMsg(JobScheduledOnce(1.second))
-        pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain UC threshold value from DES"))
+          // expect retry to be scheduled
+          schedulerListener.expectMsg(JobScheduledOnce(1.second))
+          pagerDutyAlertListener.expectMsg(TestPagerDutyAlerting.PagerDutyAlert("Could not obtain UC threshold value from DES"))
 
-        //second call to DES returns the value
-        connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
+          //second call to DES returns the value
+          connectorProxy.send(sender2, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
 
-        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+          expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
 
-        // make sure we're not getting the threshold value from DES now
-        actor ! UCThresholdManager.GetThresholdValue
-        expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
+          // make sure we're not getting the threshold value from DES now
+          actor ! UCThresholdManager.GetThresholdValue
+          expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
 
-        // make sure retries have been cancelled
-        time.advance(10.seconds)
-        connectorProxy.expectNoMsg()
-      }
+          // make sure retries have been cancelled
+          time.advance(10.seconds)
+          connectorProxy.expectNoMsg()
+        }
     }
 
     "handling scheduled updates" must {
