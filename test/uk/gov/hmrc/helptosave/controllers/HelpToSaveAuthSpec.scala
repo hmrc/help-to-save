@@ -29,7 +29,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
   val htsAuth = new HelpToSaveAuth(mockAuthConnector)
 
-  private def callAuth = htsAuth.ggAuthorisedWithNino { implicit request ⇒implicit nino ⇒
+  private def callAuth = htsAuth.ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
     Future.successful(Ok("authSuccess"))
   }
 
