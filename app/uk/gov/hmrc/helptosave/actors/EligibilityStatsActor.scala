@@ -31,7 +31,8 @@ import scala.concurrent.duration.Duration
 class EligibilityStatsActor(scheduler:               Scheduler,
                             config:                  Config,
                             timeCalculator:          TimeCalculator,
-                            eligibilityStatsService: EligibilityStatsService) extends Actor with Logging {
+                            eligibilityStatsService: EligibilityStatsService,
+                            eligibilityStatsHandler: EligibilityStatsHandler) extends Actor with Logging {
 
   import context.dispatcher
 
@@ -40,16 +41,10 @@ class EligibilityStatsActor(scheduler:               Scheduler,
   override def receive: Receive = {
     case GetStats ⇒
       logger.info("Getting eligibility stats from mongo")
-
       eligibilityStatsService.getEligibilityStats().map(GetStatsResponse) pipeTo self
 
-      sender() ! "hello world"
-
     case r: GetStatsResponse ⇒
-      r.result.fold(
-        error ⇒ logger.warn(s"failed to get eligibility stats report due to: $error"),
-        report ⇒ logger.info(s"eligibility stats report: $report")
-      )
+      eligibilityStatsHandler.handleStats(r.result)
   }
 
   def scheduleStats(): Cancellable = {
@@ -79,6 +74,7 @@ object EligibilityStatsActor {
   def props(scheduler:               Scheduler,
             config:                  Config,
             timeCalculator:          TimeCalculator,
-            eligibilityStatsService: EligibilityStatsService): Props =
-    Props(new EligibilityStatsActor(scheduler, config, timeCalculator, eligibilityStatsService))
+            eligibilityStatsService: EligibilityStatsService,
+            eligibilityStatsHandler: EligibilityStatsHandler): Props =
+    Props(new EligibilityStatsActor(scheduler, config, timeCalculator, eligibilityStatsService, eligibilityStatsHandler))
 }

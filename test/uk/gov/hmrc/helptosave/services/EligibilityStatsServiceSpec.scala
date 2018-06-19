@@ -75,7 +75,7 @@ class EligibilityStatsServiceSpec extends TestSupport with EitherValues {
            ||        |Unknown|    0|
            ||        |  Total|    1|
            ||        |       |     |
-           ||  Unkown|Digital|    1|
+           || Unknown|Digital|    1|
            ||        | Stride|    0|
            ||        |   KCOM|    0|
            ||        |Unknown|    1|
@@ -86,7 +86,8 @@ class EligibilityStatsServiceSpec extends TestSupport with EitherValues {
            ||        |   KCOM|    1|
            ||        |Unknown|    2|
            ||        |  Total|    7|
-           |+--------+-------+-----+""".stripMargin
+           |+--------+-------+-----+
+          """.stripMargin
 
         def result = Await.result(service.getEligibilityStats(), 5.seconds)
 

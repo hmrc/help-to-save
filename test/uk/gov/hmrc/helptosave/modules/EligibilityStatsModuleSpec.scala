@@ -22,16 +22,17 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.actors.ActorTestSupport
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.GetStats
+import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, EligibilityStatsHandler}
 import uk.gov.hmrc.helptosave.services.EligibilityStatsService
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class EligibilityStatsModuleSpec extends ActorTestSupport("EligibilityStatsProviderSpec") with Eventually {
 
   val service = mock[EligibilityStatsService]
+  val statsHandler = stub[EligibilityStatsHandler]
 
   implicit val timeout: Timeout = Timeout(10.seconds)
 
@@ -51,22 +52,22 @@ class EligibilityStatsModuleSpec extends ActorTestSupport("EligibilityStatsProvi
 
   "The EligibilityStatsProvider" should {
     "start up an instance of the EligibilityStatsActor correctly" in {
-      mockEligibilityStatsService(Right("actual stats table"))
+      mockEligibilityStatsService(Right("stats table"))
 
-      val provider = new EligibilityStatsProviderImpl(system, testConfiguration(enabled = true), service)
+      val provider = new EligibilityStatsProviderImpl(system, testConfiguration(enabled = true), service, statsHandler)
 
-      eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(10.second)) {
+      eventually(PatienceConfiguration.Timeout(1.seconds), PatienceConfiguration.Interval(1.second)) {
         val result = provider.esActor ? GetStats
-        Await.result(result, 1.second) shouldBe "hello world"
       }
 
       //sleep here to ensure the service's mock getEligibilityStats() method
       // definitely gets called since it happens asynchronously
       Thread.sleep(1000L)
+      (statsHandler.handleStats _).verify(Right("stats table")).once()
     }
 
     "not start up an instance of the UCThresholdManager if not enabled" in {
-      val provider = new EligibilityStatsProviderImpl(system, testConfiguration(enabled = false), service)
+      val provider = new EligibilityStatsProviderImpl(system, testConfiguration(enabled = false), service, statsHandler)
       provider.esActor shouldBe ActorRef.noSender
     }
 

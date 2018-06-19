@@ -67,47 +67,53 @@ class EligibilityStatsServiceImpl @Inject() (eligibilityReportStore: Eligibility
         val (unKnownDigitalStats, unKnownStrideStats, unknownKcomStats, unKnownUnknownStats) = get(None)
         val (ucTotal, wtcTotal, ucAndWtcTotal, unKnownTotal) = totals()
 
-          def channelTotals() = {
+          def channelTotals(): (Int, Int, Int, Int) = {
               def count(source: Option[String]) =
                 report.filter(p ⇒ p.source === source).map(_.total).sum
 
             (count(Some("Digital")), count(Some("Stride")), count(Some("KCOM")), count(None))
           }
 
-        val (digitalTotal, strideTotal, kcomTotal, unknownTotal) = channelTotals()
+        val (digitalTotal, strideTotal, kcomTotal, unKnownOverallTotal) = channelTotals()
 
-        val result = Tabulator.format(List(
-          List("Reason", "Channel", "Count"),
-          List("UC", "Digital", s"$ucDigitalStats"),
-          List("", "Stride", s"$ucStrideStats"),
-          List("", "KCOM", s"$ucKcomStats"),
-          List("", "Unknown", s"$ucUnknownStats"),
-          List("", "Total", s"$ucTotal"),
-          List(" ", " ", " "),
-          List("WTC", "Digital", s"$wtcDigitalStats"),
-          List("", "Stride", s"$wtcStrideStats"),
-          List("", "KCOM", s"$wtcKcomStats"),
-          List("", "Unknown", s"$wtcUnknownStats"),
-          List("", "Total", s"$wtcTotal"),
-          List(" ", " ", " "),
-          List("UC & WTC", "Digital", s"$ucAndWtcDigitalStats"),
-          List("", "Stride", s"$ucAndWtcStrideStats"),
-          List("", "KCOM", s"$ucAndWtcKcomStats"),
-          List("", "Unknown", s"$ucAndWtcUnknownStats"),
-          List("", "Total", s"$ucAndWtcTotal"),
-          List(" ", " ", " "),
-          List("Unkown", "Digital", s"$unKnownDigitalStats"),
-          List("", "Stride", s"$unKnownStrideStats"),
-          List("", "KCOM", s"$unknownKcomStats"),
-          List("", "Unknown", s"$unKnownUnknownStats"),
-          List("", "Total", s"$unKnownTotal"),
-          List(" ", " ", " "),
-          List("Totals", "Digital", s"$digitalTotal"),
-          List("", "Stride", s"$strideTotal"),
-          List("", "KCOM", s"$kcomTotal"),
-          List("", "Unknown", s"$unknownTotal"),
-          List("", "Total", s"${report.map(_.total).sum}")
-        ))
+        val overallTotal = report.map(_.total).sum
+
+        val result =
+          s"""
+          |+--------+-------+-----+
+          ||  Reason|Channel|Count|
+          |+--------+-------+-----+
+          ||      UC|Digital|    $ucDigitalStats|
+          ||        | Stride|    $ucStrideStats|
+          ||        |   KCOM|    $ucKcomStats|
+          ||        |Unknown|    $ucUnknownStats|
+          ||        |  Total|    $ucTotal|
+          ||        |       |     |
+          ||     WTC|Digital|    $wtcDigitalStats|
+          ||        | Stride|    $wtcStrideStats|
+          ||        |   KCOM|    $wtcKcomStats|
+          ||        |Unknown|    $wtcUnknownStats|
+          ||        |  Total|    $wtcTotal|
+          ||        |       |     |
+          ||UC & WTC|Digital|    $ucAndWtcDigitalStats|
+          ||        | Stride|    $ucAndWtcStrideStats|
+          ||        |   KCOM|    $ucAndWtcKcomStats|
+          ||        |Unknown|    $ucAndWtcUnknownStats|
+          ||        |  Total|    $ucAndWtcTotal|
+          ||        |       |     |
+          || Unknown|Digital|    $unKnownDigitalStats|
+          ||        | Stride|    $unKnownStrideStats|
+          ||        |   KCOM|    $unknownKcomStats|
+          ||        |Unknown|    $unKnownUnknownStats|
+          ||        |  Total|    $unKnownTotal|
+          ||        |       |     |
+          ||  Totals|Digital|    $digitalTotal|
+          ||        | Stride|    $strideTotal|
+          ||        |   KCOM|    $kcomTotal|
+          ||        |Unknown|    $unKnownOverallTotal|
+          ||        |  Total|    $overallTotal|
+          |+--------+-------+-----+
+          """.stripMargin
 
         Right(result)
       }.recover {
@@ -116,35 +122,4 @@ class EligibilityStatsServiceImpl @Inject() (eligibilityReportStore: Eligibility
           Left(e.getMessage)
       }
   }
-}
-
-object Tabulator {
-  def format(table: Seq[Seq[String]]): String = table match {
-    case x: Seq[Seq[String]] if x.isEmpty ⇒ ""
-    case _ ⇒
-      val sizes: Seq[Seq[Int]] = for (row ← table) yield for (cell ← row)
-        yield cell.length
-      val colSizes = for (col ← sizes.transpose) yield col.max
-      val rows = for (row ← table) yield formatRow(row, colSizes)
-      formatRows(rowSeparator(colSizes), rows)
-  }
-
-  private def formatRows(rowSeparator: String, rows: Seq[String]): String =
-
-    "\n" + (
-      rowSeparator ::
-      rows.headOption.getOrElse("") ::
-      rowSeparator ::
-      rows.drop(1).toList :::
-      rowSeparator ::
-      List()).mkString("\n")
-
-  private def formatRow(row: Seq[String], colSizes: Seq[Int]) = {
-    val cells = for ((item, size) ← row.zip(colSizes)) yield if (size === 0) "" else s"%${size}s".format(item)
-    cells.mkString("|", "|", "|")
-  }
-
-  private def rowSeparator(colSizes: Seq[Int]) = colSizes map {
-    "-" * _
-  } mkString ("+", "+", "+")
 }

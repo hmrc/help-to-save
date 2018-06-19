@@ -21,7 +21,7 @@ import java.time.{Clock, ZoneId}
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.actors.{EligibilityStatsActor, TimeCalculatorImpl}
+import uk.gov.hmrc.helptosave.actors.{EligibilityStatsActor, EligibilityStatsHandler, TimeCalculatorImpl}
 import uk.gov.hmrc.helptosave.services.EligibilityStatsService
 import uk.gov.hmrc.helptosave.util.Logging
 
@@ -36,7 +36,8 @@ trait EligibilityStatsProvider {
 @Singleton
 class EligibilityStatsProviderImpl @Inject() (system:                  ActorSystem,
                                               configuration:           Configuration,
-                                              eligibilityStatsService: EligibilityStatsService) extends EligibilityStatsProvider with Logging {
+                                              eligibilityStatsService: EligibilityStatsService,
+                                              eligibilityStatsHandler: EligibilityStatsHandler) extends EligibilityStatsProvider with Logging {
 
   val enabled: Boolean = configuration.underlying.getBoolean("eligibility-stats.enabled")
 
@@ -51,7 +52,8 @@ class EligibilityStatsProviderImpl @Inject() (system:                  ActorSyst
       system.scheduler,
       configuration.underlying,
       timeCalculator,
-      eligibilityStatsService
+      eligibilityStatsService,
+      eligibilityStatsHandler
     ))
   } else {
     logger.info("Eligibility Stats behaviour not enabled: not starting EligibilityStatsActor")
