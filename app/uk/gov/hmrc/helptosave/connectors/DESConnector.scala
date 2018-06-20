@@ -23,7 +23,6 @@ import play.api.libs.json.{JsNull, JsValue, Writes}
 import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.UCResponse
-import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
