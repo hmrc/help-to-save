@@ -41,7 +41,8 @@ object Blocking {
   implicit val writes: Format[Blocking] = Json.format[Blocking]
 }
 
-case class Account(isClosed:               Boolean,
+case class Account(accountNumber:          String,
+                   isClosed:               Boolean,
                    blocked:                Blocking,
                    balance:                BigDecimal,
                    paidInThisMonth:        BigDecimal,
@@ -79,6 +80,7 @@ object Account extends Logging {
     (paidInThisMonthValidation, accountClosedValidation).mapN{
       case (paidInThisMonth, accountClosed) ⇒
         Account(
+          accountNumber          = nsiAccount.accountNumber,
           isClosed               = accountClosed,
           blocked                = nsiAccountToBlocking(nsiAccount),
           balance                = nsiAccount.accountBalance,

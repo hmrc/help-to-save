@@ -208,6 +208,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val json = Json.parse(
           """
             |{
+            |  "accountNumber": "AC01",
             |  "accountBalance": "200.34",
             |  "accountClosedFlag": "",
             |  "accountBlockingCode": "00",
@@ -238,7 +239,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result shouldBe Right(Some(Account(false,
+        result shouldBe Right(Some(Account("AC01", false,
           Blocking(false),
           200.34,
           34.50,
@@ -256,6 +257,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val json = Json.parse(
           """
             |{
+              "accountNumber": "AC01",
             |  "accountBalance": "0.00",
             |  "accountClosedFlag": "C",
             |  "accountBlockingCode": "T1",
@@ -275,7 +277,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result shouldBe Right(Some(Account(true,
+        result shouldBe Right(Some(Account("AC01", true,
           Blocking(true),
           0.00,
           138.08,
@@ -374,6 +376,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val json = Json.parse(
           """
             |{
+            | "accountNumber": "AC01",
             |  "accountBalance": "200.34",
             |  "accountClosedFlag": "",
             |  "accountBlockingCode": "00",
@@ -392,6 +395,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val result = await(proxyConnector.getAccount(nino, needsEscapingSystemId, needsEscapingCorrelationId).value)
 
         result shouldBe Right(Some(Account(
+          "AC01",
           isClosed = false,
           Blocking(false),
           200.34,
