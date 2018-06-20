@@ -23,7 +23,8 @@ import akka.actor.{Actor, Cancellable, Props, Scheduler}
 import akka.pattern.pipe
 import com.typesafe.config.Config
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.{GetStats, GetStatsResponse}
-import uk.gov.hmrc.helptosave.services.EligibilityStatsService
+import uk.gov.hmrc.helptosave.repo.EligibilityStatsStore
+import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
 import uk.gov.hmrc.helptosave.util.{Logging, Time}
 
 import scala.concurrent.duration.Duration
@@ -31,7 +32,7 @@ import scala.concurrent.duration.Duration
 class EligibilityStatsActor(scheduler:               Scheduler,
                             config:                  Config,
                             timeCalculator:          TimeCalculator,
-                            eligibilityStatsService: EligibilityStatsService,
+                            eligibilityStatsStore:   EligibilityStatsStore,
                             eligibilityStatsHandler: EligibilityStatsHandler) extends Actor with Logging {
 
   import context.dispatcher
@@ -41,7 +42,7 @@ class EligibilityStatsActor(scheduler:               Scheduler,
   override def receive: Receive = {
     case GetStats ⇒
       logger.info("Getting eligibility stats from mongo")
-      eligibilityStatsService.getEligibilityStats().map(GetStatsResponse) pipeTo self
+      eligibilityStatsStore.getEligibilityStats().map(GetStatsResponse) pipeTo self
 
     case r: GetStatsResponse ⇒
       eligibilityStatsHandler.handleStats(r.result)
@@ -51,7 +52,7 @@ class EligibilityStatsActor(scheduler:               Scheduler,
     val scheduleStart = LocalTime.parse(config.getString("eligibility-stats.trigger-time"))
     val timeUntilNextTrigger = timeCalculator.timeUntil(scheduleStart)
     logger.info(s"Scheduling eligibility stats job in ${Time.nanosToPrettyString(timeUntilNextTrigger.toNanos)}")
-    scheduler.schedule(timeUntilNextTrigger, Duration(24, TimeUnit.HOURS), self, GetStats)
+    scheduler.schedule(timeUntilNextTrigger, Duration(3, TimeUnit.HOURS), self, GetStats)
   }
 
   override def preStart(): Unit = {
@@ -69,12 +70,12 @@ object EligibilityStatsActor {
 
   case object GetStats
 
-  case class GetStatsResponse(result: Either[String, String])
+  case class GetStatsResponse(result: List[EligibilityStats])
 
   def props(scheduler:               Scheduler,
             config:                  Config,
             timeCalculator:          TimeCalculator,
-            eligibilityStatsService: EligibilityStatsService,
+            eligibilityStatsStore:   EligibilityStatsStore,
             eligibilityStatsHandler: EligibilityStatsHandler): Props =
-    Props(new EligibilityStatsActor(scheduler, config, timeCalculator, eligibilityStatsService, eligibilityStatsHandler))
+    Props(new EligibilityStatsActor(scheduler, config, timeCalculator, eligibilityStatsStore, eligibilityStatsHandler))
 }

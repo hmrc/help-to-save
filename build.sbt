@@ -24,7 +24,8 @@ val dependencies = Seq(
   "io.lemonlabs" %% "scala-uri" % "1.1.1",
   "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
   "uk.gov.hmrc" %% "crypto" % "4.5.0",
-  "uk.gov.hmrc" %% "bootstrap-play-25" % "1.4.0"
+  "uk.gov.hmrc" %% "bootstrap-play-25" % "1.4.0",
+  "uk.gov.hmrc" %% "mongo-lock" % "5.1.0"
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
@@ -44,7 +45,7 @@ lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
   Seq(
     // Semicolon-separated list of regexs matching classes to exclude
-    ScoverageKeys.coverageExcludedPackages := "<empty>;.*config.*;.*(AuthService|BuildInfo|Routes|JsErrorOps).*",
+    ScoverageKeys.coverageExcludedPackages := "<empty>;.*config.*;.*(AuthService|BuildInfo|Routes|JsErrorOps|EligibilityStatsProviderImpl).*",
     ScoverageKeys.coverageMinimum := 90,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true,
@@ -126,7 +127,8 @@ lazy val microservice = Project(appName, file("."))
       (baseDirectory.value ** "UCThresholdManager.scala").get ++
       (baseDirectory.value ** "UCThresholdConnectorProxyActor.scala").get ++
       (baseDirectory.value ** "UCThresholdMongoProxy.scala").get ++
-      (baseDirectory.value ** "EligibilityStatsActor.scala").get
+      (baseDirectory.value ** "EligibilityStatsActor.scala").get ++
+      (baseDirectory.value ** "Lock.scala").get
   )
   .settings(catsSettings)
   .settings(
