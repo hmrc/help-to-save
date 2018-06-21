@@ -17,17 +17,17 @@
 package uk.gov.hmrc.helptosave.actors
 
 import java.time.LocalTime
-import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, Cancellable, Props, Scheduler}
 import akka.pattern.pipe
 import com.typesafe.config.Config
+import configs.syntax._
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.{GetStats, GetStatsResponse}
 import uk.gov.hmrc.helptosave.repo.EligibilityStatsStore
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
 import uk.gov.hmrc.helptosave.util.{Logging, Time}
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
 
 class EligibilityStatsActor(scheduler:               Scheduler,
                             config:                  Config,
@@ -50,9 +50,10 @@ class EligibilityStatsActor(scheduler:               Scheduler,
 
   def scheduleStats(): Cancellable = {
     val scheduleStart = LocalTime.parse(config.getString("eligibility-stats.trigger-time"))
+    val frequency = config.get[FiniteDuration]("eligibility-stats.frequency").value
     val timeUntilNextTrigger = timeCalculator.timeUntil(scheduleStart)
     logger.info(s"Scheduling eligibility stats job in ${Time.nanosToPrettyString(timeUntilNextTrigger.toNanos)}")
-    scheduler.schedule(timeUntilNextTrigger, Duration(3, TimeUnit.HOURS), self, GetStats)
+    scheduler.schedule(timeUntilNextTrigger, frequency, self, GetStats)
   }
 
   override def preStart(): Unit = {

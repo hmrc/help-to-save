@@ -24,6 +24,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework
 import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework._
+import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
@@ -40,7 +41,8 @@ trait EligibilityStatsStore {
 }
 
 @Singleton
-class MongoEligibilityStatsStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
+class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
+                                            metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
   extends ReactiveRepository[EnrolmentData, BSONObjectID](
     collectionName = "enrolments",
     mongo          = mongo.mongoConnector.db,
@@ -62,8 +64,19 @@ class MongoEligibilityStatsStore @Inject() (mongo: ReactiveMongoComponent)(impli
       List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total"))))
   }
 
-  override def getEligibilityStats(): Future[List[EligibilityStats]] =
-    doAggregate().map(_.head[EligibilityStats])
+  override def getEligibilityStats(): Future[List[EligibilityStats]] = {
+    val timerContext = metrics.eligibilityStatsTimer.time()
+    doAggregate()
+      .map { response ⇒
+        val _ = timerContext.stop()
+        response.head[EligibilityStats]
+      }.recover {
+        case e ⇒
+          val _ = timerContext.stop()
+          logger.warn(s"error retrieving the eligibility stats from mongo, error = ${e.getMessage}")
+          List.empty[EligibilityStats]
+      }
+  }
 }
 
 object MongoEligibilityStatsStore {

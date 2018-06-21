@@ -28,7 +28,7 @@ import scala.concurrent.{Await, Future}
 
 class EligibilityStatsStoreSpec extends TestSupport with MongoTestSupport[EnrolmentData, MongoEligibilityStatsStore] {
 
-  def newMongoStore(): MongoEligibilityStatsStore = new MongoEligibilityStatsStore(mockMongo) {
+  def newMongoStore(): MongoEligibilityStatsStore = new MongoEligibilityStatsStore(mockMongo, mockMetrics) {
 
     override def indexes: Seq[Index] = {
       // this line is to ensure scoverage picks up this line in MongoEnrolmentStore -
@@ -51,6 +51,11 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoTestSupport[Enrolm
       "return results as expected" in {
         mockAggregate(Right(AggregationFramework.AggregationResult(documents)))
         Await.result(mongoStore.getEligibilityStats(), 5.seconds) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
+      }
+
+      "handle error while reading from mongo" in {
+        mockAggregate(Left("unexpected error"))
+        Await.result(mongoStore.getEligibilityStats(), 5.seconds) shouldBe List.empty
       }
     }
   }

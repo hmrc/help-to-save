@@ -53,6 +53,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
          |    enabled = true
          |    timezone   = "Europe/London"
          |    trigger-time       = "01:00"
+         |    frequency = 1 hour
          |}
     """.stripMargin
     )
