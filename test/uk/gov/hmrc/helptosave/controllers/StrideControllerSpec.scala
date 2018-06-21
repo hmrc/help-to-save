@@ -65,7 +65,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
 
-    val controller = new StrideController(helpToSaveService, payeDetailsConnector, mockAuthConnector, enrolmentStore)
+    val controller = new StrideController(helpToSaveService, mockAuthConnector, enrolmentStore)
   }
 
   "The StrideController" when {

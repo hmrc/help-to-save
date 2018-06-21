@@ -21,6 +21,7 @@ import cats.instances.future._
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.controllers.EnrolmentBehaviour
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
@@ -31,6 +32,7 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val enrolmentStore: EnrolmentStore = mock[EnrolmentStore]
   val itmpConnector: DESConnector = mock[DESConnector]
   val enrolmentBehaviour: EnrolmentBehaviour = mock[EnrolmentBehaviour]
+  val helpToSaveService: HelpToSaveService = mock[HelpToSaveService]
 
   def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
     (enrolmentStore.update(_: NINO, _: Boolean)(_: HeaderCarrier))
@@ -47,9 +49,8 @@ trait TestEnrolmentBehaviour extends TestSupport {
       .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
-  def mockITMPConnector(nino: NINO)(response: HttpResponse) =
-    (itmpConnector.setFlag(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+  def mockSetFlag(nino: NINO)(result: Either[String, Unit]): Unit =
+    (helpToSaveService.setFlag(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
-      .returning(toFuture(response))
-
+      .returning(EitherT.fromEither[Future](result))
 }

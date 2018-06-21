@@ -47,9 +47,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     val userCapService = mock[UserCapService]
 
-    val eligibilityCheckService = mock[HelpToSaveService]
-
-    val controller = new HelpToSaveController(enrolmentStore, itmpConnector, proxyConnector, userCapService, eligibilityCheckService, mockAuthConnector)
+    val controller = new HelpToSaveController(enrolmentStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector)
 
     def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
       (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
@@ -68,7 +66,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     }
 
     def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
-      (eligibilityCheckService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+      (helpToSaveService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
   }
@@ -112,7 +110,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
-            mockITMPConnector("nino")(HttpResponse(200, None))
+            mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
           }
@@ -121,6 +119,9 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
 
         status(result)(10.seconds) shouldBe CREATED
+
+        // allow time for asynchronous calls to be made
+        Thread.sleep(1000L)
       }
 
       "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
@@ -142,7 +143,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
-            mockITMPConnector("nino")(HttpResponse(200, None))
+            mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Left(""))
           }
@@ -151,6 +152,9 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
 
         status(result)(10.seconds) shouldBe CREATED
+
+        // allow time for asynchronous calls to be made
+        Thread.sleep(1000L)
       }
 
       "return bad request response if the request body is not a valid CreateAccountRequest json" in new TestApparatus {
@@ -174,7 +178,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
-            mockITMPConnector("nino")(HttpResponse(200, None))
+            mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
           }
         }

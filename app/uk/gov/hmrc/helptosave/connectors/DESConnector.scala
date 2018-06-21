@@ -42,21 +42,18 @@ trait DESConnector {
 }
 
 @Singleton
-class DESConnectorImpl @Inject() (http:              WSHttp,
-                                  metrics:           Metrics,
-                                  pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+class DESConnectorImpl @Inject() (http: WSHttp)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
   extends DESConnector with Logging {
 
-  val itmpBaseURL: String = appConfig.baseUrl("itmp-eligibility-check")
-  val itmpEnrolmentURL: String = appConfig.baseUrl("itmp-enrolment")
-  val payeURL: String = appConfig.baseUrl("paye-personal-details")
-  val itmpThresholdURL: String = s"${appConfig.baseUrl("itmp-threshold")}/universal-credits/threshold-amount"
+  val itmpBaseURL: String = appConfig.baseUrl("itmp")
+
+  val itmpThresholdURL: String = s"${appConfig.baseUrl("itmp")}/universal-credits/threshold-amount"
 
   implicit val booleanShow: Show[Boolean] = Show.show(if (_) "Y" else "N")
 
   val body: JsValue = JsNull
 
-  val originatorIdHeader: (String, String) = "Originator-Id" → appConfig.getString("microservice.services.paye-personal-details.originatorId")
+  val originatorIdHeader: (String, String) = "Originator-Id" → appConfig.getString("microservice.services.itmp.originatorId")
 
   private def url(nino: String, ucResponse: Option[UCResponse]): String = {
     ucResponse match {
@@ -66,9 +63,9 @@ class DESConnectorImpl @Inject() (http:              WSHttp,
     }
   }
 
-  private def setFlagUrl(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"
+  private def setFlagUrl(nino: NINO): String = s"$itmpBaseURL/help-to-save/accounts/$nino"
 
-  def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
+  def payePersonalDetailsUrl(nino: String): String = s"$itmpBaseURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
   override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.get(url(nino, ucResponse), appConfig.desHeaders)(hc.copy(authorization = None), ec)

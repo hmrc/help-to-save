@@ -39,7 +39,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
   "The EnrolmentStoreController" when {
 
-    val controller = new EnrolmentStoreController(enrolmentStore, itmpConnector, mockAuthConnector)
+    val controller = new EnrolmentStoreController(enrolmentStore, helpToSaveService, mockAuthConnector)
     val nino = "AE123456C"
 
     "setting the ITMP flag" must {
@@ -49,7 +49,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
       "set the ITMP flag" in {
         mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockITMPConnector(nino)(HttpResponse(500, None))
+        mockSetFlag(nino)(Left(""))
 
         await(setFlag())
       }
@@ -57,7 +57,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
       "update the mongo record with the ITMP flag set to true" in {
         inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(HttpResponse(200, None))
+          mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
         }
 
@@ -67,7 +67,7 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
       "return a 200 if all the steps were successful" in {
         inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(HttpResponse(200, None))
+          mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
         }
 
@@ -82,12 +82,12 @@ class EnrolmentStoreControllerSpec extends AuthSupport with GeneratorDrivenPrope
 
         test(inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(HttpResponse(500, None))
+          mockSetFlag(nino)(Left(""))
         })
 
         test(inSequence {
           mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockITMPConnector(nino)(HttpResponse(200, None))
+          mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
         })
       }

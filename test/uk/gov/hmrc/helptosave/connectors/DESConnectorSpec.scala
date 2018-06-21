@@ -33,7 +33,7 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
 
   val nino = "NINO"
 
-  lazy val connector = new DESConnectorImpl(mockHttp, mockMetrics, mockPagerDuty)
+  lazy val connector = new DESConnectorImpl(mockHttp)
 
   def mockGet(url: String)(response: Option[HttpResponse]) =
     (mockHttp.get(_: String, _: Map[String, String])(_: HeaderCarrier, _: ExecutionContext))
@@ -52,7 +52,7 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
 
   "the isEligible method" when {
 
-      def url(nino: NINO): String = s"${connector.itmpEnrolmentURL}/help-to-save/eligibility-check/$nino"
+      def url(nino: NINO): String = s"${connector.itmpBaseURL}/help-to-save/eligibility-check/$nino"
 
     "return 200 status when call to DES successfully returns eligibility check response" in {
       mockGet(url(nino))(Some(HttpResponse(200, Some(Json.toJson(eligibilityCheckResultJson)))))
@@ -71,7 +71,7 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
 
   "the setFlag method" when {
 
-      def url(nino: NINO): String = s"${connector.itmpEnrolmentURL}/help-to-save/accounts/$nino"
+      def url(nino: NINO): String = s"${connector.itmpBaseURL}/help-to-save/accounts/$nino"
 
     "setting the ITMP flag" must {
 
@@ -124,7 +124,7 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
 
   "the getThreshold method" must {
 
-    val url = connector.itmpThresholdURL
+    val url = s"${connector.itmpBaseURL}/universal-credits/threshold-amount"
     val result = UCThreshold(500.50)
 
     "return 200 status when call to get threshold from DES has been successful" in {

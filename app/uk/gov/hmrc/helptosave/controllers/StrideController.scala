@@ -31,7 +31,6 @@ import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionConte
 import uk.gov.hmrc.helptosave.util.Logging._
 
 class StrideController @Inject() (val helpToSaveService: HelpToSaveService,
-                                  dESConnector:          DESConnector,
                                   authConnector:         AuthConnector,
                                   enrolmentStore:        EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig)
 
