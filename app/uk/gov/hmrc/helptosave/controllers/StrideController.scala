@@ -24,16 +24,15 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.PayePersonalDetailsConnector
+import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
-import uk.gov.hmrc.helptosave.services.EligibilityCheckService
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext}
 import uk.gov.hmrc.helptosave.util.Logging._
 
-class StrideController @Inject() (val eligibilityCheckService:  EligibilityCheckService,
-                                  payePersonalDetailsConnector: PayePersonalDetailsConnector,
-                                  authConnector:                AuthConnector,
-                                  enrolmentStore:               EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig)
+class StrideController @Inject() (val helpToSaveService: HelpToSaveService,
+                                  authConnector:         AuthConnector,
+                                  enrolmentStore:        EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig)
 
   extends StrideAuth(authConnector) with EligibilityBase with WithMdcExecutionContext {
 
@@ -56,7 +55,7 @@ class StrideController @Inject() (val eligibilityCheckService:  EligibilityCheck
   }
 
   def getPayePersonalDetails(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
-    payePersonalDetailsConnector.getPersonalDetails(nino)
+    helpToSaveService.getPersonalDetails(nino)
       .fold(
         { error ⇒
           logger.warn(s"Could not retrieve paye-personal-details from DES: $error", nino)

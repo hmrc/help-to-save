@@ -253,11 +253,11 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         ))
       }
 
-      "handle success response when the Account is cloned and there are no Terms in the json" in {
+      "handle success response when the Account is closed and there are no Terms in the json" in {
         val json = Json.parse(
           """
             |{
-              "accountNumber": "AC01",
+            | "accountNumber": "AC01",
             |  "accountBalance": "0.00",
             |  "accountClosedFlag": "C",
             |  "accountBlockingCode": "T1",
@@ -376,7 +376,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val json = Json.parse(
           """
             |{
-            | "accountNumber": "AC01",
+            |  "accountNumber": "AC01",
             |  "accountBalance": "200.34",
             |  "accountClosedFlag": "",
             |  "accountBlockingCode": "00",
