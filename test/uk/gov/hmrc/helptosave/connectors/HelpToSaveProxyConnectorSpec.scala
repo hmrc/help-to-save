@@ -257,7 +257,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val json = Json.parse(
           """
             |{
-            |  "accountNumber": "AC01",
+            | "accountNumber": "AC01",
             |  "accountBalance": "0.00",
             |  "accountClosedFlag": "C",
             |  "accountBlockingCode": "T1",
