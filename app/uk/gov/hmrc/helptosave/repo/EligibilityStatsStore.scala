@@ -25,6 +25,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework
 import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework._
 import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
@@ -68,7 +69,8 @@ class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
     val timerContext = metrics.eligibilityStatsTimer.time()
     doAggregate()
       .map { response ⇒
-        val _ = timerContext.stop()
+        val time = timerContext.stop()
+        logger.info(s"eligibility stats query took ${nanosToPrettyString(time)}")
         response.head[EligibilityStats]
       }.recover {
         case e ⇒
