@@ -77,8 +77,7 @@ class UCThresholdManager(thresholdConnectorProxyActor: ActorRef,
   }
 
   def scheduleEndOfUpdateWindow(): Cancellable = {
-    val timeUntilEndOfUpdateWindow = timeCalculator.timeUntil(updateWindowStartTime)
-    logger.info(s"Scheduling end of update window in ${Time.nanosToPrettyString(timeUntilEndOfUpdateWindow.toNanos)}")
+    logger.info(s"Scheduling end of update window in ${Time.nanosToPrettyString(updateTimeDelay.toNanos)}")
     scheduler.scheduleOnce(updateTimeDelay, self, UpdateWindow)
   }
 

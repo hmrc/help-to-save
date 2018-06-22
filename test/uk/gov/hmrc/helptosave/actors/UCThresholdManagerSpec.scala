@@ -395,8 +395,6 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           testApparatus.time.advance(1.hour)
 
           // expect the end of the update window to be scheduled
-          testApparatus.timeCalculatorListener.expectMsg(TimeUntilRequest)
-          testApparatus.timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
           testApparatus.schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
 
           testApparatus.actor ! UCThresholdManager.GetThresholdValue
@@ -431,14 +429,19 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           time.advance(1.second)
 
           // expect the end of the update window to be scheduled
-          timeCalculatorListener.expectMsg(TimeUntilRequest)
-          timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
           schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
 
+          // check success
           actor ! UCThresholdManager.GetThresholdValue
           connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
           connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(11.0)))
           expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(11.0)))
+
+          // check failure
+          actor ! UCThresholdManager.GetThresholdValue
+          connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
+          connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("Oh no!")))
+          expectMsg(UCThresholdManager.GetThresholdValueResponse(None))
         }
 
       "get the threshold value from DES and store it in memory when the update window ends " +
@@ -466,8 +469,6 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           // now we should be in update window
           time.advance(1.millisecond)
           // expect the end of the update window to be scheduled
-          timeCalculatorListener.expectMsg(TimeUntilRequest)
-          timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
           schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
 
           actor ! UCThresholdManager.GetThresholdValue
@@ -780,8 +781,6 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // we should now be in the in-update window state
           // expect the end of the update window to be scheduled
-          timeCalculatorListener.expectMsg(TimeUntilRequest)
-          timeCalculatorListener.reply(TimeUntilResponse(updateDelay))
           schedulerListener.expectMsg(JobScheduledOnce(updateDelay))
           actor ! UCThresholdManager.GetThresholdValue
           connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
