@@ -16,28 +16,25 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import cats.data.EitherT
-import cats.instances.future._
+import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.DESConnector
-import uk.gov.hmrc.helptosave.services.HelpToSaveService
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.helptosave.utils.MockPagerDuty
 
 import scala.concurrent.ExecutionContext
 
-class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") {
+class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") with MockPagerDuty {
   import system.dispatcher
 
   val connector = mock[DESConnector]
 
-  val service = mock[HelpToSaveService]
+  val actor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, mockPagerDuty))
 
-  val actor = system.actorOf(UCThresholdConnectorProxyActor.props(service))
-
-  def mockServiceGetValue(response: Either[String, Double]) =
-    (service.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+  def mockConnectorGetValue(response: HttpResponse) =
+    (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *)
-      .returning(EitherT(toFuture(response)))
+      .returning(toFuture(response))
 
   "The UCThresholdConnectorProxyActor" when {
 
@@ -45,7 +42,7 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
 
       "ask for and return the value from the threshold connector" in {
 
-        mockServiceGetValue(Right(100.0))
+        mockConnectorGetValue(HttpResponse(200, Some(Json.parse("""{"thresholdAmount" : 100.0}"""))))
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
         expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
@@ -53,10 +50,14 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
 
       "ask for and return an error from the threshold connector if an error occurs" in {
 
-        mockServiceGetValue(Left("error occurred"))
+        mockConnectorGetValue(HttpResponse(500, Some(Json.toJson("error occurred"))))
+
+        (mockPagerDuty.alert(_: String))
+          .expects(*)
+          .returning("Received unexpected http status in response to get UC threshold from DES")
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
-        expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("error occurred")))
+        expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("Received unexpected status 500")))
       }
 
     }

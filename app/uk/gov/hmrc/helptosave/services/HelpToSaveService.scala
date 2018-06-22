@@ -30,7 +30,7 @@ import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HeaderCarrier
 import play.api.http.Status
 import akka.pattern.ask
 import play.mvc.Http.Status.{FORBIDDEN, OK}
@@ -53,7 +53,7 @@ trait HelpToSaveService {
 
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails]
 
-  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Double]
+  //def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Double]
 
 }
 
@@ -95,7 +95,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
       dESConnector.setFlag(nino).map[Either[String, Unit]] { response ⇒
         val time = timerContext.stop()
 
-        val additionalParams = Seq("DesCorrelationId" -> desCorrelationId(response), "apiCorrelationId" -> getApiCorrelationId)
+        val additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId)
 
         response.status match {
           case OK ⇒
@@ -131,7 +131,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
       dESConnector.getPersonalDetails(nino).map[Either[String, PayePersonalDetails]] { response ⇒
         val time = timerContext.stop()
 
-        val additionalParams = "DesCorrelationId" -> desCorrelationId(response)
+        val additionalParams = "DesCorrelationId" -> response.desCorrelationId
 
         response.status match {
           case Status.OK ⇒
@@ -163,39 +163,6 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
       }
     })
 
-  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Double] =
-    EitherT({
-      dESConnector.getThreshold().map[Either[String, Double]] { response ⇒
-
-        val additionalParams = "DesCorrelationId" -> desCorrelationId(response)
-
-        logger.info(s"threshold response from DES is: ${response.body}")
-
-        response.status match {
-          case Status.OK ⇒
-            val result = response.parseJson[UCThreshold]
-            result.fold({
-              e ⇒
-                logger.warn(s"Could not parse JSON response from threshold, received 200 (OK): $e", "-", additionalParams)
-                pagerDutyAlerting.alert("Could not parse JSON in UC threshold response")
-            }, _ ⇒
-              logger.debug(s"Call to threshold successful, received 200 (OK)", "-", additionalParams)
-            )
-            result.map(_.thresholdAmount)
-
-          case other ⇒
-            logger.warn(s"Call to get threshold unsuccessful. Received unexpected status $other. " +
-              s"Body was: ${response.body}", "-", additionalParams)
-            pagerDutyAlerting.alert("Received unexpected http status in response to get UC threshold from DES")
-            Left(s"Received unexpected status $other")
-        }
-      }.recover {
-        case e ⇒
-          pagerDutyAlerting.alert("Failed to make call to get UC threshold from DES")
-          Left(s"Call to get threshold unsuccessful: ${e.getMessage}")
-      }
-    })
-
   private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     EitherT({
       val timerContext = metrics.itmpEligibilityCheckTimer.time()
@@ -204,7 +171,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
         val time = timerContext.stop()
 
-        val additionalParams = "DesCorrelationId" -> desCorrelationId(response)
+        val additionalParams = "DesCorrelationId" -> response.desCorrelationId
 
         logger.info(s"eligibility response from DES is: ${maskNino(response.body)}", nino, additionalParams)
 
@@ -242,8 +209,6 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
           Left(s"Call to check eligibility unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
       }
     })
-
-  private def desCorrelationId(response: HttpResponse): String = response.header("CorrelationId").getOrElse("-")
 
   private def timeString(nanos: Long): String = s"(round-trip time: ${nanosToPrettyString(nanos)})"
 
