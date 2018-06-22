@@ -40,45 +40,50 @@ class EligibilityStatsHandlerSpec extends TestSupport with Matchers {
             EligibilityStats(Some(7), Some("Stride"), 2),
             EligibilityStats(Some(8), Some("KCOM"), 1),
             EligibilityStats(None, Some("Digital"), 1),
+            EligibilityStats(Some(8), Some("BLAH BLAH"), 1),
             EligibilityStats(None, None, 1)
           )
 
         val message =
           """
-            |+--------+-------+-----+
-            ||  Reason|Channel|Count|
-            |+--------+-------+-----+
-            ||      UC|Digital|    1|
-            ||        | Stride|    1|
-            ||        |   KCOM|    1|
-            ||        |Unknown|    1|
-            ||        |  Total|    4|
-            ||        |       |     |
-            ||     WTC|Digital|    0|
-            ||        | Stride|    2|
-            ||        |   KCOM|    0|
-            ||        |Unknown|    0|
-            ||        |  Total|    2|
-            ||        |       |     |
-            ||UC & WTC|Digital|    0|
-            ||        | Stride|    0|
-            ||        |   KCOM|    1|
-            ||        |Unknown|    0|
-            ||        |  Total|    1|
-            ||        |       |     |
-            || Unknown|Digital|    1|
-            ||        | Stride|    0|
-            ||        |   KCOM|    0|
-            ||        |Unknown|    1|
-            ||        |  Total|    2|
-            ||        |       |     |
-            ||  Totals|Digital|    2|
-            ||        | Stride|    3|
-            ||        |   KCOM|    2|
-            ||        |Unknown|    2|
-            ||        |  Total|    9|
-            |+--------+-------+-----+
-          """.stripMargin
+         |+--------+----------+----------+
+         || Reason | Channel  |  Count   |
+         |+--------+----------+----------+
+         ||      UC| BLAH BLAH|         0|
+         ||      UC|   Digital|         1|
+         ||      UC|      KCOM|         1|
+         ||      UC|    Stride|         1|
+         ||      UC|   Unknown|         1|
+         ||        |     Total|         4|
+         ||        |          |          |
+         ||     WTC|   Unknown|         0|
+         ||     WTC|   Digital|         0|
+         ||     WTC|      KCOM|         0|
+         ||     WTC| BLAH BLAH|         0|
+         ||     WTC|    Stride|         2|
+         ||        |     Total|         2|
+         ||        |          |          |
+         ||  UC&WTC|   Unknown|         0|
+         ||  UC&WTC|   Digital|         0|
+         ||  UC&WTC|    Stride|         0|
+         ||  UC&WTC| BLAH BLAH|         1|
+         ||  UC&WTC|      KCOM|         1|
+         ||        |     Total|         2|
+         ||        |          |          |
+         || Unknown|    Stride|         0|
+         || Unknown|      KCOM|         0|
+         || Unknown| BLAH BLAH|         0|
+         || Unknown|   Digital|         1|
+         || Unknown|   Unknown|         1|
+         ||        |     Total|         2|
+         ||        |          |          |
+         ||   Total| BLAH BLAH|         1|
+         ||   Total|      KCOM|         2|
+         ||   Total|    Stride|         3|
+         ||   Total|   Digital|         2|
+         ||   Total|   Unknown|         2|
+         ||        |     Total|        10|
+         |+--------+----------+----------+""".stripMargin
 
         handler.handleStats(stats) shouldBe message
       }

@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import cats.instances.int._
-import cats.instances.option._
 import cats.instances.string._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Singleton}
@@ -32,81 +30,119 @@ trait EligibilityStatsHandler {
 @Singleton
 class EligibilityStatsHandlerImpl extends EligibilityStatsHandler with Logging {
 
-  override def handleStats(result: List[EligibilityStats]): String = {
+  type Table = List[(String, List[(String, Int)])]
 
-      def get(reason: Option[Int]): (Int, Int, Int, Int) = {
-          def count(source: Option[String]) =
-            result.filter(p ⇒ p.eligibilityReason === reason && p.source === source) match {
-              case head :: Nil ⇒ head.total
-              case _           ⇒ 0
-            }
+  private val emptyTable = List.empty[(String, List[(String, Int)])]
 
-        (count(Some("Digital")), count(Some("Stride")), count(Some("KCOM")), count(None))
-      }
+  override def handleStats(stats: List[EligibilityStats]): String = {
 
-      def totals() = {
-          def count(reason: Option[Int]) = result.filter(p ⇒ p.eligibilityReason === reason).map(_.total).sum
+    val report = prettyFormatTable(createTable(stats))
 
-        (count(Some(6)), count(Some(7)), count(Some(8)), count(None))
-      }
-
-    val (ucDigitalStats, ucStrideStats, ucKcomStats, ucUnknownStats) = get(Some(6))
-    val (wtcDigitalStats, wtcStrideStats, wtcKcomStats, wtcUnknownStats) = get(Some(7))
-    val (ucAndWtcDigitalStats, ucAndWtcStrideStats, ucAndWtcKcomStats, ucAndWtcUnknownStats) = get(Some(8))
-    val (unKnownDigitalStats, unKnownStrideStats, unknownKcomStats, unKnownUnknownStats) = get(None)
-    val (ucTotal, wtcTotal, ucAndWtcTotal, unKnownTotal) = totals()
-
-      def channelTotals(): (Int, Int, Int, Int) = {
-          def count(source: Option[String]) =
-            result.filter(p ⇒ p.source === source).map(_.total).sum
-
-        (count(Some("Digital")), count(Some("Stride")), count(Some("KCOM")), count(None))
-      }
-
-    val (digitalTotal, strideTotal, kcomTotal, unKnownOverallTotal) = channelTotals()
-
-    val overallTotal = result.map(_.total).sum
-
-    val report =
-      s"""
-         |+--------+-------+-----+
-         ||  Reason|Channel|Count|
-         |+--------+-------+-----+
-         ||      UC|Digital|    $ucDigitalStats|
-          ||        | Stride|    $ucStrideStats|
-          ||        |   KCOM|    $ucKcomStats|
-          ||        |Unknown|    $ucUnknownStats|
-          ||        |  Total|    $ucTotal|
-          ||        |       |     |
-         ||     WTC|Digital|    $wtcDigitalStats|
-          ||        | Stride|    $wtcStrideStats|
-          ||        |   KCOM|    $wtcKcomStats|
-          ||        |Unknown|    $wtcUnknownStats|
-          ||        |  Total|    $wtcTotal|
-          ||        |       |     |
-         ||UC & WTC|Digital|    $ucAndWtcDigitalStats|
-          ||        | Stride|    $ucAndWtcStrideStats|
-          ||        |   KCOM|    $ucAndWtcKcomStats|
-          ||        |Unknown|    $ucAndWtcUnknownStats|
-          ||        |  Total|    $ucAndWtcTotal|
-          ||        |       |     |
-         || Unknown|Digital|    $unKnownDigitalStats|
-          ||        | Stride|    $unKnownStrideStats|
-          ||        |   KCOM|    $unknownKcomStats|
-          ||        |Unknown|    $unKnownUnknownStats|
-          ||        |  Total|    $unKnownTotal|
-          ||        |       |     |
-         ||  Totals|Digital|    $digitalTotal|
-          ||        | Stride|    $strideTotal|
-          ||        |   KCOM|    $kcomTotal|
-          ||        |Unknown|    $unKnownOverallTotal|
-          ||        |  Total|    $overallTotal|
-          |+--------+-------+-----+
-          """.stripMargin
-
-    logger.info(s"eligibility stats report: $report")
-
+    logger.info(s"report is $report")
     //for unit testing
     report
   }
+
+  def createTable(stats: List[EligibilityStats]): Table = {
+
+    val groupedByEligibilityReason: Map[Option[Int], List[EligibilityStats]] = stats.groupBy(_.eligibilityReason)
+
+    val groupedByEligibilityReasonThenSource: Table =
+      groupedByEligibilityReason.map {
+        case (k, v) ⇒
+          k.map(_.toString).getOrElse("Unknown") -> {
+            v.groupBy(_.source).map(x ⇒ x._1.getOrElse("Unknown") → x._2.map(_.total).sum).toList.sortBy(_._1)
+          }
+      }.toList.sortBy(_._1)
+
+    val tableWithMissingSources = addMissingSourceTotals(groupedByEligibilityReasonThenSource)
+
+    mapIntToReasonString(tableWithMissingSources)
+  }
+
+  private def addMissingSourceTotals(table: Table) = {
+    //add missing sources with total 0 for each reason
+    val sources = allSourcesFromMongo(table)
+    table.foldLeft[Table](emptyTable) {
+      case (a, b) ⇒
+
+        val x = sources.foldLeft[List[(String, Int)]](List.empty[(String, Int)]) {
+          case (c, d) ⇒
+            if (!b._2.map(_._1).contains(d)) {
+              (d, 0) :: c
+            } else {
+              c
+            }
+        }
+        (b._1, x ::: b._2) :: a
+    }
+  }
+
+  private def mapIntToReasonString(table: Table) = {
+    table
+      .foldLeft[Table](emptyTable) {
+        case (modified, original) ⇒
+          if (original._1 === "6") {
+            val t: (String, List[(String, Int)]) = ("UC", original._2)
+            t :: modified
+          } else if (original._1 === "7") {
+            val t: (String, List[(String, Int)]) = ("WTC", original._2)
+            t :: modified
+          } else if (original._1 === "8") {
+            val t: (String, List[(String, Int)]) = ("UC&WTC", original._2)
+            t :: modified
+          } else {
+            val t: (String, List[(String, Int)]) = original
+            t :: modified
+          }
+      }
+  }
+
+  def prettyFormatTable(table: Table): String = {
+    val f = "|%8s|%10s|%10s|\n"
+
+    val header: String =
+      s"""
+         |+--------+----------+----------+
+         || Reason | Channel  |  Count   |
+         |+--------+----------+----------+\n""".stripMargin
+
+    var report = table.foldLeft[String](header) {
+      case (row: String, element: (String, List[(String, Int)])) ⇒
+        val a = element._2.foldLeft[String](row) {
+          case (x: String, y: (String, Int)) ⇒
+            x.concat(f.format(element._1, y._1, y._2))
+        }
+
+          def getTotalByReason =
+            table
+              .filter(p ⇒ p._1 === element._1)
+              .flatMap(_._2)
+              .map(_._2)
+              .sum
+
+        a.concat(f.format("", "Total", getTotalByReason))
+          .concat(f.format("", "", ""))
+
+    }
+
+    //compute totals by source
+    allSourcesFromMongo(table).foreach {
+      p ⇒
+        val t = table.map(_._2).map(_.filter(_._1 === p).map(_._2)).map(_.sum).sum
+        report = report.concat(f.format("Total", p, t))
+    }
+
+    //add grand total
+    report
+      .concat(f.format("", "Total", table.flatMap(_._2).map(_._2).sum))
+      .concat("+--------+----------+----------+")
+  }
+
+  private def allSourcesFromMongo(table: Table): Set[String] =
+    table.foldLeft[Set[String]](Set.empty[String]) {
+      case (a, b) ⇒ b._2.foldLeft[Set[String]](a) {
+        case (c, d) ⇒ c.+(d._1)
+      }
+    }
 }
