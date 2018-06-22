@@ -53,8 +53,6 @@ trait HelpToSaveService {
 
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails]
 
-  //def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Double]
-
 }
 
 @Singleton
