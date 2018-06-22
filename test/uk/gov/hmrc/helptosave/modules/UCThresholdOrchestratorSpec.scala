@@ -19,16 +19,15 @@ package uk.gov.hmrc.helptosave.modules
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import cats.data.EitherT
-import cats.instances.future._
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdManager}
+import play.api.libs.json.Json
+import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdConnectorProxyActor, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -40,6 +39,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   val connector = mock[DESConnector]
   val service = mock[HelpToSaveService]
   val pagerDutyAlert = mock[PagerDutyAlerting]
+  val proxyActor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
 
   def testConfiguration(enabled: Boolean) = Configuration(ConfigFactory.parseString(
     s"""
@@ -60,15 +60,19 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
 
-      (service.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+      (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
-        .returning(EitherT.fromEither[Future](Left[String, Double]("")))
+        .returning(HttpResponse(500, None))
 
-      (service.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+      (pagerDutyAlert.alert(_: String))
+        .expects(*)
+        .returning("Received unexpected http status in response to get UC threshold from DES")
+
+      (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
-        .returning(EitherT.fromEither[Future](Right[String, Double](threshold)))
+        .returning(HttpResponse(200, Some(Json.parse(s"""{ "thresholdAmount" : $threshold }"""))))
 
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), service)
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), connector)
 
       eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(1.second)) {
         val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
@@ -83,7 +87,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
     }
 
     "not start up an instance of the UCThresholdManager if not enabled" in {
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), service)
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), connector)
       orchestrator.thresholdManager shouldBe ActorRef.noSender
     }
 

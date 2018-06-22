@@ -107,11 +107,6 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       .expects(nino, *, *)
       .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
-  def mockGetThreshold()(response: Option[HttpResponse]) =
-    (mockDESConnector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
-      .expects(*, *)
-      .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
-
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
     result ← Gen.alphaStr
     resultCode ← Gen.choose(1, 10)
@@ -329,33 +324,6 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         val result = eligibilityCheckService.getEligibility(nino).value
 
         await(result) shouldBe Right(eligibilityCheckResponse)
-      }
-
-      "return OK status with the threshold from ITMP" in {
-        val result = UCThreshold(500.50)
-        mockGetThreshold()(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-        Await.result(service.getThreshold().value, 5.seconds) shouldBe Right(result.thresholdAmount)
-      }
-
-      "return an error and trigger a pagerDutyAlert when parsing invalid json" in {
-        val result = 500.50
-        inSequence {
-          mockGetThreshold()(Some(HttpResponse(200, Some(Json.toJson(result))))) // scalastyle:ignore magic.number
-          mockPagerDutyAlert("Could not parse JSON in UC threshold response")
-        }
-
-        Await.result(service.getThreshold().value, 5.seconds).isLeft shouldBe true
-      }
-
-      "return an error" when {
-        "the call fails" in {
-          inSequence {
-            mockGetThreshold()(None)
-            mockPagerDutyAlert("Failed to make call to get UC threshold from DES")
-          }
-
-          Await.result(service.getThreshold().value, 5.seconds).isLeft shouldBe true
-        }
       }
 
     }
