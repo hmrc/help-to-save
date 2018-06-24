@@ -36,14 +36,16 @@ class EligibilityStatsHandlerImpl extends EligibilityStatsHandler with Logging {
 
   override def handleStats(stats: List[EligibilityStats]): String = {
 
-    val report = prettyFormatTable(createTable(stats))
+    val sourcesFromMongo = stats.map(_.source.getOrElse("Unknown")).toSet
+
+    val report = prettyFormatTable(createTable(stats, sourcesFromMongo), sourcesFromMongo)
 
     logger.info(s"report is $report")
     //for unit testing
     report
   }
 
-  def createTable(stats: List[EligibilityStats]): Table = {
+  def createTable(stats: List[EligibilityStats], allSources: Set[String]): Table = {
 
     val groupedByEligibilityReason: Map[Option[Int], List[EligibilityStats]] = stats.groupBy(_.eligibilityReason)
 
@@ -51,54 +53,23 @@ class EligibilityStatsHandlerImpl extends EligibilityStatsHandler with Logging {
       groupedByEligibilityReason.map {
         case (k, v) ⇒
           k.map(_.toString).getOrElse("Unknown") -> {
-            v.groupBy(_.source).map(x ⇒ x._1.getOrElse("Unknown") → x._2.map(_.total).sum).toList.sortBy(_._1)
+            v.groupBy(_.source).map(x ⇒ x._1.getOrElse("Unknown") → x._2.map(_.total).sum).toList
           }
-      }.toList.sortBy(_._1)
+      }.toList
 
-    val tableWithMissingSources = addMissingSourceTotals(groupedByEligibilityReasonThenSource)
-
-    mapIntToReasonString(tableWithMissingSources)
+    addMissingSourceTotals(groupedByEligibilityReasonThenSource, allSources)
   }
 
-  private def addMissingSourceTotals(table: Table) = {
+  private def addMissingSourceTotals(table: Table, allSources: Set[String]) = {
     //add missing sources with total 0 for each reason
-    val sources = allSourcesFromMongo(table)
     table.foldLeft[Table](emptyTable) {
-      case (a, b) ⇒
-
-        val x = sources.foldLeft[List[(String, Int)]](List.empty[(String, Int)]) {
-          case (c, d) ⇒
-            if (!b._2.map(_._1).contains(d)) {
-              (d, 0) :: c
-            } else {
-              c
-            }
-        }
-        (b._1, x ::: b._2) :: a
-    }
+      case (acc, curr) ⇒
+        val missing: List[(String, Int)] = allSources.toList.diff(curr._2.map(_._1)).map(_ → 0)
+        (curr._1, (curr._2 ::: missing).sortBy(_._1)) :: acc
+    }.sortBy(_._1)
   }
 
-  private def mapIntToReasonString(table: Table) = {
-    table
-      .foldLeft[Table](emptyTable) {
-        case (modified, original) ⇒
-          if (original._1 === "6") {
-            val t: (String, List[(String, Int)]) = ("UC", original._2)
-            t :: modified
-          } else if (original._1 === "7") {
-            val t: (String, List[(String, Int)]) = ("WTC", original._2)
-            t :: modified
-          } else if (original._1 === "8") {
-            val t: (String, List[(String, Int)]) = ("UC&WTC", original._2)
-            t :: modified
-          } else {
-            val t: (String, List[(String, Int)]) = original
-            t :: modified
-          }
-      }
-  }
-
-  def prettyFormatTable(table: Table): String = {
+  def prettyFormatTable(table: Table, allSources: Set[String]): String = {
     val f = "|%8s|%10s|%10s|\n"
 
     val header: String =
@@ -107,42 +78,41 @@ class EligibilityStatsHandlerImpl extends EligibilityStatsHandler with Logging {
          || Reason | Channel  |  Count   |
          |+--------+----------+----------+\n""".stripMargin
 
+    def getStringFrom(reason: String) = {
+      if (reason === "6") {
+        "UC"
+      } else if (reason === "7") {
+        "WTC"
+      } else if (reason === "8") {
+        "UC&WTC"
+      } else {
+        reason
+      }
+    }
+
     var report = table.foldLeft[String](header) {
-      case (row: String, element: (String, List[(String, Int)])) ⇒
-        val a = element._2.foldLeft[String](row) {
-          case (x: String, y: (String, Int)) ⇒
-            x.concat(f.format(element._1, y._1, y._2))
+      case (acc, curr) =>
+        val r = curr._2.foldLeft[String]("") {
+          case (acc1, curr1) =>
+            acc1.concat(f.format(getStringFrom(curr._1), curr1._1, curr1._2))
+
         }
-
-          def getTotalByReason =
-            table
-              .filter(p ⇒ p._1 === element._1)
-              .flatMap(_._2)
-              .map(_._2)
-              .sum
-
-        a.concat(f.format("", "Total", getTotalByReason))
+        acc
+          .concat(r)
+          .concat(f.format("", "Total", curr._2.map(_._2).sum))
           .concat(f.format("", "", ""))
-
     }
 
     //compute totals by source
-    allSourcesFromMongo(table).foreach {
+    allSources.toList.sorted(Ordering.String).foreach {
       p ⇒
-        val t = table.map(_._2).map(_.filter(_._1 === p).map(_._2)).map(_.sum).sum
-        report = report.concat(f.format("Total", p, t))
+        val total = table.flatMap(_._2.filter(_._1 === p).map(_._2)).sum
+        report = report.concat(f.format("Total", p, total))
     }
 
     //add grand total
     report
-      .concat(f.format("", "Total", table.flatMap(_._2).map(_._2).sum))
+      .concat(f.format("", "Total", table.flatMap(_._2.map(_._2)).sum))
       .concat("+--------+----------+----------+")
   }
-
-  private def allSourcesFromMongo(table: Table): Set[String] =
-    table.foldLeft[Set[String]](Set.empty[String]) {
-      case (a, b) ⇒ b._2.foldLeft[Set[String]](a) {
-        case (c, d) ⇒ c.+(d._1)
-      }
-    }
 }

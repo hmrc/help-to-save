@@ -56,31 +56,31 @@ class EligibilityStatsHandlerSpec extends TestSupport with Matchers {
          ||      UC|   Unknown|         1|
          ||        |     Total|         4|
          ||        |          |          |
-         ||     WTC|   Unknown|         0|
+         ||     WTC| BLAH BLAH|         0|
          ||     WTC|   Digital|         0|
          ||     WTC|      KCOM|         0|
-         ||     WTC| BLAH BLAH|         0|
          ||     WTC|    Stride|         2|
+         ||     WTC|   Unknown|         0|
          ||        |     Total|         2|
          ||        |          |          |
-         ||  UC&WTC|   Unknown|         0|
-         ||  UC&WTC|   Digital|         0|
-         ||  UC&WTC|    Stride|         0|
          ||  UC&WTC| BLAH BLAH|         1|
+         ||  UC&WTC|   Digital|         0|
          ||  UC&WTC|      KCOM|         1|
+         ||  UC&WTC|    Stride|         0|
+         ||  UC&WTC|   Unknown|         0|
          ||        |     Total|         2|
          ||        |          |          |
-         || Unknown|    Stride|         0|
-         || Unknown|      KCOM|         0|
          || Unknown| BLAH BLAH|         0|
          || Unknown|   Digital|         1|
+         || Unknown|      KCOM|         0|
+         || Unknown|    Stride|         0|
          || Unknown|   Unknown|         1|
          ||        |     Total|         2|
          ||        |          |          |
          ||   Total| BLAH BLAH|         1|
+         ||   Total|   Digital|         2|
          ||   Total|      KCOM|         2|
          ||   Total|    Stride|         3|
-         ||   Total|   Digital|         2|
          ||   Total|   Unknown|         2|
          ||        |     Total|        10|
          |+--------+----------+----------+""".stripMargin
