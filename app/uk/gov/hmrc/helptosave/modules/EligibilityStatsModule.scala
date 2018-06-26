@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import java.time.{Clock, ZoneId}
+import java.time.Clock
 
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import com.google.inject.{AbstractModule, Inject, Singleton}
@@ -52,10 +52,7 @@ class EligibilityStatsProviderImpl @Inject() (system:                  ActorSyst
 
   private val lockDuration: FiniteDuration = configuration.underlying.get[FiniteDuration](s"$name.lock-duration").value
 
-  private val timeCalculator = {
-    val clock = Clock.system(ZoneId.of(configuration.underlying.getString(s"$name.timezone")))
-    new TimeCalculatorImpl(clock)
-  }
+  private val timeCalculator = new TimeCalculatorImpl(Clock.systemUTC())
 
   def esActor(): ActorRef = {
     if (enabled) {

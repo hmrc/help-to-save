@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import java.time.{Clock, ZoneId}
+import java.time.Clock
 
 import akka.pattern.ask
 import akka.testkit.TestProbe
@@ -42,16 +42,12 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
     val timeCalculatorListener = TestProbe()
     val schedulerListener = TestProbe()
 
-    private val timeCalculator = {
-      val clock = Clock.system(ZoneId.of(configuration.underlying.getString("eligibility-stats.timezone")))
-      new TimeCalculatorImpl(clock)
-    }
+    private val timeCalculator = new TimeCalculatorImpl(Clock.systemUTC())
 
     val config = ConfigFactory.parseString(
       s"""
          |eligibility-stats {
          |    enabled = true
-         |    timezone   = "Europe/London"
          |    initial-delay  = 5 minutes
          |    frequency = 1 hour
          |}
