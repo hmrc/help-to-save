@@ -78,22 +78,22 @@ class EligibilityStatsHandlerImpl extends EligibilityStatsHandler with Logging {
          || Reason | Channel  |  Count   |
          |+--------+----------+----------+\n""".stripMargin
 
-    def getStringFrom(reason: String) = {
-      if (reason === "6") {
-        "UC"
-      } else if (reason === "7") {
-        "WTC"
-      } else if (reason === "8") {
-        "UC&WTC"
-      } else {
-        reason
+      def getStringFrom(reason: String) = {
+        if (reason === "6") {
+          "UC"
+        } else if (reason === "7") {
+          "WTC"
+        } else if (reason === "8") {
+          "UC&WTC"
+        } else {
+          reason
+        }
       }
-    }
 
     var report = table.foldLeft[String](header) {
-      case (acc, curr) =>
+      case (acc, curr) ⇒
         val r = curr._2.foldLeft[String]("") {
-          case (acc1, curr1) =>
+          case (acc1, curr1) ⇒
             acc1.concat(f.format(getStringFrom(curr._1), curr1._1, curr1._2))
 
         }

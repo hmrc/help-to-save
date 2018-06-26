@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import java.time.LocalTime
-
 import akka.actor.{Actor, Cancellable, Props, Scheduler}
 import akka.pattern.pipe
 import com.typesafe.config.Config
@@ -49,11 +47,10 @@ class EligibilityStatsActor(scheduler:               Scheduler,
   }
 
   def scheduleStats(): Cancellable = {
-    val scheduleStart = LocalTime.parse(config.getString("eligibility-stats.trigger-time"))
+    val initialDelay = config.get[FiniteDuration]("eligibility-stats.initial-delay").value
     val frequency = config.get[FiniteDuration]("eligibility-stats.frequency").value
-    val timeUntilNextTrigger = timeCalculator.timeUntil(scheduleStart)
-    logger.info(s"Scheduling eligibility stats job in ${Time.nanosToPrettyString(timeUntilNextTrigger.toNanos)}")
-    scheduler.schedule(timeUntilNextTrigger, frequency, self, GetStats)
+    logger.info(s"Scheduling eligibility-stats job in ${Time.nanosToPrettyString(initialDelay.toNanos)}")
+    scheduler.schedule(initialDelay, frequency, self, GetStats)
   }
 
   override def preStart(): Unit = {
