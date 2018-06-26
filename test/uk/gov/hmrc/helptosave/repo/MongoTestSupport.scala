@@ -23,6 +23,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework
 import uk.gov.hmrc.mongo.{MongoConnector, ReactiveRepository}
 
 import scala.concurrent.Future
@@ -42,6 +43,8 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
     def remove(data: Data): Future[Option[Data]]
 
     def findAll(): Future[List[Data]]
+
+    def aggregate(): Future[AggregationFramework.AggregationResult]
   }
 
   val mockDBFunctions = mock[MockDBFunctions]
@@ -87,4 +90,11 @@ trait MongoTestSupport[Data, Repo <: ReactiveRepository[Data, BSONObjectID]] {
   def mockGet()(result: ⇒ Future[Option[Data]]): Unit =
     (mockDBFunctions.get: () ⇒ Future[Option[Data]]).expects()
       .returning(result)
+
+  def mockAggregate(result: ⇒ Either[String, AggregationFramework.AggregationResult]) =
+    (mockDBFunctions.aggregate: () ⇒ Future[AggregationFramework.AggregationResult]).expects()
+      .returning(result.fold(
+        s ⇒ Future.failed(new Exception(s)),
+        Future.successful)
+      )
 }
