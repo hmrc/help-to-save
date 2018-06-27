@@ -16,18 +16,19 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.LocalDate
+import java.time.{LocalDate, YearMonth}
 
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.instances.string._
 import cats.syntax.apply._
 import cats.syntax.eq._
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json._
 import uk.gov.hmrc.helptosave.util.Logging
 
 case class BonusTerm(bonusEstimate:          BigDecimal,
                      bonusPaid:              BigDecimal,
+                     startDate:              LocalDate,
                      endDate:                LocalDate,
                      bonusPaidOnOrAfterDate: LocalDate)
 
@@ -41,7 +42,8 @@ object Blocking {
   implicit val writes: Format[Blocking] = Json.format[Blocking]
 }
 
-case class Account(accountNumber:          String,
+case class Account(openedYearMonth:        YearMonth,
+                   accountNumber:          String,
                    isClosed:               Boolean,
                    blocked:                Blocking,
                    balance:                BigDecimal,
@@ -77,9 +79,18 @@ object Account extends Logging {
         Invalid(NonEmptyList.one(s"""Unknown value for accountClosedFlag: "${nsiAccount.accountClosedFlag}""""))
       }
 
-    (paidInThisMonthValidation, accountClosedValidation).mapN{
-      case (paidInThisMonth, accountClosed) ⇒
+    val sortedNsiTerms = nsiAccount.terms.sortBy(_.termNumber)
+    val openedYearMonthValidation: ValidOrErrorString[YearMonth] =
+      sortedNsiTerms.headOption.fold[ValidOrErrorString[YearMonth]] {
+        Invalid(NonEmptyList.of("Bonus terms list returned by NS&I was empty"))
+      } { firstNsiTerm ⇒
+        Valid(YearMonth.from(firstNsiTerm.startDate))
+      }
+
+    (paidInThisMonthValidation, accountClosedValidation, openedYearMonthValidation).mapN{
+      case (paidInThisMonth, accountClosed, openedYearMonth) ⇒
         Account(
+          openedYearMonth        = openedYearMonth,
           accountNumber          = nsiAccount.accountNumber,
           isClosed               = accountClosed,
           blocked                = nsiAccountToBlocking(nsiAccount),
@@ -88,7 +99,7 @@ object Account extends Logging {
           canPayInThisMonth      = nsiAccount.currentInvestmentMonth.investmentRemaining,
           maximumPaidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit,
           thisMonthEndDate       = nsiAccount.currentInvestmentMonth.endDate,
-          bonusTerms             = nsiAccount.terms.sortBy(_.termNumber).map(nsiBonusTermToBonusTerm),
+          bonusTerms             = sortedNsiTerms.map(nsiBonusTermToBonusTerm),
           closureDate            = nsiAccount.accountClosureDate,
           closingBalance         = nsiAccount.accountClosingBalance
         )
@@ -105,10 +116,15 @@ object Account extends Logging {
   private def nsiBonusTermToBonusTerm(nsiBonusTerm: NsiBonusTerm): BonusTerm = BonusTerm(
     bonusEstimate          = nsiBonusTerm.bonusEstimate,
     bonusPaid              = nsiBonusTerm.bonusPaid,
+    startDate              = nsiBonusTerm.startDate,
     endDate                = nsiBonusTerm.endDate,
     bonusPaidOnOrAfterDate = nsiBonusTerm.endDate.plusDays(1)
   )
 
-  implicit val format: Format[Account] = Json.format[Account]
+  implicit object YearMonthWrites extends Writes[YearMonth] {
+    def writes(yearMonth: YearMonth): JsValue = JsString(yearMonth.toString)
+  }
+
+  implicit val writes: Writes[Account] = Json.writes[Account]
 }
 

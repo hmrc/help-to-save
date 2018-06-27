@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.time.LocalDate
+import java.time.{LocalDate, YearMonth}
 import java.util.UUID
 
 import org.scalatest.EitherValues
 import play.api.libs.json.{Json, Writes}
-import play.mvc.Http.Status.{BAD_REQUEST, CREATED, INTERNAL_SERVER_ERROR, OK, CONFLICT}
+import play.mvc.Http.Status._
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
@@ -221,12 +221,14 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
             |  "terms": [
             |     {
             |       "termNumber":2,
+            |       "startDate":"2020-01-01",
             |       "endDate":"2021-12-31",
             |       "bonusEstimate":"67.00",
             |       "bonusPaid":"0.00"
             |    },
             |    {
             |       "termNumber":1,
+            |       "startDate":"2018-01-01",
             |       "endDate":"2019-12-31",
             |       "bonusEstimate":"123.45",
             |       "bonusPaid":"123.45"
@@ -239,21 +241,25 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result shouldBe Right(Some(Account("AC01", false,
+        result shouldBe Right(Some(Account(
+          YearMonth.of(2018, 1),
+          "AC01", false,
           Blocking(false),
           200.34,
           34.50,
           15.50,
           50.00,
           LocalDate.parse("2018-02-28"),
-          List(BonusTerm(123.45, 123.45, LocalDate.parse("2019-12-31"), LocalDate.parse("2020-01-01")),
-               BonusTerm(67.00, 0.00, LocalDate.parse("2021-12-31"), LocalDate.parse("2022-01-01"))),
+          List(
+            BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
+            BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
+          ),
           None,
           None)
         ))
       }
 
-      "handle success response when the Account is closed and there are no Terms in the json" in {
+      "throw error when there are no Terms in the json" in {
         val json = Json.parse(
           """
             |{
@@ -277,17 +283,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result shouldBe Right(Some(Account("AC01", true,
-          Blocking(true),
-          0.00,
-          138.08,
-          12.34,
-          150.42,
-          LocalDate.parse("2018-04-30"),
-          List.empty,
-          Some(LocalDate.parse("2018-04-09")),
-          Some(10.11))
-        ))
+        result.isLeft shouldBe true
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
@@ -303,11 +299,13 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
             |  "terms": [
             |     {
             |       "termNumber":1,
+            |       "startDate":"2018-01-01",
             |       "endDate":"2019-12-31",
             |       "bonusEstimate":"90.99"
             |    },
             |    {
             |       "termNumber":2,
+            |       "startDate":"2020-01-01",
             |       "endDate":"2021-12-31",
             |       "bonusEstimate":"12.00",
             |       "bonusPaid":"00.00"
@@ -386,7 +384,21 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
             |    "investmentLimit": "50.00",
             |    "endDate": "2018-02-28"
             |  },
-            |  "terms": []
+            |  "terms": [
+            |     {
+            |       "termNumber":2,
+            |       "startDate":"2020-01-01",
+            |       "endDate":"2021-12-31",
+            |       "bonusEstimate":"67.00",
+            |       "bonusPaid":"0.00"
+            |    },
+            |    {
+            |       "termNumber":1,
+            |       "startDate":"2018-01-01",
+            |       "endDate":"2019-12-31",
+            |       "bonusEstimate":"123.45",
+            |       "bonusPaid":"123.45"
+            |    }
             |}
           """.stripMargin)
 
@@ -395,6 +407,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val result = await(proxyConnector.getAccount(nino, needsEscapingSystemId, needsEscapingCorrelationId).value)
 
         result shouldBe Right(Some(Account(
+          YearMonth.of(2018, 1),
           "AC01",
           isClosed = false,
           Blocking(false),

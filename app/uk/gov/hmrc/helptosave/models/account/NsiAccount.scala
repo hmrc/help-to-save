@@ -30,7 +30,13 @@ object NsiCurrentInvestmentMonth {
   implicit val reads: Reads[NsiCurrentInvestmentMonth] = Json.reads[NsiCurrentInvestmentMonth]
 }
 
-case class NsiBonusTerm(termNumber: Int, endDate: LocalDate, bonusEstimate: BigDecimal, bonusPaid: BigDecimal)
+case class NsiBonusTerm(
+    termNumber:    Int,
+    startDate:     LocalDate,
+    endDate:       LocalDate,
+    bonusEstimate: BigDecimal,
+    bonusPaid:     BigDecimal
+)
 
 object NsiBonusTerm {
   implicit val reads: Reads[NsiBonusTerm] = Json.reads[NsiBonusTerm]
