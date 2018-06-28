@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.LocalDate
+import java.time.{LocalDate, YearMonth}
 
-import cats.data.Validated.Valid
+import cats.data.NonEmptyList
+import cats.data.Validated.{Invalid, Valid}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
 // scalastyle:off magic.number
@@ -29,14 +30,20 @@ class AccountSpec extends TestSupport {
     accountBlockingCode    = "00",
     clientBlockingCode     = "00",
     accountBalance         = 0,
-    currentInvestmentMonth = NsiCurrentInvestmentMonth(0, 0, LocalDate.of(1900, 1, 1)),
-    terms                  = Seq.empty,
+    currentInvestmentMonth = NsiCurrentInvestmentMonth(0, 0, LocalDate.of(2018, 1, 31)),
+    terms                  = Seq(
+      NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0),
+      NsiBonusTerm(termNumber    = 2, startDate = LocalDate.of(2020, 1, 1), endDate = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0)
+    ),
     accountNumber          = "AC01",
     accountClosureDate     = None,
     accountClosingBalance  = None
   )
 
-  val account = Account("AC01", false, Blocking(false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), List(), None, None)
+  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31), Seq(
+    BonusTerm(endDate                = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
+    BonusTerm(endDate                = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
+  ), None, None)
 
   "Account class" when {
     "creating a new class from NsiAccount class" must {
@@ -69,7 +76,12 @@ class AccountSpec extends TestSupport {
           accountClosingBalance = Some(BigDecimal("123.45"))
         ))
 
-        returnedAccount shouldBe Valid(Account("AC01", true, Blocking(false), 0, 0, 0, 0, LocalDate.parse("1900-01-01"), List.empty, Some(LocalDate.of(2018, 2, 16)), Some(123.45)))
+        returnedAccount shouldBe Valid(account.copy(
+          isClosed       = true,
+          balance        = 0,
+          closureDate    = Some(LocalDate.of(2018, 2, 16)),
+          closingBalance = Some(123.45)
+        ))
       }
 
       "return details for current month" in {
@@ -99,23 +111,51 @@ class AccountSpec extends TestSupport {
 
       "return bonus information including calculated bonusPaidOnOrAfterDate" in {
         val returnedAccount = Account(testNsiAccount.copy(
-          terms = Seq(NsiBonusTerm(termNumber    = 1, endDate = LocalDate.of(2020, 10, 22), bonusEstimate = BigDecimal("65.43"), bonusPaid = 0))))
+          terms = Seq(NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 10, 23), endDate = LocalDate.of(2020, 10, 22), bonusEstimate = BigDecimal("65.43"), bonusPaid = 0))))
 
-        val bonusTerms = BonusTerm(bonusEstimate          = BigDecimal("65.43"), bonusPaid = 0, endDate = LocalDate.of(2020, 10, 22), bonusPaidOnOrAfterDate = LocalDate.of(2020, 10, 23))
-        returnedAccount shouldBe Valid(account.copy(balance    = 0, bonusTerms = List(bonusTerms)))
+        val bonusTerm = BonusTerm(bonusEstimate          = BigDecimal("65.43"), bonusPaid = 0, endDate = LocalDate.of(2020, 10, 22), bonusPaidOnOrAfterDate = LocalDate.of(2020, 10, 23))
+        returnedAccount shouldBe Valid(account.copy(
+          openedYearMonth = YearMonth.of(2018, 10),
+          balance         = 0,
+          bonusTerms      = List(bonusTerm)
+        ))
       }
 
       "sort the bonus terms by termNumber" in {
         val returnedAccount = Account(testNsiAccount.copy(
           accountBalance = BigDecimal("200.34"),
           terms          = Seq(
-            NsiBonusTerm(termNumber    = 2, endDate = LocalDate.of(2021, 12, 31), bonusEstimate = 67, bonusPaid = 0),
-            NsiBonusTerm(termNumber    = 1, endDate = LocalDate.of(2019, 12, 31), bonusEstimate = BigDecimal("123.45"), bonusPaid = BigDecimal("123.45"))
+            NsiBonusTerm(termNumber    = 2, startDate = LocalDate.of(2020, 1, 1), endDate = LocalDate.of(2021, 12, 31), bonusEstimate = 67, bonusPaid = 0),
+            NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = BigDecimal("123.45"), bonusPaid = BigDecimal("123.45"))
           )))
 
         val bonusTerm1 = BonusTerm(bonusEstimate          = BigDecimal("67"), bonusPaid = 0, endDate = LocalDate.of(2021, 12, 31), bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
         val bonusTerm2 = BonusTerm(bonusEstimate          = BigDecimal("123.45"), bonusPaid = 123.45, endDate = LocalDate.of(2019, 12, 31), bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1))
-        returnedAccount shouldBe Valid(account.copy(balance    = 200.34, bonusTerms = List(bonusTerm2, bonusTerm1)))
+        returnedAccount shouldBe Valid(account.copy(
+          openedYearMonth = YearMonth.of(2018, 1),
+          balance         = 200.34,
+          bonusTerms      = List(bonusTerm2, bonusTerm1)
+        ))
+      }
+
+      "calculate openedYearMonth based on start of first bonus term" in {
+        val returnedAccount = Account(testNsiAccount.copy(
+          terms = Seq(
+            NsiBonusTerm(termNumber    = 2, startDate = LocalDate.of(2020, 1, 1), endDate = LocalDate.of(2021, 12, 31), bonusEstimate = 67, bonusPaid = 0),
+            NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = BigDecimal("123.45"), bonusPaid = BigDecimal("123.45"))
+          )))
+
+        returnedAccount.bimap(
+          errors ⇒ fail(s"returnedAccount should have been Valid but was Invalid with errors $errors"),
+          account ⇒ account.openedYearMonth shouldBe YearMonth.of(2018, 1)
+        )
+      }
+
+      // NS&I should always return 2 terms, and we need at least the first one to calculate openedYearMonth
+      "return an Invalid when the NS&I account does not contain any bonus terms" in {
+        val returnedAccount = Account(testNsiAccount.copy(terms = Seq.empty))
+
+        returnedAccount shouldBe Invalid(NonEmptyList.of("Bonus terms list returned by NS&I was empty"))
       }
     }
   }
