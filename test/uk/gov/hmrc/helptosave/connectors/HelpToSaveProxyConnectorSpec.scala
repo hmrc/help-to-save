@@ -203,60 +203,60 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
       val getAccountUrl: String = s"http://localhost:7005/help-to-save-proxy/nsi-services/account?$queryString"
 
+      val nsiAccountJson = Json.parse(
+        """
+          |{
+          |  "accountNumber": "AC01",
+          |  "accountBalance": "200.34",
+          |  "accountClosedFlag": "",
+          |  "accountBlockingCode": "00",
+          |  "clientBlockingCode": "00",
+          |  "currentInvestmentMonth": {
+          |    "investmentRemaining": "15.50",
+          |    "investmentLimit": "50.00",
+          |    "endDate": "2018-02-28"
+          |  },
+          |  "terms": [
+          |     {
+          |       "termNumber":2,
+          |       "startDate":"2020-01-01",
+          |       "endDate":"2021-12-31",
+          |       "bonusEstimate":"67.00",
+          |       "bonusPaid":"0.00"
+          |    },
+          |    {
+          |       "termNumber":1,
+          |       "startDate":"2018-01-01",
+          |       "endDate":"2019-12-31",
+          |       "bonusEstimate":"123.45",
+          |       "bonusPaid":"123.45"
+          |    }
+          |  ]
+          |}
+        """.stripMargin)
+
+      val account = Account(
+        YearMonth.of(2018, 1),
+        "AC01", false,
+        Blocking(false),
+        200.34,
+        34.50,
+        15.50,
+        50.00,
+        LocalDate.parse("2018-02-28"),
+        List(
+          BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
+          BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
+        ),
+        None,
+        None)
+
       "handle success response with Accounts having Terms" in {
-
-        val json = Json.parse(
-          """
-            |{
-            |  "accountNumber": "AC01",
-            |  "accountBalance": "200.34",
-            |  "accountClosedFlag": "",
-            |  "accountBlockingCode": "00",
-            |  "clientBlockingCode": "00",
-            |  "currentInvestmentMonth": {
-            |    "investmentRemaining": "15.50",
-            |    "investmentLimit": "50.00",
-            |    "endDate": "2018-02-28"
-            |  },
-            |  "terms": [
-            |     {
-            |       "termNumber":2,
-            |       "startDate":"2020-01-01",
-            |       "endDate":"2021-12-31",
-            |       "bonusEstimate":"67.00",
-            |       "bonusPaid":"0.00"
-            |    },
-            |    {
-            |       "termNumber":1,
-            |       "startDate":"2018-01-01",
-            |       "endDate":"2019-12-31",
-            |       "bonusEstimate":"123.45",
-            |       "bonusPaid":"123.45"
-            |    }
-            |  ]
-            |}
-          """.stripMargin)
-
-        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
+        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(nsiAccountJson))))
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result shouldBe Right(Some(Account(
-          YearMonth.of(2018, 1),
-          "AC01", false,
-          Blocking(false),
-          200.34,
-          34.50,
-          15.50,
-          50.00,
-          LocalDate.parse("2018-02-28"),
-          List(
-            BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
-            BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
-          ),
-          None,
-          None)
-        ))
+        result shouldBe Right(Some(account))
       }
 
       "throw error when there are no Terms in the json" in {
@@ -280,10 +280,11 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           """.stripMargin)
 
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
+        mockPagerDutyAlert("Could not parse JSON in the getAccount response")
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
-        result.isLeft shouldBe true
+        result shouldBe Left("Could not parse getNsiAccount response, received 200 (OK), error=[Bonus terms list returned by NS&I was empty]")
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
@@ -371,55 +372,11 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         val needsEscapingGetAccountUrl: String = s"http://localhost:7005/help-to-save-proxy/nsi-services/account?$queryString"
 
-        val json = Json.parse(
-          """
-            |{
-            |  "accountNumber": "AC01",
-            |  "accountBalance": "200.34",
-            |  "accountClosedFlag": "",
-            |  "accountBlockingCode": "00",
-            |  "clientBlockingCode": "00",
-            |  "currentInvestmentMonth": {
-            |    "investmentRemaining": "15.50",
-            |    "investmentLimit": "50.00",
-            |    "endDate": "2018-02-28"
-            |  },
-            |  "terms": [
-            |     {
-            |       "termNumber":2,
-            |       "startDate":"2020-01-01",
-            |       "endDate":"2021-12-31",
-            |       "bonusEstimate":"67.00",
-            |       "bonusPaid":"0.00"
-            |    },
-            |    {
-            |       "termNumber":1,
-            |       "startDate":"2018-01-01",
-            |       "endDate":"2019-12-31",
-            |       "bonusEstimate":"123.45",
-            |       "bonusPaid":"123.45"
-            |    }
-            |}
-          """.stripMargin)
-
-        mockGetAccountResponse(needsEscapingGetAccountUrl)(Some(HttpResponse(200, Some(json))))
+        mockGetAccountResponse(needsEscapingGetAccountUrl)(Some(HttpResponse(200, Some(nsiAccountJson))))
 
         val result = await(proxyConnector.getAccount(nino, needsEscapingSystemId, needsEscapingCorrelationId).value)
 
-        result shouldBe Right(Some(Account(
-          YearMonth.of(2018, 1),
-          "AC01",
-          isClosed = false,
-          Blocking(false),
-          200.34,
-          34.50,
-          15.50,
-          50.00,
-          LocalDate.parse("2018-02-28"),
-          List(),
-          None,
-          None)
-        ))
+        result shouldBe Right(Some(account))
       }
 
     }
