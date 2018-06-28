@@ -61,7 +61,7 @@ class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
 
   private[repo] def doAggregate(): Future[AggregationFramework.AggregationResult] = {
     collection.aggregate(
-      Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "source"))("total" -> SumAll),
+      Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"))("total" -> SumAll),
       List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total"))))
   }
 
