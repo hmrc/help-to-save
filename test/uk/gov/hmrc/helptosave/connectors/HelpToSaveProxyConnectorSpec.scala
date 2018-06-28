@@ -20,7 +20,7 @@ import java.time.{LocalDate, YearMonth}
 import java.util.UUID
 
 import org.scalatest.EitherValues
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.{JsObject, Json, Writes}
 import play.mvc.Http.Status._
 import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
 import uk.gov.hmrc.helptosave.models.account._
@@ -233,7 +233,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           |    }
           |  ]
           |}
-        """.stripMargin)
+        """.stripMargin).as[JsObject]
 
       val account = Account(
         YearMonth.of(2018, 1),
@@ -260,24 +260,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       }
 
       "throw error when there are no Terms in the json" in {
-        val json = Json.parse(
-          """
-            |{
-            | "accountNumber": "AC01",
-            |  "accountBalance": "0.00",
-            |  "accountClosedFlag": "C",
-            |  "accountBlockingCode": "T1",
-            |  "clientBlockingCode": "client blocking test",
-            |  "accountClosureDate": "2018-04-09",
-            |  "accountClosingBalance": "10.11",
-            |  "currentInvestmentMonth": {
-            |    "endDate": "2018-04-30",
-            |    "investmentRemaining": "12.34",
-            |    "investmentLimit": "150.42"
-            |  },
-            |  "terms": []
-            |}
-          """.stripMargin)
+        val json = nsiAccountJson + ("terms" -> Json.arr())
 
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
         mockPagerDutyAlert("Could not parse JSON in the getAccount response")
@@ -288,31 +271,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
-        val json = Json.parse(
-          // invalid because required field bonusPaid is omitted from first term
-          """
-            |{
-            |  "accountBalance": "123.45",
-            |  "currentInvestmentMonth": {
-            |    "investmentRemaining": "15.50",
-            |    "investmentLimit": "50.00"
-            |  },
-            |  "terms": [
-            |     {
-            |       "termNumber":1,
-            |       "startDate":"2018-01-01",
-            |       "endDate":"2019-12-31",
-            |       "bonusEstimate":"90.99"
-            |    },
-            |    {
-            |       "termNumber":2,
-            |       "startDate":"2020-01-01",
-            |       "endDate":"2021-12-31",
-            |       "bonusEstimate":"12.00",
-            |       "bonusPaid":"00.00"
-            |    }
-            |  ]
-            |}""".stripMargin)
+        val json = nsiAccountJson - "accountBalance"
 
         mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(json))))
         mockPagerDutyAlert("Could not parse JSON in the getAccount response")
