@@ -2,8 +2,8 @@
 
 GET  /eligibility-check           @uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck()
 GET  /enrolment-status            @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getEnrolmentStatus()
-GET  /set-itmp-flag               @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag()
-GET  /store-email                 @uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String)
+PUT  /set-itmp-flag               @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag()
+POST /store-email                 @uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String)
 GET  /get-email                   @uk.gov.hmrc.helptosave.controllers.EmailStoreController.get()
 GET  /account-create-allowed      @uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()
 GET  /:nino/account               @uk.gov.hmrc.helptosave.controllers.AccountController.getAccount(nino: String, systemId: String, correlationId: Option[String])
