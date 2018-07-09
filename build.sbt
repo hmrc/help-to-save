@@ -31,7 +31,6 @@ val dependencies = Seq(
 def testDependencies(scope: String = "test,it") = Seq(
   "uk.gov.hmrc" %% "hmrctest" % "3.0.0" % scope,
   "org.scalatest" %% "scalatest" % "3.0.5" % scope,
-  "org.pegdown" % "pegdown" % "1.6.0" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "org.scalamock" %% "scalamock" % "4.1.0" % scope,
   "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
