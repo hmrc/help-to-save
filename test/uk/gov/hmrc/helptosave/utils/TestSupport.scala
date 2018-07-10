@@ -18,7 +18,8 @@ package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
 
-import com.codahale.metrics.{Counter, Timer}
+import akka.actor.ActorRef
+import com.codahale.metrics.{Counter, Gauge, Timer}
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import com.typesafe.config.ConfigFactory
 import uk.gov.hmrc.smartstub._
@@ -76,6 +77,9 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
     override def timer(name: String): Timer = new Timer()
 
     override def counter(name: String): Counter = new Counter()
+
+    override def registerGauge[A](name: String, gauge: Gauge[A]): Gauge[A] = gauge
+
   }
 
   private val hmrcGenerator: Generator = new Generator()
