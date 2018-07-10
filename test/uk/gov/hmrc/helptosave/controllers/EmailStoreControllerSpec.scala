@@ -24,6 +24,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, Retrievals}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
@@ -50,28 +52,45 @@ class EmailStoreControllerSpec extends AuthSupport {
     val email = "email"
     val encodedEmail = new String(Base64.getEncoder.encode(email.getBytes()))
 
-      def store(email: String): Future[Result] =
-        controller.store(email)(FakeRequest())
+      def store(email: String, nino: Option[String]): Future[Result] =
+        controller.store(email, nino)(FakeRequest())
 
     "handling requests to store emails" must {
 
-      "return a HTTP 200 if the email is successfully stored" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-        mockStore(email, nino)(Right(()))
-        status(store(encodedEmail)) shouldBe 200
+      "return a HTTP 200 if the email is successfully stored with a GG login" in {
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(GGCredId("")))
+          mockAuth(EmptyPredicate, Retrievals.nino)(Right(Some(nino)))
+          mockStore(email, nino)(Right(()))
+        }
+
+        status(store(encodedEmail, None)) shouldBe 200
+      }
+
+      "return a HTTP 200 if the email is successfully stored with a privileged login" in {
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(PAClientId("")))
+          mockStore(email, nino)(Right(()))
+        }
+
+        status(store(encodedEmail, Some(nino))) shouldBe 200
       }
 
       "return a HTTP 500" when {
 
         "the email cannot be decoded" in {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          status(store("not base 64 encoded")) shouldBe 500
+          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(PAClientId("")))
+
+          status(store("not base 64 encoded", Some(nino))) shouldBe 500
         }
 
         "the email is not successfully stored" in {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-          mockStore(email, nino)(Left(""))
-          status(store(encodedEmail)) shouldBe 500
+          inSequence {
+            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(PAClientId("")))
+            mockStore(email, nino)(Left(""))
+          }
+
+          status(store(encodedEmail, Some(nino))) shouldBe 500
         }
       }
 
@@ -84,13 +103,13 @@ class EmailStoreControllerSpec extends AuthSupport {
         def get(): Future[Result] = controller.get()(FakeRequest())
 
       "get the email from the email store" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Right(None))
         await(get())
       }
 
       "return an OK with the email if the email exists" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Right(Some(email)))
 
         val result = get()
@@ -105,7 +124,7 @@ class EmailStoreControllerSpec extends AuthSupport {
       }
 
       "return an OK with empty JSON if the email does not exist" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Right(None))
 
         val result = get()
@@ -114,7 +133,7 @@ class EmailStoreControllerSpec extends AuthSupport {
       }
 
       "return a HTTP 500 if there is an error getting from the email store" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Left("oh no"))
 
         val result = get()

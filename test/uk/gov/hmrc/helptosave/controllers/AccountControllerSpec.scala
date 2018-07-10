@@ -25,6 +25,7 @@ import org.scalamock.function.MockFunction5
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, _}
+import uk.gov.hmrc.auth.core.retrieve.Retrievals
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
 import uk.gov.hmrc.helptosave.models.account.{Account, Blocking}
@@ -65,7 +66,7 @@ class AccountControllerSpec extends AuthSupport {
 
       "handle success responses" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
           mockGetAccount(nino, systemId, None)(Right(Some(account)))
         }
 
@@ -75,7 +76,7 @@ class AccountControllerSpec extends AuthSupport {
       }
 
       "return a 403 (FORBIDDEN) if the NINO in the URL doesn't match the NINO retrieved from auth" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getAccount("BE123456C", systemId, None)(fakeRequest)
         status(result) shouldBe 403
@@ -83,7 +84,7 @@ class AccountControllerSpec extends AuthSupport {
 
       "return a 404 if an account does not exist for the NINO" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
           mockGetAccount(nino, systemId, None)(Right(None))
         }
 
@@ -92,7 +93,7 @@ class AccountControllerSpec extends AuthSupport {
       }
 
       "return a 400 if the NINO is not valid" in {
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getAccount("nino", systemId, None)(fakeRequest)
         status(result) shouldBe 400
@@ -100,7 +101,7 @@ class AccountControllerSpec extends AuthSupport {
 
       "handle errors returned by the connector" in {
         inSequence {
-          mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
           mockGetAccount(nino, systemId, None)(Left("some error"))
         }
 

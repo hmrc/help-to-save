@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import org.scalamock.handlers.CallHandler4
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve._
@@ -32,19 +33,10 @@ trait AuthSupport extends TestSupport {
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
-  def mockAuthResultWithFail(predicate: Predicate)(ex: Throwable): Unit =
-    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(predicate, *, *, *)
-      .returning(Future.failed(ex))
+  def mockAuth[A](predicate: Predicate, retrieval: Retrieval[A])(result: Either[Exception, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
+    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(predicate, retrieval, *, *)
+      .returning(result.fold(e ⇒ Future.failed[A](e), r ⇒ Future.successful(r)))
 
-  def mockAuthResultWithSuccess(predicate: Predicate)(result: Option[String]) =
-    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[Option[String]])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(predicate, Retrievals.nino, *, *)
-      .returning(Future.successful(result))
-
-  def mockAuthResultNoRetrievals(predicate: Predicate) =
-    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[_])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(predicate, EmptyRetrieval, *, *)
-      .returning(Future.successful(()))
 }
 

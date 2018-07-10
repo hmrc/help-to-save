@@ -20,73 +20,164 @@ import play.api.http.Status
 import play.api.mvc.Results.Ok
 import play.api.test.FakeRequest
 import uk.gov.hmrc.auth.core.AuthorisationException.fromString
+import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
+import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class HelpToSaveAuthSpec extends AuthSupport {
 
   val htsAuth = new HelpToSaveAuth(mockAuthConnector)
 
-  private def callAuth = htsAuth.ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
-    Future.successful(Ok("authSuccess"))
-  }
+  "HelpToSaveAuth" when {
 
-  private def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { implicit request ⇒
-    Future.successful(Ok("authSuccess"))
-  }
+    "handling ggAuthorisedWithNINO" must {
 
-  private def mockAuthWith(error: String) = mockAuthResultWithFail(AuthWithCL200)(fromString(error))
+        def callAuth = htsAuth.ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
+          Future.successful(Ok("authSuccess"))
+        }
 
-  "HelpToSaveAuth" should {
+      "return after successful authentication" in {
 
-    "return after successful authentication" in {
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
 
-      mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
-
-      val result = Await.result(callAuth(FakeRequest()), 5.seconds)
-      status(result) shouldBe Status.OK
-    }
-
-    "return a forbidden if nino is not found" in {
-      mockAuthResultWithSuccess(AuthWithCL200)(None)
-
-      val result = Await.result(callAuth(FakeRequest()), 5.seconds)
-      status(result) shouldBe Status.FORBIDDEN
-    }
-
-    "handle various auth related exceptions and throw an error" in {
-
-      val exceptions = List(
-        "InsufficientConfidenceLevel" → Status.FORBIDDEN,
-        "InsufficientEnrolments" → Status.FORBIDDEN,
-        "UnsupportedAffinityGroup" → Status.FORBIDDEN,
-        "UnsupportedCredentialRole" → Status.FORBIDDEN,
-        "UnsupportedAuthProvider" → Status.FORBIDDEN,
-        "BearerTokenExpired" → Status.UNAUTHORIZED,
-        "MissingBearerToken" → Status.UNAUTHORIZED,
-        "InvalidBearerToken" → Status.UNAUTHORIZED,
-        "SessionRecordNotFound" → Status.UNAUTHORIZED,
-        "IncorrectCredentialStrength" → Status.FORBIDDEN,
-        "unknown-blah" → Status.INTERNAL_SERVER_ERROR)
-
-      exceptions.foreach {
-        case (error, expectedStatus) ⇒
-          mockAuthWith(error)
-          val result = callAuth(FakeRequest())
-          status(result) shouldBe expectedStatus
-      }
-    }
-
-    "authorised() with no retrievals and multiple providers" must {
-
-      "return after successful auth" in {
-        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
-
-        val result = Await.result(callAuthNoRetrievals(FakeRequest()), 5.seconds)
+        val result = callAuth(FakeRequest())
         status(result) shouldBe Status.OK
       }
+
+      "return a forbidden if nino is not found" in {
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(None))
+
+        val result = callAuth(FakeRequest())
+        status(result) shouldBe Status.FORBIDDEN
+      }
+
+      "handle various auth related exceptions and throw an error" in {
+          def mockAuthWith(error: String): Unit = mockAuth(AuthWithCL200, Retrievals.nino)(Left(fromString(error)))
+
+        val exceptions = List(
+          "InsufficientConfidenceLevel" → Status.FORBIDDEN,
+          "InsufficientEnrolments" → Status.FORBIDDEN,
+          "UnsupportedAffinityGroup" → Status.FORBIDDEN,
+          "UnsupportedCredentialRole" → Status.FORBIDDEN,
+          "UnsupportedAuthProvider" → Status.FORBIDDEN,
+          "BearerTokenExpired" → Status.UNAUTHORIZED,
+          "MissingBearerToken" → Status.UNAUTHORIZED,
+          "InvalidBearerToken" → Status.UNAUTHORIZED,
+          "SessionRecordNotFound" → Status.UNAUTHORIZED,
+          "IncorrectCredentialStrength" → Status.FORBIDDEN,
+          "unknown-blah" → Status.INTERNAL_SERVER_ERROR)
+
+        exceptions.foreach {
+          case (error, expectedStatus) ⇒
+            mockAuthWith(error)
+            val result = callAuth(FakeRequest())
+            status(result) shouldBe expectedStatus
+        }
+      }
     }
+
+    "handling ggOrPrivilegedAuthorised" must {
+
+        def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { implicit request ⇒
+          Future.successful(Ok("authSuccess"))
+        }
+
+      "return after successful auth" in {
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+
+        val result = callAuthNoRetrievals(FakeRequest())
+        status(result) shouldBe Status.OK
+      }
+
+    }
+
+    "handling ggOrPrivilegedAuthorisedWithNINO" when {
+
+        def callAuth(nino: Option[String]) = htsAuth.ggOrPrivilegedAuthorisedWithNINO(nino) { implicit request ⇒ _ ⇒
+          Future.successful(Ok("authSuccess"))
+        }
+
+      "handling GG requests" when {
+
+        val ggCredentials = GGCredId("")
+
+        "retrieve a NINO and return successfully if the given NINO and retrieved NINO match" in {
+          inSequence {
+            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(ggCredentials))
+            mockAuth(EmptyPredicate, Retrievals.nino)(Right(Some("nino")))
+          }
+
+          status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.OK
+        }
+
+        "retrieve a NINO and return successfully if a NINO is not given and a NINO is successfully retrieved" in {
+          inSequence {
+            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(ggCredentials))
+            mockAuth(EmptyPredicate, Retrievals.nino)(Right(Some("nino")))
+          }
+
+          status(callAuth(None)(FakeRequest())) shouldBe Status.OK
+        }
+
+        "retrieve a NINO and return a Forbidden if the given NINO and the retrieved NINO do not match" in {
+          inSequence {
+            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(ggCredentials))
+            mockAuth(EmptyPredicate, Retrievals.nino)(Right(Some("other-nino")))
+          }
+
+          status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
+        }
+
+        "return a Forbidden if a NINO could not be found and a NINO was given" in {
+          inSequence {
+            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(ggCredentials))
+            mockAuth(EmptyPredicate, Retrievals.nino)(Right(None))
+          }
+
+          status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
+        }
+
+        "return a Forbidden if a NINO could not be found and a NINO was not given" in {
+          inSequence {
+            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(ggCredentials))
+            mockAuth(EmptyPredicate, Retrievals.nino)(Right(None))
+          }
+
+          status(callAuth(None)(FakeRequest())) shouldBe Status.FORBIDDEN
+        }
+      }
+
+      "handling PrivilegedApplication requests" must {
+
+        val privilegedCredentials = PAClientId("")
+
+        "return a BadRequest if no NINO is given" in {
+          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(privilegedCredentials))
+          status(callAuth(None)(FakeRequest())) shouldBe Status.BAD_REQUEST
+        }
+
+        "return successfully if a NINO is given" in {
+          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(privilegedCredentials))
+          status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.OK
+        }
+
+      }
+
+      "handling requests from other AuthProviders" must {
+
+        "return a Forbidden" in {
+          List[LegacyCredentials](VerifyPid(""), OneTimeLogin).foreach{ cred ⇒
+            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(cred))
+            status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
+          }
+
+        }
+
+      }
+
+    }
+
   }
 }
