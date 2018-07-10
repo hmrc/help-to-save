@@ -25,6 +25,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK}
+import uk.gov.hmrc.auth.core.retrieve.{EmptyRetrieval, Retrievals}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
@@ -106,7 +107,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
-          mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
@@ -126,7 +127,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
         inSequence {
-          mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Left("error!"))
           mockUserCapServiceUpdate(Right(()))
@@ -139,7 +140,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
         inSequence {
-          mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
@@ -158,7 +159,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       }
 
       "return bad request response if the request body is not a valid CreateAccountRequest json" in new TestApparatus {
-        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         val requestBody = Json.parse(createAccountJson("\"123456\""))
         val result = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
@@ -166,7 +167,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       }
 
       "return bad request response if there is no json the in the request body" in new TestApparatus {
-        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         val result = controller.createAccount()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
@@ -174,7 +175,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "handle 409 response from proxy" in new TestApparatus {
         inSequence {
-          mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
@@ -194,7 +195,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     "update email" must {
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
-        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         mockUpdateEmail(validNSIUserInfo)(HttpResponse(OK))
 
         val result = controller.updateEmail()(FakeRequest().withJsonBody(validUserInfoPayload))
@@ -203,7 +204,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       }
 
       "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
-        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         val requestBody = Json.parse(userInfoJson("\"123456\""))
         val result = controller.updateEmail()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
@@ -211,7 +212,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       }
 
       "return bad request response if there is no json the in the request body" in new TestApparatus {
-        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         val result = controller.updateEmail()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
@@ -226,7 +227,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           controller.checkEligibility(nino)(FakeRequest())
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
-        mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
 
         val result = doRequest(controller)
@@ -235,7 +236,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
-          mockAuthResultNoRetrievals(GGAndPrivilegedProviders)
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           val eligibility = EligibilityCheckResult("x", 0, "y", 0)
           mockEligibilityCheckerService(nino)(Right(eligibility))
 

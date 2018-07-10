@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import cats.instances.string._
+import cats.syntax.eq._
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.Retrievals
+import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, WithMdcExecutionContext, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
@@ -63,6 +65,44 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
     Action.async { implicit request ⇒
       authorised(GGAndPrivilegedProviders) {
         action(request)
+      }.recover {
+        handleFailure()
+      }
+    }
+
+  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNino): Action[AnyContent] =
+    Action.async { implicit request ⇒
+      authorised(GGAndPrivilegedProviders).retrieve(Retrievals.authProviderId) {
+        case GGCredId(_) ⇒
+          authorised().retrieve(Retrievals.nino) { retrievedNINO ⇒
+            (nino, retrievedNINO) match {
+              case (Some(given), Some(retrieved)) ⇒
+                if (given === retrieved) {
+                  action(request)(given)
+                } else {
+                  logger.warn("Given NINO did not match retrieved NINO")
+                  toFuture(Forbidden)
+                }
+
+              case (None, Some(retrieved)) ⇒
+                action(request)(retrieved)
+
+              case (_, None) ⇒
+                logger.warn("Could not retrieve NINO for GG session")
+                Forbidden
+            }
+          }
+
+        case PAClientId(_) ⇒
+          nino.fold[Future[Result]]{
+            logger.warn("NINO not given for privileged request")
+            BadRequest
+          }(n ⇒ action(request)(n))
+
+        case other ⇒
+          logger.warn(s"Recevied request from unsupported authProvider: ${other.getClass.getSimpleName}")
+          toFuture(Forbidden)
+
       }.recover {
         handleFailure()
       }

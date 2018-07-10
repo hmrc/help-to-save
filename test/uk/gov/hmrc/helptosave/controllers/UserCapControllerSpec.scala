@@ -23,6 +23,7 @@ import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
+import uk.gov.hmrc.auth.core.retrieve.Retrievals
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.services.UserCapService
@@ -47,7 +48,7 @@ class UserCapControllerSpec extends AuthSupport {
           .expects(*)
           .returning(toFuture(UserCapResponse()))
 
-        mockAuthResultWithSuccess(AuthWithCL200)(mockedNinoRetrieval)
+        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         val result = controller.isAccountCreateAllowed()(FakeRequest())
 
         status(result) shouldBe OK
