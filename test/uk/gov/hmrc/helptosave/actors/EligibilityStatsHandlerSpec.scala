@@ -22,8 +22,6 @@ import uk.gov.hmrc.helptosave.utils.TestSupport
 
 class EligibilityStatsHandlerSpec extends TestSupport with Matchers {
 
-  val mockLogger = mock[play.api.Logger]
-
   val handler = new EligibilityStatsHandlerImpl()
 
   "The EligibilityStatsHandler" when {
