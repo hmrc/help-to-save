@@ -86,6 +86,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
   "The HelpToSaveProxyConnector" when {
     "creating account" must {
+
+      val source = "source"
+
       "handle 201 response from the help-to-save-proxy" in {
 
         mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(CREATED)))

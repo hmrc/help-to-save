@@ -126,7 +126,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
     val jsonCheckResponse =
-      s"""{
+      """{
          |"result" : "eligible",
          |"resultCode" : 1,
          |"reason" : "tax credits",
@@ -135,7 +135,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
        """.stripMargin
 
     val jsonCheckResponseReasonCode4 =
-      s"""{
+      """{
          |"result" : "eligible",
          |"resultCode" : 4,
          |"reason" : "tax credits",
