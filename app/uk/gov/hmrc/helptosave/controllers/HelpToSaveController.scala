@@ -22,10 +22,11 @@ import com.google.inject.Inject
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
-import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo}
+import uk.gov.hmrc.helptosave.models.{AccountCreated, ErrorResponse, NSIUserInfo}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.{HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
@@ -38,7 +39,8 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
                                       proxyConnector:             HelpToSaveProxyConnector,
                                       userCapService:             UserCapService,
                                       val helpToSaveService:      HelpToSaveService,
-                                      override val authConnector: AuthConnector)(
+                                      override val authConnector: AuthConnector,
+                                      auditor:                    HTSAuditor)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {
@@ -50,7 +52,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
       request.body.asJson.map(_.validate[CreateAccountRequest]) match {
         case Some(JsSuccess(createAccountRequest, _)) ⇒
           val userInfo = createAccountRequest.userInfo
-          proxyConnector.createAccount(userInfo, createAccountRequest.source).map { response ⇒
+          proxyConnector.createAccount(userInfo).map { response ⇒
             if (response.status === CREATED || response.status === CONFLICT) {
               enrolUser(createAccountRequest).value.onComplete {
                 case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)
@@ -60,9 +62,11 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
             }
 
             if (response.status === CREATED) {
+              auditor.sendEvent(AccountCreated(userInfo, createAccountRequest.source), userInfo.nino)
+
               userCapService.update().onComplete {
-                case Success(_) ⇒ logger.debug("Successfully updated user cap counts after DE account created", userInfo.nino, additionalParams)
-                case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after DE account created: ${e.getMessage}", userInfo.nino, additionalParams)
+                case Success(_) ⇒ logger.debug("Successfully updated user cap counts after account creation", userInfo.nino, additionalParams)
+                case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after account creation: ${e.getMessage}", userInfo.nino, additionalParams)
               }
             }
             Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))

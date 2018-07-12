@@ -26,10 +26,11 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK}
 import uk.gov.hmrc.auth.core.retrieve.{EmptyRetrieval, Retrievals}
+import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
-import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, NSIUserInfo}
+import uk.gov.hmrc.helptosave.models.{AccountCreated, EligibilityCheckResult, HTSEvent, NSIUserInfo}
 import uk.gov.hmrc.helptosave.services.{HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
@@ -48,11 +49,18 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     val userCapService = mock[UserCapService]
 
-    val controller = new HelpToSaveController(enrolmentStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector)
+    val mockAuditor = mock[HTSAuditor]
 
-    def mockCreateAccount(expectedPayload: NSIUserInfo, source: String)(response: HttpResponse) =
-      (proxyConnector.createAccount(_: NSIUserInfo, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(expectedPayload, source, *, *)
+    val controller = new HelpToSaveController(enrolmentStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector, mockAuditor)
+
+    def mockSendAuditEvent(event: HTSEvent, nino: String) =
+      (mockAuditor.sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
+        .expects(event, nino, *)
+        .returning(())
+
+    def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
+      (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
     def mockUpdateEmail(expectedPayload: NSIUserInfo)(response: HttpResponse) =
@@ -72,7 +80,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         .returning(EitherT.fromEither[Future](result))
   }
 
-  "The HelpToSaveNonDigitalController" when {
+  "The HelpToSaveController" when {
 
       def userInfoJson(dobValue: String) =
         s"""{
@@ -108,12 +116,13 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CREATED))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital"), "nino")
           }
         }
 
@@ -128,9 +137,12 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CREATED))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Left("error!"))
-          mockUserCapServiceUpdate(Right(()))
+          inAnyOrder {
+            mockUserCapServiceUpdate(Right(()))
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital"), "nino")
+          }
         }
 
         val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
@@ -141,12 +153,13 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CREATED))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Left(""))
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital"), "nino")
           }
         }
 
@@ -176,7 +189,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "handle 409 response from proxy" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CONFLICT))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))

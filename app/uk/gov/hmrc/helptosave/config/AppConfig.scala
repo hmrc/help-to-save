@@ -39,8 +39,6 @@ class AppConfig @Inject() (override val runModeConfiguration: Configuration, val
 
   val correlationIdHeaderName: String = getString("microservice.correlationIdHeaderName")
 
-  val clientIdHeaderName: String = getString("microservice.clientIdHeaderName")
-
   val isUCThresholdEnabled: Boolean = getBoolean("uc-threshold.enabled")
 
   val thresholdAmount: Double = runModeConfiguration.underlying.get[Double]("uc-threshold.threshold-amount").value

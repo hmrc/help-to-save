@@ -44,7 +44,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[HelpToSaveProxyConnectorImpl])
 trait HelpToSaveProxyConnector {
 
-  def createAccount(userInfo: NSIUserInfo, source: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
   def updateEmail(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
@@ -73,9 +73,9 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              WSHttp,
 
   val noAccountErrorCode: String = appConfig.runModeConfiguration.underlying.getString("nsi.no-account-error-message-id")
 
-  override def createAccount(userInfo: NSIUserInfo, source: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
 
-    http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo, Map(appConfig.clientIdHeaderName → source))
+    http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
         case e ⇒
           logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}",

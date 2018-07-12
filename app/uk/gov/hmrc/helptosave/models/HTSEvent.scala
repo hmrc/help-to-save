@@ -65,3 +65,30 @@ case class EligibilityCheckEvent(nino:              NINO,
     case None                               ⇒ Map.empty[String, String]
   }
 }
+
+case class AccountCreated(userInfo: NSIUserInfo, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
+
+  val value: DataEvent = HTSEvent(
+    appConfig.appName,
+    "AccountCreated",
+    Map[String, String](
+      "forename" → userInfo.forename,
+      "surname" → userInfo.surname,
+      "dateOfBirth" → userInfo.dateOfBirth.toString,
+      "nino" → userInfo.nino,
+      "address1" → userInfo.contactDetails.address1,
+      "address2" → userInfo.contactDetails.address2,
+      "address3" → userInfo.contactDetails.address3.fold("")(identity),
+      "address4" → userInfo.contactDetails.address4.fold("")(identity),
+      "address5" → userInfo.contactDetails.address5.fold("")(identity),
+      "postcode" → userInfo.contactDetails.postcode,
+      "countryCode" → userInfo.contactDetails.countryCode.fold("")(identity),
+      "email" → userInfo.contactDetails.email.fold("")(identity),
+      "phoneNumber" → userInfo.contactDetails.phoneNumber.fold("")(identity),
+      "communicationPreference" → userInfo.contactDetails.communicationPreference,
+      "registrationChannel" → userInfo.registrationChannel,
+      "source" → source
+    )
+  )
+}
+
