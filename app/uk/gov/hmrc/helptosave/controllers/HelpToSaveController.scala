@@ -46,10 +46,11 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
   def createAccount(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒
       val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
+
       request.body.asJson.map(_.validate[CreateAccountRequest]) match {
         case Some(JsSuccess(createAccountRequest, _)) ⇒
           val userInfo = createAccountRequest.userInfo
-          proxyConnector.createAccount(userInfo).map { response ⇒
+          proxyConnector.createAccount(userInfo, createAccountRequest.source).map { response ⇒
             if (response.status === CREATED || response.status === CONFLICT) {
               enrolUser(createAccountRequest).value.onComplete {
                 case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)

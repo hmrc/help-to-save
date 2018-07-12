@@ -50,9 +50,9 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     val controller = new HelpToSaveController(enrolmentStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector)
 
-    def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
-      (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(expectedPayload, *, *)
+    def mockCreateAccount(expectedPayload: NSIUserInfo, source: String)(response: HttpResponse) =
+      (proxyConnector.createAccount(_: NSIUserInfo, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(expectedPayload, source, *, *)
         .returning(toFuture(response))
 
     def mockUpdateEmail(expectedPayload: NSIUserInfo)(response: HttpResponse) =
@@ -108,7 +108,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
@@ -128,7 +128,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Left("error!"))
           mockUserCapServiceUpdate(Right(()))
         }
@@ -141,7 +141,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CREATED))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
@@ -176,7 +176,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "handle 409 response from proxy" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
+          mockCreateAccount(validNSIUserInfo, "Digital")(HttpResponse(CONFLICT))
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))

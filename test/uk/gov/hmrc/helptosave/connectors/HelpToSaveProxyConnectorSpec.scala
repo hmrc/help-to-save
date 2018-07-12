@@ -49,9 +49,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       "regChannel"
     )
 
-  private def mockCreateAccountResponse(userInfo: NSIUserInfo)(response: Future[HttpResponse]) =
+  private def mockCreateAccountResponse(userInfo: NSIUserInfo, source: String)(response: Future[HttpResponse]) =
     (mockHttp.post(_: String, _: NSIUserInfo, _: Map[String, String])(_: Writes[NSIUserInfo], _: HeaderCarrier, _: ExecutionContext))
-      .expects(createAccountURL, userInfo, Map.empty[String, String], *, *, *)
+      .expects(createAccountURL, userInfo, Map("X-Client-ID" → source), *, *, *)
       .returning(response)
 
   private def mockUpdateEmailResponse(userInfo: NSIUserInfo)(response: Future[HttpResponse]) =
@@ -59,9 +59,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       .expects(updateEmailURL, userInfo, Map.empty[String, String], *, *, *)
       .returning(response)
 
-  private def mockFailCreateAccountResponse(userInfo: NSIUserInfo)(ex: Exception) =
+  private def mockFailCreateAccountResponse(userInfo: NSIUserInfo, source: String)(ex: Exception) =
     (mockHttp.post(_: String, _: NSIUserInfo, _: Map[String, String])(_: Writes[NSIUserInfo], _: HeaderCarrier, _: ExecutionContext))
-      .expects(createAccountURL, userInfo, Map.empty[String, String], *, *, *)
+      .expects(createAccountURL, userInfo, Map("X-Client-ID" → source), *, *, *)
       .returning(Future.failed(ex))
 
   private def mockUCClaimantCheck(url: String)(response: Option[HttpResponse]) =
@@ -86,34 +86,37 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
   "The HelpToSaveProxyConnector" when {
     "creating account" must {
+
+      val source = "source"
+
       "handle 201 response from the help-to-save-proxy" in {
 
-        mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(CREATED)))
-        val result = await(proxyConnector.createAccount(userInfo))
+        mockCreateAccountResponse(userInfo, source)(toFuture(HttpResponse(CREATED)))
+        val result = await(proxyConnector.createAccount(userInfo, source))
 
         result.status shouldBe CREATED
       }
 
       "handle 409 response from the help-to-save-proxy" in {
 
-        mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(CONFLICT)))
-        val result = await(proxyConnector.createAccount(userInfo))
+        mockCreateAccountResponse(userInfo, source)(toFuture(HttpResponse(CONFLICT)))
+        val result = await(proxyConnector.createAccount(userInfo, source))
 
         result.status shouldBe CONFLICT
       }
 
       "handle bad_request response from frontend" in {
 
-        mockCreateAccountResponse(userInfo)(toFuture(HttpResponse(BAD_REQUEST)))
-        val result = await(proxyConnector.createAccount(userInfo))
+        mockCreateAccountResponse(userInfo, source)(toFuture(HttpResponse(BAD_REQUEST)))
+        val result = await(proxyConnector.createAccount(userInfo, source))
 
         result.status shouldBe BAD_REQUEST
       }
 
       "handle unexpected errors" in {
 
-        mockFailCreateAccountResponse(userInfo)(new RuntimeException("boom"))
-        val result = await(proxyConnector.createAccount(userInfo))
+        mockFailCreateAccountResponse(userInfo, source)(new RuntimeException("boom"))
+        val result = await(proxyConnector.createAccount(userInfo, source))
 
         result.status shouldBe INTERNAL_SERVER_ERROR
         Json.parse(result.body) shouldBe
