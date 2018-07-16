@@ -60,6 +60,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
   private val mockAuditConnector = mock[AuditConnector]
 
+  val threshold = 650.0
   val htsAuditor = new HTSAuditor(mockAuditConnector)
 
   val thresholdManagerProvider = new TestThresholdProvider
@@ -74,7 +75,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
     s"""
        |uc-threshold {
        |  enabled = $enabled
-       |  threshold-amount = 650.0
+       |  threshold-amount = $threshold
        |  ask-timeout = 10 seconds
        |}
     """.stripMargin
@@ -88,7 +89,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
   private def mockUCClaimantCheck(nino: String, threshold: Double)(result: Either[String, UCResponse]) = {
     (mockProxyConnector.ucClaimantCheck(_: String, _: UUID, _: Double)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(where { (ninoP, _, threshold, _, _) ⇒ ninoP === nino })
+      .expects(nino, *, threshold, *, *)
       .returning(EitherT.fromEither[Future](result))
   }
 
@@ -121,7 +122,6 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
     val nino = "AE123456C"
     val uCResponse = UCResponse(true, Some(true))
-    val threshold = 650.0
 
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
@@ -150,7 +150,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         val uCResponse = UCResponse(false, Some(false))
         forAll { result: EligibilityCheckResult ⇒
           whenever(result.resultCode =!= 4) {
-            mockUCClaimantCheck(nino, 50.0)(Right(uCResponse))
+            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
             mockAuditEligibilityEvent()
             Await.result(service.getEligibility(nino).value, 5.seconds) shouldBe Right(result)
@@ -162,7 +162,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         val uCResponse = UCResponse(true, Some(true))
         forAll { result: EligibilityCheckResult ⇒
           whenever(result.resultCode =!= 4) {
-            mockUCClaimantCheck(nino, 50.0)(Right(uCResponse))
+            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
             mockAuditEligibilityEvent()
             Await.result(service.getEligibility(nino).value, 5.seconds) shouldBe Right(result)
@@ -174,7 +174,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         val uCResponse = UCResponse(true, None)
         forAll { result: EligibilityCheckResult ⇒
           whenever(result.resultCode =!= 4) {
-            mockUCClaimantCheck(nino, 50.0)(Right(uCResponse))
+            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
             mockAuditEligibilityEvent()
             Await.result(service.getEligibility(nino).value, 5.seconds) shouldBe Right(result)
@@ -184,7 +184,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
       "handle errors when parsing invalid json" in {
         inSequence {
-          mockUCClaimantCheck(nino, 50.0)(Right(uCResponse))
+          mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
           mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("Could not parse JSON in eligibility check response")
@@ -199,7 +199,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       "return with an error" when {
         "the call fails" in {
           inSequence {
-            mockUCClaimantCheck(nino, 50.0)(Right(uCResponse))
+            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, None))
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to check eligibility")
@@ -212,7 +212,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           forAll { status: Int ⇒
             whenever(status > 0 && status =!= 200 && status =!= 404) {
               inSequence {
-                mockUCClaimantCheck(nino, 50.0)(Right(uCResponse))
+                mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
                 mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(status, None))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to eligibility check")

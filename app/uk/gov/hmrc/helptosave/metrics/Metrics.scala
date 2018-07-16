@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.metrics
 
 import cats.instances.long._
 import cats.syntax.eq._
-import com.codahale.metrics.{Counter, Timer}
+import com.codahale.metrics.{Counter, Gauge, Timer}
 import com.google.inject.{Inject, Singleton}
 
 import scala.annotation.tailrec
@@ -29,6 +29,8 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
   protected def timer(name: String): Timer = metrics.defaultRegistry.timer(name)
 
   protected def counter(name: String): Counter = metrics.defaultRegistry.counter(name)
+
+  protected def registerGauge[A](name: String, gauge: Gauge[A]): Gauge[A] = metrics.defaultRegistry.register(name, gauge)
 
   val itmpEligibilityCheckTimer: Timer = timer("backend.itmp-eligibility-check-time")
 
@@ -69,6 +71,13 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
   val getTransactionsErrorCounter: Counter = counter("backend.get-transactions-error.count")
 
   val eligibilityStatsTimer: Timer = timer("backend.eligibility-stats.time")
+
+  def registerAccountStatsGauge(reason: String, channel: String, value: () ⇒ Int): Gauge[Int] = {
+    registerGauge[Int](s"backend.create-account.$reason.$channel", new Gauge[Int] {
+      override def getValue(): Int = value()
+    })
+  }
+
 }
 
 object Metrics {

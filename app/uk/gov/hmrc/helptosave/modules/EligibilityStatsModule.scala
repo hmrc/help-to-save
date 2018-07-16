@@ -24,7 +24,8 @@ import configs.syntax._
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import play.modules.reactivemongo.ReactiveMongoComponent
-import uk.gov.hmrc.helptosave.actors.{EligibilityStatsActor, EligibilityStatsHandler, TimeCalculatorImpl}
+import uk.gov.hmrc.helptosave.actors.{EligibilityStatsActor, EligibilityStatsParser, TimeCalculatorImpl}
+import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.EligibilityStatsStore
 import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.helptosave.util.lock.Lock
@@ -36,16 +37,17 @@ class EligibilityStatsModule extends AbstractModule {
 }
 
 trait EligibilityStatsProvider {
-  def esActor: ActorRef
+  def esActor(): ActorRef
 }
 
 @Singleton
-class EligibilityStatsProviderImpl @Inject() (system:                  ActorSystem,
-                                              configuration:           Configuration,
-                                              eligibilityStatsStore:   EligibilityStatsStore,
-                                              eligibilityStatsHandler: EligibilityStatsHandler,
-                                              mongo:                   ReactiveMongoComponent,
-                                              lifecycle:               ApplicationLifecycle) extends EligibilityStatsProvider with Logging {
+class EligibilityStatsProviderImpl @Inject() (system:                 ActorSystem,
+                                              configuration:          Configuration,
+                                              eligibilityStatsStore:  EligibilityStatsStore,
+                                              eligibilityStatsParser: EligibilityStatsParser,
+                                              mongo:                  ReactiveMongoComponent,
+                                              lifecycle:              ApplicationLifecycle,
+                                              metrics:                Metrics) extends EligibilityStatsProvider with Logging {
 
   private val name = "eligibility-stats"
   private val enabled: Boolean = configuration.underlying.getBoolean(s"$name.enabled")
@@ -62,7 +64,8 @@ class EligibilityStatsProviderImpl @Inject() (system:                  ActorSyst
         configuration.underlying,
         timeCalculator,
         eligibilityStatsStore,
-        eligibilityStatsHandler
+        eligibilityStatsParser,
+        metrics
       ))
     } else {
       logger.info("Eligibility Stats behaviour not enabled: not starting EligibilityStatsActor")
