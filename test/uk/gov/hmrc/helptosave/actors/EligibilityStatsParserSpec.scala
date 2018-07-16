@@ -22,9 +22,9 @@ import uk.gov.hmrc.helptosave.utils.TestSupport
 
 class EligibilityStatsParserSpec extends TestSupport with Matchers {
 
-  val handler = new EligibilityStatsParserImpl()
+  val parser = new EligibilityStatsParserImpl()
 
-  "The EligibilityStatsHandler" when {
+  "The EligibilityParserHandler" when {
 
     "logging the eligibility stats" must {
 
@@ -70,8 +70,8 @@ class EligibilityStatsParserSpec extends TestSupport with Matchers {
             ||        |     Total|        10|
             |+--------+----------+----------+""".stripMargin
 
-        handler.createTable(TestEligibilityStats.stats) shouldBe TestEligibilityStats.table
-        handler.prettyFormatTable(TestEligibilityStats.table) shouldBe message
+        parser.createTable(TestEligibilityStats.stats) shouldBe TestEligibilityStats.table
+        parser.prettyFormatTable(TestEligibilityStats.table) shouldBe message
       }
     }
   }
