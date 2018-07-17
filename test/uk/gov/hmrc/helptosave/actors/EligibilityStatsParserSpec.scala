@@ -24,6 +24,45 @@ class EligibilityStatsParserSpec extends TestSupport with Matchers {
 
   val parser = new EligibilityStatsParserImpl()
 
+  val stats =
+    List(
+      EligibilityStats(Some(6), None, 1),
+      EligibilityStats(Some(6), Some("Stride"), 1),
+      EligibilityStats(Some(6), Some("Digital"), 1),
+      EligibilityStats(Some(6), Some("KCOM"), 1),
+      EligibilityStats(Some(7), Some("Stride"), 2),
+      EligibilityStats(Some(8), Some("KCOM"), 1),
+      EligibilityStats(None, Some("Digital"), 1),
+      EligibilityStats(Some(8), Some("BLAH BLAH"), 1),
+      EligibilityStats(None, None, 1)
+    )
+
+  val table = Map(
+    "8" -> Map(
+      "BLAH BLAH" -> 1,
+      "KCOM" -> 1,
+      "Stride" -> 0,
+      "Digital" -> 0,
+      "Unknown" -> 0),
+    "Unknown" -> Map(
+      "BLAH BLAH" -> 0,
+      "KCOM" -> 0,
+      "Stride" -> 0,
+      "Digital" -> 1,
+      "Unknown" -> 1),
+    "7" -> Map(
+      "BLAH BLAH" -> 0,
+      "KCOM" -> 0,
+      "Stride" -> 2,
+      "Digital" -> 0,
+      "Unknown" -> 0),
+    "6" -> Map(
+      "BLAH BLAH" -> 0,
+      "KCOM" -> 1,
+      "Stride" -> 1,
+      "Digital" -> 1,
+      "Unknown" -> 1))
+
   "The EligibilityParserHandler" when {
 
     "logging the eligibility stats" must {
@@ -70,8 +109,8 @@ class EligibilityStatsParserSpec extends TestSupport with Matchers {
             ||        |     Total|        10|
             |+--------+----------+----------+""".stripMargin
 
-        parser.createTable(TestEligibilityStats.stats) shouldBe TestEligibilityStats.table
-        parser.prettyFormatTable(TestEligibilityStats.table) shouldBe message
+        parser.createTable(stats) shouldBe table
+        parser.prettyFormatTable(table) shouldBe message
       }
     }
   }

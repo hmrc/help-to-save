@@ -41,6 +41,8 @@ class EligibilityStatsActor(scheduler:              Scheduler,
 
   var eligibilityStatsJob: Option[Cancellable] = None
 
+  var registeredStats: Set[(EligibilityReason, Source)] = Set.empty[(EligibilityReason, Source)]
+
   // use a thread safe map as the gauges we register with require access to this
   // table as well as this actor
   val statsTable: TrieMap[EligibilityReason, TrieMap[Source, Int]] = TrieMap.empty[EligibilityReason, TrieMap[Source, Int]]
@@ -61,12 +63,19 @@ class EligibilityStatsActor(scheduler:              Scheduler,
   def updateMetrics(table: Table): Unit = {
       def replaceSpaces(s: String) = s.replaceAllLiterally(" ", "-")
 
-    statsTable.foreach{
+    table.foreach{
       case (reason, channels) ⇒
         channels.foreach {
           case (channel, _) ⇒
-            metrics.registerAccountStatsGauge(replaceSpaces(reason), replaceSpaces(channel),
-              () ⇒ statsTable.get(reason).flatMap(_.get(channel)).getOrElse(0))
+            if (!registeredStats.contains(reason → channel)) {
+              logger.info(s"Registering gauge for (reason, channel) = ($reason, $channel) ")
+              metrics.registerAccountStatsGauge(
+                replaceSpaces(reason), replaceSpaces(channel),
+                () ⇒ statsTable.get(reason).flatMap(_.get(channel)).getOrElse(0)
+              )
+
+              registeredStats += reason → channel
+            }
         }
     }
   }
