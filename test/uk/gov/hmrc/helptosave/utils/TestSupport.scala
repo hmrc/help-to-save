@@ -78,7 +78,7 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
 
     override def counter(name: String): Counter = new Counter()
 
-    override def registerGauge[A](name: String, gauge: Gauge[A]): Gauge[A] = gauge
+    override def registerIntGauge(name: String, gauge: Gauge[Int]): Gauge[Int] = gauge
 
   }
 

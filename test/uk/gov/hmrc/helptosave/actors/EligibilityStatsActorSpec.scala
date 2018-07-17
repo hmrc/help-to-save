@@ -32,6 +32,7 @@ import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsParser.Table
 
+import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -79,21 +80,15 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
       override def counter(name: String): Counter = new Counter()
 
-      override def registerGauge[A](name: String, gauge: Gauge[A]): Gauge[A] = {
-        gauge match {
-          case g: Gauge[Long] ⇒
-            reportTo ! MockMetrics.GaugeRegistered(name, g)
-            gauge
-
-          case _ ⇒ fail()
-        }
-
+      override def registerIntGauge(name: String, gauge: Gauge[Int]): Gauge[Int] = {
+        reportTo ! MockMetrics.GaugeRegistered(name, gauge)
+        gauge
       }
 
     }
 
     object MockMetrics {
-      case class GaugeRegistered(name: String, gauge: Gauge[Long])
+      case class GaugeRegistered(name: String, gauge: Gauge[Int])
     }
 
     class TestEligibilityStatsStore(reportTo: ActorRef) extends EligibilityStatsStore {
@@ -128,35 +123,71 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
   "EligibilityStatsActor" when {
     "retrieving the stats from mongo store" must {
 
-      "handle stats returned from mongo" in new TestApparatus {
-        val gaugeNames = TestEligibilityStats.table.keys.toList.flatMap { reason ⇒
-          TestEligibilityStats.table.values.flatMap(_.keys).toList.distinct.map { channel ⇒
-            (reason, channel,
-              s"backend.create-account.${replaceSpaces(reason)}.${replaceSpaces(channel)}"
-            )
-          }
+        def checkRegisteredGauges(metricsListener: TestProbe,
+                                  expectedGauges:  List[(String, Int)]
+        ): Unit = {
+            @tailrec
+            def loop(remaining: List[(String, Int)]): Unit = remaining match {
+              case Nil ⇒
+                metricsListener.expectNoMsg()
+
+              case l ⇒
+                val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
+                val entry @ (_, count) =
+                  l.find(_._1 === registered.name).getOrElse(fail(s"Encountered unexpected gauge name: ${registered.name}"))
+                registered.gauge.getValue shouldBe count
+                loop(l.filterNot(_ === entry))
+            }
+
+          loop(expectedGauges)
         }
 
+      "handle stats returned from mongo" in new TestApparatus {
+        val stats = List(EligibilityStats(Some(1), Some("some source"), 2))
+        val table = Map("1" → Map("some source" → 2))
+
+        // trigger the process
         actor ? GetStats
 
+        // give the actor the stats
         eligibilityStatsStoreListener.expectMsg(GetStats)
-        eligibilityStatsStoreListener.reply(GetStatsResponse(TestEligibilityStats.stats))
+        eligibilityStatsStoreListener.reply(GetStatsResponse(stats))
 
-        eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.CreateTableRequestReceived(TestEligibilityStats.stats))
+        // now a conversion to a table should be requested
+        eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.CreateTableRequestReceived(stats))
 
-        val gaugesRegistered = gaugeNames.map{ _ ⇒
-          metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
-        }
+        // gauge should now be registered
+        val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
         metricsListener.expectNoMsg()
 
-        gaugesRegistered.foreach{
-          case gaugeRegistered ⇒
-            val (reason, channel, _) = gaugeNames.find(_._3 === gaugeRegistered.name).getOrElse(fail())
-            gaugeRegistered.gauge.getValue shouldBe TestEligibilityStats.table.get(reason).flatMap(_.get(channel)).getOrElse(fail())
+        registered.name shouldBe "backend.create-account.1.some-source"
+        registered.gauge.getValue() shouldBe 2
 
-        }
-        
-        eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.PrettyFormatTableRequestReceived(TestEligibilityStats.table))
+        // now the table should be pretty printed
+        eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.PrettyFormatTableRequestReceived(table))
+
+        // now check that gauges that have already been registered don't get registered again
+        val newStats = EligibilityStats(Some(2), Some("new source"), 3) :: stats
+        val newTable = Map(
+          "1" → Map("some source" → 2, "new source" → 0),
+          "2" → Map("some source" → 0, "new source" → 3)
+        )
+
+        // we won't expect "backend.create-account.1.some-source" because it has already been registered
+        val expectedGauges =
+          List(
+            ("backend.create-account.1.new-source", 0),
+            ("backend.create-account.2.some-source", 0),
+            ("backend.create-account.2.new-source", 3)
+          )
+
+        actor ? GetStats
+        eligibilityStatsStoreListener.expectMsg(GetStats)
+        eligibilityStatsStoreListener.reply(GetStatsResponse(newStats))
+        eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.CreateTableRequestReceived(newStats))
+
+        checkRegisteredGauges(metricsListener, expectedGauges)
+        eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.PrettyFormatTableRequestReceived(newTable))
 
       }
 

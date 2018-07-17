@@ -30,7 +30,7 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   protected def counter(name: String): Counter = metrics.defaultRegistry.counter(name)
 
-  protected def registerGauge[A](name: String, gauge: Gauge[A]): Gauge[A] = metrics.defaultRegistry.register(name, gauge)
+  protected def registerIntGauge(name: String, gauge: Gauge[Int]): Gauge[Int] = metrics.defaultRegistry.register(name, gauge)
 
   val itmpEligibilityCheckTimer: Timer = timer("backend.itmp-eligibility-check-time")
 
@@ -73,7 +73,7 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
   val eligibilityStatsTimer: Timer = timer("backend.eligibility-stats.time")
 
   def registerAccountStatsGauge(reason: String, channel: String, value: () ⇒ Int): Gauge[Int] = {
-    registerGauge[Int](s"backend.create-account.$reason.$channel", new Gauge[Int] {
+    registerIntGauge(s"backend.create-account.$reason.$channel", new Gauge[Int] {
       override def getValue(): Int = value()
     })
   }
