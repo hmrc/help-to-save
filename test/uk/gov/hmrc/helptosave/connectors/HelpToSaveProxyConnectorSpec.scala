@@ -401,7 +401,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
             |      "accountingDate": "2017-12-04"
             |    },
             |    {
-            |      "sequence": "1",
+            |      "sequence": "5",
             |      "amount": "50.00",
             |      "operation": "C",
             |      "description": "Debit card online deposit",
