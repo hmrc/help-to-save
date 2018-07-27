@@ -241,7 +241,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       val account = Account(
         YearMonth.of(2018, 1),
         "AC01", false,
-        Blocking(false),
+        Blocking(false, false),
         200.34,
         34.50,
         15.50,

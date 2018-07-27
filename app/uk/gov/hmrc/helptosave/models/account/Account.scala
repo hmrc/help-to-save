@@ -35,7 +35,7 @@ object BonusTerm {
   implicit val writes: Format[BonusTerm] = Json.format[BonusTerm]
 }
 
-case class Blocking(unspecified: Boolean)
+case class Blocking(unspecified: Boolean, payments: Boolean)
 
 object Blocking {
   implicit val writes: Format[Blocking] = Json.format[Blocking]
@@ -108,9 +108,15 @@ object Account extends Logging {
 
   private type ValidOrErrorString[A] = ValidatedNel[String, A]
 
-  private def nsiAccountToBlocking(nsiAccount: NsiAccount): Blocking = Blocking(
-    unspecified = nsiAccount.accountBlockingCode != "00" || nsiAccount.clientBlockingCode != "00"
-  )
+  private def nsiAccountToBlocking(nsiAccount: NsiAccount): Blocking = {
+      def isBlockedFromPredicate(predicate: String ⇒ Boolean): Boolean =
+        predicate(nsiAccount.accountBlockingCode) || predicate(nsiAccount.clientBlockingCode)
+
+    Blocking(
+      unspecified = isBlockedFromPredicate(_ =!= "00"),
+      payments    = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "11")
+    )
+  }
 
   private def nsiBonusTermToBonusTerm(nsiBonusTerm: NsiBonusTerm): BonusTerm = BonusTerm(
     bonusEstimate          = nsiBonusTerm.bonusEstimate,
