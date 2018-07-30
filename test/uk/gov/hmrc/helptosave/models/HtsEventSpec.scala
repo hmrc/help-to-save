@@ -33,7 +33,6 @@ class HtsEventSpec extends TestSupport {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.auditSource shouldBe appName
       event.value.auditType shouldBe "EligibilityResult"
-      println(s"\n\nGot ${event.value.tags}\n\n")
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
