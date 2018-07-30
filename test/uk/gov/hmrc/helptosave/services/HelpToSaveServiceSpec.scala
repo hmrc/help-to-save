@@ -153,7 +153,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
             mockAuditEligibilityEvent()
-            Await.result(service.getEligibility(nino).value, 5.seconds) shouldBe Right(result)
+            Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
           }
         }
       }
@@ -165,7 +165,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
             mockAuditEligibilityEvent()
-            Await.result(service.getEligibility(nino).value, 5.seconds) shouldBe Right(result)
+            Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
           }
         }
       }
@@ -177,7 +177,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
             mockAuditEligibilityEvent()
-            Await.result(service.getEligibility(nino).value, 5.seconds) shouldBe Right(result)
+            Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
           }
         }
       }
@@ -190,7 +190,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           mockPagerDutyAlert("Could not parse JSON in eligibility check response")
         }
 
-        Await.result(service.getEligibility(nino).value, 5.seconds) shouldBe
+        Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe
           Left("Could not parse http response JSON: /reasonCode: [error.path.missing]; /result: " +
             "[error.path.missing]; /resultCode: [error.path.missing]; /reason: [error.path.missing]. Response body was " +
             "\"{\\\"invalid\\\": \\\"foo\\\"}\"")
@@ -205,7 +205,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockPagerDutyAlert("Failed to make call to check eligibility")
           }
 
-          Await.result(service.getEligibility(nino).value, 5.seconds).isLeft shouldBe true
+          Await.result(service.getEligibility(nino, "path").value, 5.seconds).isLeft shouldBe true
         }
 
         "the call comes back with an unexpected http status" in {
@@ -218,7 +218,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
                 mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
               }
 
-              Await.result(service.getEligibility(nino).value, 5.seconds).isLeft shouldBe true
+              Await.result(service.getEligibility(nino, "path").value, 5.seconds).isLeft shouldBe true
             }
 
           }
@@ -239,7 +239,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockAuditEligibilityEvent()
           }
 
-          val result = eligibilityCheckService.getEligibility(nino).value
+          val result = eligibilityCheckService.getEligibility(nino, "path").value
           thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
           thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
 
@@ -256,7 +256,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockAuditEligibilityEvent()
           }
 
-          val result = eligibilityCheckService.getEligibility(nino).value
+          val result = eligibilityCheckService.getEligibility(nino, "path").value
           thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
           thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
 
@@ -273,7 +273,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockPagerDutyAlert("Received result code 4 from DES eligibility check")
           }
 
-          val result = eligibilityCheckService.getEligibility(nino).value
+          val result = eligibilityCheckService.getEligibility(nino, "path").value
           thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
           thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
 
@@ -290,7 +290,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
           }
 
-          val result = eligibilityCheckService.getEligibility(nino).value
+          val result = eligibilityCheckService.getEligibility(nino, "path").value
           thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
           thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
 
@@ -302,7 +302,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           val config = testConfiguration(true)
           val eligibilityCheckService = newHelpToSaveService(config)
 
-          val result = eligibilityCheckService.getEligibility(nino).value
+          val result = eligibilityCheckService.getEligibility(nino, "path").value
           thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
           thresholdManagerProvider.probe.reply(GetThresholdValueResponse(None))
 
@@ -321,7 +321,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           mockAuditEligibilityEvent()
         }
 
-        val result = eligibilityCheckService.getEligibility(nino).value
+        val result = eligibilityCheckService.getEligibility(nino, "path").value
 
         await(result) shouldBe Right(eligibilityCheckResponse)
       }

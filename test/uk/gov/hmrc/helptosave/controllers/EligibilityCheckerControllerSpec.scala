@@ -41,8 +41,8 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
       controller.eligibilityCheck()(FakeRequest())
 
     def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
-      (eligibilityService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(nino, *, *)
+      (eligibilityService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(nino, routes.EligibilityCheckController.eligibilityCheck().url, *, *)
         .returning(EitherT.fromEither[Future](result))
 
     val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector)

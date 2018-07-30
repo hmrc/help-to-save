@@ -75,8 +75,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     }
 
     def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
-      (helpToSaveService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(nino, *, *)
+      (helpToSaveService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(nino, routes.HelpToSaveController.checkEligibility(nino).url, *, *)
         .returning(EitherT.fromEither[Future](result))
   }
 

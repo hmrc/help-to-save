@@ -24,7 +24,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext}
@@ -51,7 +50,7 @@ class StrideController @Inject() (val helpToSaveService: HelpToSaveService,
   }
 
   def eligibilityCheck(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
-    checkEligibility(nino)
+    checkEligibility(nino, routes.StrideController.eligibilityCheck(nino).url)
   }
 
   def getPayePersonalDetails(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒

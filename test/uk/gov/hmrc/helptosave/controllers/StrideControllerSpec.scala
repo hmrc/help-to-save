@@ -51,8 +51,8 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
     def mockEligibilityService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
-      (helpToSaveService.getEligibility(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(nino, *, *)
+      (helpToSaveService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(nino, routes.StrideController.eligibilityCheck(nino).url, *, *)
         .returning(EitherT.fromEither[Future](result))
 
     def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =

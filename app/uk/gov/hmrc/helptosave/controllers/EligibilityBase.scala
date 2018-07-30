@@ -32,12 +32,12 @@ trait EligibilityBase extends Logging {
 
   val helpToSaveService: HelpToSaveService
 
-  def checkEligibility(nino: String)(implicit request: Request[_],
-                                     hc:          HeaderCarrier,
-                                     ec:          ExecutionContext,
-                                     transformer: LogMessageTransformer,
-                                     appConfig:   AppConfig): Future[Result] =
-    helpToSaveService.getEligibility(nino).fold(
+  def checkEligibility(nino: String, path: String)(implicit request: Request[_],
+                                                   hc:          HeaderCarrier,
+                                                   ec:          ExecutionContext,
+                                                   transformer: LogMessageTransformer,
+                                                   appConfig:   AppConfig): Future[Result] =
+    helpToSaveService.getEligibility(nino, path).fold(
       {
         e ⇒
           val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")

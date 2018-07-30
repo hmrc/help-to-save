@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.models
 
 import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.play.audit.EventKeys.Path
 
 class HtsEventSpec extends TestSupport {
 
@@ -29,48 +30,55 @@ class HtsEventSpec extends TestSupport {
     val inEligibleResult = EligibilityCheckResult("HtS account was previously created", 3, "HtS account already exists", 1)
 
     "be created with the appropriate auditSource and auditType" in {
-      val event = EligibilityCheckEvent(nino, eligibleResult, None)
+      val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.auditSource shouldBe appName
       event.value.auditType shouldBe "EligibilityResult"
+      println(s"\n\nGot ${event.value.tags}\n\n")
+      event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is eligible" in {
-      val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = true, Some(true))))
+      val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
       event.value.detail.size shouldBe 4
       event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "true") shouldBe true
       event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe true
       event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe true
+      event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is eligible" in {
-      val event = EligibilityCheckEvent(nino, eligibleResult, None)
+      val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.detail.size shouldBe 2
       event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "true") shouldBe true
       event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe false
       event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe false
+      event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "contain only the isUCClaimant param in the details but not isWithinUCThreshold" in {
-      val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)))
+      val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)), "path")
       event.value.detail.size shouldBe 3
       event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "true") shouldBe true
       event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "false") shouldBe true
+      event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is NOT eligible" in {
-      val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))))
+      val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
       event.value.detail.size shouldBe 5
       event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "false") shouldBe true
       event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe true
       event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe true
+      event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is NOT eligible" in {
-      val event = EligibilityCheckEvent(nino, inEligibleResult, None)
+      val event = EligibilityCheckEvent(nino, inEligibleResult, None, "path")
       event.value.detail.size shouldBe 3
       event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "false") shouldBe true
       event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe false
       event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe false
+      event.value.tags.get(Path) shouldBe Some("path")
     }
 
   }

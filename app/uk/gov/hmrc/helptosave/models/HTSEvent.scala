@@ -19,6 +19,7 @@ package uk.gov.hmrc.helptosave.models
 import cats.instances.int._
 import cats.syntax.eq._
 import uk.gov.hmrc.helptosave.config.AppConfig
+import uk.gov.hmrc.helptosave.controllers.routes
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
@@ -29,15 +30,18 @@ trait HTSEvent {
 }
 
 object HTSEvent {
-  def apply(appName:   String,
-            auditType: String,
-            detail:    Map[String, String])(implicit hc: HeaderCarrier): DataEvent =
-    DataEvent(appName, auditType = auditType, detail = detail, tags = hc.toAuditTags("", "N/A"))
+  def apply(appName:         String,
+            auditType:       String,
+            detail:          Map[String, String],
+            transactionName: String,
+            path:            String)(implicit hc: HeaderCarrier): DataEvent =
+    DataEvent(appName, auditType = auditType, detail = detail, tags = hc.toAuditTags(transactionName, path))
 }
 
 case class EligibilityCheckEvent(nino:              NINO,
                                  eligibilityResult: EligibilityCheckResult,
-                                 ucResponse:        Option[UCResponse])(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
+                                 ucResponse:        Option[UCResponse],
+                                 path:              String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
   val value: DataEvent = {
     val details = {
@@ -55,7 +59,7 @@ case class EligibilityCheckEvent(nino:              NINO,
       result ++ ucData(ucResponse)
     }
 
-    HTSEvent(appConfig.appName, "EligibilityResult", details)
+    HTSEvent(appConfig.appName, "EligibilityResult", details, "eligibility-result", path)
   }
 
   def ucData(ucResponse: Option[UCResponse]): Map[String, String] = ucResponse match {
@@ -68,6 +72,8 @@ case class EligibilityCheckEvent(nino:              NINO,
 
 case class AccountCreated(userInfo: NSIUserInfo, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
+  private val createAccountURL = routes.HelpToSaveController.createAccount().url
+
   val value: DataEvent = HTSEvent(
     appConfig.appName,
     "AccountCreated",
@@ -78,17 +84,19 @@ case class AccountCreated(userInfo: NSIUserInfo, source: String)(implicit hc: He
       "nino" → userInfo.nino,
       "address1" → userInfo.contactDetails.address1,
       "address2" → userInfo.contactDetails.address2,
-      "address3" → userInfo.contactDetails.address3.fold("")(identity),
-      "address4" → userInfo.contactDetails.address4.fold("")(identity),
-      "address5" → userInfo.contactDetails.address5.fold("")(identity),
+      "address3" → userInfo.contactDetails.address3.getOrElse(""),
+      "address4" → userInfo.contactDetails.address4.getOrElse(""),
+      "address5" → userInfo.contactDetails.address5.getOrElse(""),
       "postcode" → userInfo.contactDetails.postcode,
-      "countryCode" → userInfo.contactDetails.countryCode.fold("")(identity),
-      "email" → userInfo.contactDetails.email.fold("")(identity),
-      "phoneNumber" → userInfo.contactDetails.phoneNumber.fold("")(identity),
+      "countryCode" → userInfo.contactDetails.countryCode.getOrElse(""),
+      "email" → userInfo.contactDetails.email.getOrElse(""),
+      "phoneNumber" → userInfo.contactDetails.phoneNumber.getOrElse(""),
       "communicationPreference" → userInfo.contactDetails.communicationPreference,
       "registrationChannel" → userInfo.registrationChannel,
       "source" → source
-    )
+    ),
+    "account-created",
+    createAccountURL
   )
 }
 
