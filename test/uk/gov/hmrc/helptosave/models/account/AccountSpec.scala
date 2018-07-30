@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.models.account
 
 import java.time.{LocalDate, YearMonth}
 
-import cats.data.NonEmptyList
+import cats.data.{NonEmptyList, ValidatedNel}
 import cats.data.Validated.{Invalid, Valid}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
@@ -58,39 +58,35 @@ class AccountSpec extends TestSupport {
         returnedAccount shouldBe Valid(account)
       }
 
-        def testBlockingCodes(codes: List[String], test: NsiAccount ⇒ Unit) =
+        def testBlockingCodes(codes: String*)(assertion: ValidatedNel[String, Account] ⇒ Unit) =
           codes.foreach{ code ⇒
             List(
               testNsiAccount.copy(accountBlockingCode = code),
               testNsiAccount.copy(clientBlockingCode = code),
               testNsiAccount.copy(accountBlockingCode = code, clientBlockingCode = code)
             ).foreach{ nsiAccount ⇒
-              withClue(s"For NsiAccount: $nsiAccount") { test(nsiAccount) }
-            }
+                withClue(s"For NsiAccount: $nsiAccount") { assertion(Account(nsiAccount)) }
+              }
           }
 
       """return blocking.unspecified = true when accountBlockingCode or clientBlockingCode is not "00"""" in {
-        testBlockingCodes(List("11", "12", "13", "15", "30", "61", "64"), {
-          nsiAccount ⇒
-            val returnedAccount = Account(nsiAccount)
-            returnedAccount.map(_.blocked.unspecified) shouldBe Valid(true)
-        })
+        testBlockingCodes("11", "12", "13", "15", "30", "64"){
+          _.map(_.blocked.unspecified) shouldBe Valid(true)
+        }
       }
 
       """return blocking.payments = true when accountBlockingCode or clientBlockingCode is not "00" or "11""" in {
-        testBlockingCodes(List("12", "13", "15", "30", "61", "64"), {
-          nsiAccount ⇒
-            val returnedAccount = Account(nsiAccount)
-            returnedAccount shouldBe Valid(account.copy(blocked = Blocking(true, true), balance = 0))
-        })
+        testBlockingCodes("12", "13", "15", "30", "64"){
+          _ shouldBe Valid(account.copy(blocked = Blocking(true, true), balance = 0))
+        }
       }
 
       """return blocking.payments = false when accountBlockingCode or clientBlockingCode is "00" or "11"""" in {
-        testBlockingCodes(List("00", "11"), {
-          nsiAccount ⇒
-            val returnedAccount = Account(nsiAccount)
-            returnedAccount.map(_.blocked.payments) shouldBe Valid(false)
-        })
+        testBlockingCodes("00", "11"){ _.map(_.blocked.payments) shouldBe Valid(false) }
+      }
+
+      "return an error for unknown blocking codes" in {
+        testBlockingCodes("61", "abc"){ _.isInvalid shouldBe true }
       }
 
       "return an error for unknown accountClosedFlag values" in {
