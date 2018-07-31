@@ -40,6 +40,7 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
+import uk.gov.hmrc.helptosave.util.toFuture
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -67,7 +68,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
   override def getEligibility(nino: NINO, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
     for {
-      threshold ← getThresholdValue()
+      threshold ← EitherT.liftF(getThresholdValue())
       ucResponse ← EitherT.liftF(getUCDetails(nino, UUID.randomUUID(), threshold))
       result ← getEligibility(nino, ucResponse)
     } yield {
@@ -75,14 +76,13 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
       result
     }
 
-  private def getThresholdValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Double] = {
+  private def getThresholdValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Double]] = {
     if (appConfig.isUCThresholdEnabled) {
-      EitherT(
-        thresholdManagerProvider.thresholdManager.ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
-          .mapTo[GetThresholdValueResponse]
-          .map(r ⇒ Either.fromOption(r.result, "Could not get threshold value")))
+      thresholdManagerProvider.thresholdManager.ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
+        .mapTo[GetThresholdValueResponse]
+        .map(r ⇒ r.result)
     } else {
-      EitherT.pure[Future, String](appConfig.thresholdAmount)
+      Future.successful(Some(appConfig.thresholdAmount))
     }
   }
 
@@ -210,14 +210,19 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
   private def timeString(nanos: Long): String = s"(round-trip time: ${nanosToPrettyString(nanos)})"
 
-  private def getUCDetails(nino: NINO, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier,
-                                                                       ec: ExecutionContext): Future[Option[UCResponse]] =
-    helpToSaveProxyConnector.ucClaimantCheck(nino, txnId, threshold)
-      .fold({ e ⇒
-        logger.warn(s"Error while retrieving UC details: $e", nino)
-        None
-      }, Some(_)
-      )
+  private def getUCDetails(nino: NINO, txnId: UUID, threshold: Option[Double])(implicit hc: HeaderCarrier,
+                                                                               ec: ExecutionContext): Future[Option[UCResponse]] =
+    threshold.fold[Future[Option[UCResponse]]]({
+      logger.warn("call to uc claimant check will not be made as there is no threshold value present", nino)
+      None
+    })(thresholdValue ⇒
+      helpToSaveProxyConnector.ucClaimantCheck(nino, txnId, thresholdValue)
+        .fold({ e ⇒
+          logger.warn(s"Error while retrieving UC details: $e", nino)
+          None
+        }, Some(_)
+        )
+    )
 
 }
 
