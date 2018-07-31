@@ -122,13 +122,7 @@ object Transactions {
   private implicit val eqLocalDate: Eq[LocalDate] = Eq.instance(_.isEqual(_))
 
   private def sortLikeNsiWeb(transactions: Seq[ValidNsiTransaction]): Seq[ValidNsiTransaction] = {
-    transactions.sortWith { (t1, t2) ⇒
-      if (t1.accountingDate === t2.accountingDate) {
-        t1.sequence < t2.sequence
-      } else {
-        t1.accountingDate.isBefore(t2.accountingDate)
-      }
-    }
+    transactions.sortWith { (t1, t2) ⇒ t1.sequence < t2.sequence }
   }
 
   private def runningBalance(transactions: Seq[ValidNsiTransaction]): Seq[Transaction] = {

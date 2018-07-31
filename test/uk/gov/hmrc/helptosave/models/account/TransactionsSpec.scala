@@ -111,9 +111,9 @@ class TransactionsSpec extends TestSupport {
         Transactions(nsiTransactions) shouldBe Valid(expectedTransactions)
       }
 
-      "sort transactions by accountingDate then sequence" in {
+      "sort transactions by sequence number" in {
         val nsiTransactions = NsiTransactions(Seq(
-          nsiCreditTransaction.copy(sequence       = "1", accountingDate = LocalDate.parse("2018-04-10"), amount = BigDecimal(5)),
+          nsiCreditTransaction.copy(sequence       = "5", accountingDate = LocalDate.parse("2018-04-10"), amount = BigDecimal(5)),
           nsiCreditTransaction.copy(sequence       = "3", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(3)),
           nsiCreditTransaction.copy(sequence       = "4", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(4)),
           nsiDebitTransaction.copy(sequence       = "2", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(2)),
