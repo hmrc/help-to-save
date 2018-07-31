@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.models.account
 
 import java.time.{LocalDate, YearMonth}
 
-import cats.data.NonEmptyList
+import cats.data.{NonEmptyList, ValidatedNel}
 import cats.data.Validated.{Invalid, Valid}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
@@ -40,7 +40,7 @@ class AccountSpec extends TestSupport {
     accountClosingBalance  = None
   )
 
-  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31), Seq(
+  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31), Seq(
     BonusTerm(endDate                = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
     BonusTerm(endDate                = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
   ), None, None)
@@ -58,9 +58,35 @@ class AccountSpec extends TestSupport {
         returnedAccount shouldBe Valid(account)
       }
 
-      """return blocking.unspecified = true when accountBlockingCode is not "00"""" in {
-        val returnedAccount = Account(testNsiAccount.copy(accountBlockingCode = "01"))
-        returnedAccount shouldBe Valid(account.copy(blocked = Blocking(true), balance = 0))
+        def testBlockingCodes(codes: String*)(assertion: ValidatedNel[String, Account] ⇒ Unit) =
+          codes.foreach{ code ⇒
+            List(
+              testNsiAccount.copy(accountBlockingCode = code),
+              testNsiAccount.copy(clientBlockingCode = code),
+              testNsiAccount.copy(accountBlockingCode = code, clientBlockingCode = code)
+            ).foreach{ nsiAccount ⇒
+                withClue(s"For NsiAccount: $nsiAccount") { assertion(Account(nsiAccount)) }
+              }
+          }
+
+      """return blocking.unspecified = true when accountBlockingCode or clientBlockingCode is not "00"""" in {
+        testBlockingCodes("11", "12", "13", "15", "30", "64"){
+          _.map(_.blocked.unspecified) shouldBe Valid(true)
+        }
+      }
+
+      """return blocking.payments = true when accountBlockingCode or clientBlockingCode is not "00" or "11""" in {
+        testBlockingCodes("12", "13", "15", "30", "64"){
+          _ shouldBe Valid(account.copy(blocked = Blocking(true, true), balance = 0))
+        }
+      }
+
+      """return blocking.payments = false when accountBlockingCode or clientBlockingCode is "00" or "11"""" in {
+        testBlockingCodes("00", "11"){ _.map(_.blocked.payments) shouldBe Valid(false) }
+      }
+
+      "return an error for unknown blocking codes" in {
+        testBlockingCodes("61", "abc"){ _.isInvalid shouldBe true }
       }
 
       "return an error for unknown accountClosedFlag values" in {

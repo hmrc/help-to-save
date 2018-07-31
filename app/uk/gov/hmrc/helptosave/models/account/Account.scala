@@ -35,7 +35,7 @@ object BonusTerm {
   implicit val writes: Format[BonusTerm] = Json.format[BonusTerm]
 }
 
-case class Blocking(unspecified: Boolean)
+case class Blocking(unspecified: Boolean, payments: Boolean)
 
 object Blocking {
   implicit val writes: Format[Blocking] = Json.format[Blocking]
@@ -86,13 +86,15 @@ object Account extends Logging {
         Valid(YearMonth.from(firstNsiTerm.startDate))
       }
 
-    (paidInThisMonthValidation, accountClosedValidation, openedYearMonthValidation).mapN{
-      case (paidInThisMonth, accountClosed, openedYearMonth) ⇒
+    val blockingValidation: ValidOrErrorString[Blocking] = nsiAccountToBlockingValidation(nsiAccount)
+
+    (paidInThisMonthValidation, accountClosedValidation, openedYearMonthValidation, blockingValidation).mapN{
+      case (paidInThisMonth, accountClosed, openedYearMonth, blocking) ⇒
         Account(
           openedYearMonth        = openedYearMonth,
           accountNumber          = nsiAccount.accountNumber,
           isClosed               = accountClosed,
-          blocked                = nsiAccountToBlocking(nsiAccount),
+          blocked                = blocking,
           balance                = nsiAccount.accountBalance,
           paidInThisMonth        = paidInThisMonth,
           canPayInThisMonth      = nsiAccount.currentInvestmentMonth.investmentRemaining,
@@ -108,9 +110,25 @@ object Account extends Logging {
 
   private type ValidOrErrorString[A] = ValidatedNel[String, A]
 
-  private def nsiAccountToBlocking(nsiAccount: NsiAccount): Blocking = Blocking(
-    unspecified = nsiAccount.accountBlockingCode != "00" || nsiAccount.clientBlockingCode != "00"
-  )
+  private val expectedBlockingCodes: Set[String] = Set("00", "11", "12", "13", "15", "30", "64")
+
+  private def nsiAccountToBlockingValidation(nsiAccount: NsiAccount): ValidatedNel[String, Blocking] = {
+      def checkIsValidCode(code: String): ValidOrErrorString[String] =
+        if (expectedBlockingCodes.contains(code)) { Valid(code) } else { Invalid(NonEmptyList.one(s"Received unexpected blocking code: $code")) }
+
+    (checkIsValidCode(nsiAccount.accountBlockingCode), checkIsValidCode(nsiAccount.clientBlockingCode))
+      .mapN{
+        case (accountBlockingCode, clientBlockingCode) ⇒
+          def isBlockedFromPredicate(predicate: String ⇒ Boolean): Boolean =
+              predicate(accountBlockingCode) || predicate(clientBlockingCode)
+
+          Blocking(
+            unspecified = isBlockedFromPredicate(_ =!= "00"),
+            payments    = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "11")
+          )
+
+      }
+  }
 
   private def nsiBonusTermToBonusTerm(nsiBonusTerm: NsiBonusTerm): BonusTerm = BonusTerm(
     bonusEstimate          = nsiBonusTerm.bonusEstimate,
