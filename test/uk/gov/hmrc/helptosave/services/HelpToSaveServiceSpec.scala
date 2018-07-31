@@ -122,6 +122,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
     val nino = "AE123456C"
     val uCResponse = UCResponse(true, Some(true))
+    val uCUnknownThresholdResponse = UCResponse(true, None)
 
     val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
@@ -298,16 +299,39 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
         }
 
-        "stop and return an error when obtaining the threshold is enabled but the threshold manager returns None" in {
-          val config = testConfiguration(true)
-          val eligibilityCheckService = newHelpToSaveService(config)
+        "continue the eligibility check when obtaining the threshold is enabled but the threshold manager returns None and the applicant" +
+          "is eligible from a WTC perspective" in {
+            val config = testConfiguration(true)
+            val eligibilityCheckService = newHelpToSaveService(config)
 
-          val result = eligibilityCheckService.getEligibility(nino, "path").value
-          thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-          thresholdManagerProvider.probe.reply(GetThresholdValueResponse(None))
+            inSequence {
+              mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
+              mockAuditEligibilityEvent()
+            }
 
-          await(result) shouldBe Left("Could not get threshold value")
-        }
+            val result = eligibilityCheckService.getEligibility(nino, "path").value
+            thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
+            thresholdManagerProvider.probe.reply(GetThresholdValueResponse(None))
+
+            await(result) shouldBe Right(eligibilityCheckResponse)
+          }
+
+        "continue the eligibility check when obtaining the threshold is enabled but the threshold manager returns None and the applicant" +
+          "is not eligible from a WTC perspective so the user's journey ends in a technical error" in {
+            val config = testConfiguration(true)
+            val eligibilityCheckService = newHelpToSaveService(config)
+
+            inSequence {
+              mockDESEligibilityCheck(nino, None)(HttpResponse(500, Some(Json.toJson("eligibility check was inconclusive"))))
+              mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
+            }
+
+            val result = eligibilityCheckService.getEligibility(nino, "path").value
+            thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
+            thresholdManagerProvider.probe.reply(GetThresholdValueResponse(None))
+
+            await(result) shouldBe Left("Received unexpected status 500")
+          }
 
       }
 
