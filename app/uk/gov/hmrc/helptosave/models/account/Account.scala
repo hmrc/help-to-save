@@ -50,6 +50,8 @@ case class Account(openedYearMonth:        YearMonth,
                    canPayInThisMonth:      BigDecimal,
                    maximumPaidInThisMonth: BigDecimal,
                    thisMonthEndDate:       LocalDate,
+                   accountHolderName:      String,
+                   accountHolderEmail:     Option[String],
                    bonusTerms:             Seq[BonusTerm],
                    closureDate:            Option[LocalDate]  = None,
                    closingBalance:         Option[BigDecimal] = None)
@@ -100,6 +102,8 @@ object Account extends Logging {
           canPayInThisMonth      = nsiAccount.currentInvestmentMonth.investmentRemaining,
           maximumPaidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit,
           thisMonthEndDate       = nsiAccount.currentInvestmentMonth.endDate,
+          accountHolderName      = nsiAccount.clientForename + " " + nsiAccount.clientSurname,
+          accountHolderEmail     = nsiAccount.emailAddress,
           bonusTerms             = sortedNsiTerms.map(nsiBonusTermToBonusTerm),
           closureDate            = nsiAccount.accountClosureDate,
           closingBalance         = nsiAccount.accountClosingBalance
