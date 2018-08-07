@@ -49,6 +49,9 @@ case class NsiAccount(
     clientBlockingCode:     String,
     accountBalance:         BigDecimal,
     currentInvestmentMonth: NsiCurrentInvestmentMonth,
+    clientForename:         String,
+    clientSurname:          String,
+    emailAddress:           Option[String],
     terms:                  Seq[NsiBonusTerm],
     accountClosureDate:     Option[LocalDate]         = None,
     accountClosingBalance:  Option[BigDecimal]        = None
