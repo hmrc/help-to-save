@@ -219,6 +219,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           |    "investmentLimit": "50.00",
           |    "endDate": "2018-02-28"
           |  },
+          |  "clientForename":"Testforename",
+          |  "clientSurname":"Testsurname",
+          |  "emailAddress":"test@example.com",
           |  "terms": [
           |     {
           |       "termNumber":2,
@@ -247,6 +250,9 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         15.50,
         50.00,
         LocalDate.parse("2018-02-28"),
+        "Testforename",
+        "Testsurname",
+        Some("test@example.com"),
         List(
           BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
           BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
@@ -282,6 +288,14 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
 
         result.isLeft shouldBe true
+      }
+
+      "succeed when the NS&I response omits the emailAddress optional field" in {
+        mockGetAccountResponse(getAccountUrl)(Some(HttpResponse(200, Some(nsiAccountJson - "emailAddress"))))
+
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+
+        result shouldBe Right(Some(account.copy(accountHolderEmail = None)))
       }
 
       "handle non 200 responses from help-to-save-proxy" in {

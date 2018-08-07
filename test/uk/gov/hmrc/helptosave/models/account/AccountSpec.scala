@@ -31,6 +31,9 @@ class AccountSpec extends TestSupport {
     clientBlockingCode     = "00",
     accountBalance         = 0,
     currentInvestmentMonth = NsiCurrentInvestmentMonth(0, 0, LocalDate.of(2018, 1, 31)),
+    clientForename         = "Testforename",
+    clientSurname          = "Testsurname",
+    emailAddress           = Some("test@example.com"),
     terms                  = Seq(
       NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0),
       NsiBonusTerm(termNumber    = 2, startDate = LocalDate.of(2020, 1, 1), endDate = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0)
@@ -40,10 +43,12 @@ class AccountSpec extends TestSupport {
     accountClosingBalance  = None
   )
 
-  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31), Seq(
-    BonusTerm(endDate                = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
-    BonusTerm(endDate                = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
-  ), None, None)
+  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
+                        accountHolderForename = "Testforename", accountHolderSurname = "Testsurname", accountHolderEmail = Some("test@example.com"),
+                        Seq(
+      BonusTerm(endDate                = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
+      BonusTerm(endDate                = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
+    ), None, None)
 
   "Account class" when {
     "creating a new class from NsiAccount class" must {
