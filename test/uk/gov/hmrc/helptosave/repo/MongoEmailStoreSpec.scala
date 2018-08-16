@@ -16,17 +16,20 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import play.api.libs.json.Json
+import org.scalatest.concurrent.Eventually
+import play.api.libs.json.{JsObject, JsString}
+import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
+import reactivemongo.play.json.collection.JSONCollection
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
-class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, MongoEmailStore] {
+class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport {
 
   val crypto: Crypto = mock[Crypto]
 
@@ -40,111 +43,113 @@ class MongoEmailStoreSpec extends TestSupport with MongoTestSupport[EmailData, M
       .expects(input)
       .returning(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
 
-  def newMongoStore() = new MongoEmailStore(mockMongo, crypto, mockMetrics) {
+  def newMongoEmailStore(reactiveMongoComponent: ReactiveMongoComponent) =
+    new MongoEmailStore(reactiveMongoComponent, crypto, mockMetrics) {
 
-    override def indexes: Seq[Index] = {
-      // this line is to ensure scoverage picks up this line in MongoEnrolmentStore -
-      // we can't really test the indexes function, it doesn't affect the behaviour of
-      // the class only its performance
-      super.indexes
-      Seq.empty[Index]
     }
-
-    override def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
-      mockDBFunctions.update(EmailData(nino, encryptedEmail))
-
-    override def find(query: (String, Json.JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[EmailData]] =
-      query.toList match {
-        case head :: Nil ⇒ mockDBFunctions.get(head._2)
-        case _           ⇒ fail("Find function expected only 1 parameter")
-      }
-  }
 
   "The MongoEmailStore" when {
 
+    val nino = "NINO"
+    val email = "EMAIL"
+    val encryptedEmail = "ENCRYPTED"
+
+      def storeConfirmedEmail(nino: NINO, email: String, emailStore: MongoEmailStore): Either[String, Unit] =
+        Await.result(emailStore.storeConfirmedEmail(email, nino).value, 5.seconds)
+
+      def getConfirmedEmail(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
+        Await.result(emailStore.getConfirmedEmail(nino).value, 5.seconds)
+
     "updating emails" must {
 
-      val nino = "NINO"
-      val email = "EMAIL"
-      val encryptedEmail = "ENCRYPTED"
       val data = EmailData(nino, encryptedEmail)
 
-        def update(nino: NINO, email: String): Either[String, Unit] =
-          Await.result(mongoStore.storeConfirmedEmail(email, nino).value, 5.seconds)
-
       "store the email in the mongo database" in {
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-          mockUpdate(data)(Right(None))
+        withMongo { reactiveMongoComponent ⇒
+          val emailStore = newMongoEmailStore(reactiveMongoComponent)
+
+          inSequence {
+            mockEncrypt(email)(encryptedEmail)
+            mockDecrypt(encryptedEmail)(Some(email))
+          }
+
+          storeConfirmedEmail(nino, email, emailStore)
+
+          val storedEmail = getConfirmedEmail(nino, emailStore)
+          storedEmail shouldBe Right(Some(email))
         }
 
-        update(nino, email)
       }
 
       "return a right if the update is successful" in {
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-          mockUpdate(data)(Right(Some(data)))
-        }
+        withMongo { reactiveMongoComponent ⇒
+          val emailStore = newMongoEmailStore(reactiveMongoComponent)
 
-        update(nino, email) shouldBe Right(())
+          inSequence {
+            mockEncrypt(email)(encryptedEmail)
+          }
+
+          val result = storeConfirmedEmail(nino, email, emailStore)
+          result shouldBe Right(())
+        }
       }
 
       "return a left if the update is unsuccessful" in {
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-          mockUpdate(data)(Right(None))
-        }
-        update(nino, email).isLeft shouldBe true
+        withBrokenMongo { reactiveMongoComponent ⇒
+          val emailStore = newMongoEmailStore(reactiveMongoComponent)
 
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-          mockUpdate(data)(Left(""))
+          inSequence {
+            mockEncrypt(email)(encryptedEmail)
+          }
+
+          storeConfirmedEmail(nino, email, emailStore).isLeft shouldBe true
         }
-        update(nino, email).isLeft shouldBe true
       }
 
     }
 
     "getting email" must {
 
-      val nino = "NINO"
-      val email = "EMAIL"
+      import reactivemongo.play.json.ImplicitBSONHandlers._
 
-        def get(nino: NINO): Either[String, Option[String]] =
-          Await.result(mongoStore.getConfirmedEmail(nino).value, 5.seconds)
+        def get(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
+          Await.result(emailStore.getConfirmedEmail(nino).value, 5.seconds)
 
-      "get the email in the mongo database" in {
-        inSequence {
-          mockFind(nino)(Future.successful(List(EmailData(nino, email), EmailData("not picked up", "not picked up"))))
-          mockDecrypt(email)(Some(email))
+        def remove(nino: String)(collection: JSONCollection): Unit = {
+          val selector = JsObject(Map("nino" → JsString(nino)))
+          Await.result(collection.remove(selector).value, 5.seconds)
         }
-
-        get(nino)
-      }
 
       "return a right if the get is successful" in {
-        // try when there is an email first
-        inSequence {
-          mockFind(nino)(Future.successful(List(EmailData(nino, email))))
-          mockDecrypt(email)(Some(email))
-        }
-        get(nino) shouldBe Right(Some(email))
+        withMongo { reactiveMongoComponent ⇒
+          mockEncrypt(email)(encryptedEmail)
+          mockDecrypt(encryptedEmail)(Some(email))
 
-        // now try when there is no email
-        mockFind(nino)(Future.successful(List()))
-        get(nino) shouldBe Right(None)
+          val emailStore = newMongoEmailStore(reactiveMongoComponent)
+
+          //there should no emails to start with
+          get(nino, emailStore) shouldBe Right(None)
+
+          //putting the email in mongo
+          storeConfirmedEmail(nino, email, emailStore)
+
+          // try when there is an email
+          get(nino, emailStore) shouldBe Right(Some(email))
+
+          remove(nino)(emailStore.collection)
+
+          //check the email has been removed
+          eventually {
+            get(nino, emailStore) shouldBe Right(None)
+          }
+        }
       }
 
       "return a left if the get is unsuccessful" in {
-        mockFind(nino)(Future.failed(new Exception("")))
-        get(nino).isLeft shouldBe true
-
-        inSequence {
-          mockFind(nino)(Future.successful(List(EmailData(nino, email))))
-          mockDecrypt(email)(None)
+        withBrokenMongo { reactiveMongoComponent ⇒
+          val emailStore = newMongoEmailStore(reactiveMongoComponent)
+          get(nino, emailStore).isLeft shouldBe true
         }
-        get(nino).isLeft shouldBe true
       }
 
     }
