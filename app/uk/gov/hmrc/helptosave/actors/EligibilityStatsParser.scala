@@ -75,6 +75,15 @@ class EligibilityStatsParserImpl extends EligibilityStatsParser with Logging {
   override def prettyFormatTable(table: Table): String = {
     val allSourcesSorted: List[Source] = table.values.toList.flatMap(_.keys.toList).distinct.sorted
 
+    val (sourceColumnWidth, reasonColumnWidth, totalColumnWidth) =
+      (allSourcesSorted.map(_.length).max + 1,
+        table.keys.map(_.length).max + 1,
+        10)
+
+    val rowFormat: String = s"|%${reasonColumnWidth}s|%${sourceColumnWidth}s|%${totalColumnWidth}s|\n"
+    val rowSeparator = s"+${"-" * reasonColumnWidth}+${"-" * sourceColumnWidth}+${"-" * totalColumnWidth}+"
+    val tableHeader: String = s"$rowSeparator\n${rowFormat.format("Reason", "Channel", "Count")}$rowSeparator\n"
+
     val sortedTable: List[(EligibilityReason, List[(Source, Int)])] =
       table.toList.sortBy(_._1).map{ case (k, v) ⇒ k → v.toList.sortBy(_._1) }
 
@@ -101,16 +110,8 @@ class EligibilityStatsParserImpl extends EligibilityStatsParser with Logging {
     report
       .concat(sourcesTotalsRows)
       .concat(rowFormat.format("", "Total", sortedTable.flatMap(_._2.map(_._2)).sum))
-      .concat("+--------+----------+----------+")
+      .concat(rowSeparator)
   }
-
-  private val rowFormat: String = "|%8s|%10s|%10s|\n"
-
-  private val tableHeader: String =
-    s"""
-      |+--------+----------+----------+
-      || Reason | Channel  |  Count   |
-      |+--------+----------+----------+\n""".stripMargin
 
   private def getStringFrom(reason: String) = {
     if (reason === "6") {
