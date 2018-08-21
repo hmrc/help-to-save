@@ -35,11 +35,11 @@ class EligibilityStatsParserSpec extends TestSupport with Matchers {
       EligibilityStats(None, Some("Digital"), 1),
       EligibilityStats(Some(8), Some("BLAH BLAH"), 1),
       EligibilityStats(None, None, 1),
-      EligibilityStats(Some(0), Some("Stride-Manual"), 2)
+      EligibilityStats(Some(3), Some("Stride-Manual"), 2)
     )
 
   val table = Map(
-    "0" → Map(
+    "3" → Map(
       "BLAH BLAH" -> 0,
       "KCOM" -> 0,
       "Stride" -> 0,
@@ -85,7 +85,7 @@ class EligibilityStatsParserSpec extends TestSupport with Matchers {
           """|+--------+--------------+----------+
             ||  Reason|       Channel|     Count|
             |+--------+--------------+----------+
-            ||  Manual|     BLAH BLAH|         0|
+            ||       3|     BLAH BLAH|         0|
             ||        |       Digital|         0|
             ||        |          KCOM|         0|
             ||        |        Stride|         0|

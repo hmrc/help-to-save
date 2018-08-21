@@ -120,8 +120,6 @@ class EligibilityStatsParserImpl extends EligibilityStatsParser with Logging {
       "WTC"
     } else if (reason === "8") {
       "UC&WTC"
-    } else if (reason === "0") {
-      "Manual"
     } else {
       reason
     }
