@@ -20,11 +20,12 @@ import cats.Show
 import cats.syntax.show._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue, Writes}
-import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
-import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.config.AppConfig
+import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.models.UCResponse
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,7 +43,7 @@ trait DESConnector {
 }
 
 @Singleton
-class DESConnectorImpl @Inject() (http: WSHttp)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+class DESConnectorImpl @Inject() (http: HttpClient)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
   extends DESConnector with Logging {
 
   val itmpECBaseURL: String = appConfig.baseUrl("itmp-eligibility-check")

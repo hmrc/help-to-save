@@ -18,7 +18,6 @@ package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
 
-import akka.actor.ActorRef
 import com.codahale.metrics.{Counter, Gauge, Timer}
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import com.typesafe.config.ConfigFactory
@@ -29,7 +28,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
-import uk.gov.hmrc.helptosave.config.{AppConfig, WSHttp}
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -70,8 +69,6 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
   implicit lazy val configuration: Configuration = fakeApplication.injector.instanceOf[Configuration]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
-
-  val mockHttp: WSHttp = mock[WSHttp]
 
   val mockMetrics = new Metrics(stub[PlayMetrics]) {
     override def timer(name: String): Timer = new Timer()
