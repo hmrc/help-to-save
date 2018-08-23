@@ -48,7 +48,6 @@ class EligibilityStatsStoreSpec extends TestSupport with Eventually with MongoSu
         withMongo { reactiveMongoComponent ⇒
           val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
-          store.doAggregate()
           Await.result(store.getEligibilityStats(), 5.seconds) shouldBe List.empty
         }
       }
