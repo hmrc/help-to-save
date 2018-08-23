@@ -31,10 +31,11 @@ object HttpClient {
   private val rawHttpReads = new RawHttpReads
 
   implicit class HttpClientOps(val http: uk.gov.hmrc.play.bootstrap.http.HttpClient) extends AnyVal {
-    def get(url:     String,
-            headers: Map[String, String] = Map.empty[String, String]
+    def get(url:         String,
+            queryParams: Map[String, String] = Map.empty[String, String],
+            headers:     Map[String, String] = Map.empty[String, String]
     )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-      http.GET(url, Seq.empty[(String, String)])(rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
+      http.GET(url, queryParams.toSeq)(rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 
     def post[A](url:     String,
                 body:    A,
