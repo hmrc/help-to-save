@@ -70,15 +70,15 @@ class DESConnectorImpl @Inject() (http: HttpClient)(implicit transformer: LogMes
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
   override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(url(nino, ucResponse), appConfig.desHeaders)(hc.copy(authorization = None), ec)
+    http.get(url(nino, ucResponse), headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.JsValueWrites, hc.copy(authorization = None), ec)
 
   override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(payePersonalDetailsUrl(nino), appConfig.desHeaders + originatorIdHeader)(hc.copy(authorization = None), ec)
+    http.get(payePersonalDetailsUrl(nino), headers = appConfig.desHeaders + originatorIdHeader)(hc.copy(authorization = None), ec)
 
   override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(itmpThresholdURL, appConfig.desHeaders)(hc.copy(authorization = None), ec)
+    http.get(itmpThresholdURL, headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)
 
 }

@@ -30,11 +30,11 @@ trait HttpSupport { this: MockFactory with Matchers ⇒
 
   private val emptyMap = Map.empty[String, String]
 
-  def mockGet[A](url: String, headers: Map[String, String] = emptyMap, queryParams: Map[String, String] = emptyMap)(response: Option[A]) =
+  def mockGet[A](url: String, queryParams: Map[String, String] = emptyMap, headers: Map[String, String] = emptyMap)(response: Option[A]) =
     (mockHttp.GET(_: String, _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
       .expects(where{ (u: String, q: Seq[(String, String)], _: HttpReads[A], h: HeaderCarrier, _: ExecutionContext) ⇒
         // use matchers here to get useful error messages when the following predicates
-        // are not satisfied - otherwise it is difficult to tell in the ogs what went wrong
+        // are not satisfied - otherwise it is difficult to tell in the logs what went wrong
         u shouldBe url
         q shouldBe queryParams.toSeq
         h.extraHeaders shouldBe headers.toSeq

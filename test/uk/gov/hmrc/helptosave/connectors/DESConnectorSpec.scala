@@ -38,14 +38,14 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
       def url(nino: NINO): String = s"${connector.itmpECBaseURL}/help-to-save/eligibility-check/$nino"
 
     "return 200 status when call to DES successfully returns eligibility check response" in {
-      mockGet(url(nino), appConfig.desHeaders)(Some(HttpResponse(200, Some(Json.toJson(eligibilityCheckResultJson)))))
+      mockGet(url(nino), headers = appConfig.desHeaders)(Some(HttpResponse(200, Some(Json.toJson(eligibilityCheckResultJson)))))
       val result = await(connector.isEligible(nino, None))
 
       result.status shouldBe 200
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url(nino), appConfig.desHeaders)(Some(HttpResponse(500, Some(Json.toJson(eligibilityCheckResultJson)))))
+      mockGet(url(nino), headers = appConfig.desHeaders)(Some(HttpResponse(500, Some(Json.toJson(eligibilityCheckResultJson)))))
       val result = await(connector.isEligible(nino, None))
 
       result.status shouldBe 500
@@ -89,7 +89,7 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
     val url = connector.payePersonalDetailsUrl(nino)
 
     "return pay personal details for a successful nino" in {
-      mockGet(url, appConfig.desHeaders + connector.originatorIdHeader)(Some(HttpResponse(200, Some(Json.parse(payeDetails(nino)))))) // scalastyle:ignore magic.number
+      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(Some(HttpResponse(200, Some(Json.parse(payeDetails(nino)))))) // scalastyle:ignore magic.number
       val result = await(connector.getPersonalDetails(nino))
 
       result.status shouldBe 200
@@ -97,7 +97,7 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url, appConfig.desHeaders + connector.originatorIdHeader)(Some(HttpResponse(500, Some(Json.parse(payeDetails(nino)))))) // scalastyle:ignore magic.number
+      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(Some(HttpResponse(500, Some(Json.parse(payeDetails(nino)))))) // scalastyle:ignore magic.number
       val result = await(connector.getPersonalDetails(nino))
 
       result.status shouldBe 500
@@ -111,14 +111,14 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
     val result = UCThreshold(500.50)
 
     "return 200 status when call to get threshold from DES has been successful" in {
-      mockGet(url, appConfig.desHeaders)(Some(HttpResponse(200, Some(Json.toJson(result)))))
+      mockGet(url, headers = appConfig.desHeaders)(Some(HttpResponse(200, Some(Json.toJson(result)))))
 
       val response = await(connector.getThreshold())
       response.status shouldBe 200
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url, appConfig.desHeaders)(Some(HttpResponse(500, Some(Json.toJson(result)))))
+      mockGet(url, headers = appConfig.desHeaders)(Some(HttpResponse(500, Some(Json.toJson(result)))))
 
       val response = await(connector.getThreshold())
       response.status shouldBe 500
