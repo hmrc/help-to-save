@@ -16,43 +16,23 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import play.api.libs.json.Json
-import reactivemongo.api.commands.{DefaultWriteResult, WriteError, WriteResult}
-import reactivemongo.api.indexes.Index
+import com.github.simplyscala.MongoEmbedDatabase
+import org.scalatest.concurrent.Eventually
+import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
-import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
 
-class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[EnrolmentData, MongoEnrolmentStore] {
+class MongoEnrolmentStoreSpec extends TestSupport with MongoEmbedDatabase with Eventually with MongoSupport {
 
-  def newMongoStore() = new MongoEnrolmentStore(mockMongo, mockMetrics) {
+  def newMongoEnrolmentStore(reactiveMongoComponent: ReactiveMongoComponent) =
+    new MongoEnrolmentStore(reactiveMongoComponent, mockMetrics)
 
-    override def indexes: Seq[Index] = {
-      // this line is to ensure scoverage picks up this line in MongoEnrolmentStore -
-      // we can't really test the indexes function, it doesn't affect the behaviour of
-      // the class only its performance
-      super.indexes
-      Seq.empty[Index]
-    }
-
-    override def doUpdate(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
-      mockDBFunctions.update(EnrolmentData(nino, itmpFlag))
-
-    override def doInsert(nino: NINO, eligibilityReason: Option[Int], channel: String, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[WriteResult] =
-      mockDBFunctions.insert(EnrolmentData(nino, itmpFlag, eligibilityReason, Some(channel)))
-
-    override def find(query: (String, Json.JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[EnrolmentData]] =
-      query.toList match {
-        case (_, value) :: Nil ⇒
-          mockDBFunctions.get[Json.JsValueWrapper](value)
-
-        case _ ⇒ fail("find method called with multiple NINOs")
-      }
-  }
+  def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String, store: MongoEnrolmentStore): Either[String, Unit] =
+    Await.result(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel).value, 5.seconds)
 
   "The MongoEnrolmentStore" when {
 
@@ -60,58 +40,44 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
 
     "creating" must {
 
-        def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String): Either[String, Unit] =
-          Await.result(mongoStore.insert(nino, itmpNeedsUpdate, eligibilityReason, channel).value, 5.seconds)
-
       "create a new record in the db when inserted" in {
-        mockInsert(EnrolmentData(nino, true, Some(7), Some("online")))(Right(DefaultWriteResult(true, 1, Seq.empty, None, None, None)))
-        val result = create(nino, true, Some(7), "online")
-        result shouldBe Right(())
+        withMongo { reactiveMongoComponent ⇒
+          val store = newMongoEnrolmentStore(reactiveMongoComponent)
+          create(nino, true, Some(7), "online", store) shouldBe Right(())
+        }
       }
 
       "return an error" when {
 
-        "the update result from mongo is negative" in {
-          mockInsert(EnrolmentData(nino, true, Some(7), Some("online")))(Right(DefaultWriteResult(true, 1, Seq(WriteError(1, 1, "insert failed")), None, None, None)))
-          val result = create(nino, true, Some(7), "online")
-
-          result shouldBe Left("insert failed")
-        }
-
         "the future returned by mongo fails" in {
-          mockInsert(EnrolmentData(nino, true, Some(7), Some("online")))(Left("future failed"))
-          val result = create(nino, true, Some(7), "online")
-
-          result.isLeft shouldBe true
+          withBrokenMongo { reactiveMongoComponent ⇒
+            val store = newMongoEnrolmentStore(reactiveMongoComponent)
+            create(nino, true, Some(7), "online", store).isLeft shouldBe true
+          }
         }
       }
     }
 
     "updating" must {
 
-        def update(nino: NINO, itmpNeedsUpdate: Boolean): Either[String, Unit] =
-          Await.result(mongoStore.update(nino, itmpNeedsUpdate).value, 5.seconds)
+        def update(nino: NINO, itmpNeedsUpdate: Boolean, store: MongoEnrolmentStore): Either[String, Unit] =
+          Await.result(store.update(nino, itmpNeedsUpdate).value, 5.seconds)
 
       "update the mongodb collection" in {
-        mockUpdate(EnrolmentData(nino, true))(Right(Some(EnrolmentData(nino, true))))
-        update(nino, true)
-      }
-
-      "return successfully if the update was successful" in {
-        mockUpdate(EnrolmentData(nino, false))(Right(Some(EnrolmentData(nino, false))))
-        update(nino, false) shouldBe Right(())
+        withMongo{ reactiveMongoComponent ⇒
+          val store = newMongoEnrolmentStore(reactiveMongoComponent)
+          create(nino, false, Some(7), "online", store) shouldBe Right(())
+          update(nino, true, store) shouldBe Right(())
+        }
       }
 
       "return an error" when {
 
-        "the update result from mongo is negative" in {
-          mockUpdate(EnrolmentData(nino, true))(Right(None))
-          update(nino, true).isLeft shouldBe true
-        }
-
         "the future returned by mongo fails" in {
-          mockUpdate(EnrolmentData(nino, false))(Left("Uh oh!"))
-          update(nino, false).isLeft shouldBe true
+          withBrokenMongo { reactiveMongoComponent ⇒
+            val store = newMongoEnrolmentStore(reactiveMongoComponent)
+            update(nino, false, store).isLeft shouldBe true
+          }
 
         }
       }
@@ -119,33 +85,39 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoTestSupport[Enrolmen
 
     "getting" must {
 
-        def get(nino: NINO): Either[String, Status] =
-          Await.result(mongoStore.get(nino).value, 5.seconds)
+        def get(nino: NINO, store: MongoEnrolmentStore): Either[String, Status] =
+          Await.result(store.get(nino).value, 5.seconds)
 
       "attempt to find the entry in the collection based on the input nino" in {
-        mockFind(nino)(Future.successful(List.empty[EnrolmentData]))
-
-        get(nino)
+        withMongo { reactiveMongoComponent ⇒
+          val store = newMongoEnrolmentStore(reactiveMongoComponent)
+          get(nino, store) shouldBe Right(NotEnrolled)
+        }
       }
 
       "return an enrolled status if an entry is found" in {
-        mockFind(nino)(Future.successful(List(EnrolmentData("a", true), EnrolmentData("b", false))))
-
-        get(nino) shouldBe Right(Enrolled(true))
+        withMongo { reactiveMongoComponent ⇒
+          val store = newMongoEnrolmentStore(reactiveMongoComponent)
+          create(nino, true, Some(7), "online", store) shouldBe Right(())
+          get(nino, store) shouldBe Right(Enrolled(true))
+        }
       }
 
       "return a not enrolled status if the entry is not found" in {
-        mockFind(nino)(Future.successful(List.empty[EnrolmentData]))
-
-        get(nino) shouldBe Right(NotEnrolled)
+        withMongo { reactiveMongoComponent ⇒
+          val store = newMongoEnrolmentStore(reactiveMongoComponent)
+          get(nino, store) shouldBe Right(NotEnrolled)
+        }
       }
 
       "return an error if there is an error while finding the entry" in {
-        mockFind(nino)(Future.failed(new Exception))
-
-        get(nino).isLeft shouldBe true
+        withBrokenMongo { reactiveMongoComponent ⇒
+          val store = newMongoEnrolmentStore(reactiveMongoComponent)
+          get(nino, store).isLeft shouldBe true
+        }
       }
     }
 
   }
+
 }

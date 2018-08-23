@@ -18,30 +18,18 @@ package uk.gov.hmrc.helptosave.repo
 
 import java.time.{LocalDate, ZoneId}
 
-import reactivemongo.api.indexes.Index
+import org.scalatest.concurrent.Eventually
+import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
-import uk.gov.hmrc.helptosave.util.toFuture
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 
-class UserCapStoreSpec extends TestSupport with MongoTestSupport[UserCap, MongoUserCapStore] {
+class UserCapStoreSpec extends TestSupport with MongoSupport with Eventually {
 
-  override def newMongoStore() = new MongoUserCapStore(mockMongo) {
-
-    override def indexes: Seq[Index] = {
-      // this line is to ensure scoverage picks up this line in MongoUserCapStore -
-      // we can't really test the indexes function, it doesn't affect the behaviour of
-      // the class only its performance
-      super.indexes
-      Seq.empty[Index]
-    }
-
-    override def doFind(): Future[Option[UserCap]] = mockDBFunctions.get()
-
-    override def doUpdate(userCap: UserCap): Future[Option[UserCap]] = mockDBFunctions.update(userCap)
-  }
+  def newUserCapMongoStore(reactiveMongoComponent: ReactiveMongoComponent) =
+    new MongoUserCapStore(reactiveMongoComponent)
 
   "The UserCapStore" when {
 
@@ -50,23 +38,19 @@ class UserCapStoreSpec extends TestSupport with MongoTestSupport[UserCap, MongoU
     "getting the user-cap" should {
 
       "return the existing record successfully" in {
-
-        mockGet()(toFuture(Some(record)))
-        Await.result(mongoStore.get(), 5.seconds) shouldBe Some(record)
+        withMongo { reactiveMongoComponent ⇒
+          val store = newUserCapMongoStore(reactiveMongoComponent)
+          Await.result(store.doUpdate(record), 5.seconds)
+          Await.result(store.get(), 5.seconds) shouldBe Some(record)
+        }
       }
 
       "returns None if no record exists" in {
-        mockGet()(toFuture(None))
-        Await.result(mongoStore.get(), 5.seconds) shouldBe None
-      }
-    }
-
-    "updating the user-cap" should {
-
-      "return the updated record successfully" in {
-
-        mockUpdate(record)(Right(Some(record)))
-        Await.result(mongoStore.upsert(record), 5.seconds) shouldBe Some(record)
+        withMongo { reactiveMongoComponent ⇒
+          val store = newUserCapMongoStore(reactiveMongoComponent)
+          store.removeAll()
+          Await.result(store.get(), 5.seconds) shouldBe None
+        }
       }
     }
   }

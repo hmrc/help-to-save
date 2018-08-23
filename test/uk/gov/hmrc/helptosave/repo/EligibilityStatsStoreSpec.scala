@@ -16,46 +16,40 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import org.scalatest.concurrent.Eventually
 import play.api.libs.json.Json
-import reactivemongo.api.indexes.Index
-import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework
+import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
-import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 
-class EligibilityStatsStoreSpec extends TestSupport with MongoTestSupport[EnrolmentData, MongoEligibilityStatsStore] {
+class EligibilityStatsStoreSpec extends TestSupport with Eventually with MongoSupport {
 
-  def newMongoStore(): MongoEligibilityStatsStore = new MongoEligibilityStatsStore(mockMongo, mockMetrics) {
-
-    override def indexes: Seq[Index] = {
-      // this line is to ensure scoverage picks up this line in MongoEnrolmentStore -
-      // we can't really test the indexes function, it doesn't affect the behaviour of
-      // the class only its performance
-      super.indexes
-      Seq.empty[Index]
-    }
-
-    override def doAggregate(): Future[AggregationFramework.AggregationResult] =
-      mockDBFunctions.aggregate()
-  }
+  def newEligibilityStatsMongoStore(reactiveMongoComponent: ReactiveMongoComponent) = new MongoEligibilityStatsStore(reactiveMongoComponent, mockMetrics)
 
   "The EligibilityStatsStore" when {
 
     "aggregating the eligibility stats" must {
 
-      val documents = List(Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1))
+      val document = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
 
       "return results as expected" in {
-        mockAggregate(Right(AggregationFramework.AggregationResult(documents)))
-        Await.result(mongoStore.getEligibilityStats(), 5.seconds) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
+        withMongo { reactiveMongoComponent ⇒
+          val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
+
+          Await.result(store.collection.insert(document), 5.seconds)
+          Await.result(store.getEligibilityStats(), 5.seconds) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
+        }
       }
 
       "handle error while reading from mongo" in {
-        mockAggregate(Left("unexpected error"))
-        Await.result(mongoStore.getEligibilityStats(), 5.seconds) shouldBe List.empty
+        withMongo { reactiveMongoComponent ⇒
+          val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
+
+          Await.result(store.getEligibilityStats(), 5.seconds) shouldBe List.empty
+        }
       }
     }
   }
