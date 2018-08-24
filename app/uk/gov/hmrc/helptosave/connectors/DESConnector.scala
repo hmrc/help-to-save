@@ -57,20 +57,21 @@ class DESConnectorImpl @Inject() (http: HttpClient)(implicit transformer: LogMes
 
   val originatorIdHeader: (String, String) = "Originator-Id" → appConfig.getString("microservice.services.paye-personal-details.originatorId")
 
-  private def url(nino: String, ucResponse: Option[UCResponse]): String = {
-    ucResponse match {
-      case Some(UCResponse(a, Some(b))) ⇒ s"$itmpECBaseURL/help-to-save/eligibility-check/$nino?universalCreditClaimant=${a.show}&withinThreshold=${b.show}"
-      case Some(UCResponse(a, None))    ⇒ s"$itmpECBaseURL/help-to-save/eligibility-check/$nino?universalCreditClaimant=${a.show}"
-      case _                            ⇒ s"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
-    }
-  }
+  def eligibilityCheckUrl(nino: String): String = s"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
 
-  private def setFlagUrl(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"
+  def eligibilityCheckQueryParameters(ucResponse: Option[UCResponse]): Map[String, String] =
+    ucResponse match {
+      case Some(UCResponse(a, Some(b))) ⇒ Map("universalCreditClaimant" → a.show, "withinThreshold" -> b.show)
+      case Some(UCResponse(a, None))    ⇒ Map("universalCreditClaimant" -> a.show)
+      case _                            ⇒ Map()
+    }
+
+  def setFlagUrl(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
   override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(url(nino, ucResponse), headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)
+    http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.desHeaders)(hc.copy(authorization = None), ec)
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.JsValueWrites, hc.copy(authorization = None), ec)

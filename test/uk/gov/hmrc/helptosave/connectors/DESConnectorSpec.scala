@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.connectors
 import org.joda.time.LocalDate
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.{JsNull, Json}
-import uk.gov.hmrc.helptosave.models.UCThreshold
+import uk.gov.hmrc.helptosave.models.{UCResponse, UCThreshold}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.{HttpSupport, MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
@@ -38,10 +38,25 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
       def url(nino: NINO): String = s"${connector.itmpECBaseURL}/help-to-save/eligibility-check/$nino"
 
     "return 200 status when call to DES successfully returns eligibility check response" in {
-      mockGet(url(nino), headers = appConfig.desHeaders)(Some(HttpResponse(200, Some(Json.toJson(eligibilityCheckResultJson)))))
-      val result = await(connector.isEligible(nino, None))
+      List[(Option[UCResponse], Map[String, String])](
+        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(true))) →
+          Map("universalCreditClaimant" → "Y", "withinThreshold" -> "Y"),
+        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(false))) →
+          Map("universalCreditClaimant" → "Y", "withinThreshold" -> "N"),
+        Some(UCResponse(ucClaimant      = false, withinThreshold = None)) →
+          Map("universalCreditClaimant" → "N"),
+        None →
+          Map()
+      ).foreach{
+          case (ucResponse, expectedQueryParameters) ⇒
+            withClue(s"For ucResponse: $ucResponse:"){
+              mockGet(url(nino), expectedQueryParameters, appConfig.desHeaders)(Some(HttpResponse(200, Some(Json.toJson(eligibilityCheckResultJson)))))
+              val result = await(connector.isEligible(nino, ucResponse))
 
-      result.status shouldBe 200
+              result.status shouldBe 200
+            }
+        }
+
     }
 
     "return 500 status when call to DES fails" in {
