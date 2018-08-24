@@ -18,15 +18,11 @@ package uk.gov.hmrc.helptosave.repo
 
 import java.time.{LocalDate, ZoneId}
 
-import org.scalatest.concurrent.Eventually
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
-class UserCapStoreSpec extends TestSupport with MongoSupport with Eventually {
+class UserCapStoreSpec extends TestSupport with MongoSupport {
 
   def newUserCapMongoStore(reactiveMongoComponent: ReactiveMongoComponent) =
     new MongoUserCapStore(reactiveMongoComponent)
@@ -38,19 +34,14 @@ class UserCapStoreSpec extends TestSupport with MongoSupport with Eventually {
     "getting the user-cap" should {
 
       "return the existing record successfully" in {
-        withMongo { reactiveMongoComponent ⇒
-          val store = newUserCapMongoStore(reactiveMongoComponent)
-          Await.result(store.doUpdate(record), 5.seconds)
-          Await.result(store.get(), 5.seconds) shouldBe Some(record)
-        }
+        val store = newUserCapMongoStore(reactiveMongoComponent)
+        await(store.doUpdate(record))
+        await(store.get()) shouldBe Some(record)
       }
 
       "returns None if no record exists" in {
-        withMongo { reactiveMongoComponent ⇒
-          val store = newUserCapMongoStore(reactiveMongoComponent)
-          store.removeAll()
-          Await.result(store.get(), 5.seconds) shouldBe None
-        }
+        val store = newUserCapMongoStore(reactiveMongoComponent)
+        await(store.get()) shouldBe None
       }
     }
   }

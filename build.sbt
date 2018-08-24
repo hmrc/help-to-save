@@ -35,7 +35,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
   "com.miguno.akka" % "akka-mock-scheduler_2.11" % "0.5.1" % scope,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope,
-  "com.github.simplyscala" %% "scalatest-embedmongo" % "0.2.4" % scope
+  "uk.gov.hmrc" %% "reactivemongo-test" % "3.1.0"
 )
 
 lazy val scoverageSettings = {
