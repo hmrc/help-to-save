@@ -16,80 +16,42 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import java.net.ServerSocket
-
-import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
-import org.scalatest.Matchers
-import org.scalatest.concurrent.Eventually
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.FailoverStrategy
 import reactivemongo.core.actors.Exceptions.PrimaryUnavailableException
-import uk.gov.hmrc.mongo.MongoConnector
+import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 
-trait MongoSupport extends MongoEmbedDatabase { this: Eventually with Matchers ⇒
+import scala.concurrent.ExecutionContext.Implicits.global
 
-  def withMongo(f: ReactiveMongoComponent ⇒ Any): Unit = withMongo(mongo(_, None), f)
+trait MongoSupport extends MongoSpecSupport with BeforeAndAfterEach with BeforeAndAfterAll { this: Suite ⇒
 
-  def withBrokenMongo(f: ReactiveMongoComponent ⇒ Any): Unit =
+  val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
+    override def mongoConnector: MongoConnector = mongoConnectorForTest
+  }
+
+  def withBrokenMongo(f: ReactiveMongoComponent ⇒ Unit): Unit =
     scala.util.control.Exception.ignoring(classOf[PrimaryUnavailableException]) {
-      withMongo(brokenMongo, f)
-    }
-
-  private def withMongo(newReactiveMongoComponent: MongodProps ⇒ ReactiveMongoComponent, f: ReactiveMongoComponent ⇒ Any): Unit = {
-    val port = {
-      val socket = new ServerSocket(0)
-      socket.close()
-
-      eventually {
-        socket.isClosed shouldBe true
+      val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
+        override def mongoConnector: MongoConnector =
+          MongoConnector(s"mongodb://127.0.0.1:27018/$databaseName", Some(FailoverStrategy(retries = 0)))
       }
-
-      socket.getLocalPort
-    }
-
-    withEmbedMongoFixture(port) { mongodProps ⇒
-      val component = newReactiveMongoComponent(mongodProps)
 
       try {
-        f(component)
+        f(reactiveMongoComponent)
       } finally {
-        component.mongoConnector.close()
+        reactiveMongoComponent.mongoConnector.helper.driver.close()
       }
     }
+
+  abstract override def beforeEach(): Unit = {
+    super.beforeEach()
+    mongo().drop()
   }
 
-  override def mongoStop(mongodProps: MongodProps): Unit = {
-    super.mongoStop(mongodProps)
-    eventually{
-      mongodProps.mongodProcess.isProcessRunning shouldBe false
-    }
-  }
-
-  private def mongo(mongodProps: MongodProps, failoverStrategy: Option[FailoverStrategy] = None): ReactiveMongoComponent = new ReactiveMongoComponent {
-    override def mongoConnector: MongoConnector = {
-      val address = mongodProps.mongodProcess.getConfig.net()
-      MongoConnector(
-        s"mongodb://${address.getServerAddress.getHostAddress}:${address.getPort}/help-to-save",
-        failoverStrategy
-      )
-    }
-  }
-
-  private def brokenMongo(mongodProps: MongodProps): ReactiveMongoComponent = {
-    val component = mongo(mongodProps, Some(FailoverStrategy(retries = 0)))
-
-    eventually {
-      component.mongoConnector.helper.connection.active shouldBe true
-    }
-
-    mongodProps.mongodProcess.stop()
-
-    eventually{
-      mongodProps.mongodProcess.isProcessRunning shouldBe false
-    }
-
-    component
-
+  abstract override def afterAll(): Unit = {
+    super.afterAll()
+    reactiveMongoComponent.mongoConnector.helper.driver.close()
   }
 
 }
