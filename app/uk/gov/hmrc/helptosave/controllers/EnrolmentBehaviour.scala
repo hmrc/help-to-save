@@ -39,11 +39,11 @@ trait EnrolmentBehaviour {
 
   def enrolUser(createAccountRequest: CreateAccountRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
     for {
-      _ ← enrolmentStore.insert(createAccountRequest.userInfo.nino,
+      _ ← enrolmentStore.insert(createAccountRequest.payload.nino,
                                 itmpFlag = false,
                                 createAccountRequest.eligibilityReason,
                                 createAccountRequest.source)
-      _ ← setITMPFlagAndUpdateMongo(createAccountRequest.userInfo.nino)
+      _ ← setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
     } yield ()
   }
 }

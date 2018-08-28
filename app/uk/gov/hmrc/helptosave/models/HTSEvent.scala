@@ -70,7 +70,7 @@ case class EligibilityCheckEvent(nino:              NINO,
   }
 }
 
-case class AccountCreated(userInfo: NSIUserInfo, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
+case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
   private val createAccountURL = routes.HelpToSaveController.createAccount().url
 

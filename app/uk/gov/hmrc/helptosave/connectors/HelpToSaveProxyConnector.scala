@@ -31,7 +31,7 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount, NsiTransactions, Transactions}
-import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIUserInfo, UCResponse}
+import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIPayload, UCResponse}
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
@@ -45,9 +45,9 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[HelpToSaveProxyConnectorImpl])
 trait HelpToSaveProxyConnector {
 
-  def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def createAccount(userInfo: NSIPayload)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
-  def updateEmail(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def updateEmail(userInfo: NSIPayload)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
   def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse]
 
@@ -74,7 +74,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
 
   val noAccountErrorCode: String = appConfig.runModeConfiguration.underlying.getString("nsi.no-account-error-message-id")
 
-  override def createAccount(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+  override def createAccount(userInfo: NSIPayload)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
 
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
@@ -87,7 +87,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
       }
   }
 
-  override def updateEmail(userInfo: NSIUserInfo)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+  override def updateEmail(userInfo: NSIPayload)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
 
     http.put(s"$proxyURL/help-to-save-proxy/update-email", userInfo)
       .recover {
