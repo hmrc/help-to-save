@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.models.register
+package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.helptosave.models.NSIPayload
 
-case class CreateAccountRequest(payload: NSIPayload, eligibilityReason: Option[Int], source: String)
-
-object CreateAccountRequest {
-  implicit val createAccountRequestFormat: Format[CreateAccountRequest] = Json.format[CreateAccountRequest]
+object BankDetails {
+  implicit val bankDetailsFormat: Format[BankDetails] = Json.format[BankDetails]
 }
+
+case class BankDetails(sortCode: String, accountNumber: String, rollNumber: Option[String], accountName: String)
