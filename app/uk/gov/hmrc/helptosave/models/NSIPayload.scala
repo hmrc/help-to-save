@@ -22,16 +22,19 @@ import java.time.format.DateTimeFormatter
 import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
-import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
+import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 
-case class NSIUserInfo(forename:            String,
-                       surname:             String,
-                       dateOfBirth:         LocalDate,
-                       nino:                String,
-                       contactDetails:      ContactDetails,
-                       registrationChannel: String)
+case class NSIPayload(forename:            String,
+                      surname:             String,
+                      dateOfBirth:         LocalDate,
+                      nino:                String,
+                      contactDetails:      ContactDetails,
+                      registrationChannel: String,
+                      nbaDetails:          Option[BankDetails] = None,
+                      version:             String,
+                      systemId:            String)
 
-object NSIUserInfo {
+object NSIPayload {
 
   case class ContactDetails(address1:                String,
                             address2:                String,
@@ -51,6 +54,6 @@ object NSIUserInfo {
 
   implicit val contactDetailsFormat: Format[ContactDetails] = Json.format[ContactDetails]
 
-  implicit val nsiUserInfoFormat: Format[NSIUserInfo] = Json.format[NSIUserInfo]
+  implicit val nsiPayloadFormat: Format[NSIPayload] = Json.format[NSIPayload]
 
 }
