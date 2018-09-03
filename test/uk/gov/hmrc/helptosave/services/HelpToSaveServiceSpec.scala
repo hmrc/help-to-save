@@ -26,7 +26,6 @@ import cats.instances.int._
 import cats.syntax.eq._
 import com.typesafe.config.ConfigFactory
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalamock.handlers.CallHandler3
 import org.scalatest.EitherValues
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.Json
@@ -36,19 +35,19 @@ import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetT
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
-import uk.gov.hmrc.helptosave.models.{EligibilityCheckResult, UCResponse, UCThreshold}
+import uk.gov.hmrc.helptosave.controllers.routes
+import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ExistingDetails, ManuallyEnteredDetails}
+import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
-import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
-import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.helptosave.util._
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") with TestSupport with EitherValues with MockPagerDuty
+class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") with TestEnrolmentBehaviour with EitherValues with MockPagerDuty
   with GeneratorDrivenPropertyChecks with TestData {
 
   class TestThresholdProvider extends ThresholdManagerProvider {
@@ -58,15 +57,14 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
   private val mockDESConnector = mock[DESConnector]
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
-  private val mockAuditConnector = mock[AuditConnector]
+  val mockAuditor = mock[HTSAuditor]
 
   val threshold = 650.0
-  val htsAuditor = new HTSAuditor(mockAuditConnector)
 
   val thresholdManagerProvider = new TestThresholdProvider
 
   def newHelpToSaveService(testConfig: Configuration): HelpToSaveServiceImpl =
-    new HelpToSaveServiceImpl(mockProxyConnector, mockDESConnector, htsAuditor, mockMetrics, mockPagerDuty, thresholdManagerProvider)(
+    new HelpToSaveServiceImpl(mockProxyConnector, mockDESConnector, mockAuditor, mockMetrics, mockPagerDuty, thresholdManagerProvider)(
       transformer,
       new AppConfig(fakeApplication.injector.instanceOf[Configuration] ++ testConfig, fakeApplication.injector.instanceOf[Environment])
     )
@@ -93,10 +91,10 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       .returning(EitherT.fromEither[Future](result))
   }
 
-  def mockAuditEligibilityEvent(): CallHandler3[DataEvent, HeaderCarrier, ExecutionContext, Future[AuditResult]] =
-    (mockAuditConnector.sendEvent(_: DataEvent)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(where { (dataEvent, _, _) ⇒ dataEvent.auditType === "EligibilityResult" })
-      .returning(Future.successful(AuditResult.Success))
+  def mockSendAuditEvent(event: HTSEvent, nino: String) =
+    (mockAuditor.sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
+      .expects(event, nino, *)
+      .returning(())
 
   def mockSetFlag(nino: String)(response: HttpResponse) =
     (mockDESConnector.setFlag(_: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -153,7 +151,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           whenever(result.resultCode =!= 4) {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
-            mockAuditEligibilityEvent()
+            mockSendAuditEvent(EligibilityCheckEvent(nino, result, Some(uCResponse), "path"), nino)
             Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
           }
         }
@@ -165,7 +163,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           whenever(result.resultCode =!= 4) {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
-            mockAuditEligibilityEvent()
+            mockSendAuditEvent(EligibilityCheckEvent(nino, result, Some(uCResponse), "path"), nino)
             Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
           }
         }
@@ -177,7 +175,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           whenever(result.resultCode =!= 4) {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
-            mockAuditEligibilityEvent()
+            mockSendAuditEvent(EligibilityCheckEvent(nino, result, Some(uCResponse), "path"), nino)
             Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
           }
         }
@@ -237,7 +235,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-            mockAuditEligibilityEvent()
+            mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
           }
 
           val result = eligibilityCheckService.getEligibility(nino, "path").value
@@ -254,7 +252,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Left("unexpected error during UCClaimant check"))
             mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-            mockAuditEligibilityEvent()
+            mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, None, "path"), nino)
           }
 
           val result = eligibilityCheckService.getEligibility(nino, "path").value
@@ -306,7 +304,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
             inSequence {
               mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-              mockAuditEligibilityEvent()
+              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, None, "path"), nino)
             }
 
             val result = eligibilityCheckService.getEligibility(nino, "path").value
@@ -342,7 +340,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         inSequence {
           mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
           mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-          mockAuditEligibilityEvent()
+          mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
         }
 
         val result = eligibilityCheckService.getEligibility(nino, "path").value
