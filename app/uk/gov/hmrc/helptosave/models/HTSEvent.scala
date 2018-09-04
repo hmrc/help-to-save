@@ -47,29 +47,16 @@ case class EligibilityCheckEvent(nino:              NINO,
 
   val value: ExtendedDataEvent = {
     val details: JsValue = {
-
-      val result =
-        if (eligibilityResult.resultCode === 1) {
-          EligibilityResult(nino, true)
-        } else {
-          val reason = "Response: " +
-            s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
-            s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
-          EligibilityResult(nino, false, Some(reason))
-        }
-
-      ucData(result, ucResponse)
+      if (eligibilityResult.resultCode === 1) {
+        EligibilityResult(nino, true, eligibilityResult, ucResponse)
+      } else {
+        EligibilityResult(nino, false, eligibilityResult, ucResponse)
+      }
     }
 
     HTSEvent(appConfig.appName, "EligibilityResult", details, "eligibility-result", path)
   }
 
-  def ucData(result: EligibilityResult, ucResponse: Option[UCResponse]): JsValue = ucResponse match {
-    case Some(UCResponse(isClaimant, Some(withinThreshold))) ⇒
-      Json.toJson(EligibilityResult(result.nino, result.eligible, result.ineligibleReason, isClaimant, Some(withinThreshold)))
-    case Some(UCResponse(isClaimant, None)) ⇒ Json.toJson(EligibilityResult(result.nino, result.eligible, result.ineligibleReason, isClaimant))
-    case None                               ⇒ Json.toJson(EligibilityResult(result.nino, result.eligible))
-  }
 }
 
 case class EligibilityResult(nino:                String,
@@ -81,6 +68,21 @@ case class EligibilityResult(nino:                String,
 object EligibilityResult {
 
   implicit val format: Format[EligibilityResult] = Json.format[EligibilityResult]
+
+  def apply(nino: String, eligible: Boolean, eligibilityResult: EligibilityCheckResult, ucResponse: Option[UCResponse]): JsValue = {
+
+    val reason = "Response: " +
+      s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
+      s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
+
+    Json.toJson(EligibilityResult(
+      nino                = nino,
+      eligible            = eligible,
+      ineligibleReason    = Some(reason),
+      isUCClaimant        = ucResponse.fold(false)(_.ucClaimant),
+      isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold)
+    ))
+  }
 }
 
 case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
@@ -109,10 +111,10 @@ case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: Hea
       source
     ),
                            Some(ManuallyEnteredDetails(
-        userInfo.nbaDetails.fold("")(_.accountName),
-        userInfo.nbaDetails.fold("")(_.accountNumber),
-        userInfo.nbaDetails.fold("")(_.sortCode),
-        userInfo.nbaDetails.fold("")(_.rollNumber.getOrElse(""))
+        userInfo.nbaDetails.map(_.accountName).getOrElse(""),
+        userInfo.nbaDetails.map(_.accountNumber).getOrElse(""),
+        userInfo.nbaDetails.map(_.sortCode).getOrElse(""),
+        userInfo.nbaDetails.flatMap(_.rollNumber).getOrElse("")
       )))),
     "account-created",
     createAccountURL
