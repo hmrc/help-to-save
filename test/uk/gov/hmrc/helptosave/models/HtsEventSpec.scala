@@ -30,16 +30,19 @@ class HtsEventSpec extends TestSupport {
     val inEligibleResult = EligibilityCheckResult("HtS account was previously created", 3, "HtS account already exists", 1)
 
     val eligibleUCClaimantWithinThreshold =
-      s"""{"nino":"$nino","eligible":true,"ineligibleReason":"Response: resultCode=1, reasonCode=6, meaning result='Eligible to HtS Account', reason='In receipt of UC and income sufficient'","isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
+      s"""{"nino":"$nino","eligible":true,"isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
+
+    val eligibleUCClaimant =
+      s"""{"nino":"$nino","eligible":true,"isUCClaimant":false}""".stripMargin
 
     val eligibleWithoutUCParams =
-      s"""{"nino":"$nino","eligible":true,"ineligibleReason":"Response: resultCode=1, reasonCode=6, meaning result='Eligible to HtS Account', reason='In receipt of UC and income sufficient'","isUCClaimant":false}""".stripMargin
+      s"""{"nino":"$nino","eligible":true}""".stripMargin
 
     val notEligibleWithUCParams =
       s"""{"nino":"$nino","eligible":false,"ineligibleReason":"Response: resultCode=3, reasonCode=1, meaning result='HtS account was previously created', reason='HtS account already exists'","isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
 
     val notEligibleWithoutUCParams =
-      s"""{"nino":"$nino","eligible":false,"ineligibleReason":"Response: resultCode=3, reasonCode=1, meaning result='HtS account was previously created', reason='HtS account already exists'","isUCClaimant":false}""".stripMargin
+      s"""{"nino":"$nino","eligible":false,"ineligibleReason":"Response: resultCode=3, reasonCode=1, meaning result='HtS account was previously created', reason='HtS account already exists'"}""".stripMargin
 
     "be created with the appropriate auditSource and auditType" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
@@ -62,7 +65,7 @@ class HtsEventSpec extends TestSupport {
 
     "contain only the isUCClaimant param in the details but not isWithinUCThreshold" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)), "path")
-      event.value.detail.toString shouldBe eligibleWithoutUCParams
+      event.value.detail.toString shouldBe eligibleUCClaimant
       event.value.tags.get(Path) shouldBe Some("path")
     }
 

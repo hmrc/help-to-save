@@ -46,15 +46,8 @@ case class EligibilityCheckEvent(nino:              NINO,
                                  path:              String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
   val value: ExtendedDataEvent = {
-    val details: JsValue = {
-      if (eligibilityResult.resultCode === 1) {
-        EligibilityResult(nino, true, eligibilityResult, ucResponse)
-      } else {
-        EligibilityResult(nino, false, eligibilityResult, ucResponse)
-      }
-    }
 
-    HTSEvent(appConfig.appName, "EligibilityResult", details, "eligibility-result", path)
+    HTSEvent(appConfig.appName, "EligibilityResult", EligibilityResult(nino, eligibilityResult, ucResponse), "eligibility-result", path)
   }
 
 }
@@ -62,26 +55,27 @@ case class EligibilityCheckEvent(nino:              NINO,
 case class EligibilityResult(nino:                String,
                              eligible:            Boolean,
                              ineligibleReason:    Option[String]  = None,
-                             isUCClaimant:        Boolean         = false,
+                             isUCClaimant:        Option[Boolean] = None,
                              isWithinUCThreshold: Option[Boolean] = None)
 
 object EligibilityResult {
 
   implicit val format: Format[EligibilityResult] = Json.format[EligibilityResult]
 
-  def apply(nino: String, eligible: Boolean, eligibilityResult: EligibilityCheckResult, ucResponse: Option[UCResponse]): JsValue = {
+  def apply(nino: String, eligibilityResult: EligibilityCheckResult, ucResponse: Option[UCResponse]): JsValue = {
 
-    val reason = "Response: " +
-      s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
-      s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
+    val details =
+      if (eligibilityResult.resultCode === 1) {
+        EligibilityResult(nino, true, isUCClaimant = ucResponse.map(_.ucClaimant), isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold))
+      } else {
+        val reason = "Response: " +
+          s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
+          s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
 
-    Json.toJson(EligibilityResult(
-      nino                = nino,
-      eligible            = eligible,
-      ineligibleReason    = Some(reason),
-      isUCClaimant        = ucResponse.fold(false)(_.ucClaimant),
-      isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold)
-    ))
+        EligibilityResult(nino, false, Some(reason), ucResponse.map(_.ucClaimant), ucResponse.flatMap(_.withinThreshold))
+      }
+
+    Json.toJson(details)
   }
 }
 
