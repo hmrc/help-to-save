@@ -18,12 +18,14 @@ package uk.gov.hmrc.helptosave.utils
 
 import cats.data.EitherT
 import cats.instances.future._
+import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.controllers.EnrolmentBehaviour
+import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -53,4 +55,41 @@ trait TestEnrolmentBehaviour extends TestSupport {
     (helpToSaveService.setFlag(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
       .returning(EitherT.fromEither[Future](result))
+
+  def payloadJson(dobValue: String) =
+    s"""{
+            "nino" : "nino",
+            "forename" : "name",
+            "surname" : "surname",
+            "dateOfBirth" : $dobValue,
+            "contactDetails" : {
+              "address1" : "1",
+              "address2" : "2",
+              "postcode": "postcode",
+              "countryCode" : "country",
+              "communicationPreference" : "preference"
+            },
+            "nbaDetails": {
+               "sortCode" : "20-12-12",
+               "accountNumber" : "12345678",
+               "rollNumber" : "11",
+               "accountName" : "test"
+             },
+            "registrationChannel" : "online",
+            "version" : "V2.0",
+            "systemId" : "MDTP REGISTRATION"
+      }""".stripMargin
+
+  def createAccountJson(dobValue: String): String =
+    s"""{
+           "payload":${payloadJson(dobValue)},
+           "eligibilityReason":7,
+           "source": "Digital"
+          }""".stripMargin
+
+  val validUserInfoPayload = Json.parse(payloadJson("20200101"))
+
+  val validCreateAccountRequestPayload = Json.parse(createAccountJson("20200101"))
+  val validCreateAccountRequest = validCreateAccountRequestPayload.validate[CreateAccountRequest].getOrElse(sys.error("Could not parse CreateAccountRequest"))
+  val validNSIUserInfo = validCreateAccountRequest.payload
 }

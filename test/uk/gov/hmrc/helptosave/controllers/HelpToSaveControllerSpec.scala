@@ -82,43 +82,6 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
   "The HelpToSaveController" when {
 
-      def payloadJson(dobValue: String) =
-        s"""{
-            "nino" : "nino",
-            "forename" : "name",
-            "surname" : "surname",
-            "dateOfBirth" : $dobValue,
-            "contactDetails" : {
-              "address1" : "1",
-              "address2" : "2",
-              "postcode": "postcode",
-              "countryCode" : "country",
-              "communicationPreference" : "preference"
-            },
-            "bankDetails": {
-               "sortCode" : "20-12-12",
-               "accountNumber" : "12345678",
-               "rollNumber" : "11",
-               "accountName" : "test"
-             },
-            "registrationChannel" : "online",
-            "version" : "V2.0",
-            "systemId" : "MDTP REGISTRATION"
-      }""".stripMargin
-
-      def createAccountJson(dobValue: String): String =
-        s"""{
-           "payload":${payloadJson(dobValue)},
-           "eligibilityReason":7,
-           "source": "Digital"
-          }""".stripMargin
-
-    val validUserInfoPayload = Json.parse(payloadJson("20200101"))
-
-    val validCreateAccountRequestPayload = Json.parse(createAccountJson("20200101"))
-    val validCreateAccountRequest = validCreateAccountRequestPayload.validate[CreateAccountRequest].getOrElse(sys.error("Could not parse CreateAccountRequest"))
-    val validNSIUserInfo = validCreateAccountRequest.payload
-
     "create account" must {
 
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
