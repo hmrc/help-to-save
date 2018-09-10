@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/hmrc/help-to-save.svg)](https://travis-ci.org/hmrc/help-to-save) [ ![Download](https://api.bintray.com/packages/hmrc/releases/help-to-save/images/download.svg) ](https://bintray.com/hmrc/releases/help-to-save/_latestVersion)
 
-## Help to Save 
+## Help to Save
 
 Backend application process for Help to Save.
 
