@@ -90,6 +90,11 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val validUserInfoPayload = Json.parse(payloadJson("20200101"))
 
   val validCreateAccountRequestPayload = Json.parse(createAccountJson("20200101"))
-  val validCreateAccountRequest = validCreateAccountRequestPayload.validate[CreateAccountRequest].getOrElse(sys.error("Could not parse CreateAccountRequest"))
+  val validCreateAccountRequest = validCreateAccountRequestPayload
+    .validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion)))
+    .getOrElse(sys.error("Could not parse CreateAccountRequest"))
+
+  val validUpdateAccountRequest = validCreateAccountRequest.copy(payload = validCreateAccountRequest.payload.copy(systemId = None, version = None))
+
   val validNSIUserInfo = validCreateAccountRequest.payload
 }

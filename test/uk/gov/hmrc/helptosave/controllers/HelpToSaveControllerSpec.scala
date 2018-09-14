@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK}
@@ -180,9 +180,9 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     "update email" must {
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        mockUpdateEmail(validNSIUserInfo)(HttpResponse(OK))
+        mockUpdateEmail(validUpdateAccountRequest.payload)(HttpResponse(OK))
 
-        val result = controller.updateEmail()(FakeRequest().withJsonBody(validUserInfoPayload))
+        val result = controller.updateEmail()(FakeRequest().withJsonBody(validUserInfoPayload.as[JsObject] - "version" - "systemId"))
 
         status(result)(10.seconds) shouldBe OK
       }
