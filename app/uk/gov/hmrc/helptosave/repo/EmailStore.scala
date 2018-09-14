@@ -47,6 +47,8 @@ trait EmailStore {
 
   def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]]
 
+  def deleteEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
+
 }
 
 @Singleton
@@ -114,6 +116,21 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
         Left(s"Could not read from email store: ${e.getMessage}")
     }
   })
+
+  override def deleteEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
+
+    remove("nino" → nino).map[Either[String, Unit]]{ res ⇒
+      if (res.writeErrors.nonEmpty) {
+        Left(s"Could not delete email: ${res.writeErrors.mkString(";")}")
+      } else {
+        Right(())
+      }
+    }.recover{
+      case e ⇒
+        Left(s"Could not delete email: ${e.getMessage}")
+    }
+
+  }
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
     collection.findAndUpdate(
