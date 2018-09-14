@@ -26,7 +26,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
-import uk.gov.hmrc.helptosave.models.{AccountCreated, ErrorResponse, NSIUserInfo}
+import uk.gov.hmrc.helptosave.models.{AccountCreated, ErrorResponse, NSIPayload}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.{HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
@@ -49,24 +49,24 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     implicit request ⇒
       val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
 
-      request.body.asJson.map(_.validate[CreateAccountRequest]) match {
+      request.body.asJson.map(_.validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(createAccountVersion)))) match {
         case Some(JsSuccess(createAccountRequest, _)) ⇒
-          val userInfo = createAccountRequest.userInfo
-          proxyConnector.createAccount(userInfo).map { response ⇒
+          val payload = createAccountRequest.payload
+          proxyConnector.createAccount(payload).map { response ⇒
             if (response.status === CREATED || response.status === CONFLICT) {
               enrolUser(createAccountRequest).value.onComplete {
-                case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", userInfo.nino, additionalParams)
-                case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", userInfo.nino, additionalParams)
-                case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", userInfo.nino, additionalParams)
+                case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", payload.nino, additionalParams)
+                case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", payload.nino, additionalParams)
+                case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", payload.nino, additionalParams)
               }
             }
 
             if (response.status === CREATED) {
-              auditor.sendEvent(AccountCreated(userInfo, createAccountRequest.source), userInfo.nino)
+              auditor.sendEvent(AccountCreated(payload, createAccountRequest.source), payload.nino)
 
               userCapService.update().onComplete {
-                case Success(_) ⇒ logger.debug("Successfully updated user cap counts after account creation", userInfo.nino, additionalParams)
-                case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after account creation: ${e.getMessage}", userInfo.nino, additionalParams)
+                case Success(_) ⇒ logger.debug("Successfully updated user cap counts after account creation", payload.nino, additionalParams)
+                case Failure(e) ⇒ logger.warn(s"Could not update user cap counts after account creation: ${e.getMessage}", payload.nino, additionalParams)
               }
             }
             Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
@@ -85,7 +85,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
 
   def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒
-      request.body.asJson.map(_.validate[NSIUserInfo]) match {
+      request.body.asJson.map(_.validate[NSIPayload](NSIPayload.nsiPayloadReads(None))) match {
         case Some(JsSuccess(userInfo, _)) ⇒
           proxyConnector.updateEmail(userInfo).map { response ⇒
             Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
@@ -105,4 +105,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
   def checkEligibility(nino: String): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒ checkEligibility(nino, routes.HelpToSaveController.checkEligibility(nino).url)
   }
+
+  private val createAccountVersion = appConfig.createAccountVersion
+
 }

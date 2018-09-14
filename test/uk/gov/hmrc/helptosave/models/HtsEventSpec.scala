@@ -29,6 +29,21 @@ class HtsEventSpec extends TestSupport {
     val eligibleResult = EligibilityCheckResult("Eligible to HtS Account", 1, "In receipt of UC and income sufficient", 6)
     val inEligibleResult = EligibilityCheckResult("HtS account was previously created", 3, "HtS account already exists", 1)
 
+    val eligibleUCClaimantWithinThreshold =
+      s"""{"nino":"$nino","eligible":true,"isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
+
+    val eligibleUCClaimant =
+      s"""{"nino":"$nino","eligible":true,"isUCClaimant":false}""".stripMargin
+
+    val eligibleWithoutUCParams =
+      s"""{"nino":"$nino","eligible":true}""".stripMargin
+
+    val notEligibleWithUCParams =
+      s"""{"nino":"$nino","eligible":false,"ineligibleReason":"Response: resultCode=3, reasonCode=1, meaning result='HtS account was previously created', reason='HtS account already exists'","isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
+
+    val notEligibleWithoutUCParams =
+      s"""{"nino":"$nino","eligible":false,"ineligibleReason":"Response: resultCode=3, reasonCode=1, meaning result='HtS account was previously created', reason='HtS account already exists'"}""".stripMargin
+
     "be created with the appropriate auditSource and auditType" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.auditSource shouldBe appName
@@ -38,45 +53,31 @@ class HtsEventSpec extends TestSupport {
 
     "read UC params if they are present when the user is eligible" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
-      event.value.detail.size shouldBe 4
-      event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "true") shouldBe true
-      event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe true
-      event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe true
+      event.value.detail.toString shouldBe eligibleUCClaimantWithinThreshold
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is eligible" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
-      event.value.detail.size shouldBe 2
-      event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "true") shouldBe true
-      event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe false
-      event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe false
+      event.value.detail.toString shouldBe eligibleWithoutUCParams
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "contain only the isUCClaimant param in the details but not isWithinUCThreshold" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)), "path")
-      event.value.detail.size shouldBe 3
-      event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "true") shouldBe true
-      event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "false") shouldBe true
+      event.value.detail.toString shouldBe eligibleUCClaimant
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
-      event.value.detail.size shouldBe 5
-      event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "false") shouldBe true
-      event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe true
-      event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe true
+      event.value.detail.toString shouldBe notEligibleWithUCParams
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, None, "path")
-      event.value.detail.size shouldBe 3
-      event.value.detail.exists(x ⇒ x._1 === "eligible" && x._2 === "false") shouldBe true
-      event.value.detail.exists(x ⇒ x._1 === "isUCClaimant" && x._2 === "true") shouldBe false
-      event.value.detail.exists(x ⇒ x._1 === "isWithinUCThreshold" && x._2 === "true") shouldBe false
+      event.value.detail.toString shouldBe notEligibleWithoutUCParams
       event.value.tags.get(Path) shouldBe Some("path")
     }
 

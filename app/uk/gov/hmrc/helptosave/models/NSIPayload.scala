@@ -22,16 +22,19 @@ import java.time.format.DateTimeFormatter
 import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
-import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
+import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 
-case class NSIUserInfo(forename:            String,
-                       surname:             String,
-                       dateOfBirth:         LocalDate,
-                       nino:                String,
-                       contactDetails:      ContactDetails,
-                       registrationChannel: String)
+case class NSIPayload(forename:            String,
+                      surname:             String,
+                      dateOfBirth:         LocalDate,
+                      nino:                String,
+                      contactDetails:      ContactDetails,
+                      registrationChannel: String,
+                      nbaDetails:          Option[BankDetails],
+                      version:             Option[String],
+                      systemId:            Option[String])
 
-object NSIUserInfo {
+object NSIPayload {
 
   case class ContactDetails(address1:                String,
                             address2:                String,
@@ -51,6 +54,19 @@ object NSIUserInfo {
 
   implicit val contactDetailsFormat: Format[ContactDetails] = Json.format[ContactDetails]
 
-  implicit val nsiUserInfoFormat: Format[NSIUserInfo] = Json.format[NSIUserInfo]
+  implicit val nsiPayloadWrites: Writes[NSIPayload] = Json.writes[NSIPayload]
+
+  def nsiPayloadReads(version: Option[String]): Reads[NSIPayload] = Reads[NSIPayload]{ jsValue ⇒
+    for {
+      forename ← (jsValue \ "forename").validate[String]
+      surname ← (jsValue \ "surname").validate[String]
+      dateOfBirth ← (jsValue \ "dateOfBirth").validate[LocalDate]
+      nino ← (jsValue \ "nino").validate[String]
+      contactDetails ← (jsValue \ "contactDetails").validate[ContactDetails]
+      registrationChannel ← (jsValue \ "registrationChannel").validate[String]
+      nbaDetails ← (jsValue \ "nbaDetails").validateOpt[BankDetails]
+      systemId ← (jsValue \ "systemId").validateOpt[String]
+    } yield NSIPayload(forename, surname, dateOfBirth, nino, contactDetails, registrationChannel, nbaDetails, version, systemId)
+  }
 
 }

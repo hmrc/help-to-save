@@ -22,9 +22,9 @@ import java.util.UUID
 import org.scalatest.EitherValues
 import play.api.libs.json.{JsObject, Json}
 import play.mvc.Http.Status._
-import uk.gov.hmrc.helptosave.models.NSIUserInfo.ContactDetails
+import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.models.account._
-import uk.gov.hmrc.helptosave.models.{NSIUserInfo, UCResponse}
+import uk.gov.hmrc.helptosave.models.{NSIPayload, UCResponse}
 import uk.gov.hmrc.helptosave.utils.{HttpSupport, MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
 
@@ -38,14 +38,14 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
   val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
 
-  val userInfo: NSIUserInfo =
-    NSIUserInfo(
+  val userInfo: NSIPayload =
+    NSIPayload(
       "forename",
       "surname",
       LocalDate.now(),
       "nino",
       ContactDetails("address1", "address2", Some("address3"), Some("address4"), Some("address5"), "postcode", Some("GB"), Some("phoneNumber"), Some("email"), "commPref"),
-      "regChannel"
+      "regChannel", None, Some("version"), Some("systemId")
     )
 
   "The HelpToSaveProxyConnector" when {

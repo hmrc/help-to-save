@@ -18,24 +18,26 @@ package uk.gov.hmrc.helptosave.models
 
 import cats.instances.int._
 import cats.syntax.eq._
+import play.api.libs.json._
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.controllers.routes
+import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ExistingDetails, ManuallyEnteredDetails}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
-import uk.gov.hmrc.play.audit.model.DataEvent
+import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
 trait HTSEvent {
-  val value: DataEvent
+  val value: ExtendedDataEvent
 }
 
 object HTSEvent {
   def apply(appName:         String,
             auditType:       String,
-            detail:          Map[String, String],
+            detail:          JsValue,
             transactionName: String,
-            path:            String)(implicit hc: HeaderCarrier): DataEvent =
-    DataEvent(appName, auditType = auditType, detail = detail, tags = hc.toAuditTags(transactionName, path))
+            path:            String)(implicit hc: HeaderCarrier): ExtendedDataEvent =
+    ExtendedDataEvent(appName, auditType = auditType, detail = detail, tags = hc.toAuditTags(transactionName, path))
 }
 
 case class EligibilityCheckEvent(nino:              NINO,
@@ -43,60 +45,113 @@ case class EligibilityCheckEvent(nino:              NINO,
                                  ucResponse:        Option[UCResponse],
                                  path:              String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
-  val value: DataEvent = {
-    val details = {
-      val result =
-        if (eligibilityResult.resultCode === 1) {
-          Map[String, String]("nino" → nino, "eligible" → "true")
-        } else {
-          val reason = "Response: " +
-            s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
-            s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
+  val value: ExtendedDataEvent = {
 
-          Map[String, String]("nino" → nino, "eligible" → "false", "reason" -> reason)
-
-        }
-      result ++ ucData(ucResponse)
-    }
-
-    HTSEvent(appConfig.appName, "EligibilityResult", details, "eligibility-result", path)
+    HTSEvent(appConfig.appName, "EligibilityResult", EligibilityResult(nino, eligibilityResult, ucResponse), "eligibility-result", path)
   }
 
-  def ucData(ucResponse: Option[UCResponse]): Map[String, String] = ucResponse match {
-    case Some(UCResponse(isClaimant, Some(withinThreshold))) ⇒
-      Map("isUCClaimant" -> isClaimant.toString, "isWithinUCThreshold" -> withinThreshold.toString)
-    case Some(UCResponse(isClaimant, None)) ⇒ Map("isUCClaimant" -> isClaimant.toString)
-    case None                               ⇒ Map.empty[String, String]
+}
+
+case class EligibilityResult(nino:                String,
+                             eligible:            Boolean,
+                             ineligibleReason:    Option[String]  = None,
+                             isUCClaimant:        Option[Boolean] = None,
+                             isWithinUCThreshold: Option[Boolean] = None)
+
+object EligibilityResult {
+
+  implicit val format: Format[EligibilityResult] = Json.format[EligibilityResult]
+
+  def apply(nino: String, eligibilityResult: EligibilityCheckResult, ucResponse: Option[UCResponse]): JsValue = {
+
+    val details =
+      if (eligibilityResult.resultCode === 1) {
+        EligibilityResult(nino, true, isUCClaimant = ucResponse.map(_.ucClaimant), isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold))
+      } else {
+        val reason = "Response: " +
+          s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
+          s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
+
+        EligibilityResult(nino, false, Some(reason), ucResponse.map(_.ucClaimant), ucResponse.flatMap(_.withinThreshold))
+      }
+
+    Json.toJson(details)
   }
 }
 
-case class AccountCreated(userInfo: NSIUserInfo, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
+case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
   private val createAccountURL = routes.HelpToSaveController.createAccount().url
 
-  val value: DataEvent = HTSEvent(
+  val value: ExtendedDataEvent = HTSEvent(
     appConfig.appName,
     "AccountCreated",
-    Map[String, String](
-      "forename" → userInfo.forename,
-      "surname" → userInfo.surname,
-      "dateOfBirth" → userInfo.dateOfBirth.toString,
-      "nino" → userInfo.nino,
-      "address1" → userInfo.contactDetails.address1,
-      "address2" → userInfo.contactDetails.address2,
-      "address3" → userInfo.contactDetails.address3.getOrElse(""),
-      "address4" → userInfo.contactDetails.address4.getOrElse(""),
-      "address5" → userInfo.contactDetails.address5.getOrElse(""),
-      "postcode" → userInfo.contactDetails.postcode,
-      "countryCode" → userInfo.contactDetails.countryCode.getOrElse(""),
-      "email" → userInfo.contactDetails.email.getOrElse(""),
-      "phoneNumber" → userInfo.contactDetails.phoneNumber.getOrElse(""),
-      "communicationPreference" → userInfo.contactDetails.communicationPreference,
-      "registrationChannel" → userInfo.registrationChannel,
-      "source" → source
+    Json.toJson(AllDetails(ExistingDetails(
+      userInfo.forename,
+      userInfo.surname,
+      userInfo.dateOfBirth.toString,
+      userInfo.nino,
+      userInfo.contactDetails.address1,
+      userInfo.contactDetails.address2,
+      userInfo.contactDetails.address3.getOrElse(""),
+      userInfo.contactDetails.address4.getOrElse(""),
+      userInfo.contactDetails.address5.getOrElse(""),
+      userInfo.contactDetails.postcode,
+      userInfo.contactDetails.countryCode.getOrElse(""),
+      userInfo.contactDetails.email.getOrElse(""),
+      userInfo.contactDetails.phoneNumber.getOrElse(""),
+      userInfo.contactDetails.communicationPreference,
+      userInfo.registrationChannel,
+      source
     ),
+                           Some(ManuallyEnteredDetails(
+        userInfo.nbaDetails.map(_.accountName).getOrElse(""),
+        userInfo.nbaDetails.map(_.accountNumber).getOrElse(""),
+        userInfo.nbaDetails.map(_.sortCode).getOrElse(""),
+        userInfo.nbaDetails.flatMap(_.rollNumber).getOrElse("")
+      )))),
     "account-created",
     createAccountURL
   )
 }
+object AccountCreated {
 
+  case class AllDetails(existingDetail: ExistingDetails, manuallyEnteredDetail: Option[ManuallyEnteredDetails])
+
+  object AllDetails {
+
+    implicit val format: Format[AllDetails] = Json.format[AllDetails]
+  }
+
+  case class ExistingDetails(forename:                String,
+                             surname:                 String,
+                             dateOfBirth:             String,
+                             nino:                    String,
+                             address1:                String,
+                             address2:                String,
+                             address3:                String,
+                             address4:                String,
+                             address5:                String,
+                             postcode:                String,
+                             countryCode:             String,
+                             email:                   String,
+                             phoneNumber:             String,
+                             communicationPreference: String,
+                             registrationChannel:     String,
+                             source:                  String)
+
+  object ExistingDetails {
+
+    implicit val format: Format[ExistingDetails] = Json.format[ExistingDetails]
+  }
+
+  case class ManuallyEnteredDetails(accountName:   String,
+                                    accountNumber: String,
+                                    sortCode:      String,
+                                    rollNumber:    String)
+
+  object ManuallyEnteredDetails {
+
+    implicit val format: Format[ManuallyEnteredDetails] = Json.format[ManuallyEnteredDetails]
+  }
+}

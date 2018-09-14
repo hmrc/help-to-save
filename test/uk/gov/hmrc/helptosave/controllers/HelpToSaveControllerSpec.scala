@@ -21,17 +21,17 @@ import java.util.concurrent.TimeUnit
 import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK}
-import uk.gov.hmrc.auth.core.retrieve.{EmptyRetrieval, Retrievals}
+import uk.gov.hmrc.auth.core.retrieve.EmptyRetrieval
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
-import uk.gov.hmrc.helptosave.models.{AccountCreated, EligibilityCheckResult, HTSEvent, NSIUserInfo}
-import uk.gov.hmrc.helptosave.services.{HelpToSaveService, UserCapService}
+import uk.gov.hmrc.helptosave.models.{AccountCreated, EligibilityCheckResult, HTSEvent, NSIPayload}
+import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -58,13 +58,13 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         .expects(event, nino, *)
         .returning(())
 
-    def mockCreateAccount(expectedPayload: NSIUserInfo)(response: HttpResponse) =
-      (proxyConnector.createAccount(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+    def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse) =
+      (proxyConnector.createAccount(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
-    def mockUpdateEmail(expectedPayload: NSIUserInfo)(response: HttpResponse) =
-      (proxyConnector.updateEmail(_: NSIUserInfo)(_: HeaderCarrier, _: ExecutionContext))
+    def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse) =
+      (proxyConnector.updateEmail(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
@@ -81,35 +81,6 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
   }
 
   "The HelpToSaveController" when {
-
-      def userInfoJson(dobValue: String) =
-        s"""{
-            "nino" : "nino",
-            "forename" : "name",
-            "surname" : "surname",
-            "dateOfBirth" : $dobValue,
-            "contactDetails" : {
-              "address1" : "1",
-              "address2" : "2",
-              "postcode": "postcode",
-              "countryCode" : "country",
-              "communicationPreference" : "preference"
-            },
-            "registrationChannel" : "online"
-      }""".stripMargin
-
-      def createAccountJson(dobValue: String): String =
-        s"""{
-           "userInfo":${userInfoJson(dobValue)},
-           "eligibilityReason":7,
-           "source": "Digital"
-          }""".stripMargin
-
-    val validUserInfoPayload = Json.parse(userInfoJson("20200101"))
-
-    val validCreateAccountRequestPayload = Json.parse(createAccountJson("20200101"))
-    val validCreateAccountRequest = validCreateAccountRequestPayload.validate[CreateAccountRequest].getOrElse(sys.error("Could not parse CreateAccountRequest"))
-    val validNSIUserInfo = validCreateAccountRequest.userInfo
 
     "create account" must {
 
@@ -209,16 +180,16 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     "update email" must {
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        mockUpdateEmail(validNSIUserInfo)(HttpResponse(OK))
+        mockUpdateEmail(validUpdateAccountRequest.payload)(HttpResponse(OK))
 
-        val result = controller.updateEmail()(FakeRequest().withJsonBody(validUserInfoPayload))
+        val result = controller.updateEmail()(FakeRequest().withJsonBody(validUserInfoPayload.as[JsObject] - "version" - "systemId"))
 
         status(result)(10.seconds) shouldBe OK
       }
 
       "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val requestBody = Json.parse(userInfoJson("\"123456\""))
+        val requestBody = Json.parse(payloadJson("\"123456\""))
         val result = controller.updateEmail()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")
