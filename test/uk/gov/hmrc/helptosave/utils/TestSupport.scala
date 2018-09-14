@@ -46,7 +46,7 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
         ConfigFactory.parseString(
           """
             | metrics.enabled       = false
-            | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.UCThresholdModule", "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule", "play.modules.reactivemongo.ReactiveMongoHmrcModule" ]
+            | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.UCThresholdModule", "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule", "play.modules.reactivemongo.ReactiveMongoHmrcModule", "uk.gov.hmrc.helptosave.modules.EmailDeletionModule" ]
           """.stripMargin)
       ) ++ additionalConfig)
       .build()
