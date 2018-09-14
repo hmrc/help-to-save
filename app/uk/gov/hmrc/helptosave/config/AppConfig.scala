@@ -45,4 +45,6 @@ class AppConfig @Inject() (override val runModeConfiguration: Configuration, val
 
   val thresholdAskTimeout: FiniteDuration = runModeConfiguration.underlying.get[FiniteDuration]("uc-threshold.ask-timeout").value
 
+  val createAccountVersion: String = getString("nsi.create-account.version")
+
 }

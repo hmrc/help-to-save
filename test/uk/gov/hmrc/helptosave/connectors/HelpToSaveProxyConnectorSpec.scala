@@ -45,7 +45,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
       LocalDate.now(),
       "nino",
       ContactDetails("address1", "address2", Some("address3"), Some("address4"), Some("address5"), "postcode", Some("GB"), Some("phoneNumber"), Some("email"), "commPref"),
-      "regChannel", None, "version", "systemId"
+      "regChannel", None, Some("version"), Some("systemId")
     )
 
   "The HelpToSaveProxyConnector" when {

@@ -49,7 +49,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     implicit request ⇒
       val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
 
-      request.body.asJson.map(_.validate[CreateAccountRequest]) match {
+      request.body.asJson.map(_.validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(createAccountVersion)))) match {
         case Some(JsSuccess(createAccountRequest, _)) ⇒
           val payload = createAccountRequest.payload
           proxyConnector.createAccount(payload).map { response ⇒
@@ -85,7 +85,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
 
   def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒
-      request.body.asJson.map(_.validate[NSIPayload]) match {
+      request.body.asJson.map(_.validate[NSIPayload](NSIPayload.nsiPayloadReads(None))) match {
         case Some(JsSuccess(userInfo, _)) ⇒
           proxyConnector.updateEmail(userInfo).map { response ⇒
             Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
@@ -105,4 +105,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
   def checkEligibility(nino: String): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒ checkEligibility(nino, routes.HelpToSaveController.checkEligibility(nino).url)
   }
+
+  private val createAccountVersion = appConfig.createAccountVersion
+
 }
