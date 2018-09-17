@@ -16,39 +16,50 @@
 
 package uk.gov.hmrc.helptosave.http
 
+import com.google.inject.{Inject, Singleton}
+import play.api.Configuration
+import play.api.http.HttpVerbs
 import play.api.libs.json.Writes
+import play.api.libs.ws.WSClient
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.hooks.HttpHook
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
+
 import scala.concurrent.{ExecutionContext, Future}
 
-object HttpClient {
+@Singleton
+class HttpClient @Inject() (override val auditConnector: AuditConnector,
+                            config:                      Configuration,
+                            wsClient:                    WSClient)
 
-  // this HttpReads instance for HttpResponse is preferred over the default
-  // uk.gov.hmrc.http.RawReads.readRaw as this custom one doesn't throw exceptions
+  extends DefaultHttpClient(config, auditConnector, wsClient) with HttpVerbs {
+
+  override val hooks: Seq[HttpHook] = NoneRequired
+
   private class RawHttpReads extends HttpReads[HttpResponse] {
     override def read(method: String, url: String, response: HttpResponse): HttpResponse = response
   }
 
+  // this HttpReads instance for HttpResponse is preferred over the default
+  // uk.gov.hmrc.http.RawReads.readRaw as this custom one doesn't throw exceptions
   private val rawHttpReads = new RawHttpReads
 
-  implicit class HttpClientOps(val http: uk.gov.hmrc.play.bootstrap.http.HttpClient) extends AnyVal {
-    def get(url:         String,
-            queryParams: Map[String, String] = Map.empty[String, String],
-            headers:     Map[String, String] = Map.empty[String, String]
-    )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-      http.GET(url, queryParams.toSeq)(rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
+  def get(url:         String,
+          queryParams: Map[String, String] = Map.empty[String, String],
+          headers:     Map[String, String] = Map.empty[String, String]
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    GET(url, queryParams.toSeq)(rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 
-    def post[A](url:     String,
-                body:    A,
-                headers: Map[String, String] = Map.empty[String, String]
-    )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-      http.POST(url, body, headers.toSeq)(w, rawHttpReads, hc, ec)
+  def post[A](url:     String,
+              body:    A,
+              headers: Map[String, String] = Map.empty[String, String]
+  )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    POST(url, body, headers.toSeq)(w, rawHttpReads, hc, ec)
 
-    def put[A](url:     String,
-               body:    A,
-               headers: Map[String, String] = Map.empty[String, String]
-    )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-      http.PUT(url, body)(w, rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
-  }
-
+  def put[A](url:     String,
+             body:    A,
+             headers: Map[String, String] = Map.empty[String, String]
+  )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    PUT(url, body)(w, rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
 }
-
