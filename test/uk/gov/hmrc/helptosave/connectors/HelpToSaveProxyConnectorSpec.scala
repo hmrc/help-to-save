@@ -25,7 +25,7 @@ import play.mvc.Http.Status._
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models.{NSIPayload, UCResponse}
-import uk.gov.hmrc.helptosave.utils.{HttpSupport, MockPagerDuty, TestSupport}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
 
 import scala.concurrent.duration._

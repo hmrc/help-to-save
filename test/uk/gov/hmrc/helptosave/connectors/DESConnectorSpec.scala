@@ -21,7 +21,7 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.{JsNull, Json}
 import uk.gov.hmrc.helptosave.models.{UCResponse, UCThreshold}
 import uk.gov.hmrc.helptosave.util.NINO
-import uk.gov.hmrc.helptosave.utils.{HttpSupport, MockPagerDuty, TestData, TestSupport}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext
 
