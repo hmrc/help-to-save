@@ -55,6 +55,9 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       def getConfirmedEmail(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
         await(emailStore.getConfirmedEmail(nino).value)
 
+      def deleteEmail(nino: NINO, emailStore: MongoEmailStore): Either[String, Unit] =
+        await(emailStore.deleteEmail(nino).value)
+
     "updating emails" must {
 
       "store the email in the mongo database" in {
@@ -144,6 +147,36 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
           val nino = randomNINO()
           val emailStore = newMongoEmailStore(reactiveMongoComponent)
           get(nino, emailStore).isLeft shouldBe true
+        }
+      }
+
+    }
+
+    "deleting emails" must {
+
+      "delete the email in the mongo database for a given nino" in {
+        val nino = randomNINO()
+        val emailStore = newMongoEmailStore(reactiveMongoComponent)
+
+        mockEncrypt(email)(encryptedEmail)
+
+        //store email first
+        val result = storeConfirmedEmail(nino, email, emailStore)
+        result shouldBe Right(())
+
+        //then delete
+        deleteEmail(nino, emailStore) shouldBe Right(())
+
+        //now verify
+        getConfirmedEmail(nino, emailStore) shouldBe Right(None)
+      }
+
+      "return a left if the delete is unsuccessful" in {
+        withBrokenMongo { reactiveMongoComponent ⇒
+          val nino = randomNINO()
+          val emailStore = newMongoEmailStore(reactiveMongoComponent)
+
+          deleteEmail(nino, emailStore).isLeft shouldBe true
         }
       }
 
