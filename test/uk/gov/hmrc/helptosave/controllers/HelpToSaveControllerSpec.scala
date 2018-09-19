@@ -21,16 +21,17 @@ import java.util.concurrent.TimeUnit
 import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
+import play.api.http.Status
 import play.api.libs.json.{JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
-import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK}
+import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK, INTERNAL_SERVER_ERROR}
 import uk.gov.hmrc.auth.core.retrieve.EmptyRetrieval
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
-import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.models.{AccountCreated, EligibilityCheckResult, HTSEvent, NSIPayload}
+import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
@@ -45,13 +46,16 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
   class TestApparatus {
+
     val proxyConnector = mock[HelpToSaveProxyConnector]
 
     val userCapService = mock[UserCapService]
 
     val mockAuditor = mock[HTSAuditor]
 
-    val controller = new HelpToSaveController(enrolmentStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector, mockAuditor)
+    val emailStore = mock[EmailStore]
+
+    val controller = new HelpToSaveController(enrolmentStore, emailStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector, mockAuditor)
 
     def mockSendAuditEvent(event: HTSEvent, nino: String) =
       (mockAuditor.sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
@@ -78,6 +82,11 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       (helpToSaveService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, routes.HelpToSaveController.checkEligibility(nino).url, *, *)
         .returning(EitherT.fromEither[Future](result))
+
+    def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
+      (emailStore.deleteEmail(_: NINO)(_: ExecutionContext))
+        .expects(nino, *)
+        .returning(EitherT.fromEither[Future](result))
   }
 
   "The HelpToSaveController" when {
@@ -97,7 +106,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -116,7 +125,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -134,12 +143,46 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CREATED
 
         // allow time for asynchronous calls to be made
         Thread.sleep(1000L)
+      }
+
+      "delete any existing emails of DE users before creating the account" in new TestApparatus {
+        val payloadDE = validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+          mockEmailDelete("nino")(Right(()))
+          mockCreateAccount(payloadDE)(HttpResponse(CREATED))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
+          inAnyOrder {
+            mockSetFlag("nino")(Right(()))
+            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            mockUserCapServiceUpdate(Right(()))
+            mockSendAuditEvent(AccountCreated(payloadDE, "Digital"), "nino")
+          }
+        }
+
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload("00")))
+
+        status(result)(10.seconds) shouldBe CREATED
+
+      }
+
+      "handle any unexpected mongo errors during deleting emails of DE users" in new TestApparatus {
+        val payloadDE = validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+          mockEmailDelete("nino")(Left("mongo error"))
+        }
+
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload("00")))
+
+        status(result)(10.seconds) shouldBe INTERNAL_SERVER_ERROR
+
       }
 
       "return bad request response if the request body is not a valid CreateAccountRequest json" in new TestApparatus {
@@ -168,7 +211,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CONFLICT
         // allow time for asynchronous calls to mocks to be made

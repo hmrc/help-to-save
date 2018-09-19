@@ -56,7 +56,7 @@ trait TestEnrolmentBehaviour extends TestSupport {
       .expects(nino, *, *)
       .returning(EitherT.fromEither[Future](result))
 
-  def payloadJson(dobValue: String) =
+  def payloadJson(dobValue: String, communicationPreference: String = "02"): String =
     s"""{
             "nino" : "nino",
             "forename" : "name",
@@ -67,7 +67,7 @@ trait TestEnrolmentBehaviour extends TestSupport {
               "address2" : "2",
               "postcode": "postcode",
               "countryCode" : "country",
-              "communicationPreference" : "preference"
+              "communicationPreference" : "$communicationPreference"
             },
             "nbaDetails": {
                "sortCode" : "20-12-12",
@@ -80,17 +80,18 @@ trait TestEnrolmentBehaviour extends TestSupport {
             "systemId" : "MDTP REGISTRATION"
       }""".stripMargin
 
-  def createAccountJson(dobValue: String): String =
+  def createAccountJson(dobValue: String, communicationPreference: String = "02"): String =
     s"""{
-           "payload":${payloadJson(dobValue)},
+           "payload":${payloadJson(dobValue, communicationPreference)},
            "eligibilityReason":7,
            "source": "Digital"
           }""".stripMargin
 
   val validUserInfoPayload = Json.parse(payloadJson("20200101"))
 
-  val validCreateAccountRequestPayload = Json.parse(createAccountJson("20200101"))
-  val validCreateAccountRequest = validCreateAccountRequestPayload
+  def validCreateAccountRequestPayload(communicationPreference: String = "02") = Json.parse(createAccountJson("20200101", communicationPreference))
+
+  val validCreateAccountRequest = validCreateAccountRequestPayload()
     .validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion)))
     .getOrElse(sys.error("Could not parse CreateAccountRequest"))
 
