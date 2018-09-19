@@ -60,7 +60,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
 
           //delete any existing emails of DE users from mongo
           if (payload.contactDetails.communicationPreference === "00") {
-            emailStore.deleteEmail(nino).fold(
+            emailStore.delete(nino).fold(
               error ⇒ {
                 logger.warn(s"couldn't delete email for DE user due to: $error", nino)
                 toFuture(InternalServerError)

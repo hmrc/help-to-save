@@ -47,7 +47,7 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
         logger.warn(s"Could not store email. Could not decode email: $error", nino)
         Future.successful(InternalServerError)
       }, { decodedEmail ⇒
-        emailStore.storeConfirmedEmail(decodedEmail, nino).fold(
+        emailStore.store(decodedEmail, nino).fold(
           { e ⇒
             logger.error(s"Could not store email: $e", nino)
             InternalServerError
@@ -60,7 +60,7 @@ class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: 
   }
 
   def get(): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
-    emailStore.getConfirmedEmail(nino).fold(
+    emailStore.get(nino).fold(
       { e ⇒
         logger.warn(e, nino)
         InternalServerError

@@ -84,7 +84,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         .returning(EitherT.fromEither[Future](result))
 
     def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
-      (emailStore.deleteEmail(_: NINO)(_: ExecutionContext))
+      (emailStore.delete(_: NINO)(_: ExecutionContext))
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
   }

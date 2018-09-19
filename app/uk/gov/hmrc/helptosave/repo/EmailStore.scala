@@ -43,11 +43,11 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[MongoEmailStore])
 trait EmailStore {
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
+  def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
 
-  def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]]
+  def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]]
 
-  def deleteEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
+  def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
 
 }
 
@@ -73,7 +73,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
     )
   )
 
-  def storeConfirmedEmail(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
+  def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
@@ -94,7 +94,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
         }
     })
 
-  override def getConfirmedEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
+  override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
 
     find("nino" → JsString(nino)).map { res ⇒
@@ -117,7 +117,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
     }
   })
 
-  override def deleteEmail(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
+  override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
 
     remove("nino" → nino).map[Either[String, Unit]]{ res ⇒
       if (res.writeErrors.nonEmpty) {

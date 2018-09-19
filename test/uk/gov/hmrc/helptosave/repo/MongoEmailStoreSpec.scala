@@ -50,13 +50,13 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
     val encryptedEmail = "ENCRYPTED"
 
       def storeConfirmedEmail(nino: NINO, email: String, emailStore: MongoEmailStore): Either[String, Unit] =
-        await(emailStore.storeConfirmedEmail(email, nino).value)
+        await(emailStore.store(email, nino).value)
 
       def getConfirmedEmail(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
-        await(emailStore.getConfirmedEmail(nino).value)
+        await(emailStore.get(nino).value)
 
       def deleteEmail(nino: NINO, emailStore: MongoEmailStore): Either[String, Unit] =
-        await(emailStore.deleteEmail(nino).value)
+        await(emailStore.delete(nino).value)
 
     "updating emails" must {
 
@@ -108,7 +108,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       import reactivemongo.play.json.ImplicitBSONHandlers._
 
         def get(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
-          await(emailStore.getConfirmedEmail(nino).value)
+          await(emailStore.get(nino).value)
 
         def remove(nino: String)(collection: JSONCollection): Unit = {
           val selector = JsObject(Map("nino" → JsString(nino)))

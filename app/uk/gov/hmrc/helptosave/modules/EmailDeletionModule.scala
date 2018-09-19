@@ -44,7 +44,7 @@ object EmailDeletionModule {
     if (ninos.nonEmpty) {
       logger.info(s"Deleting ${ninos.length} emails")
       ninos.foreach{ nino ⇒
-        emailStore.deleteEmail(nino).value.onComplete{
+        emailStore.delete(nino).value.onComplete{
           case scala.util.Success(value) ⇒
             value.fold(
               e ⇒ logger.warn(s"Could not delete email: $e"),

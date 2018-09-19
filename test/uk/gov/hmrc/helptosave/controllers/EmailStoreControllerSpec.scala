@@ -37,12 +37,12 @@ class EmailStoreControllerSpec extends AuthSupport {
   val emailStore: EmailStore = mock[EmailStore]
 
   def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
-    (emailStore.storeConfirmedEmail(_: String, _: NINO)(_: ExecutionContext))
+    (emailStore.store(_: String, _: NINO)(_: ExecutionContext))
       .expects(email, nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit =
-    (emailStore.getConfirmedEmail(_: NINO)(_: ExecutionContext))
+    (emailStore.get(_: NINO)(_: ExecutionContext))
       .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
