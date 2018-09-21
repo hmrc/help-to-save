@@ -47,7 +47,7 @@ case class EligibilityCheckEvent(nino:              NINO,
 
   val value: ExtendedDataEvent = {
 
-    HTSEvent(appConfig.appName, "EligibilityResult", EligibilityResult(nino, eligibilityResult, ucResponse), "eligibility-result", path)
+    HTSEvent(appConfig.appName, "eligibilityResult", EligibilityResult(nino, eligibilityResult, ucResponse), "eligibility-result", path)
   }
 
 }
@@ -85,7 +85,7 @@ case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: Hea
 
   val value: ExtendedDataEvent = HTSEvent(
     appConfig.appName,
-    "AccountCreated",
+    "accountCreated",
     Json.toJson(AllDetails(ExistingDetails(
       userInfo.forename,
       userInfo.surname,
@@ -104,12 +104,15 @@ case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: Hea
       userInfo.registrationChannel,
       source
     ),
-                           Some(ManuallyEnteredDetails(
-        userInfo.nbaDetails.map(_.accountName).getOrElse(""),
-        userInfo.nbaDetails.map(_.accountNumber).getOrElse(""),
-        userInfo.nbaDetails.map(_.sortCode).getOrElse(""),
-        userInfo.nbaDetails.flatMap(_.rollNumber).getOrElse("")
-      )))),
+                           userInfo.nbaDetails.map{ bankDetails ⇒
+        ManuallyEnteredDetails(
+          bankDetails.accountName,
+          bankDetails.accountNumber,
+          bankDetails.sortCode,
+          bankDetails.rollNumber.getOrElse("")
+        )
+      }
+    )),
     "account-created",
     createAccountURL
   )

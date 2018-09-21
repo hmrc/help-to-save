@@ -16,6 +16,11 @@
 
 package uk.gov.hmrc.helptosave.models
 
+import java.time.LocalDate
+
+import play.api.libs.json.Json
+import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ExistingDetails, ManuallyEnteredDetails}
+import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.audit.EventKeys.Path
 
@@ -47,13 +52,14 @@ class HtsEventSpec extends TestSupport {
     "be created with the appropriate auditSource and auditType" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.auditSource shouldBe appName
-      event.value.auditType shouldBe "EligibilityResult"
+      event.value.auditType shouldBe "eligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is eligible" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
       event.value.detail.toString shouldBe eligibleUCClaimantWithinThreshold
+      event.value.auditType shouldBe "eligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
@@ -66,19 +72,71 @@ class HtsEventSpec extends TestSupport {
     "contain only the isUCClaimant param in the details but not isWithinUCThreshold" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)), "path")
       event.value.detail.toString shouldBe eligibleUCClaimant
+      event.value.auditType shouldBe "eligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
       event.value.detail.toString shouldBe notEligibleWithUCParams
+      event.value.auditType shouldBe "eligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, None, "path")
       event.value.detail.toString shouldBe notEligibleWithoutUCParams
+      event.value.auditType shouldBe "eligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
+    }
+  }
+
+  "AccountCreated" must {
+
+    "construct an event correctly" in {
+      val nsiPayload = NSIPayload(
+        "name",
+        "surname",
+        LocalDate.ofEpochDay(0),
+        "nino",
+        ContactDetails("line1", "line2", Some("line3"), None, None, "postcode", None, None, Some("email"), "comms"),
+        "channel",
+        Some(BankDetails("sortCode", "accountNumber", Some("rollNumber"), "accountName")),
+        Some("version"),
+        Some("id")
+      )
+
+      val event = AccountCreated(nsiPayload, "source")
+      event.value.auditType shouldBe "accountCreated"
+      event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
+      event.value.detail shouldBe Json.toJson(
+        AllDetails(
+          ExistingDetails(
+            "name",
+            "surname",
+            "1970-01-01",
+            "nino",
+            "line1",
+            "line2",
+            "line3",
+            "",
+            "",
+            "postcode",
+            "",
+            "email",
+            "",
+            "comms",
+            "channel",
+            "source"
+          ), Some(ManuallyEnteredDetails(
+            "accountName",
+            "accountNumber",
+            "sortCode",
+            "rollNumber"
+          ))
+        )
+      )
+
     }
 
   }
