@@ -36,7 +36,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.controllers.routes
-import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ExistingDetails, ManuallyEnteredDetails}
+import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, PrePopulatedUserData, ManuallyEnteredDetails}
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestEnrolmentBehaviour}
