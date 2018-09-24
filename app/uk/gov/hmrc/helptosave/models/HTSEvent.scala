@@ -21,7 +21,7 @@ import cats.syntax.eq._
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.controllers.routes
-import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ExistingDetails, ManuallyEnteredDetails}
+import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, PrePopulatedUserData, ManuallyEnteredDetails}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
@@ -54,9 +54,9 @@ case class EligibilityCheckEvent(nino:              NINO,
 
 case class EligibilityResult(nino:                String,
                              eligible:            Boolean,
-                             ineligibleReason:    Option[String]  = None,
-                             isUCClaimant:        Option[Boolean] = None,
-                             isWithinUCThreshold: Option[Boolean] = None)
+                             ineligibleReason:    Option[EligibilityCheckResult] = None,
+                             isUCClaimant:        Option[Boolean]                = None,
+                             isWithinUCThreshold: Option[Boolean]                = None)
 
 object EligibilityResult {
 
@@ -68,11 +68,7 @@ object EligibilityResult {
       if (eligibilityResult.resultCode === 1) {
         EligibilityResult(nino, true, isUCClaimant = ucResponse.map(_.ucClaimant), isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold))
       } else {
-        val reason = "Response: " +
-          s"resultCode=${eligibilityResult.resultCode}, reasonCode=${eligibilityResult.reasonCode}, " +
-          s"meaning result='${eligibilityResult.result}', reason='${eligibilityResult.reason}'"
-
-        EligibilityResult(nino, false, Some(reason), ucResponse.map(_.ucClaimant), ucResponse.flatMap(_.withinThreshold))
+        EligibilityResult(nino, false, Some(eligibilityResult), ucResponse.map(_.ucClaimant), ucResponse.flatMap(_.withinThreshold))
       }
 
     Json.toJson(details)
@@ -86,7 +82,7 @@ case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: Hea
   val value: ExtendedDataEvent = HTSEvent(
     appConfig.appName,
     "accountCreated",
-    Json.toJson(AllDetails(ExistingDetails(
+    Json.toJson(AllDetails(PrePopulatedUserData(
       userInfo.forename,
       userInfo.surname,
       userInfo.dateOfBirth.toString,
@@ -119,33 +115,33 @@ case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: Hea
 }
 object AccountCreated {
 
-  case class AllDetails(existingDetail: ExistingDetails, manuallyEnteredDetail: Option[ManuallyEnteredDetails])
+  case class AllDetails(prePopulatedUserData: PrePopulatedUserData, manuallyEnteredDetail: Option[ManuallyEnteredDetails])
 
   object AllDetails {
 
     implicit val format: Format[AllDetails] = Json.format[AllDetails]
   }
 
-  case class ExistingDetails(forename:                String,
-                             surname:                 String,
-                             dateOfBirth:             String,
-                             nino:                    String,
-                             address1:                String,
-                             address2:                String,
-                             address3:                String,
-                             address4:                String,
-                             address5:                String,
-                             postcode:                String,
-                             countryCode:             String,
-                             email:                   String,
-                             phoneNumber:             String,
-                             communicationPreference: String,
-                             registrationChannel:     String,
-                             source:                  String)
+  case class PrePopulatedUserData(forename:                String,
+                                  surname:                 String,
+                                  dateOfBirth:             String,
+                                  nino:                    String,
+                                  address1:                String,
+                                  address2:                String,
+                                  address3:                String,
+                                  address4:                String,
+                                  address5:                String,
+                                  postcode:                String,
+                                  countryCode:             String,
+                                  email:                   String,
+                                  phoneNumber:             String,
+                                  communicationPreference: String,
+                                  registrationChannel:     String,
+                                  source:                  String)
 
-  object ExistingDetails {
+  object PrePopulatedUserData {
 
-    implicit val format: Format[ExistingDetails] = Json.format[ExistingDetails]
+    implicit val format: Format[PrePopulatedUserData] = Json.format[PrePopulatedUserData]
   }
 
   case class ManuallyEnteredDetails(accountName:   String,

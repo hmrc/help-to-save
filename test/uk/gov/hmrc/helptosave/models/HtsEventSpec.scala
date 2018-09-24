@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.models
 import java.time.LocalDate
 
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ExistingDetails, ManuallyEnteredDetails}
+import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, PrePopulatedUserData, ManuallyEnteredDetails}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.audit.EventKeys.Path
@@ -44,10 +44,10 @@ class HtsEventSpec extends TestSupport {
       s"""{"nino":"$nino","eligible":true}""".stripMargin
 
     val notEligibleWithUCParams =
-      s"""{"nino":"$nino","eligible":false,"ineligibleReason":"Response: resultCode=3, reasonCode=1, meaning result='HtS account was previously created', reason='HtS account already exists'","isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
+      s"""{"nino":"$nino","eligible":false,"ineligibleReason": {"resultCode": 3, "reasonCode" : 1, "result": "HtS account was previously created", "reason": "HtS account already exists"},"isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
 
     val notEligibleWithoutUCParams =
-      s"""{"nino":"$nino","eligible":false,"ineligibleReason":"Response: resultCode=3, reasonCode=1, meaning result='HtS account was previously created', reason='HtS account already exists'"}""".stripMargin
+      s"""{"nino":"$nino","eligible":false,"ineligibleReason": {"resultCode": 3, "reasonCode" : 1, "result": "HtS account was previously created", "reason": "HtS account already exists"}}""".stripMargin
 
     "be created with the appropriate auditSource and auditType" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
@@ -78,14 +78,14 @@ class HtsEventSpec extends TestSupport {
 
     "read UC params if they are present when the user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
-      event.value.detail.toString shouldBe notEligibleWithUCParams
+      event.value.detail shouldBe Json.parse(notEligibleWithUCParams)
       event.value.auditType shouldBe "eligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, None, "path")
-      event.value.detail.toString shouldBe notEligibleWithoutUCParams
+      event.value.detail shouldBe Json.parse(notEligibleWithoutUCParams)
       event.value.auditType shouldBe "eligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
@@ -111,7 +111,7 @@ class HtsEventSpec extends TestSupport {
       event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
       event.value.detail shouldBe Json.toJson(
         AllDetails(
-          ExistingDetails(
+          PrePopulatedUserData(
             "name",
             "surname",
             "1970-01-01",
