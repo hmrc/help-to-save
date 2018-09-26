@@ -52,41 +52,42 @@ class HtsEventSpec extends TestSupport {
     "be created with the appropriate auditSource and auditType" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.auditSource shouldBe appName
-      event.value.auditType shouldBe "eligibilityResult"
+      event.value.auditType shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is eligible" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
       event.value.detail.toString shouldBe eligibleUCClaimantWithinThreshold
-      event.value.auditType shouldBe "eligibilityResult"
+      event.value.auditType shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is eligible" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.detail.toString shouldBe eligibleWithoutUCParams
+      event.value.auditType shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "contain only the isUCClaimant param in the details but not isWithinUCThreshold" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)), "path")
       event.value.detail.toString shouldBe eligibleUCClaimant
-      event.value.auditType shouldBe "eligibilityResult"
+      event.value.auditType shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
       event.value.detail shouldBe Json.parse(notEligibleWithUCParams)
-      event.value.auditType shouldBe "eligibilityResult"
+      event.value.auditType shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, None, "path")
       event.value.detail shouldBe Json.parse(notEligibleWithoutUCParams)
-      event.value.auditType shouldBe "eligibilityResult"
+      event.value.auditType shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
   }
@@ -107,7 +108,7 @@ class HtsEventSpec extends TestSupport {
       )
 
       val event = AccountCreated(nsiPayload, "source")
-      event.value.auditType shouldBe "accountCreated"
+      event.value.auditType shouldBe "AccountCreated"
       event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
       event.value.detail shouldBe Json.toJson(
         AllDetails(
