@@ -47,7 +47,7 @@ case class EligibilityCheckEvent(nino:              NINO,
 
   val value: ExtendedDataEvent = {
 
-    HTSEvent(appConfig.appName, "eligibilityResult", EligibilityResult(nino, eligibilityResult, ucResponse), "eligibility-result", path)
+    HTSEvent(appConfig.appName, "EligibilityResult", EligibilityResult(nino, eligibilityResult, ucResponse), "eligibility-result", path)
   }
 
 }
@@ -81,7 +81,7 @@ case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: Hea
 
   val value: ExtendedDataEvent = HTSEvent(
     appConfig.appName,
-    "accountCreated",
+    "AccountCreated",
     Json.toJson(AllDetails(PrePopulatedUserData(
       userInfo.forename,
       userInfo.surname,
