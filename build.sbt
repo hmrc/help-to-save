@@ -33,7 +33,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "org.scalamock" %% "scalamock" % "4.1.0" % scope,
   "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
-  "com.miguno.akka" % "akka-mock-scheduler_2.11" % "0.5.1" % scope,
+  "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope,
   "uk.gov.hmrc" %% "reactivemongo-test" % "3.1.0"
 )
@@ -103,8 +103,9 @@ lazy val wartRemoverSettings = {
 lazy val catsSettings = scalacOptions += "-Ypartial-unification"
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
+  .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory) ++ plugins: _*)
   .settings(addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17"))
+  .settings(majorVersion := 2)
   .settings(playSettings ++ scoverageSettings: _*)
   .settings(scalaSettings: _*)
   .settings(scalaVersion := "2.11.12")
