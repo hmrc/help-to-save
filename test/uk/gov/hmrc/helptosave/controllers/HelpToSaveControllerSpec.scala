@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit
 import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.http.Status
 import play.api.libs.json.{JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
@@ -126,6 +125,23 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         }
 
         val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+
+        status(result)(10.seconds) shouldBe CREATED
+      }
+
+      "create account but dont call ITMP to set the flag if the source is Stride-Manual" in new TestApparatus {
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          mockEnrolmentStoreInsert("nino", true, Some(7), "Stride-Manual")(Right(()))
+          inAnyOrder {
+            mockUserCapServiceUpdate(Right(()))
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Stride-Manual"), "nino")
+          }
+        }
+
+        val body = validCreateAccountRequestPayload().as[JsObject] ++ Json.obj("source" → "Stride-Manual")
+        val result = controller.createAccount()(FakeRequest().withJsonBody(body))
 
         status(result)(10.seconds) shouldBe CREATED
       }
