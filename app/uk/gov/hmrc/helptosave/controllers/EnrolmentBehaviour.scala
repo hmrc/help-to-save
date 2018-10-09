@@ -18,11 +18,13 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
+import cats.instances.string._
+import cats.syntax.eq._
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
+import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.helptosave.services.HelpToSaveService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,12 +40,19 @@ trait EnrolmentBehaviour {
   } yield ()
 
   def enrolUser(createAccountRequest: CreateAccountRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
-    for {
-      _ ← enrolmentStore.insert(createAccountRequest.payload.nino,
-                                itmpFlag = false,
-                                createAccountRequest.eligibilityReason,
-                                createAccountRequest.source)
-      _ ← setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
-    } yield ()
+    if (createAccountRequest.source === "Stride-Manual") { //HTS-1403: set the itmpFlag to true in mongo straightaway without actually calling ITMP
+      enrolmentStore.insert(createAccountRequest.payload.nino,
+                            itmpFlag = true,
+                            createAccountRequest.eligibilityReason,
+                            createAccountRequest.source)
+    } else {
+      for {
+        _ ← enrolmentStore.insert(createAccountRequest.payload.nino,
+                                  itmpFlag = false,
+                                  createAccountRequest.eligibilityReason,
+                                  createAccountRequest.source)
+        _ ← setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
+      } yield ()
+    }
   }
 }
