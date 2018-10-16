@@ -59,25 +59,19 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
   val mockAuditor = mock[HTSAuditor]
 
-  val threshold = 650.0
+  val threshold = 1.23
 
   val thresholdManagerProvider = new TestThresholdProvider
 
-  def newHelpToSaveService(testConfig: Configuration): HelpToSaveServiceImpl =
+  val service: HelpToSaveServiceImpl = {
+    val testConfig = Configuration(ConfigFactory.parseString("""uc-threshold { ask-timeout = 10 seconds }"""))
+
     new HelpToSaveServiceImpl(mockProxyConnector, mockDESConnector, mockAuditor, mockMetrics, mockPagerDuty, thresholdManagerProvider)(
+
       transformer,
       new AppConfig(fakeApplication.injector.instanceOf[Configuration] ++ testConfig, fakeApplication.injector.instanceOf[Environment])
     )
-
-  def testConfiguration(enabled: Boolean) = Configuration(ConfigFactory.parseString(
-    s"""
-       |uc-threshold {
-       |  enabled = $enabled
-       |  threshold-amount = $threshold
-       |  ask-timeout = 10 seconds
-       |}
-    """.stripMargin
-  ))
+  }
 
   private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: HttpResponse) = {
     (mockDESConnector.isEligible(_: String, _: Option[UCResponse])(_: HeaderCarrier, _: ExecutionContext))
@@ -115,88 +109,105 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
   "HelpToSaveService" when {
 
-    val config = testConfiguration(false)
-    val service = newHelpToSaveService(config)
-
     val nino = "AE123456C"
     val uCResponse = UCResponse(true, Some(true))
-    val uCUnknownThresholdResponse = UCResponse(true, None)
 
-    val eligibilityCheckResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
+    val wtcEligibleResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
     val jsonCheckResponse =
       """{
-         |"result" : "eligible",
-         |"resultCode" : 1,
-         |"reason" : "tax credits",
-         |"reasonCode" : 1
-         |}
-       """.stripMargin
+        |"result" : "eligible",
+        |"resultCode" : 1,
+        |"reason" : "tax credits",
+        |"reasonCode" : 1
+        |}
+      """.stripMargin
 
     val jsonCheckResponseReasonCode4 =
       """{
-         |"result" : "eligible",
-         |"resultCode" : 4,
-         |"reason" : "tax credits",
-         |"reasonCode" : 4
-         |}
-       """.stripMargin
+        |"result" : "eligible",
+        |"resultCode" : 4,
+        |"reason" : "tax credits",
+        |"reasonCode" : 4
+        |}
+      """.stripMargin
 
     "handling eligibility calls" must {
       val nino = randomNINO()
 
+        def getEligibility(thresholdResponse: Option[Double]): Either[String, EligibilityCheckResult] = {
+          val result = service.getEligibility(nino, "path").value
+          thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
+          thresholdManagerProvider.probe.reply(GetThresholdValueResponse(thresholdResponse))
+          await(result)
+        }
+
       "return with the eligibility check result unchanged from ITMP" in {
         val uCResponse = UCResponse(false, Some(false))
-        forAll { result: EligibilityCheckResult ⇒
-          whenever(result.resultCode =!= 4) {
-            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
-            mockSendAuditEvent(EligibilityCheckEvent(nino, result, Some(uCResponse), "path"), nino)
-            Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
+        forAll { eligibilityCheckResponse: EligibilityCheckResult ⇒
+          whenever(eligibilityCheckResponse.resultCode =!= 4) {
+            inSequence {
+              mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(eligibilityCheckResponse)))) // scalastyle:ignore magic.number
+              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
+            }
+
+            getEligibility(Some(threshold)) shouldBe Right(eligibilityCheckResponse)
           }
         }
       }
 
+      "call DES even if there is an errors during UC claimant check" in {
+        inSequence {
+          mockUCClaimantCheck(nino, threshold)(Left("unexpected error during UCClaimant check"))
+          mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
+          mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
+        }
+
+        getEligibility(Some(threshold)) shouldBe Right(wtcEligibleResponse)
+      }
+
+      "continue the eligibility check when the threshold cannot be retrieved and the applicant is eligible from a WTC perspective" in {
+        inSequence {
+          mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
+          mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
+        }
+
+        getEligibility(None) shouldBe Right(wtcEligibleResponse)
+      }
+
       "pass the UC params to DES if they are provided" in {
         val uCResponse = UCResponse(true, Some(true))
-        forAll { result: EligibilityCheckResult ⇒
-          whenever(result.resultCode =!= 4) {
-            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
-            mockSendAuditEvent(EligibilityCheckEvent(nino, result, Some(uCResponse), "path"), nino)
-            Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
+        forAll { eligibilityCheckResponse: EligibilityCheckResult ⇒
+          whenever(eligibilityCheckResponse.resultCode =!= 4) {
+            inSequence {
+              mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(eligibilityCheckResponse)))) // scalastyle:ignore magic.number
+              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
+            }
+
+            getEligibility(Some(threshold)) shouldBe Right(eligibilityCheckResponse)
           }
         }
       }
 
       "do not pass the UC withinThreshold param to DES if its not set" in {
         val uCResponse = UCResponse(true, None)
-        forAll { result: EligibilityCheckResult ⇒
-          whenever(result.resultCode =!= 4) {
-            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(result)))) // scalastyle:ignore magic.number
-            mockSendAuditEvent(EligibilityCheckEvent(nino, result, Some(uCResponse), "path"), nino)
-            Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe Right(result)
+        forAll { eligibilityCheckResponse: EligibilityCheckResult ⇒
+          whenever(eligibilityCheckResponse.resultCode =!= 4) {
+            inSequence {
+              mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(eligibilityCheckResponse)))) // scalastyle:ignore magic.number
+              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
+            }
+
+            getEligibility(Some(threshold)) shouldBe Right(eligibilityCheckResponse)
           }
         }
       }
 
-      "handle errors when parsing invalid json" in {
-        inSequence {
-          mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-          mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
-          // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
-          mockPagerDutyAlert("Could not parse JSON in eligibility check response")
-        }
-
-        Await.result(service.getEligibility(nino, "path").value, 5.seconds) shouldBe
-          Left("Could not parse http response JSON: /reasonCode: [error.path.missing]; /result: " +
-            "[error.path.missing]; /resultCode: [error.path.missing]; /reason: [error.path.missing]. Response body was " +
-            "\"{\\\"invalid\\\": \\\"foo\\\"}\"")
-      }
-
       "return with an error" when {
-        "the call fails" in {
+        "the call to DES fails" in {
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, None))
@@ -204,7 +215,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             mockPagerDutyAlert("Failed to make call to check eligibility")
           }
 
-          Await.result(service.getEligibility(nino, "path").value, 5.seconds).isLeft shouldBe true
+          getEligibility(Some(threshold)).isLeft shouldBe true
         }
 
         "the call comes back with an unexpected http status" in {
@@ -217,137 +228,36 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
                 mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
               }
 
-              Await.result(service.getEligibility(nino, "path").value, 5.seconds).isLeft shouldBe true
+              getEligibility(Some(threshold)).isLeft shouldBe true
             }
-
           }
-
         }
 
-      }
-
-      "handle when uc threshold is enabled" when {
-
-        "on the happy path and return result as expected" in {
-          val config = testConfiguration(true)
-          val eligibilityCheckService = newHelpToSaveService(config)
-
+        "parsing invalid json" in {
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-            mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
+            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
+            // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+            mockPagerDutyAlert("Could not parse JSON in eligibility check response")
           }
 
-          val result = eligibilityCheckService.getEligibility(nino, "path").value
-          thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-          thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
-
-          await(result) shouldBe Right(eligibilityCheckResponse)
+          getEligibility(Some(threshold)) shouldBe
+            Left("Could not parse http response JSON: /reasonCode: [error.path.missing]; /result: " +
+              "[error.path.missing]; /resultCode: [error.path.missing]; /reason: [error.path.missing]. Response body was " +
+              "\"{\\\"invalid\\\": \\\"foo\\\"}\"")
         }
 
-        "call DES even if there is an errors during UC claimant check" in {
-          val config = testConfiguration(true)
-          val eligibilityCheckService = newHelpToSaveService(config)
-
-          inSequence {
-            mockUCClaimantCheck(nino, threshold)(Left("unexpected error during UCClaimant check"))
-            mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-            mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, None, "path"), nino)
-          }
-
-          val result = eligibilityCheckService.getEligibility(nino, "path").value
-          thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-          thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
-
-          await(result) shouldBe Right(eligibilityCheckResponse)
-        }
-
-        "map DES responses with result code 4 to an error" in {
-          val config = testConfiguration(true)
-          val eligibilityCheckService = newHelpToSaveService(config)
-
+        "DES returns result code 4" in {
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.parse(jsonCheckResponseReasonCode4))))
             mockPagerDutyAlert("Received result code 4 from DES eligibility check")
           }
 
-          val result = eligibilityCheckService.getEligibility(nino, "path").value
-          thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-          thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
-
-          await(result).isLeft shouldBe true
+          getEligibility(Some(threshold)).isLeft shouldBe true
         }
-
-        "handle errors during DES eligibility check" in {
-          val config = testConfiguration(true)
-          val eligibilityCheckService = newHelpToSaveService(config)
-
-          inSequence {
-            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, Some(Json.toJson("unexpected error during DES eligibility check"))))
-            mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
-          }
-
-          val result = eligibilityCheckService.getEligibility(nino, "path").value
-          thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-          thresholdManagerProvider.probe.reply(GetThresholdValueResponse(Some(threshold)))
-
-          await(result) shouldBe Left("Received unexpected status 500")
-
-        }
-
-        "continue the eligibility check when obtaining the threshold is enabled but the threshold manager returns None and the applicant" +
-          "is eligible from a WTC perspective" in {
-            val config = testConfiguration(true)
-            val eligibilityCheckService = newHelpToSaveService(config)
-
-            inSequence {
-              mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, None, "path"), nino)
-            }
-
-            val result = eligibilityCheckService.getEligibility(nino, "path").value
-            thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-            thresholdManagerProvider.probe.reply(GetThresholdValueResponse(None))
-
-            await(result) shouldBe Right(eligibilityCheckResponse)
-          }
-
-        "continue the eligibility check when obtaining the threshold is enabled but the threshold manager returns None and the applicant" +
-          "is not eligible from a WTC perspective so the user's journey ends in a technical error" in {
-            val config = testConfiguration(true)
-            val eligibilityCheckService = newHelpToSaveService(config)
-
-            inSequence {
-              mockDESEligibilityCheck(nino, None)(HttpResponse(500, Some(Json.toJson("eligibility check was inconclusive"))))
-              mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
-            }
-
-            val result = eligibilityCheckService.getEligibility(nino, "path").value
-            thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-            thresholdManagerProvider.probe.reply(GetThresholdValueResponse(None))
-
-            await(result) shouldBe Left("Received unexpected status 500")
-          }
 
       }
-
-      "return the result as expected when obtaining the threshold is disabled" in {
-        val config = testConfiguration(false)
-        val eligibilityCheckService = newHelpToSaveService(config)
-
-        inSequence {
-          mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-          mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
-          mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-        }
-
-        val result = eligibilityCheckService.getEligibility(nino, "path").value
-
-        await(result) shouldBe Right(eligibilityCheckResponse)
-      }
-
     }
 
     "handling setFlag calls" must {
