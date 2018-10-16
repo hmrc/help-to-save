@@ -76,15 +76,10 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
       result
     }
 
-  private def getThresholdValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Double]] = {
-    if (appConfig.isUCThresholdEnabled) {
-      thresholdManagerProvider.thresholdManager.ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
-        .mapTo[GetThresholdValueResponse]
-        .map(r ⇒ r.result)
-    } else {
-      Future.successful(Some(appConfig.thresholdAmount))
-    }
-  }
+  private def getThresholdValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Double]] =
+    thresholdManagerProvider.thresholdManager.ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
+      .mapTo[GetThresholdValueResponse]
+      .map(r ⇒ r.result)
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
     EitherT({

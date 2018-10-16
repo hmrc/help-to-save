@@ -39,10 +39,6 @@ class AppConfig @Inject() (override val runModeConfiguration: Configuration, val
 
   val correlationIdHeaderName: String = getString("microservice.correlationIdHeaderName")
 
-  val isUCThresholdEnabled: Boolean = getBoolean("uc-threshold.enabled")
-
-  val thresholdAmount: Double = runModeConfiguration.underlying.get[Double]("uc-threshold.threshold-amount").value
-
   val thresholdAskTimeout: FiniteDuration = runModeConfiguration.underlying.get[FiniteDuration]("uc-threshold.ask-timeout").value
 
   val createAccountVersion: String = getString("nsi.create-account.version")
