@@ -41,10 +41,9 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   val pagerDutyAlert = mock[PagerDutyAlerting]
   val proxyActor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
 
-  def testConfiguration(enabled: Boolean) = Configuration(ConfigFactory.parseString(
+  val testConfiguration = Configuration(ConfigFactory.parseString(
     s"""
        |uc-threshold {
-       |enabled = $enabled
        |ask-timeout = 10 seconds
        |min-backoff = 1 second
        |max-backoff = 5 seconds
@@ -55,6 +54,8 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
        |}
     """.stripMargin
   ))
+
+  val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 
   "The UCThresholdOrchestrator" should {
     "start up an instance of the UCThresholdManager correctly" in {
@@ -72,8 +73,6 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .expects(*, *)
         .returning(HttpResponse(200, Some(Json.parse(s"""{ "thresholdAmount" : $threshold }"""))))
 
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = true), connector)
-
       eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(1.second)) {
         val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
           .mapTo[UCThresholdManager.GetThresholdValueResponse]
@@ -84,11 +83,6 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       // sleep here to ensure the mock ThresholdStore's storeUCThreshold method
       // definitely gets called since it happens asynchronously
       Thread.sleep(1000L)
-    }
-
-    "not start up an instance of the UCThresholdManager if not enabled" in {
-      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration(enabled = false), connector)
-      orchestrator.thresholdManager shouldBe ActorRef.noSender
     }
 
   }

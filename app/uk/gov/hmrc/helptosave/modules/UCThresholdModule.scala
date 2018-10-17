@@ -43,15 +43,13 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
 
   private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
 
-  val enabled: Boolean = configuration.underlying.getBoolean("uc-threshold.enabled")
-
   private val timeCalculator = {
     val clock = Clock.system(ZoneId.of(configuration.underlying.getString("uc-threshold.update-timezone")))
     new TimeCalculatorImpl(clock)
   }
 
-  val thresholdManager: ActorRef = if (enabled) {
-    logger.info("UC threshold DES behaviour enabled: starting UCThresholdManager")
+  val thresholdManager: ActorRef = {
+    logger.info("Starting UCThresholdManager")
     system.actorOf(UCThresholdManager.props(
       connectorProxy,
       pagerDutyAlerting,
@@ -59,11 +57,6 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
       timeCalculator,
       configuration.underlying
     ))
-  } else {
-    logger.info("UC threshold DES behaviour not enabled: not starting UCThresholdManager")
-    // ActorRef.noSender is actually null - we're abusing the use of
-    // the value here to support the temporary enabled/disabled behaviour
-    ActorRef.noSender
   }
 
 }
