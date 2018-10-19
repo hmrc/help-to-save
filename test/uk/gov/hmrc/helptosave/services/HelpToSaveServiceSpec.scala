@@ -135,7 +135,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
     "handling eligibility calls" must {
       val nino = randomNINO()
 
-        def getEligibility(thresholdResponse: Option[Double]): Either[String, EligibilityCheckResult] = {
+        def getEligibility(thresholdResponse: Option[Double]): Either[String, EligibilityCheckResponse] = {
           val result = service.getEligibility(nino, "path").value
           thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
           thresholdManagerProvider.probe.reply(GetThresholdValueResponse(thresholdResponse))
@@ -152,7 +152,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
               mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
             }
 
-            getEligibility(Some(threshold)) shouldBe Right(eligibilityCheckResponse)
+            getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
           }
         }
       }
@@ -164,7 +164,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
         }
 
-        getEligibility(Some(threshold)) shouldBe Right(wtcEligibleResponse)
+        getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, Some(1.23)))
       }
 
       "continue the eligibility check when the threshold cannot be retrieved and the applicant is eligible from a WTC perspective" in {
@@ -173,7 +173,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
         }
 
-        getEligibility(None) shouldBe Right(wtcEligibleResponse)
+        getEligibility(None) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, None))
       }
 
       "pass the UC params to DES if they are provided" in {
@@ -186,7 +186,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
               mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
             }
 
-            getEligibility(Some(threshold)) shouldBe Right(eligibilityCheckResponse)
+            getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
           }
         }
       }
@@ -201,7 +201,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
               mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
             }
 
-            getEligibility(Some(threshold)) shouldBe Right(eligibilityCheckResponse)
+            getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
           }
         }
       }

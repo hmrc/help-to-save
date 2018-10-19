@@ -40,7 +40,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
     def doRequest(controller: EligibilityCheckController): Future[PlayResult] =
       controller.eligibilityCheck()(FakeRequest())
 
-    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
+    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResponse]): Unit =
       (eligibilityService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, routes.EligibilityCheckController.eligibilityCheck().url, *, *)
         .returning(EitherT.fromEither[Future](result))
@@ -62,7 +62,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
 
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
-          val eligibility = EligibilityCheckResult("x", 0, "y", 0)
+          val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
           mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
           mockEligibilityCheckerService(nino)(Right(eligibility))
 

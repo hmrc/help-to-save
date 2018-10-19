@@ -24,12 +24,12 @@ import cats.instances.future._
 import play.api.libs.json.{JsObject, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
-import play.mvc.Http.Status.{BAD_REQUEST, CONFLICT, CREATED, OK, INTERNAL_SERVER_ERROR}
+import play.mvc.Http.Status._
 import uk.gov.hmrc.auth.core.retrieve.EmptyRetrieval
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
-import uk.gov.hmrc.helptosave.models.{AccountCreated, EligibilityCheckResult, HTSEvent, NSIPayload}
+import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
@@ -77,7 +77,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
     }
 
-    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
+    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResponse]): Unit =
       (helpToSaveService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, routes.HelpToSaveController.checkEligibility(nino).url, *, *)
         .returning(EitherT.fromEither[Future](result))
@@ -280,7 +280,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          val eligibility = EligibilityCheckResult("x", 0, "y", 0)
+          val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
           mockEligibilityCheckerService(nino)(Right(eligibility))
 
           val result = doRequest(controller)

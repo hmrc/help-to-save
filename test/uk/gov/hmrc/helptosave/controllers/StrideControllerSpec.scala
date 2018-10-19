@@ -20,7 +20,7 @@ import java.util.UUID
 
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.libs.json.{JsDefined, JsSuccess, Json}
+import play.api.libs.json.{JsSuccess, Json}
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.Helpers.contentAsJson
 import play.api.test.{DefaultAwaitTimeout, FakeRequest}
@@ -30,7 +30,7 @@ import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestData
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,7 +50,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     def doPayeDetailsRequest(controller: StrideController): Future[PlayResult] =
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
-    def mockEligibilityService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
+    def mockEligibilityService(nino: NINO)(result: Either[String, EligibilityCheckResponse]): Unit =
       (helpToSaveService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, routes.StrideController.eligibilityCheck(nino).url, *, *)
         .returning(EitherT.fromEither[Future](result))
@@ -103,7 +103,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     "handling requests to perform eligibility checks" must {
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
-        val eligibility = EligibilityCheckResult("x", 0, "y", 0)
+        val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
         inSequence {
           mockSuccessfulAuthorisation()
           mockEligibilityService(nino)(Right(eligibility))

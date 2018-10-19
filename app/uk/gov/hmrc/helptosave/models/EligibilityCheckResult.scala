@@ -28,3 +28,11 @@ object EligibilityCheckResult {
   implicit val format: Format[EligibilityCheckResult] = Json.format[EligibilityCheckResult]
 
 }
+
+case class EligibilityCheckResponse(eligibilityCheckResult: EligibilityCheckResult, threshold: Option[Double])
+
+object EligibilityCheckResponse {
+
+  implicit val format: Format[EligibilityCheckResponse] = Json.format[EligibilityCheckResponse]
+
+}
