@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosave.models
 
 import java.time.LocalDate
 
-import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, PrePopulatedUserData, ManuallyEnteredDetails}
+import play.api.libs.json.{JsObject, Json}
+import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ManuallyEnteredDetails, PrePopulatedUserData}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.audit.EventKeys.Path
@@ -140,6 +140,57 @@ class HtsEventSpec extends TestSupport {
 
     }
 
+  }
+
+  "GetAccountResultEvent" must {
+
+    val nino = randomNINO()
+
+    val nsiAccountJson = Json.parse(
+      """
+        |{
+        |  "accountNumber": "AC01",
+        |  "accountBalance": "200.34",
+        |  "accountClosedFlag": "",
+        |  "accountBlockingCode": "00",
+        |  "clientBlockingCode": "00",
+        |  "currentInvestmentMonth": {
+        |    "investmentRemaining": "15.50",
+        |    "investmentLimit": "50.00",
+        |    "endDate": "2018-02-28"
+        |  },
+        |  "clientForename":"Testforename",
+        |  "clientSurname":"Testsurname",
+        |  "emailAddress":"test@example.com",
+        |  "terms": [
+        |     {
+        |       "termNumber":2,
+        |       "startDate":"2020-01-01",
+        |       "endDate":"2021-12-31",
+        |       "bonusEstimate":"67.00",
+        |       "bonusPaid":"0.00"
+        |    },
+        |    {
+        |       "termNumber":1,
+        |       "startDate":"2018-01-01",
+        |       "endDate":"2019-12-31",
+        |       "bonusEstimate":"123.45",
+        |       "bonusPaid":"123.45"
+        |    }
+        |  ]
+        |}
+      """.stripMargin).as[JsObject]
+
+    "construct GetAccountResult event correctly" in {
+
+      val getAccountResult = GetAccountResult(nino, nsiAccountJson)
+      val event = GetAccountResultEvent(getAccountResult, "path")
+
+      event.value.auditSource shouldBe appName
+      event.value.auditType shouldBe "GetAccountResult"
+      event.value.tags.get(Path) shouldBe Some("path")
+      event.value.detail shouldBe Json.toJson(getAccountResult)
+    }
   }
 
 }
