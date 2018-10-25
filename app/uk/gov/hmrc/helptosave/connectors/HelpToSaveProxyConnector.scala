@@ -56,7 +56,7 @@ trait HelpToSaveProxyConnector {
   /**
    * If NS&I do not recognise the given NINO return None
    */
-  def getAccount(nino: String, systemId: String, correlationId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]]
+  def getAccount(nino: String, systemId: String, correlationId: String, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]]
 
   def getTransactions(nino: String, systemId: String, correlationId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Transactions]]
 }
@@ -133,7 +133,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
     )
   }
 
-  override def getAccount(nino: String, systemId: String, correlationId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]] = {
+  override def getAccount(nino: String, systemId: String, correlationId: String, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]] = {
 
     val url = s"$proxyURL/help-to-save-proxy/nsi-services/account"
     val timerContext = metrics.getAccountTimer.time()
@@ -145,7 +145,6 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
             response.status match {
               case Status.OK ⇒
 
-                val path = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
                 auditor.sendEvent(GetAccountResultEvent(GetAccountResult(nino, response.json), path), nino)
 
                 val result = for {

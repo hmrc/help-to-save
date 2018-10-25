@@ -237,7 +237,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, Some(nsiAccountJson))))
         mockSendAuditEvent(event(), nino)
 
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
 
         result shouldBe Right(Some(account))
       }
@@ -251,7 +251,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           mockPagerDutyAlert("Could not parse JSON in the getAccount response")
         }
 
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
 
         result shouldBe Left("Could not parse getNsiAccount response, received 200 (OK), error=[Bonus terms list returned by NS&I was empty]")
       }
@@ -265,7 +265,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           mockPagerDutyAlert("Could not parse JSON in the getAccount response")
         }
 
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
 
         result.isLeft shouldBe true
       }
@@ -274,7 +274,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         val json = nsiAccountJson - "emailAddress"
         mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, Some(json))))
         mockSendAuditEvent(event(json), nino)
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
 
         result shouldBe Right(Some(account.copy(accountHolderEmail = None)))
       }
@@ -285,7 +285,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           mockPagerDutyAlert("Received unexpected http status in response to getAccount")
         }
 
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result shouldBe Left("Received unexpected status(400) from getNsiAccount call")
       }
 
@@ -295,7 +295,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
           mockPagerDutyAlert("Failed to make call to getAccount")
         }
 
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result.isLeft shouldBe true
       }
 
@@ -321,7 +321,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
         mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400, Some(errorResponse))))
 
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId).value)
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result shouldBe Right(None)
       }
 
