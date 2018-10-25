@@ -23,6 +23,7 @@ import cats.instances.string._
 import cats.syntax.eq._
 import play.api.libs.json.{Json, Writes}
 import play.api.mvc._
+import uk.gov.hmrc.domain.Nino.isValid
 import uk.gov.hmrc.helptosave.util
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
@@ -39,7 +40,7 @@ trait AccountQuery extends Logging with Results {
                                 systemId:      String,
                                 correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A]): Action[AnyContent] =
     ggAuthorisedWithNino { implicit request ⇒ implicit authNino ⇒
-      if (!uk.gov.hmrc.domain.Nino.isValid(nino)) {
+      if (!isValid(nino)) {
         logger.warn("NINO in request was not valid")
         BadRequest
       } else if (nino =!= authNino) {

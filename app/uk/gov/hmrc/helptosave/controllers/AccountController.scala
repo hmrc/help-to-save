@@ -29,6 +29,6 @@ class AccountController @Inject() (proxyConnector: HelpToSaveProxyConnector,
 
   def getAccount(nino: String, systemId: String, correlationId: Option[String]): Action[AnyContent] =
     accountQuery(nino, systemId, correlationId) { implicit request ⇒ nsiParams ⇒
-      proxyConnector.getAccount(nsiParams.nino, nsiParams.systemId, nsiParams.correlationId)
+      proxyConnector.getAccount(nsiParams.nino, nsiParams.systemId, nsiParams.correlationId, request.uri)
     }
 }
