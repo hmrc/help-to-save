@@ -163,7 +163,7 @@ object GetAccountResult {
 
 case class GetAccountResultEvent(getAccountResult: GetAccountResult, path: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
   val value: ExtendedDataEvent = {
-    HTSEvent(appConfig.appName, "GetAccountResult", Json.toJson(getAccountResult), "GetAccountResult", path)
+    HTSEvent(appConfig.appName, "GetAccountResult", Json.toJson(getAccountResult), "get-account-result", path)
   }
 }
 
