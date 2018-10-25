@@ -22,7 +22,7 @@ import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ManuallyEnteredDetails, PrePopulatedUserData}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.utils.TestSupport
-import uk.gov.hmrc.play.audit.EventKeys.Path
+import uk.gov.hmrc.play.audit.EventKeys._
 
 class HtsEventSpec extends TestSupport {
 
@@ -188,6 +188,7 @@ class HtsEventSpec extends TestSupport {
 
       event.value.auditSource shouldBe appName
       event.value.auditType shouldBe "GetAccountResult"
+      event.value.tags.get(TransactionName) shouldBe Some("get-account-result")
       event.value.tags.get(Path) shouldBe Some("path")
       event.value.detail shouldBe Json.toJson(getAccountResult)
     }
