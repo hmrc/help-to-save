@@ -31,7 +31,7 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.http.HttpClient
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount, NsiTransactions, Transactions}
-import uk.gov.hmrc.helptosave.models.{ErrorResponse, NSIPayload, UCResponse}
+import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
@@ -39,6 +39,7 @@ import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAle
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import HttpClient.HttpClientOps
+import uk.gov.hmrc.helptosave.audit.HTSAuditor
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -63,7 +64,8 @@ trait HelpToSaveProxyConnector {
 @Singleton
 class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
                                               metrics:           Metrics,
-                                              pagerDutyAlerting: PagerDutyAlerting)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+                                              pagerDutyAlerting: PagerDutyAlerting,
+                                              auditor:           HTSAuditor)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveProxyConnector with Logging {
 
   import HelpToSaveProxyConnectorImpl._
@@ -142,6 +144,10 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
             val _ = timerContext.stop()
             response.status match {
               case Status.OK ⇒
+
+                val path = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
+                auditor.sendEvent(GetAccountResultEvent(GetAccountResult(nino, response.json), path), nino)
+
                 val result = for {
                   nsiAccount ← response.parseJsonWithoutLoggingBody[NsiAccount].leftMap(NonEmptyList.one)
                   account ← Account(nsiAccount).toEither
