@@ -20,7 +20,7 @@ import java.util.UUID
 
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.libs.json.{JsDefined, JsSuccess, Json}
+import play.api.libs.json.{JsSuccess, Json}
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.Helpers.contentAsJson
 import play.api.test.{DefaultAwaitTimeout, FakeRequest}
@@ -30,7 +30,7 @@ import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestData
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 

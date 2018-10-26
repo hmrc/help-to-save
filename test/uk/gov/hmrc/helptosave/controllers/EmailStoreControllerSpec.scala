@@ -25,7 +25,8 @@ import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, Retrievals}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId ⇒ v2AuthProviderId, nino ⇒ v2Nino}
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
@@ -59,8 +60,8 @@ class EmailStoreControllerSpec extends AuthSupport {
 
       "return a HTTP 200 if the email is successfully stored with a GG login" in {
         inSequence {
-          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(GGCredId("")))
-          mockAuth(EmptyPredicate, Retrievals.nino)(Right(Some(nino)))
+          mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(GGCredId("")))
+          mockAuth(EmptyPredicate, v2Nino)(Right(Some(nino)))
           mockStore(email, nino)(Right(()))
         }
 
@@ -69,7 +70,7 @@ class EmailStoreControllerSpec extends AuthSupport {
 
       "return a HTTP 200 if the email is successfully stored with a privileged login" in {
         inSequence {
-          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(PAClientId("")))
+          mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
           mockStore(email, nino)(Right(()))
         }
 
@@ -79,14 +80,14 @@ class EmailStoreControllerSpec extends AuthSupport {
       "return a HTTP 500" when {
 
         "the email cannot be decoded" in {
-          mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(PAClientId("")))
+          mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
 
           status(store("not base 64 encoded", Some(nino))) shouldBe 500
         }
 
         "the email is not successfully stored" in {
           inSequence {
-            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(PAClientId("")))
+            mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
             mockStore(email, nino)(Left(""))
           }
 
@@ -103,13 +104,13 @@ class EmailStoreControllerSpec extends AuthSupport {
         def get(): Future[Result] = controller.get()(FakeRequest())
 
       "get the email from the email store" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Right(None))
         await(get())
       }
 
       "return an OK with the email if the email exists" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Right(Some(email)))
 
         val result = get()
@@ -124,7 +125,7 @@ class EmailStoreControllerSpec extends AuthSupport {
       }
 
       "return an OK with empty JSON if the email does not exist" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Right(None))
 
         val result = get()
@@ -133,7 +134,7 @@ class EmailStoreControllerSpec extends AuthSupport {
       }
 
       "return a HTTP 500 if there is an error getting from the email store" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
         mockGet(nino)(Left("oh no"))
 
         val result = get()
