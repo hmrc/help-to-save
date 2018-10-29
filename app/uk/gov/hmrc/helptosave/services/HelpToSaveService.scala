@@ -48,7 +48,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[HelpToSaveServiceImpl])
 trait HelpToSaveService {
 
-  def getEligibility(nino: NINO, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult]
+  def getEligibility(nino: NINO, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResponse]
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit]
 
@@ -66,14 +66,14 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
                                                                                            appConfig: AppConfig)
   extends HelpToSaveService with Logging {
 
-  override def getEligibility(nino: NINO, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResult] =
+  override def getEligibility(nino: NINO, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[EligibilityCheckResponse] =
     for {
       threshold ← EitherT.liftF(getThresholdValue())
       ucResponse ← EitherT.liftF(getUCDetails(nino, UUID.randomUUID(), threshold))
       result ← getEligibility(nino, ucResponse)
     } yield {
       auditor.sendEvent(EligibilityCheckEvent(nino, result, ucResponse, path), nino)
-      result
+      EligibilityCheckResponse(result, threshold)
     }
 
   private def getThresholdValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Double]] =

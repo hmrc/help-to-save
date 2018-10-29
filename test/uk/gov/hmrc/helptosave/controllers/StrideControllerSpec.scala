@@ -50,7 +50,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     def doPayeDetailsRequest(controller: StrideController): Future[PlayResult] =
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
-    def mockEligibilityService(nino: NINO)(result: Either[String, EligibilityCheckResult]): Unit =
+    def mockEligibilityService(nino: NINO)(result: Either[String, EligibilityCheckResponse]): Unit =
       (helpToSaveService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, routes.StrideController.eligibilityCheck(nino).url, *, *)
         .returning(EitherT.fromEither[Future](result))
@@ -103,7 +103,7 @@ class StrideControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout wi
     "handling requests to perform eligibility checks" must {
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
-        val eligibility = EligibilityCheckResult("x", 0, "y", 0)
+        val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
         inSequence {
           mockSuccessfulAuthorisation()
           mockEligibilityService(nino)(Right(eligibility))

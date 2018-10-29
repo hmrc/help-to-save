@@ -14,6 +14,6 @@ PUT  /update-email                @uk.gov.hmrc.helptosave.controllers.HelpToSave
 GET  /api/eligibility-check/:nino @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.checkEligibility(nino: String)
 
 
-GET /stride/enrolment-status      @uk.gov.hmrc.helptosave.controllers.StrideController.getEnrolmentStatus(nino: String)
-GET /stride/eligibility-check     @uk.gov.hmrc.helptosave.controllers.StrideController.eligibilityCheck(nino: String)
-GET /stride/paye-personal-details @uk.gov.hmrc.helptosave.controllers.StrideController.getPayePersonalDetails(nino: String)
+GET  /stride/enrolment-status      @uk.gov.hmrc.helptosave.controllers.StrideController.getEnrolmentStatus(nino: String)
+GET  /stride/eligibility-check     @uk.gov.hmrc.helptosave.controllers.StrideController.eligibilityCheck(nino: String)
+GET  /stride/paye-personal-details @uk.gov.hmrc.helptosave.controllers.StrideController.getPayePersonalDetails(nino: String)
