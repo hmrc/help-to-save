@@ -231,7 +231,7 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         None)
 
       val path = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
-      def event(accountJson: JsValue = nsiAccountJson) = GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
+        def event(accountJson: JsValue = nsiAccountJson) = GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
 
       "handle success response with Accounts having Terms" in {
         mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, Some(nsiAccountJson))))
