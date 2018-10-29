@@ -25,7 +25,7 @@ import org.scalamock.function.MockFunction5
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, _}
-import uk.gov.hmrc.auth.core.retrieve.Retrievals
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
 import uk.gov.hmrc.helptosave.models.account._
@@ -75,7 +75,7 @@ class TransactionsControllerSpec extends AuthSupport {
 
       "handle success responses" in {
         inSequence {
-          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockGetTransactions(nino, systemId, None)(Right(Some(transactions)))
         }
 
@@ -85,7 +85,7 @@ class TransactionsControllerSpec extends AuthSupport {
       }
 
       "return a 403 (FORBIDDEN) if the NINO in the URL doesn't match the NINO retrieved from auth" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getTransactions("BE123456C", systemId, None)(fakeRequest)
         status(result) shouldBe 403
@@ -93,7 +93,7 @@ class TransactionsControllerSpec extends AuthSupport {
 
       "return a 404 if an transactions does not exist for the NINO" in {
         inSequence {
-          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockGetTransactions(nino, systemId, None)(Right(None))
         }
 
@@ -102,7 +102,7 @@ class TransactionsControllerSpec extends AuthSupport {
       }
 
       "return a 400 if the NINO is not valid" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getTransactions("nino", systemId, None)(fakeRequest)
         status(result) shouldBe 400
@@ -110,7 +110,7 @@ class TransactionsControllerSpec extends AuthSupport {
 
       "handle errors returned by the connector" in {
         inSequence {
-          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockGetTransactions(nino, systemId, None)(Left("some error"))
         }
 

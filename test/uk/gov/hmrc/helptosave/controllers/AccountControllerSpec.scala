@@ -21,11 +21,11 @@ import java.util.UUID
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.scalamock.function.MockFunction5
+import org.scalamock.function.MockFunction6
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, _}
-import uk.gov.hmrc.auth.core.retrieve.Retrievals
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
 import uk.gov.hmrc.helptosave.models.account.{Account, Blocking}
@@ -43,16 +43,18 @@ class AccountControllerSpec extends AuthSupport {
 
   val queryString = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
 
-  val fakeRequest = FakeRequest("GET", s"/nsi-account?$queryString")
+  val path = s"/help-to-save/$nino/account?$queryString"
 
-  def mockGetAccount(nino: String, systemId: String, correlationId: Option[String])(response: Either[String, Option[Account]]) = {
-    val call: MockFunction5[String, String, String, HeaderCarrier, ExecutionContext, EitherT[Future, String, Option[Account]]] =
-      mockProxyConnector.getAccount(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext)
+  val fakeRequest = FakeRequest("GET", path)
+
+  def mockGetAccount(nino: String, systemId: String, correlationId: Option[String], path: String)(response: Either[String, Option[Account]]) = {
+    val call: MockFunction6[String, String, String, String, HeaderCarrier, ExecutionContext, EitherT[Future, String, Option[Account]]] =
+      mockProxyConnector.getAccount(_: String, _: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext)
 
     val callHandler = correlationId.fold(
-      call.expects(nino, systemId, *, *, *)
+      call.expects(nino, systemId, *, path, *, *)
     ){ id ⇒
-        call.expects(nino, systemId, id, *, *)
+        call.expects(nino, systemId, id, path, *, *)
       }
 
     callHandler.returning(EitherT.fromEither(response))
@@ -66,8 +68,8 @@ class AccountControllerSpec extends AuthSupport {
 
       "handle success responses" in {
         inSequence {
-          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
-          mockGetAccount(nino, systemId, None)(Right(Some(account)))
+          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
+          mockGetAccount(nino, systemId, None, path)(Right(Some(account)))
         }
 
         val result = controller.getAccount(nino, systemId, None)(fakeRequest)
@@ -76,7 +78,7 @@ class AccountControllerSpec extends AuthSupport {
       }
 
       "return a 403 (FORBIDDEN) if the NINO in the URL doesn't match the NINO retrieved from auth" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getAccount("BE123456C", systemId, None)(fakeRequest)
         status(result) shouldBe 403
@@ -84,8 +86,8 @@ class AccountControllerSpec extends AuthSupport {
 
       "return a 404 if an account does not exist for the NINO" in {
         inSequence {
-          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
-          mockGetAccount(nino, systemId, None)(Right(None))
+          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
+          mockGetAccount(nino, systemId, None, path)(Right(None))
         }
 
         val result = controller.getAccount(nino, systemId, None)(fakeRequest)
@@ -93,7 +95,7 @@ class AccountControllerSpec extends AuthSupport {
       }
 
       "return a 400 if the NINO is not valid" in {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getAccount("nino", systemId, None)(fakeRequest)
         status(result) shouldBe 400
@@ -101,8 +103,8 @@ class AccountControllerSpec extends AuthSupport {
 
       "handle errors returned by the connector" in {
         inSequence {
-          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
-          mockGetAccount(nino, systemId, None)(Left("some error"))
+          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
+          mockGetAccount(nino, systemId, None, path)(Left("some error"))
         }
 
         val result = controller.getAccount(nino, systemId, None)(fakeRequest)

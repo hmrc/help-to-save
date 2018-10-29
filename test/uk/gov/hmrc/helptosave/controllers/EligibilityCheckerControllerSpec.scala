@@ -23,7 +23,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Result ⇒ PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.retrieve.Retrievals
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
@@ -53,7 +53,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
     "handling requests to perform eligibility checks" must {
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
-        mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
         mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
 
         val result = doRequest(controller)
@@ -63,7 +63,7 @@ class EligibilityCheckerControllerSpec extends AuthSupport with GeneratorDrivenP
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
           val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
-          mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
+          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockEligibilityCheckerService(nino)(Right(eligibility))
 
           val result = doRequest(controller)

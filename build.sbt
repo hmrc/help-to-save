@@ -16,7 +16,7 @@ lazy val plugins: Seq[Plugins] = Seq.empty
 
 val dependencies = Seq(
   ws,
-  "uk.gov.hmrc" %% "auth-client" % "2.6.0",
+  "uk.gov.hmrc" %% "auth-client" % "2.17.0-play-25",
   "uk.gov.hmrc" %% "play-config" % "5.0.0",
   "uk.gov.hmrc" %% "domain" % "5.1.0",
   "org.typelevel" %% "cats-core" % "1.1.0",

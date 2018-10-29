@@ -22,7 +22,8 @@ import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve._
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, v2}
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, WithMdcExecutionContext, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
@@ -50,7 +51,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   def ggAuthorisedWithNino(action: HtsActionWithNino): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
-        .retrieve(Retrievals.nino) { mayBeNino ⇒
+        .retrieve(v2Nino) { mayBeNino ⇒
           mayBeNino.fold[Future[Result]] {
             logger.warn("Could not find NINO for logged in user")
             Forbidden
@@ -72,9 +73,9 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
 
   def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNino): Action[AnyContent] =
     Action.async { implicit request ⇒
-      authorised(GGAndPrivilegedProviders).retrieve(Retrievals.authProviderId) {
+      authorised(GGAndPrivilegedProviders).retrieve(v2.Retrievals.authProviderId) {
         case GGCredId(_) ⇒
-          authorised().retrieve(Retrievals.nino) { retrievedNINO ⇒
+          authorised().retrieve(v2Nino) { retrievedNINO ⇒
             (nino, retrievedNINO) match {
               case (Some(given), Some(retrieved)) ⇒
                 if (given === retrieved) {
