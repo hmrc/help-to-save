@@ -102,17 +102,16 @@ object PayePersonalDetails {
     readSeq(json, "addresses", "2").orElse(readSeq(json, "addresses", "1")) //1–Residential Address, 2–Correspondence Address
       .fold[JsResult[Address]](
         JsError("No Address found in the DES response")
-      )(v ⇒ {
-          val line1 = (v \ "line1").as[String]
-          val line2 = (v \ "line2").as[String]
-          val line3 = (v \ "line3").asOpt[String]
-          val line4 = (v \ "line4").asOpt[String]
-          val line5 = (v \ "line5").asOpt[String]
-          val postcode = (v \ "postcode").as[String]
-          val countryCode = (v \ "countryCode").asOpt[Int]
-
-          JsSuccess(Address(line1, line2, line3, line4, line5, postcode, countryCode.flatMap(countryCodes.get).map(_.take(2))))
-        }
+      )(v ⇒
+          for {
+            line1 ← (v \ "line1").validate[String]
+            line2 ← (v \ "line2").validate[String]
+            line3 ← (v \ "line3").validateOpt[String]
+            line4 ← (v \ "line4").validateOpt[String]
+            line5 ← (v \ "line5").validateOpt[String]
+            postcode ← (v \ "postcode").validate[String]
+            countryCode ← (v \ "countryCode").validateOpt[Int]
+          } yield Address(line1, line2, line3, line4, line5, postcode, countryCode.flatMap(countryCodes.get).map(_.take(2)))
         )
   }
 
@@ -120,12 +119,12 @@ object PayePersonalDetails {
     readSeq(json, "phoneNumbers", "7").orElse(readSeq(json, "phoneNumbers", "1")) //7–Mobile Telephone Number, 1–Daytime Home Telephone Number
       .fold[JsResult[Option[String]]](
         JsSuccess(None)
-      )(v ⇒ {
-          val callingCode = (v \ "callingCode").asOpt[Int]
-          val convertedAreaDiallingCode = (v \ "convertedAreaDiallingCode").asOpt[String]
-          val telephoneNumber = (v \ "telephoneNumber").asOpt[String]
-
-          JsSuccess {
+      )(v ⇒
+          for {
+            callingCode ← (v \ "callingCode").validateOpt[Int]
+            convertedAreaDiallingCode ← (v \ "convertedAreaDiallingCode").validateOpt[String]
+            telephoneNumber ← (v \ "telephoneNumber").validateOpt[String]
+          } yield {
             (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
               case (Some(cc), Some(cadc), Some(t)) ⇒
                 Some(s"+$cc${cadc.stripPrefix("0")}$t")
@@ -138,7 +137,6 @@ object PayePersonalDetails {
               case _ ⇒
                 None
             }
-          }
-        })
+          })
   }
 }
