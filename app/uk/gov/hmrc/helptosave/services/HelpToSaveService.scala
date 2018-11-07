@@ -128,7 +128,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
         response.status match {
           case Status.OK ⇒
-            val result = response.parseJson[PayePersonalDetails]
+            val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
             result.fold({
               e ⇒
                 metrics.payePersonalDetailsErrorCounter.inc()
