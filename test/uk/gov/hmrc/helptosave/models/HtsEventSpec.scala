@@ -194,4 +194,24 @@ class HtsEventSpec extends TestSupport {
     }
   }
 
+  "BARSCheck" must {
+
+    "be created correctly" in {
+      val response = Json.parse("""{ "a" : "b" }""")
+      val event = BARSCheck(BarsRequest("nino", "code", "number"), response, "path")
+      event.value.auditSource shouldBe appName
+      event.value.auditType shouldBe "BARSCheck"
+      event.value.detail shouldBe Json.parse(
+        s"""{
+           | "nino": "nino",
+           | "accountNumber" : "number",
+           | "sortCode": "code",
+           | "response" : ${response.toString}
+           | }
+        """.stripMargin
+      )
+      event.value.tags.get("path") shouldBe Some("path")
+    }
+
+  }
 }

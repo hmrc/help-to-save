@@ -21,16 +21,16 @@ import cats.instances.int._
 import cats.instances.string._
 import cats.syntax.eq._
 import com.google.inject.Inject
-import play.api.libs.json.{JsError, JsSuccess}
+import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
-import uk.gov.hmrc.helptosave.models.{AccountCreated, ErrorResponse, NSIPayload}
+import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.repo.{EmailStore, EnrolmentStore}
-import uk.gov.hmrc.helptosave.services.{HelpToSaveService, UserCapService}
+import uk.gov.hmrc.helptosave.services.{BarsService, HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext, toFuture}
@@ -44,7 +44,8 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
                                       userCapService:             UserCapService,
                                       val helpToSaveService:      HelpToSaveService,
                                       override val authConnector: AuthConnector,
-                                      auditor:                    HTSAuditor)(
+                                      auditor:                    HTSAuditor,
+                                      barsService:                BarsService)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {
@@ -103,6 +104,26 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
 
   def checkEligibility(nino: String): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒ checkEligibility(nino, routes.HelpToSaveController.checkEligibility(nino).url)
+  }
+
+  def doBarsCheck(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request ⇒
+    request.body.asJson.map(_.validate[BarsRequest]) match {
+
+      case Some(JsSuccess(barsRequest, _)) ⇒
+        barsService.validate(barsRequest, request.uri).flatMap {
+          case Right(isValid) ⇒ Ok(Json.parse(s"""{"isValid":$isValid}"""))
+          case Left(_)        ⇒ InternalServerError
+        }
+
+      case Some(error: JsError) ⇒
+        val errorString = error.prettyPrint()
+        logger.warn(s"Could not parse BarsRequest in request body: $errorString")
+        BadRequest(ErrorResponse("Could not parse BarsRequest in request body", errorString).toJson())
+
+      case None ⇒
+        logger.warn("No BarsRequest body found in request")
+        BadRequest(ErrorResponse("No BarsRequest body found in request", "").toJson())
+    }
   }
 
   private def createAccount(createAccountRequest: CreateAccountRequest,

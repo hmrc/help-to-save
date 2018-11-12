@@ -18,8 +18,14 @@ package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json.{Format, Json}
 
+case class BankDetails(sortCode: String, accountNumber: String, rollNumber: Option[String], accountName: String)
+
 object BankDetails {
   implicit val bankDetailsFormat: Format[BankDetails] = Json.format[BankDetails]
 }
 
-case class BankDetails(sortCode: String, accountNumber: String, rollNumber: Option[String], accountName: String)
+case class BarsRequest(nino: String, sortCode: String, accountNumber: String)
+
+object BarsRequest {
+  implicit val barsRequestFormat: Format[BarsRequest] = Json.format[BarsRequest]
+}

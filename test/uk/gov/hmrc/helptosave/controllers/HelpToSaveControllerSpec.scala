@@ -31,7 +31,7 @@ import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.repo.EmailStore
-import uk.gov.hmrc.helptosave.services.UserCapService
+import uk.gov.hmrc.helptosave.services.{BarsService, UserCapService}
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -54,7 +54,17 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     val emailStore = mock[EmailStore]
 
-    val controller = new HelpToSaveController(enrolmentStore, emailStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector, mockAuditor)
+    val barsService = mock[BarsService]
+
+    val controller = new HelpToSaveController(
+      enrolmentStore,
+      emailStore,
+      proxyConnector,
+      userCapService,
+      helpToSaveService,
+      mockAuthConnector,
+      mockAuditor,
+      barsService)
 
     def mockSendAuditEvent(event: HTSEvent, nino: String) =
       (mockAuditor.sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
@@ -86,6 +96,11 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       (emailStore.delete(_: NINO)(_: ExecutionContext))
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
+
+    def mockBarsService(barsRequest: BarsRequest, path: String)(result: Either[String, Boolean]): Unit =
+      (barsService.validate(_: BarsRequest, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(barsRequest, path, *, *)
+        .returning(Future.successful(result))
   }
 
   "The HelpToSaveController" when {
@@ -287,6 +302,45 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           status(result) shouldBe 200
           contentAsJson(result) shouldBe Json.toJson(eligibility)
         }
+    }
+
+    "validating bank details" must {
+
+      val barsRequest = BarsRequest(nino, "123456", "02012345")
+      val url = s"/$nino/validate-bank-details"
+
+      "handle send success response if the details are valid or invalid" in new TestApparatus {
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+          mockBarsService(barsRequest, url)(Right(true))
+        }
+
+        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
+        status(result) shouldBe 200
+        contentAsJson(result) shouldBe Json.parse("""{"isValid":true}""")
+      }
+
+      "handle invalid json from the request" in new TestApparatus {
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson("""{"invalid":"barsRequest"}""")))
+        status(result) shouldBe 400
+      }
+
+      "handle No json from the request" in new TestApparatus {
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+        val result = controller.doBarsCheck()(FakeRequest("POST", url))
+        status(result) shouldBe 400
+      }
+
+      "handle unexpected errors" in new TestApparatus {
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+          mockBarsService(barsRequest, url)(Left("unexpected error"))
+        }
+
+        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
+        status(result) shouldBe 500
+      }
     }
   }
 
