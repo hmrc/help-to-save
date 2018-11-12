@@ -22,6 +22,7 @@ import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
 import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status._
@@ -97,9 +98,9 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
 
-    def mockBarsService(barsRequest: BarsRequest, path: String)(result: Either[String, Boolean]): Unit =
-      (barsService.validate(_: BarsRequest, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(barsRequest, path, *, *)
+    def mockBarsService(barsRequest: BarsRequest)(result: Either[String, Boolean]): Unit =
+      (barsService.validate(_: BarsRequest)(_: HeaderCarrier, _: ExecutionContext, _: Request[_]))
+        .expects(barsRequest, *, *, *)
         .returning(Future.successful(result))
   }
 
@@ -312,7 +313,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "handle send success response if the details are valid or invalid" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockBarsService(barsRequest, url)(Right(true))
+          mockBarsService(barsRequest)(Right(true))
         }
 
         val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
@@ -335,7 +336,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "handle unexpected errors" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockBarsService(barsRequest, url)(Left("unexpected error"))
+          mockBarsService(barsRequest)(Left("unexpected error"))
         }
 
         val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))

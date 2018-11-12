@@ -22,6 +22,7 @@ import cats.instances.string._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
+import play.api.mvc.Request
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
@@ -38,7 +39,7 @@ trait BarsService {
 
   type BarsResponseType = Future[Either[String, Boolean]]
 
-  def validate(barsRequest: BarsRequest, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): BarsResponseType
+  def validate(barsRequest: BarsRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType
 
 }
 
@@ -48,7 +49,7 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
                                  alerting:      PagerDutyAlerting,
                                  auditor:       HTSAuditor)(implicit transformer: LogMessageTransformer, appConfig: AppConfig) extends BarsService with Logging {
 
-  override def validate(barsRequest: BarsRequest, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): BarsResponseType = {
+  override def validate(barsRequest: BarsRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType = {
     val timerContext = metrics.barsTimer.time()
     val trackingId = UUID.randomUUID()
     val nino = barsRequest.nino
@@ -57,7 +58,7 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
         val _ = timerContext.stop()
         response.status match {
           case Status.OK ⇒
-            auditor.sendEvent(BARSCheck(barsRequest, response.json, path), nino)
+            auditor.sendEvent(BARSCheck(barsRequest, response.json, request.uri), nino)
 
             (response.json \ "accountNumberWithSortCodeIsValid").asOpt[Boolean] →
               (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {

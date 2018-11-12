@@ -110,7 +110,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     request.body.asJson.map(_.validate[BarsRequest]) match {
 
       case Some(JsSuccess(barsRequest, _)) ⇒
-        barsService.validate(barsRequest, request.uri).flatMap {
+        barsService.validate(barsRequest).flatMap {
           case Right(isValid) ⇒ Ok(Json.parse(s"""{"isValid":$isValid}"""))
           case Left(_)        ⇒ InternalServerError
         }

@@ -19,7 +19,9 @@ package uk.gov.hmrc.helptosave.services
 import java.util.UUID
 
 import org.scalamock.handlers.CallHandler4
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.Request
+import play.api.test.FakeRequest
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
 import uk.gov.hmrc.helptosave.models.{BARSCheck, BarsRequest, HTSEvent}
@@ -53,7 +55,8 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
       val nino = "NINO"
       val barsRequest = BarsRequest(nino, "123456", "accountNumber")
-      val path = "path"
+      implicit val request: Request[JsValue] = FakeRequest("GET", "/validate-bank-details").withBody(Json.toJson(barsRequest))
+      val path = request.uri
 
         def newResponse(accountNumberWithSortCodeIsValid: Boolean, sortCodeIsPresentOnEISCD: String): String =
           s"""{
@@ -73,7 +76,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
-        val result = await(service.validate(barsRequest, path))
+        val result = await(service.validate(barsRequest))
         result shouldBe Right(true)
       }
 
@@ -84,7 +87,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
-        val result = await(service.validate(barsRequest, path))
+        val result = await(service.validate(barsRequest))
         result shouldBe Right(false)
       }
 
@@ -95,7 +98,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
-        val result = await(service.validate(barsRequest, path))
+        val result = await(service.validate(barsRequest))
         result shouldBe Right(false)
       }
 
@@ -106,7 +109,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
-        val result = await(service.validate(barsRequest, path))
+        val result = await(service.validate(barsRequest))
         result.isLeft shouldBe true
       }
 
@@ -127,21 +130,21 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
         }
         mockPagerDutyAlert("error parsing the response json from bars check")
-        val result = await(service.validate(barsRequest, path))
+        val result = await(service.validate(barsRequest))
         result shouldBe Left("error parsing the response json from bars check")
       }
 
       "handle unsuccessful response from bars check" in {
         mockBarsConnector(barsRequest)(Some(HttpResponse(400)))
         mockPagerDutyAlert("unexpected status from bars check")
-        val result = await(service.validate(barsRequest, path))
+        val result = await(service.validate(barsRequest))
         result shouldBe Left("unexpected status from bars check")
       }
 
       "recover from unexpected errors" in {
         mockBarsConnector(barsRequest)(None)
         mockPagerDutyAlert("unexpected error from bars check")
-        val result = await(service.validate(barsRequest, path))
+        val result = await(service.validate(barsRequest))
         result shouldBe Left("unexpected error from bars check")
       }
 
