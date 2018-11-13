@@ -72,10 +72,6 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   val eligibilityStatsTimer: Timer = timer("backend.eligibility-stats.time")
 
-  val barsTimer: Timer = timer("backend.bars-timer")
-
-  val barsErrorCounter: Counter = counter("backend.bars-error.count")
-
   def registerAccountStatsGauge(reason: String, channel: String, value: () ⇒ Int): Gauge[Int] = {
     registerIntGauge(s"backend.create-account.$reason.$channel", new Gauge[Int] {
       override def getValue(): Int = value()

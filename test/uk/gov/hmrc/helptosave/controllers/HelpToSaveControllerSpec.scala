@@ -22,7 +22,6 @@ import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status._
@@ -32,7 +31,7 @@ import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.repo.EmailStore
-import uk.gov.hmrc.helptosave.services.{BarsService, UserCapService}
+import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -55,17 +54,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     val emailStore = mock[EmailStore]
 
-    val barsService = mock[BarsService]
-
-    val controller = new HelpToSaveController(
-      enrolmentStore,
-      emailStore,
-      proxyConnector,
-      userCapService,
-      helpToSaveService,
-      mockAuthConnector,
-      mockAuditor,
-      barsService)
+    val controller = new HelpToSaveController(enrolmentStore, emailStore, proxyConnector, userCapService, helpToSaveService, mockAuthConnector, mockAuditor)
 
     def mockSendAuditEvent(event: HTSEvent, nino: String) =
       (mockAuditor.sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
@@ -97,11 +86,6 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       (emailStore.delete(_: NINO)(_: ExecutionContext))
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
-
-    def mockBarsService(barsRequest: BarsRequest)(result: Either[String, Boolean]): Unit =
-      (barsService.validate(_: BarsRequest)(_: HeaderCarrier, _: ExecutionContext, _: Request[_]))
-        .expects(barsRequest, *, *, *)
-        .returning(Future.successful(result))
   }
 
   "The HelpToSaveController" when {
@@ -303,45 +287,6 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           status(result) shouldBe 200
           contentAsJson(result) shouldBe Json.toJson(eligibility)
         }
-    }
-
-    "validating bank details" must {
-
-      val barsRequest = BarsRequest(nino, "123456", "02012345")
-      val url = s"/$nino/validate-bank-details"
-
-      "handle send success response if the details are valid or invalid" in new TestApparatus {
-        inSequence {
-          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockBarsService(barsRequest)(Right(true))
-        }
-
-        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
-        status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.parse("""{"isValid":true}""")
-      }
-
-      "handle invalid json from the request" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson("""{"invalid":"barsRequest"}""")))
-        status(result) shouldBe 400
-      }
-
-      "handle No json from the request" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val result = controller.doBarsCheck()(FakeRequest("POST", url))
-        status(result) shouldBe 400
-      }
-
-      "handle unexpected errors" in new TestApparatus {
-        inSequence {
-          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockBarsService(barsRequest)(Left("unexpected error"))
-        }
-
-        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
-        status(result) shouldBe 500
-      }
     }
   }
 

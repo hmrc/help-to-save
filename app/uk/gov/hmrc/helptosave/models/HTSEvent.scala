@@ -167,16 +167,3 @@ case class GetAccountResultEvent(getAccountResult: GetAccountResult, path: Strin
   }
 }
 
-case class BARSCheck(barsRequest: BarsRequest, response: JsValue, path: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
-  val value: ExtendedDataEvent =
-    HTSEvent(appConfig.appName, "BARSCheck",
-             Json.toJson(BARSCheck.Details(barsRequest.nino, barsRequest.accountNumber, barsRequest.sortCode, response)), "bars-check", path)
-
-}
-
-object BARSCheck {
-  private case class Details(nino: String, accountNumber: String, sortCode: String, response: JsValue)
-
-  private implicit val detailsFormat: Format[Details] = Json.format[Details]
-}
-
