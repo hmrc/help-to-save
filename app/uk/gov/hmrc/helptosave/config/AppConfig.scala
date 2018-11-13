@@ -43,4 +43,6 @@ class AppConfig @Inject() (override val runModeConfiguration: Configuration, val
 
   val createAccountVersion: String = getString("nsi.create-account.version")
 
+  val barsUrl: String = baseUrl("bank-account-reputation")
+
 }
