@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.models
 import java.time.LocalDate
 
 import org.scalatest.{Matchers, WordSpec}
-import play.api.libs.json.{JsSuccess, Json}
+import play.api.libs.json.{JsSuccess, JsValue, Json}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 
 class NSIPayloadSpec extends WordSpec with Matchers {
@@ -29,33 +29,31 @@ class NSIPayloadSpec extends WordSpec with Matchers {
     "have a reads instance" which {
 
       "correctly sets the version" in {
+          def json(bankDetailsFieldName: String): String =
+            s"""
+             |{
+             |  "forename" : "forename",
+             |  "surname" : "surname",
+             |  "dateOfBirth" : "19700101",
+             |  "nino" : "nino",
+             |  "contactDetails" : {
+             |    "address1" : "address1",
+             |    "address2" : "address2",
+             |    "postcode": "postcode",
+             |    "communicationPreference" : "preference"
+             |  },
+             |  "$bankDetailsFieldName": {
+             |    "sortCode" : "123456",
+             |    "accountNumber" : "12345678",
+             |    "accountName" : "accountName"
+             |  },
+             |  "registrationChannel" : "channel",
+             |  "systemId" : "systemId"
+             |}""".stripMargin
+
         List[Option[String]](Some("version"), None).foreach{ version ⇒
           withClue(s"For version $version"){
-            val result = NSIPayload.nsiPayloadReads(version).reads(
-              Json.parse(
-                """
-                  |{
-                  |  "forename" : "forename",
-                  |  "surname" : "surname",
-                  |  "dateOfBirth" : "19700101",
-                  |  "nino" : "nino",
-                  |  "contactDetails" : {
-                  |    "address1" : "address1",
-                  |    "address2" : "address2",
-                  |    "postcode": "postcode",
-                  |    "communicationPreference" : "preference"
-                  |  },
-                  |  "nbaDetails": {
-                  |    "sortCode" : "123456",
-                  |    "accountNumber" : "12345678",
-                  |    "accountName" : "accountName"
-                  |  },
-                  |  "registrationChannel" : "channel",
-                  |  "systemId" : "systemId"
-                  |}
-                """.stripMargin))
-
-            result shouldBe JsSuccess(NSIPayload(
+            val expectedResult = JsSuccess(NSIPayload(
               "forename",
               "surname",
               LocalDate.of(1970, 1, 1),
@@ -66,6 +64,9 @@ class NSIPayloadSpec extends WordSpec with Matchers {
               version,
               Some("systemId")
             ))
+
+            NSIPayload.nsiPayloadReads(version).reads(Json.parse(json("nbaDetails"))) shouldBe expectedResult
+            NSIPayload.nsiPayloadReads(version).reads(Json.parse(json("bankDetails"))) shouldBe expectedResult
           }
 
         }

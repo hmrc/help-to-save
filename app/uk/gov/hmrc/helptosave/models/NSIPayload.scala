@@ -65,8 +65,9 @@ object NSIPayload {
       contactDetails ← (jsValue \ "contactDetails").validate[ContactDetails]
       registrationChannel ← (jsValue \ "registrationChannel").validate[String]
       nbaDetails ← (jsValue \ "nbaDetails").validateOpt[BankDetails]
+      bankDetails ← (jsValue \ "bankDetails").validateOpt[BankDetails]
       systemId ← (jsValue \ "systemId").validateOpt[String]
-    } yield NSIPayload(forename, surname, dateOfBirth, nino, contactDetails, registrationChannel, nbaDetails, version, systemId)
+    } yield NSIPayload(forename, surname, dateOfBirth, nino, contactDetails, registrationChannel, nbaDetails.orElse(bankDetails), version, systemId)
   }
 
 }
