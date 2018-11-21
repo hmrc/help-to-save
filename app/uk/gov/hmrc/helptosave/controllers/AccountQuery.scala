@@ -27,6 +27,7 @@ import uk.gov.hmrc.domain.Nino.isValid
 import uk.gov.hmrc.helptosave.util
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
+import uk.gov.hmrc.play.bootstrap.controller.ActionWithMdc
 
 case class NsiAccountQueryParams(nino: String, systemId: String, correlationId: String)
 
@@ -39,23 +40,27 @@ trait AccountQuery extends Logging with Results {
   protected def accountQuery[A](nino:          String,
                                 systemId:      String,
                                 correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A]): Action[AnyContent] =
-    ggAuthorisedWithNino { implicit request ⇒ implicit authNino ⇒
-      if (!isValid(nino)) {
+    if (!isValid(nino)) {
+      ActionWithMdc {
         logger.warn("NINO in request was not valid")
         BadRequest
-      } else if (nino =!= authNino) {
-        logger.warn("NINO in request did not match NINO found in auth")
-        Forbidden
-      } else {
-        val id = correlationId.getOrElse(UUID.randomUUID().toString)
-        query(request)(NsiAccountQueryParams(nino, systemId, id))
-          .fold(
-            { errorString ⇒
-              logger.warn(errorString, nino, "correlationId" → id)
-              InternalServerError
-            },
-            _.fold[Result](NotFound)(found ⇒ Ok(Json.toJson(found)))
-          )
+      }
+    } else {
+      ggOrPrivilegedAuthorisedWithNINO(Some(nino)) { implicit request ⇒ implicit authNino ⇒
+        if (nino =!= authNino) {
+          logger.warn("NINO in request did not match NINO found in auth")
+          Forbidden
+        } else {
+          val id = correlationId.getOrElse(UUID.randomUUID().toString)
+          query(request)(NsiAccountQueryParams(nino, systemId, id))
+            .fold(
+              { errorString ⇒
+                logger.warn(errorString, nino, "correlationId" → id)
+                InternalServerError
+              },
+              _.fold[Result](NotFound)(found ⇒ Ok(Json.toJson(found)))
+            )
+        }
       }
     }
 }
