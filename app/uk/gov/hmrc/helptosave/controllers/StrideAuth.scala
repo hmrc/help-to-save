@@ -19,9 +19,6 @@ package uk.gov.hmrc.helptosave.controllers
 import java.util.Base64
 
 import configs.syntax._
-import cats.instances.list._
-import cats.instances.option._
-import cats.syntax.traverse._
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._
@@ -45,18 +42,33 @@ class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppCon
       .map(s ⇒ new String(decoder.decode(s)))
   }
 
+  private val secureRoles: List[String] = {
+    val decoder = Base64.getDecoder
+    appConfig.runModeConfiguration.underlying
+      .get[List[String]]("stride.base64-encoded-secure-roles")
+      .value
+      .map(s ⇒ new String(decoder.decode(s)))
+  }
+
+  val allRoles = requiredRoles ::: secureRoles
+
   def authorisedFromStride(action: Request[AnyContent] ⇒ Future[Result]): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthProviders(PrivilegedApplication)).retrieve(allEnrolments) {
         enrolments ⇒
-          val necessaryRoles: Option[List[Enrolment]] =
-            requiredRoles.map(enrolments.getEnrolment).traverse[Option, Enrolment](identity)
-
-          necessaryRoles.fold[Future[Result]](Unauthorized("Insufficient roles")) { _ ⇒ action(request) }
+          roleMatch(enrolments) match {
+            case true  ⇒ action(request)
+            case false ⇒ Unauthorized("Insufficient roles")
+          }
       }.recover {
         case _: NoActiveSession ⇒
           logger.warn("user is not logged in via stride, probably a hack?")
           Unauthorized
       }
     }
+
+  private def roleMatch(enrolments: Enrolments): Boolean = {
+    val enrolmentKeys = enrolments.enrolments.map(_.key).toList
+    enrolmentKeys.exists(e ⇒ allRoles.contains(e))
+  }
 }
