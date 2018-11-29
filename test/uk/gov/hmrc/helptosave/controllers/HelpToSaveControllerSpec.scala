@@ -98,8 +98,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
 
-    def mockBarsService(barsRequest: BarsRequest)(result: Either[String, Boolean]): Unit =
-      (barsService.validate(_: BarsRequest)(_: HeaderCarrier, _: ExecutionContext, _: Request[_]))
+    def mockBarsService(barsRequest: BankDetailsValidationRequest)(result: Either[String, BankDetailsValidationResult]): Unit =
+      (barsService.validate(_: BankDetailsValidationRequest)(_: HeaderCarrier, _: ExecutionContext, _: Request[_]))
         .expects(barsRequest, *, *, *)
         .returning(Future.successful(result))
   }
@@ -307,18 +307,18 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     "validating bank details" must {
 
-      val barsRequest = BarsRequest(nino, "123456", "02012345")
+      val barsRequest = BankDetailsValidationRequest(nino, "123456", "02012345")
       val url = s"/$nino/validate-bank-details"
 
       "handle send success response if the details are valid or invalid" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockBarsService(barsRequest)(Right(true))
+          mockBarsService(barsRequest)(Right(BankDetailsValidationResult(true, true)))
         }
 
         val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
         status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.parse("""{"isValid":true}""")
+        contentAsJson(result) shouldBe Json.parse("""{"isValid":true, "sortCodeExists":true}""")
       }
 
       "handle invalid json from the request" in new TestApparatus {

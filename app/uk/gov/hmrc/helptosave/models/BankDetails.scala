@@ -24,8 +24,16 @@ object BankDetails {
   implicit val bankDetailsFormat: Format[BankDetails] = Json.format[BankDetails]
 }
 
-case class BarsRequest(nino: String, sortCode: String, accountNumber: String)
+case class BankDetailsValidationRequest(nino: String, sortCode: String, accountNumber: String)
 
-object BarsRequest {
-  implicit val barsRequestFormat: Format[BarsRequest] = Json.format[BarsRequest]
+object BankDetailsValidationRequest {
+  implicit val barsRequestFormat: Format[BankDetailsValidationRequest] = Json.format[BankDetailsValidationRequest]
+}
+
+case class BankDetailsValidationResult(isValid: Boolean, sortCodeExists: Boolean)
+
+object BankDetailsValidationResult {
+
+  implicit val format: Format[BankDetailsValidationResult] = Json.format[BankDetailsValidationResult]
+
 }
