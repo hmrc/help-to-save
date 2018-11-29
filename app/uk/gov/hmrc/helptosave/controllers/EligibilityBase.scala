@@ -43,10 +43,6 @@ trait EligibilityBase extends Logging {
           val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
           logger.warn(s"Could not check eligibility due to $e", nino, additionalParams)
           InternalServerError
-      }, r ⇒
-        {
-          Ok(Json.toJson(r))
-        }
-
+      }, r ⇒ Ok(Json.toJson(r))
     )
 }
