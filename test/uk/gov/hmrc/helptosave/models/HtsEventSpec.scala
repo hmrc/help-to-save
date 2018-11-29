@@ -198,7 +198,7 @@ class HtsEventSpec extends TestSupport {
 
     "be created correctly" in {
       val response = Json.parse("""{ "a" : "b" }""")
-      val event = BARSCheck(BarsRequest("nino", "code", "number"), response, "path")
+      val event = BARSCheck(BankDetailsValidationRequest("nino", "code", "number"), response, "path")
       event.value.auditSource shouldBe appName
       event.value.auditType shouldBe "BARSCheck"
       event.value.detail shouldBe Json.parse(

@@ -107,22 +107,26 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
   }
 
   def doBarsCheck(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request ⇒
-    request.body.asJson.map(_.validate[BarsRequest]) match {
+    request.body.asJson.map(_.validate[BankDetailsValidationRequest]) match {
 
-      case Some(JsSuccess(barsRequest, _)) ⇒
-        barsService.validate(barsRequest).flatMap {
-          case Right(isValid) ⇒ Ok(Json.parse(s"""{"isValid":$isValid}"""))
-          case Left(_)        ⇒ InternalServerError
+      case Some(JsSuccess(bankDetailsValidationRequest, _)) ⇒
+        barsService.validate(bankDetailsValidationRequest).flatMap {
+          case Right(result) ⇒
+            Ok(Json.toJson(result))
+
+          case Left(e) ⇒
+            logger.warn("Could not perform bank details validation")
+            InternalServerError
         }
 
       case Some(error: JsError) ⇒
         val errorString = error.prettyPrint()
-        logger.warn(s"Could not parse BarsRequest in request body: $errorString")
-        BadRequest(ErrorResponse("Could not parse BarsRequest in request body", errorString).toJson())
+        logger.warn(s"Could not parse bank details validation request body: $errorString")
+        BadRequest
 
       case None ⇒
-        logger.warn("No BarsRequest body found in request")
-        BadRequest(ErrorResponse("No BarsRequest body found in request", "").toJson())
+        logger.warn("No body found in bank details validation request")
+        BadRequest
     }
   }
 

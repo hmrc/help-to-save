@@ -24,7 +24,7 @@ import play.api.mvc.Request
 import play.api.test.FakeRequest
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
-import uk.gov.hmrc.helptosave.models.{BARSCheck, BarsRequest, HTSEvent}
+import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationRequest, BankDetailsValidationResult, HTSEvent}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -38,8 +38,8 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
   val mockAuditor = mock[HTSAuditor]
 
-  def mockBarsConnector(barsRequest: BarsRequest)(response: Option[HttpResponse]): CallHandler4[BarsRequest, UUID, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
-    (mockBarsConnector.validate(_: BarsRequest, _: UUID)(_: HeaderCarrier, _: ExecutionContext)).expects(barsRequest, *, *, *)
+  def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: Option[HttpResponse]): CallHandler4[BankDetailsValidationRequest, UUID, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
+    (mockBarsConnector.validate(_: BankDetailsValidationRequest, _: UUID)(_: HeaderCarrier, _: ExecutionContext)).expects(barsRequest, *, *, *)
       .returning(response.fold[Future[HttpResponse]](Future.failed(new Exception("")))(r ⇒ Future.successful(r)))
 
   def mockAuditBarsEvent(expectedEvent: BARSCheck, nino: NINO)() =
@@ -54,7 +54,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
     "validating bank details" must {
 
       val nino = "NINO"
-      val barsRequest = BarsRequest(nino, "123456", "accountNumber")
+      val barsRequest = BankDetailsValidationRequest(nino, "123456", "accountNumber")
       implicit val request: Request[JsValue] = FakeRequest("GET", "/validate-bank-details").withBody(Json.toJson(barsRequest))
       val path = request.uri
 
@@ -77,18 +77,18 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
         val result = await(service.validate(barsRequest))
-        result shouldBe Right(true)
+        result shouldBe Right(BankDetailsValidationResult(true, true))
       }
 
       "handle the case when the bank details are not valid" in {
-        val response = newResponse(false, "blah")
+        val response = newResponse(false, "no")
 
         inSequence {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
         val result = await(service.validate(barsRequest))
-        result shouldBe Right(false)
+        result shouldBe Right(BankDetailsValidationResult(false, false))
       }
 
       "handle the case when the bank details are valid but the sort code does not exist" in {
@@ -99,7 +99,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
         val result = await(service.validate(barsRequest))
-        result shouldBe Right(false)
+        result shouldBe Right(BankDetailsValidationResult(true, false))
       }
 
       "handle the case when the bank details are valid but the sort code response cannot be parsed" in {

@@ -20,7 +20,7 @@ import java.util.UUID
 
 import play.api.http.Status
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.models.BarsRequest
+import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.test.UnitSpec
@@ -57,7 +57,7 @@ class BarsConnectorSpec extends TestSupport with UnitSpec with HttpSupport {
             |}""".stripMargin
 
         mockPost("http://localhost:7002/validateBankDetails", headers, body)(Some(HttpResponse(Status.OK, Some(Json.parse(response)))))
-        val result = await(connector.validate(BarsRequest("AE123456C", "123456", "0201234"), trackingId))
+        val result = await(connector.validate(BankDetailsValidationRequest("AE123456C", "123456", "0201234"), trackingId))
 
         result.status shouldBe 200
         result.json shouldBe Json.parse(response)

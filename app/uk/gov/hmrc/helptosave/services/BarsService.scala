@@ -19,6 +19,7 @@ package uk.gov.hmrc.helptosave.services
 import java.util.UUID
 
 import cats.instances.string._
+import cats.syntax.either._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
@@ -27,7 +28,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.models.{BARSCheck, BarsRequest}
+import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationResult, BankDetailsValidationRequest}
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -37,9 +38,9 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[BarsServiceImpl])
 trait BarsService {
 
-  type BarsResponseType = Future[Either[String, Boolean]]
+  type BarsResponseType = Future[Either[String, BankDetailsValidationResult]]
 
-  def validate(barsRequest: BarsRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType
+  def validate(barsRequest: BankDetailsValidationRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType
 
 }
 
@@ -49,11 +50,11 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
                                  alerting:      PagerDutyAlerting,
                                  auditor:       HTSAuditor)(implicit transformer: LogMessageTransformer, appConfig: AppConfig) extends BarsService with Logging {
 
-  override def validate(barsRequest: BarsRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType = {
+  override def validate(barsRequest: BankDetailsValidationRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType = {
     val timerContext = metrics.barsTimer.time()
     val trackingId = UUID.randomUUID()
     val nino = barsRequest.nino
-    barsConnector.validate(barsRequest, trackingId).map[Either[String, Boolean]] {
+    barsConnector.validate(barsRequest, trackingId).map[Either[String, BankDetailsValidationResult]] {
       response ⇒
         val _ = timerContext.stop()
         response.status match {
@@ -63,7 +64,7 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
             (response.json \ "accountNumberWithSortCodeIsValid").asOpt[Boolean] →
               (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {
                 case (Some(accountNumberWithSortCodeIsValid), Some(sortCodeIsPresentOnEISCD)) ⇒
-                  if (accountNumberWithSortCodeIsValid) {
+                  val sortCodeExists: Either[String, Boolean] =
                     if (sortCodeIsPresentOnEISCD === "yes") {
                       Right(true)
                     } else if (sortCodeIsPresentOnEISCD === "no") {
@@ -72,11 +73,8 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
                     } else {
                       Left(s"Could not parse value for 'sortCodeIsPresentOnEISCD': $sortCodeIsPresentOnEISCD")
                     }
-                  } else {
-                    logger.info("BARS response: bank details were invalid", nino)
-                    Right(false)
-                  }
 
+                  sortCodeExists.map{ BankDetailsValidationResult(accountNumberWithSortCodeIsValid, _) }
                 case _ ⇒
                   logger.warn(s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}")
                   alerting.alert("error parsing the response json from bars check")
