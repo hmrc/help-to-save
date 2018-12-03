@@ -36,10 +36,18 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class StrideAuthSpec extends TestSupport {
 
-  val roles = List("a", "b")
+  val standardRoles = List("a", "b")
+  val secureRoles = List("c", "d")
 
-  override lazy val additionalConfig: Configuration =
-    Configuration("stride.base64-encoded-roles" → roles.map(r ⇒ new String(Base64.getEncoder().encode(r.getBytes))))
+  override lazy val additionalConfig: Configuration = {
+      def toConfigValue(rolesList: List[String]): List[String] =
+        rolesList.map(r ⇒ new String(Base64.getEncoder().encode(r.getBytes)))
+
+    Configuration(
+      "stride.base64-encoded-roles" → toConfigValue(standardRoles),
+      "stride.base64-encoded-secure-roles" → toConfigValue(secureRoles)
+    )
+  }
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
@@ -71,23 +79,32 @@ class StrideAuthSpec extends TestSupport {
 
         "the requester does not have the necessary roles" in {
           List(
-            Set("c"),
+            Set("x"),
+            Set("a"),
+            Set("a", "c"),
             Set("d"),
-            Set("e"),
             Set.empty
           ).foreach { enrolments ⇒
-              mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(enrolments.map(Enrolment(_)))))
-
-              status(action(FakeRequest())) shouldBe UNAUTHORIZED
+              withClue(s"For enrolements $enrolments: ") {
+                mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(enrolments.map(Enrolment(_)))))
+                status(action(FakeRequest())) shouldBe UNAUTHORIZED
+              }
             }
         }
 
       }
 
       "allow authorised logic to be run if the requester has the correct roles" in {
-        mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(roles.map(Enrolment(_)).toSet)))
+        List(
+          standardRoles,
+          secureRoles
+        ).foreach{ enrolments ⇒
+          withClue(s"For enrolements $enrolments: ") {
+            mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(enrolments.map(Enrolment(_)).toSet)))
+            status(action(FakeRequest())) shouldBe OK
+          }
+        }
 
-        status(action(FakeRequest())) shouldBe OK
       }
 
     }

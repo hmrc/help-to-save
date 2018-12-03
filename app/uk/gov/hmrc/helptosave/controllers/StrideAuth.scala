@@ -34,31 +34,30 @@ class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppCon
 
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private val requiredRoles: List[String] = {
+  private val (standardRoles, secureRoles): (List[String], List[String]) = {
     val decoder = Base64.getDecoder
-    appConfig.runModeConfiguration.underlying
-      .get[List[String]]("stride.base64-encoded-roles")
-      .value
-      .map(s ⇒ new String(decoder.decode(s)))
+
+      def getRoles(key: String): List[String] = appConfig.runModeConfiguration.underlying
+        .get[List[String]](key)
+        .value
+        .map(s ⇒ new String(decoder.decode(s)))
+
+    getRoles("stride.base64-encoded-roles") → getRoles("stride.base64-encoded-secure-roles")
   }
 
-  private val secureRoles: List[String] = {
-    val decoder = Base64.getDecoder
-    appConfig.runModeConfiguration.underlying
-      .get[List[String]]("stride.base64-encoded-secure-roles")
-      .value
-      .map(s ⇒ new String(decoder.decode(s)))
+  private def roleMatch(enrolments: Enrolments): Boolean = {
+    val enrolmentKeys = enrolments.enrolments.map(_.key)
+    standardRoles.forall(enrolmentKeys.contains) || secureRoles.forall(enrolmentKeys.contains)
   }
-
-  val allRoles = requiredRoles ::: secureRoles
 
   def authorisedFromStride(action: Request[AnyContent] ⇒ Future[Result]): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthProviders(PrivilegedApplication)).retrieve(allEnrolments) {
         enrolments ⇒
-          roleMatch(enrolments) match {
-            case true  ⇒ action(request)
-            case false ⇒ Unauthorized("Insufficient roles")
+          if (roleMatch(enrolments)) {
+            action(request)
+          } else {
+            Unauthorized("Insufficient roles")
           }
       }.recover {
         case _: NoActiveSession ⇒
@@ -67,8 +66,4 @@ class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppCon
       }
     }
 
-  private def roleMatch(enrolments: Enrolments): Boolean = {
-    val enrolmentKeys = enrolments.enrolments.map(_.key).toList
-    enrolmentKeys.exists(e ⇒ allRoles.contains(e))
-  }
 }
