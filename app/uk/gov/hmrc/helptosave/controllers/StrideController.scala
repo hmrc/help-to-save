@@ -38,15 +38,17 @@ class StrideController @Inject() (val helpToSaveService: HelpToSaveService,
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
   def getEnrolmentStatus(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
-    enrolmentStore.get(nino).fold(
-      {
-        e ⇒
-          logger.warn(s"Could not get enrolments status: $e", nino)
-          InternalServerError
-      }, { status ⇒
-        Ok(Json.toJson(status))
-      }
-    )
+    {
+      enrolmentStore.get(nino).fold(
+        {
+          e ⇒
+            logger.warn(s"Could not get enrolments status: $e", nino)
+            InternalServerError
+        }, { status ⇒
+          Ok(Json.toJson(status))
+        }
+      )
+    }
   }
 
   def eligibilityCheck(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
