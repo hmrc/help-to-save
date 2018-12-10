@@ -80,16 +80,19 @@ trait TestEnrolmentBehaviour extends TestSupport {
             "systemId" : "MDTP REGISTRATION"
       }""".stripMargin
 
-  def createAccountJson(dobValue: String, communicationPreference: String = "02"): String =
+  def createAccountJson(dobValue: String, detailsManuallyEntered: Boolean, communicationPreference: String = "02"): String =
     s"""{
            "payload":${payloadJson(dobValue, communicationPreference)},
            "eligibilityReason":7,
-           "source": "Digital"
+           "source": "Digital",
+           "detailsManuallyEntered" : $detailsManuallyEntered
           }""".stripMargin
 
   val validUserInfoPayload = Json.parse(payloadJson("20200101"))
 
-  def validCreateAccountRequestPayload(communicationPreference: String = "02") = Json.parse(createAccountJson("20200101", communicationPreference))
+  def validCreateAccountRequestPayload(detailsManuallyEntered:  Boolean = false,
+                                       communicationPreference: String  = "02") =
+    Json.parse(createAccountJson("20200101", detailsManuallyEntered, communicationPreference))
 
   val validCreateAccountRequest = validCreateAccountRequestPayload()
     .validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion)))

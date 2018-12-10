@@ -117,11 +117,32 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital"), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", false), "nino")
           }
         }
 
         val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+
+        status(result)(10.seconds) shouldBe CREATED
+
+        // allow time for asynchronous calls to be made
+        Thread.sleep(1000L)
+      }
+
+      "create account if the request is valid NSIUserInfo json and the details have been manually entered" in new TestApparatus {
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
+          inAnyOrder {
+            mockSetFlag("nino")(Right(()))
+            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            mockUserCapServiceUpdate(Right(()))
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", true), "nino")
+          }
+        }
+
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(true)))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -136,7 +157,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Left("error!"))
           inAnyOrder {
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital"), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", false), "nino")
           }
         }
 
@@ -152,7 +173,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockEnrolmentStoreInsert("nino", true, Some(7), "Stride-Manual")(Right(()))
           inAnyOrder {
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Stride-Manual"), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Stride-Manual", false), "nino")
           }
         }
 
@@ -171,7 +192,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Left(""))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital"), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", false), "nino")
           }
         }
 
@@ -194,11 +215,11 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(payloadDE, "Digital"), "nino")
+            mockSendAuditEvent(AccountCreated(payloadDE, "Digital", false), "nino")
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload("00")))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -211,7 +232,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockEmailDelete("nino")(Left("mongo error"))
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload("00")))
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
 
         status(result)(10.seconds) shouldBe INTERNAL_SERVER_ERROR
 
@@ -219,7 +240,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "return bad request response if the request body is not a valid CreateAccountRequest json" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val requestBody = Json.parse(createAccountJson("\"123456\""))
+        val requestBody = Json.parse(createAccountJson("\"123456\"", false))
         val result = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")

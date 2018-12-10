@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.models.register
 import play.api.libs.json.{Json, Reads, Writes}
 import uk.gov.hmrc.helptosave.models.NSIPayload
 
-case class CreateAccountRequest(payload: NSIPayload, eligibilityReason: Option[Int], source: String)
+case class CreateAccountRequest(payload: NSIPayload, eligibilityReason: Option[Int], source: String, detailsManuallyEntered: Boolean)
 
 object CreateAccountRequest {
   implicit val createAccountRequestWrites: Writes[CreateAccountRequest] = Json.writes[CreateAccountRequest]
@@ -29,7 +29,8 @@ object CreateAccountRequest {
       nsiPayload ← (jsValue \ "payload").validate[NSIPayload](NSIPayload.nsiPayloadReads(version))
       reason ← (jsValue \ "eligibilityReason").validateOpt[Int]
       source ← (jsValue \ "source").validate[String]
-    } yield CreateAccountRequest(nsiPayload, reason, source)
+      detailsManuallyEntered ← (jsValue \ "detailsManuallyEntered").validateOpt[Boolean]
+    } yield CreateAccountRequest(nsiPayload, reason, source, detailsManuallyEntered.getOrElse(false))
 
   }
 
