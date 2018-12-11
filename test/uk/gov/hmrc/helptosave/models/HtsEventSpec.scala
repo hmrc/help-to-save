@@ -94,47 +94,83 @@ class HtsEventSpec extends TestSupport {
 
   "AccountCreated" must {
 
-    "construct an event correctly" in {
-      val nsiPayload = NSIPayload(
-        "name",
-        "surname",
-        LocalDate.ofEpochDay(0),
-        "nino",
-        ContactDetails("line1", "line2", Some("line3"), None, None, "postcode", None, None, Some("email"), "comms"),
-        "channel",
-        Some(BankDetails("sortCode", "accountNumber", Some("rollNumber"), "accountName")),
-        Some("version"),
-        Some("id")
-      )
+    val nsiPayload = NSIPayload(
+      "name",
+      "surname",
+      LocalDate.ofEpochDay(0),
+      "nino",
+      ContactDetails("line1", "line2", Some("line3"), None, None, "postcode", None, None, Some("email"), "comms"),
+      "channel",
+      Some(BankDetails("sortCode", "accountNumber", Some("rollNumber"), "accountName")),
+      Some("version"),
+      Some("id")
+    )
 
-      val event = AccountCreated(nsiPayload, "source")
+    "construct an event correctly when the details have not been manually entered" in {
+
+      val event = AccountCreated(nsiPayload, "source", false)
       event.value.auditType shouldBe "AccountCreated"
       event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
       event.value.detail shouldBe Json.toJson(
         AllDetails(
           PrePopulatedUserData(
-            "name",
-            "surname",
-            "1970-01-01",
+            Some("name"),
+            Some("surname"),
+            Some("1970-01-01"),
+            Some("line1"),
+            Some("line2"),
+            Some("line3"),
+            None,
+            None,
+            Some("postcode"),
+            None,
+            Some("email"),
+            None,
             "nino",
-            "line1",
-            "line2",
-            "line3",
-            "",
-            "",
-            "postcode",
-            "",
-            "email",
-            "",
             "comms",
             "channel",
             "source"
-          ), Some(ManuallyEnteredDetails(
+          ), ManuallyEnteredDetails(
             "accountName",
             "accountNumber",
             "sortCode",
-            "rollNumber"
-          ))
+            Some("rollNumber")
+          )
+        )
+      )
+
+    }
+
+    "construct an event correctly when the details have been manually entered" in {
+
+      val event = AccountCreated(nsiPayload, "source", true)
+      event.value.auditType shouldBe "AccountCreated"
+      event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
+      event.value.detail shouldBe Json.toJson(
+        AllDetails(
+          PrePopulatedUserData(
+            "nino",
+            "comms",
+            "channel",
+            "source"
+          ), ManuallyEnteredDetails(
+            Some("accountName"),
+            Some("accountNumber"),
+            Some("sortCode"),
+            Some("rollNumber"),
+            Some("name"),
+            Some("surname"),
+            Some("1970-01-01"),
+            Some("line1"),
+            Some("line2"),
+            Some("line3"),
+            None,
+            None,
+            Some("postcode"),
+            None,
+            Some("email"),
+            None
+          )
         )
       )
 

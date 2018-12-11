@@ -75,81 +75,114 @@ object EligibilityResult {
   }
 }
 
-case class AccountCreated(userInfo: NSIPayload, source: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
+case class AccountCreated(userInfo:               NSIPayload,
+                          source:                 String,
+                          detailsManuallyEntered: Boolean)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
 
   private val createAccountURL = routes.HelpToSaveController.createAccount().url
+
+  private val (prePopulatedData, manuallyEnteredData): (PrePopulatedUserData, ManuallyEnteredDetails) =
+    if (!detailsManuallyEntered) {
+      PrePopulatedUserData(
+        Some(userInfo.forename), Some(userInfo.surname), Some(userInfo.dateOfBirth.toString),
+        Some(userInfo.contactDetails.address1), Some(userInfo.contactDetails.address2),
+        userInfo.contactDetails.address3, userInfo.contactDetails.address4,
+        userInfo.contactDetails.address5, Some(userInfo.contactDetails.postcode),
+        userInfo.contactDetails.countryCode, userInfo.contactDetails.email,
+        userInfo.contactDetails.phoneNumber, userInfo.nino, userInfo.contactDetails.communicationPreference,
+        userInfo.registrationChannel, source
+      ) →
+        userInfo.nbaDetails.fold(ManuallyEnteredDetails()){ bank ⇒
+          ManuallyEnteredDetails(bank.accountName, bank.accountNumber, bank.sortCode, bank.rollNumber)
+        }
+    } else {
+      PrePopulatedUserData(userInfo.nino, userInfo.contactDetails.communicationPreference,
+                           userInfo.registrationChannel, source) →
+        ManuallyEnteredDetails(
+          userInfo.nbaDetails.map(_.accountName), userInfo.nbaDetails.map(_.accountNumber),
+          userInfo.nbaDetails.map(_.sortCode), userInfo.nbaDetails.flatMap(_.rollNumber),
+          Some(userInfo.forename), Some(userInfo.surname), Some(userInfo.dateOfBirth.toString),
+          Some(userInfo.contactDetails.address1), Some(userInfo.contactDetails.address2),
+          userInfo.contactDetails.address3, userInfo.contactDetails.address4,
+          userInfo.contactDetails.address5, Some(userInfo.contactDetails.postcode),
+          userInfo.contactDetails.countryCode, userInfo.contactDetails.email,
+          userInfo.contactDetails.phoneNumber
+        )
+    }
 
   val value: ExtendedDataEvent = HTSEvent(
     appConfig.appName,
     "AccountCreated",
-    Json.toJson(AllDetails(PrePopulatedUserData(
-      userInfo.forename,
-      userInfo.surname,
-      userInfo.dateOfBirth.toString,
-      userInfo.nino,
-      userInfo.contactDetails.address1,
-      userInfo.contactDetails.address2,
-      userInfo.contactDetails.address3.getOrElse(""),
-      userInfo.contactDetails.address4.getOrElse(""),
-      userInfo.contactDetails.address5.getOrElse(""),
-      userInfo.contactDetails.postcode,
-      userInfo.contactDetails.countryCode.getOrElse(""),
-      userInfo.contactDetails.email.getOrElse(""),
-      userInfo.contactDetails.phoneNumber.getOrElse(""),
-      userInfo.contactDetails.communicationPreference,
-      userInfo.registrationChannel,
-      source
-    ),
-                           userInfo.nbaDetails.map{ bankDetails ⇒
-        ManuallyEnteredDetails(
-          bankDetails.accountName,
-          bankDetails.accountNumber,
-          bankDetails.sortCode,
-          bankDetails.rollNumber.getOrElse("")
-        )
-      }
-    )),
+    Json.toJson(AllDetails(prePopulatedData, manuallyEnteredData)),
     "account-created",
     createAccountURL
   )
 }
 object AccountCreated {
 
-  case class AllDetails(prePopulatedUserData: PrePopulatedUserData, manuallyEnteredDetail: Option[ManuallyEnteredDetails])
+  case class AllDetails(prePopulatedUserData: PrePopulatedUserData, manuallyEnteredDetail: ManuallyEnteredDetails)
 
   object AllDetails {
 
     implicit val format: Format[AllDetails] = Json.format[AllDetails]
   }
 
-  case class PrePopulatedUserData(forename:                String,
-                                  surname:                 String,
-                                  dateOfBirth:             String,
+  case class PrePopulatedUserData(forename:                Option[String],
+                                  surname:                 Option[String],
+                                  dateOfBirth:             Option[String],
+                                  address1:                Option[String],
+                                  address2:                Option[String],
+                                  address3:                Option[String],
+                                  address4:                Option[String],
+                                  address5:                Option[String],
+                                  postcode:                Option[String],
+                                  countryCode:             Option[String],
+                                  email:                   Option[String],
+                                  phoneNumber:             Option[String],
                                   nino:                    String,
-                                  address1:                String,
-                                  address2:                String,
-                                  address3:                String,
-                                  address4:                String,
-                                  address5:                String,
-                                  postcode:                String,
-                                  countryCode:             String,
-                                  email:                   String,
-                                  phoneNumber:             String,
                                   communicationPreference: String,
                                   registrationChannel:     String,
                                   source:                  String)
 
   object PrePopulatedUserData {
 
+    def apply(nino:                    String,
+              communicationPreference: String,
+              registrationChannel:     String,
+              source:                  String): PrePopulatedUserData =
+      PrePopulatedUserData(None, None, None, None, None, None, None, None, None, None, None, None, nino, communicationPreference, registrationChannel, source)
+
     implicit val format: Format[PrePopulatedUserData] = Json.format[PrePopulatedUserData]
   }
 
-  case class ManuallyEnteredDetails(accountName:   String,
-                                    accountNumber: String,
-                                    sortCode:      String,
-                                    rollNumber:    String)
+  case class ManuallyEnteredDetails(accountName:   Option[String],
+                                    accountNumber: Option[String],
+                                    sortCode:      Option[String],
+                                    rollNumber:    Option[String],
+                                    forename:      Option[String],
+                                    surname:       Option[String],
+                                    dateOfBirth:   Option[String],
+                                    address1:      Option[String],
+                                    address2:      Option[String],
+                                    address3:      Option[String],
+                                    address4:      Option[String],
+                                    address5:      Option[String],
+                                    postcode:      Option[String],
+                                    countryCode:   Option[String],
+                                    email:         Option[String],
+                                    phoneNumber:   Option[String])
 
   object ManuallyEnteredDetails {
+
+    def apply(): ManuallyEnteredDetails =
+      ManuallyEnteredDetails(None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)
+
+    def apply(accountName:   String,
+              accountNumber: String,
+              sortCode:      String,
+              rollNumber:    Option[String]): ManuallyEnteredDetails =
+      ManuallyEnteredDetails(Some(accountName), Some(accountNumber), Some(sortCode), rollNumber,
+                             None, None, None, None, None, None, None, None, None, None, None, None)
 
     implicit val format: Format[ManuallyEnteredDetails] = Json.format[ManuallyEnteredDetails]
   }
@@ -167,7 +200,8 @@ case class GetAccountResultEvent(getAccountResult: GetAccountResult, path: Strin
   }
 }
 
-case class BARSCheck(barsRequest: BankDetailsValidationRequest, response: JsValue, path: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
+case class BARSCheck(barsRequest: BankDetailsValidationRequest,
+                     response:    JsValue, path: String)(implicit hc: HeaderCarrier, appConfig: AppConfig) extends HTSEvent {
   val value: ExtendedDataEvent =
     HTSEvent(appConfig.appName, "BARSCheck",
              Json.toJson(BARSCheck.Details(barsRequest.nino, barsRequest.accountNumber, barsRequest.sortCode, response)), "bars-check", path)

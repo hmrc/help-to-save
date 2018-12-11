@@ -144,7 +144,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
       }
 
       if (response.status === CREATED) {
-        auditor.sendEvent(AccountCreated(payload, createAccountRequest.source), nino)
+        auditor.sendEvent(AccountCreated(payload, createAccountRequest.source, createAccountRequest.detailsManuallyEntered), nino)
 
         userCapService.update().onComplete {
           case Success(_) ⇒ logger.debug("Successfully updated user cap counts after account creation", nino, additionalParams)
