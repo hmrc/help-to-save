@@ -22,8 +22,10 @@ import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.services.UserCapService
 
+import scala.concurrent.ExecutionContext
+
 class UserCapController @Inject() (userCapService: UserCapService,
-                                   authConnector:  AuthConnector)
+                                   authConnector:  AuthConnector)(implicit ec: ExecutionContext)
   extends HelpToSaveAuth(authConnector) {
 
   def isAccountCreateAllowed: Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒

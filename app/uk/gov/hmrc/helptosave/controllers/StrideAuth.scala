@@ -24,13 +24,13 @@ import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.util.{Logging, WithMdcExecutionContext, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppConfig)
-  extends BaseController with AuthorisedFunctions with Logging with WithMdcExecutionContext {
+  extends BaseController with AuthorisedFunctions with Logging {
 
   override def authConnector: AuthConnector = htsAuthConnector
 
@@ -50,7 +50,7 @@ class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppCon
     standardRoles.forall(enrolmentKeys.contains) || secureRoles.forall(enrolmentKeys.contains)
   }
 
-  def authorisedFromStride(action: Request[AnyContent] ⇒ Future[Result]): Action[AnyContent] =
+  def authorisedFromStride(action: Request[AnyContent] ⇒ Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthProviders(PrivilegedApplication)).retrieve(allEnrolments) {
         enrolments ⇒

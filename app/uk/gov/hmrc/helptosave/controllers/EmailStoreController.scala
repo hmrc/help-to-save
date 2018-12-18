@@ -28,12 +28,12 @@ import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: AuthConnector)(
     implicit
-    transformer: LogMessageTransformer
+    transformer: LogMessageTransformer, ec: ExecutionContext
 )
   extends HelpToSaveAuth(htsAuthConnector) {
 
