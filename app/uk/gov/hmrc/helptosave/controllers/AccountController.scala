@@ -21,11 +21,13 @@ import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext}
+import uk.gov.hmrc.helptosave.util.LogMessageTransformer
+
+import scala.concurrent.ExecutionContext
 
 class AccountController @Inject() (proxyConnector: HelpToSaveProxyConnector,
-                                   authConnector:  AuthConnector)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends HelpToSaveAuth(authConnector) with WithMdcExecutionContext with AccountQuery {
+                                   authConnector:  AuthConnector)(implicit transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
+  extends HelpToSaveAuth(authConnector) with AccountQuery {
 
   def getAccount(nino: String, systemId: String, correlationId: Option[String]): Action[AnyContent] =
     accountQuery(nino, systemId, correlationId) { implicit request ⇒ nsiParams ⇒

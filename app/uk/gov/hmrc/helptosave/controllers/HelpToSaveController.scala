@@ -33,9 +33,10 @@ import uk.gov.hmrc.helptosave.repo.{EmailStore, EnrolmentStore}
 import uk.gov.hmrc.helptosave.services.{BarsService, HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext, toFuture}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, toFuture}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore,
@@ -47,8 +48,8 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
                                       auditor:                    HTSAuditor,
                                       barsService:                BarsService)(
     implicit
-    transformer: LogMessageTransformer, appConfig: AppConfig)
-  extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour with WithMdcExecutionContext {
+    transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
+  extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour {
 
   def createAccount(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒

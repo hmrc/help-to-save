@@ -24,10 +24,10 @@ import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, v2}
-import uk.gov.hmrc.helptosave.util.{Logging, NINO, WithMdcExecutionContext, toFuture}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object HelpToSaveAuth {
 
@@ -39,7 +39,7 @@ object HelpToSaveAuth {
 
 }
 
-class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController with AuthorisedFunctions with Logging with WithMdcExecutionContext {
+class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController with AuthorisedFunctions with Logging {
 
   import HelpToSaveAuth._
 
@@ -48,7 +48,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   private type HtsAction = Request[AnyContent] ⇒ Future[Result]
   private type HtsActionWithNino = Request[AnyContent] ⇒ NINO ⇒ Future[Result]
 
-  def ggAuthorisedWithNino(action: HtsActionWithNino): Action[AnyContent] =
+  def ggAuthorisedWithNino(action: HtsActionWithNino)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
         .retrieve(v2Nino) { mayBeNino ⇒
@@ -62,7 +62,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
         }
     }
 
-  def ggOrPrivilegedAuthorised(action: HtsAction): Action[AnyContent] =
+  def ggOrPrivilegedAuthorised(action: HtsAction)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(GGAndPrivilegedProviders) {
         action(request)
@@ -71,7 +71,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
       }
     }
 
-  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNino): Action[AnyContent] =
+  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNino)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(GGAndPrivilegedProviders).retrieve(v2.Retrievals.authProviderId) {
         case GGCredId(_) ⇒

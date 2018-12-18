@@ -26,14 +26,16 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, WithMdcExecutionContext}
+import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.helptosave.util.Logging._
+
+import scala.concurrent.ExecutionContext
 
 class StrideController @Inject() (val helpToSaveService: HelpToSaveService,
                                   authConnector:         AuthConnector,
-                                  enrolmentStore:        EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig)
+                                  enrolmentStore:        EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig, ec: ExecutionContext)
 
-  extends StrideAuth(authConnector) with EligibilityBase with WithMdcExecutionContext {
+  extends StrideAuth(authConnector) with EligibilityBase {
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 

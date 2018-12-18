@@ -27,7 +27,8 @@ import uk.gov.hmrc.domain.Nino.isValid
 import uk.gov.hmrc.helptosave.util
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
-import uk.gov.hmrc.play.bootstrap.controller.ActionWithMdc
+
+import scala.concurrent.ExecutionContext
 
 case class NsiAccountQueryParams(nino: String, systemId: String, correlationId: String)
 
@@ -39,9 +40,9 @@ trait AccountQuery extends Logging with Results {
    */
   protected def accountQuery[A](nino:          String,
                                 systemId:      String,
-                                correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A]): Action[AnyContent] =
+                                correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A], ec: ExecutionContext): Action[AnyContent] =
     if (!isValid(nino)) {
-      ActionWithMdc {
+      Action {
         logger.warn("NINO in request was not valid")
         BadRequest
       }

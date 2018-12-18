@@ -30,13 +30,13 @@ import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
                                           val helpToSaveService: HelpToSaveService,
                                           authConnector:         AuthConnector)(
     implicit
-    transformer: LogMessageTransformer, appConfig: AppConfig)
+    transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
   extends HelpToSaveAuth(authConnector) with EnrolmentBehaviour {
 
   import EnrolmentStoreController._
