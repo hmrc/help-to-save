@@ -16,19 +16,19 @@ lazy val plugins: Seq[Plugins] = Seq.empty
 
 val dependencies = Seq(
   ws,
-  "uk.gov.hmrc" %% "auth-client" % "2.17.0-play-25",
-  "uk.gov.hmrc" %% "play-config" % "5.0.0",
-  "uk.gov.hmrc" %% "domain" % "5.1.0",
-  "org.typelevel" %% "cats-core" % "1.1.0",
+  "uk.gov.hmrc" %% "auth-client" % "2.18.0-play-25",
+  "uk.gov.hmrc" %% "play-config" % "7.2.0",
+  "uk.gov.hmrc" %% "domain" % "5.3.0",
+  "org.typelevel" %% "cats-core" % "1.5.0",
   "com.github.kxbmap" %% "configs" % "0.4.4",
   "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
-  "uk.gov.hmrc" %% "crypto" % "5.0.0",
-  "uk.gov.hmrc" %% "bootstrap-play-25" % "4.4.0",
-  "uk.gov.hmrc" %% "mongo-lock" % "5.1.0"
+  "uk.gov.hmrc" %% "crypto" % "5.2.0",
+  "uk.gov.hmrc" %% "bootstrap-play-25" % "4.6.0",
+  "uk.gov.hmrc" %% "mongo-lock" % "5.1.1"
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
-  "uk.gov.hmrc" %% "hmrctest" % "3.0.0" % scope,
+  "uk.gov.hmrc" %% "hmrctest" % "3.3.0" % scope,
   "org.scalatest" %% "scalatest" % "3.0.5" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "org.scalamock" %% "scalamock" % "4.1.0" % scope,

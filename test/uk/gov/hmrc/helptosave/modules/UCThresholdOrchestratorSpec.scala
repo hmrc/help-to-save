@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   val proxyActor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
 
   val testConfiguration = Configuration(ConfigFactory.parseString(
-    s"""
+    """
        |uc-threshold {
        |ask-timeout = 10 seconds
        |min-backoff = 1 second
@@ -54,8 +54,6 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
        |}
     """.stripMargin
   ))
-
-  val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 
   "The UCThresholdOrchestrator" should {
     "start up an instance of the UCThresholdManager correctly" in {
@@ -72,6 +70,8 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
         .returning(HttpResponse(200, Some(Json.parse(s"""{ "thresholdAmount" : $threshold }"""))))
+
+      val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 
       eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(1.second)) {
         val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
