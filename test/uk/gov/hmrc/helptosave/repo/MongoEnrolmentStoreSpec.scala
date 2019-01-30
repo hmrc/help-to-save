@@ -26,6 +26,8 @@ import scala.concurrent.duration._
 
 class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
+  val ninoDifferentSuffix = "AE123456B"
+
   def newMongoEnrolmentStore(reactiveMongoComponent: ReactiveMongoComponent) =
     new MongoEnrolmentStore(reactiveMongoComponent, mockMetrics)
 
@@ -77,6 +79,13 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
         }
       }
+
+      "update the enrolment when a different nino suffix is used of an existing user" in {
+        val nino = "AE123456A"
+        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        create(nino, false, Some(7), "online", store) shouldBe Right(())
+        update(ninoDifferentSuffix, true, store) shouldBe Right(())
+      }
     }
 
     "getting" must {
@@ -110,6 +119,15 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
           get(nino, store).isLeft shouldBe true
         }
       }
+
+      "return an enrolled status when a different nino suffix is used of an existing user" in {
+        val nino = "AE123456A"
+        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        create(nino, true, Some(7), "online", store) shouldBe Right(())
+        get(nino, store) shouldBe Right(Enrolled(true))
+        get(ninoDifferentSuffix, store) shouldBe Right(Enrolled(true))
+      }
+
     }
 
   }

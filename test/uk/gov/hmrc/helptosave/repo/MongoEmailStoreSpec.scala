@@ -101,6 +101,32 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         }
       }
 
+      "update the email when a different nino suffix is used of an existing user" in {
+        val nino = "AE123456A"
+        val ninoDifferentSuffix = "AE123456B"
+        val updatedEmail = "test@gmail.com"
+
+        inSequence {
+          mockEncrypt(email)(encryptedEmail)
+          mockDecrypt(encryptedEmail)(Some(email))
+          mockEncrypt(updatedEmail)(encryptedEmail)
+        }
+
+        val emailStore = newMongoEmailStore(reactiveMongoComponent)
+
+        //there should no emails to start with
+        getConfirmedEmail(nino, emailStore) shouldBe Right(None)
+
+        //putting the email in mongo
+        storeConfirmedEmail(nino, email, emailStore)
+
+        // try when there is an email
+        getConfirmedEmail(nino, emailStore) shouldBe Right(Some(email))
+
+        // also try with nino with a different suffix
+        storeConfirmedEmail(ninoDifferentSuffix, updatedEmail, emailStore) shouldBe Right(())
+      }
+
     }
 
     "getting email" must {
@@ -150,6 +176,31 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         }
       }
 
+      "return the email when a different nino suffix is used of an existing user" in {
+        val nino = "AE123456A"
+        val ninoDifferentSuffix = "AE123456B"
+
+        inSequence {
+          mockEncrypt(email)(encryptedEmail)
+          mockDecrypt(encryptedEmail)(Some(email))
+          mockDecrypt(encryptedEmail)(Some(email))
+        }
+
+        val emailStore = newMongoEmailStore(reactiveMongoComponent)
+
+        //there should no emails to start with
+        get(nino, emailStore) shouldBe Right(None)
+
+        //putting the email in mongo
+        storeConfirmedEmail(nino, email, emailStore)
+
+        // try when there is an email
+        get(nino, emailStore) shouldBe Right(Some(email))
+
+        // also try with nino with a different suffix
+        get(ninoDifferentSuffix, emailStore) shouldBe Right(Some(email))
+      }
+
     }
 
     "deleting emails" must {
@@ -178,6 +229,24 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
           deleteEmail(nino, emailStore).isLeft shouldBe true
         }
+      }
+
+      "delete the email when a different nino suffix is used of an existing user" in {
+        val nino = "AE123456A"
+        val emailStore = newMongoEmailStore(reactiveMongoComponent)
+
+        mockEncrypt(email)(encryptedEmail)
+
+        //store email first
+        val result = storeConfirmedEmail(nino, email, emailStore)
+        result shouldBe Right(())
+
+        //then delete using a different suffix
+        val ninoDifferentSuffix = "AE123456B"
+        deleteEmail(ninoDifferentSuffix, emailStore) shouldBe Right(())
+
+        //now verify using the original nino
+        getConfirmedEmail(nino, emailStore) shouldBe Right(None)
       }
 
     }

@@ -92,6 +92,8 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
   val log: Logger = new Logger(logger)
 
+  def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
+
   override def indexes: Seq[Index] = Seq(
     Index(
       key  = Seq("nino" → IndexType.Ascending),
@@ -107,7 +109,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
   private[repo] def doUpdate(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
     collection.findAndUpdate(
-      BSONDocument("nino" -> nino),
+      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
       BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
       fetchNewObject = true,
       upsert         = false
@@ -117,7 +119,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
     {
       val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-      find("nino" → JsString(nino)).map { res ⇒
+      find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
         val time = timerContext.stop()
 
         Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
