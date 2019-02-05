@@ -66,6 +66,8 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
   val log: Logger = new Logger(logger)
 
+  def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
+
   override def indexes: Seq[Index] = Seq(
     Index(
       key  = Seq("nino" → IndexType.Ascending),
@@ -78,13 +80,13 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
       doUpdate(crypto.encrypt(email), nino)
-        .map { result ⇒
+        .map[Either[String, Unit]] { result ⇒
           val time = timerContext.stop()
 
-          result.fold[Either[String, Unit]] {
+          if (!result) {
             metrics.emailStoreUpdateErrorCounter.inc()
             Left("Could not update email mongo store")
-          }(_ ⇒ Right(()))
+          } else { Right(()) }
         }
         .recover {
           case NonFatal(e) ⇒
@@ -97,7 +99,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
   override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
 
-    find("nino" → JsString(nino)).map { res ⇒
+    find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
       val time = timerContext.stop()
 
       val decryptedEmail = res.headOption
@@ -119,7 +121,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
   override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
 
-    remove("nino" → nino).map[Either[String, Unit]]{ res ⇒
+    remove("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map[Either[String, Unit]]{ res ⇒
       if (res.writeErrors.nonEmpty) {
         Left(s"Could not delete email: ${res.writeErrors.mkString(";")}")
       } else {
@@ -132,13 +134,12 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
   }
 
-  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Option[EmailData]] =
-    collection.findAndUpdate(
-      BSONDocument("nino" -> nino),
-      BSONDocument("$set" -> BSONDocument("email" -> encryptedEmail)),
-      fetchNewObject = true,
-      upsert         = true
-    ).map(_.result[EmailData])
+  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] =
+    collection.update(
+      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
+      BSONDocument("$set" -> BSONDocument("nino" -> nino, "email" -> encryptedEmail)),
+      upsert = true
+    ).map(_.ok)
 
 }
 
