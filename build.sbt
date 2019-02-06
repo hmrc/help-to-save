@@ -129,6 +129,7 @@ lazy val microservice = Project(appName, file("."))
       (baseDirectory.value ** "Lock.scala").get
   )
   .settings(catsSettings)
+  .settings(scalacOptions += "-Xcheckinit")
   .settings(
     libraryDependencies ++= appDependencies,
     retrieveManaged := false,
