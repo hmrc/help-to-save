@@ -1,153 +1,161 @@
-[![Build Status](https://travis-ci.org/hmrc/help-to-save.svg)](https://travis-ci.org/hmrc/help-to-save) [ ![Download](https://api.bintray.com/packages/hmrc/releases/help-to-save/images/download.svg) ](https://bintray.com/hmrc/releases/help-to-save/_latestVersion)
-  
-## Help to Save
+help-to-save
+============
 
-Backend application process for Help to Save.
+Backend service for Help to Save.
 
-## About Help to Save
 
-Please click [here](https://github.com/hmrc/help-to-save-frontend#product-repos) for more information
+Table of Contents
+=================
 
-## How to run
+* [About Help to Save](#about-help-to-save)
+   * [Keywords](#keywords)
+   * [Product Background](#product-background)
+   * [Product Repos](#product-repos)
+   * [Private Beta User Restriction](#private-beta-user-restriction)
+* [Running and Testing](#running-and-testing)
+   * [Running](#running)
+   * [Unit tests](#unit-tests)
+* [Endpoints](#endpoints)
+* [License](#license)
 
-The `help-to-save` service will run on port 7001 when started by the service manager.
+About Help to Save
+========================
 
-Start service manager with the following command to run the service with all required dependencies:
+Abbreviations
+-------------
+| Key | Meaning |
+|:----------------:|-------------|
+|DES| Data Exchange Service (Message Bus) |
+|HoD| Head Of Duty, HMRC legacy application |
+|HtS| Help To Save |
+|MDTP| HMRC Multi-channel Digital Tax Platform |
+|NS&I| National Savings & Investments |
+|UC| Universal Credit|
+|WTC| Working Tax Credit|
+
+Product Background
+------------------
+The Prime Minister set out the government’s intention to bring forward, a new Help to Save
+(‘HtS’) scheme to encourage people on low incomes to build up a “rainy day” fund.
+
+Help to Save will target working families on the lowest incomes to help them build up their
+savings. The scheme will be open to 3.5 million adults in receipt of Universal Credit with
+minimum weekly household earnings equivalent to 16 hours at the National Living Wage, or those in receipt 
+of Working Tax Credit.
+
+A customer can deposit up to a maximum of £50 per month in the account. It will work by
+providing a 50% government bonus on the highest amount saved into a HtS account. The
+bonus is paid after two years with an option to save for a further two years, meaning that people
+can save up to £2,400 and benefit from government bonuses worth up to £1,200. Savers will be
+able to use the funds in any way they wish. The published implementation date for this is Q2/2018,
+but the project will have a controlled go-live with a pilot population in Q1/2018.
+
+Product Repos
+-------------
+The suite of repos connected with this Product are as follows:  
+
+| Repo | Description |
+|:-----|:------------|
+| [help-to-save-frontend](https://github.com/hmrc/help-to-save-frontend)                       | handles requests from browser for public digital journey |
+| [help-to-save](https://github.com/hmrc/help-to-save)                                         | handles backend logic for HTS |
+| [help-to-save-proxy](https://github.com/hmrc/help-to-save-proxy)                             | handles requests to services outside of MDTP |
+| [help-to-save-api](https://github.com/hmrc/help-to-save-api)                                 | handles requests from third parties outside of MDTP |
+| [help-to-save-stride-frontend](https://github.com/hmrc/help-to-save-stride-frontend)         | handles requests from browser for internal call centre journey |
+| [help-to-save-stub](https://github.com/hmrc/help-to-save-stub)                               | provides endpoints for testing |
+| [help-to-save-integration-tests](https://github.com/hmrc/help-to-save-integration-tests)     | contains system integration tests |
+| [help-to-save-performance-tests](https://github.com/hmrc/help-to-save-performance-tests)     | contains load performance tests |
+| [help-to-save-test-admin-frontend](https://github.com/hmrc/help-to-save-test-admin-frontend) | provides useful functions for testing |
+
+This repo is the JSON create account interface schema between HMRC and NS&I:
+- [help-to-save-apis](https://github.com/hmrc/help-to-save-apis/blob/master/1.0/create-account.request.schema.json)
+
+This diagram shows a general picture of how the different services are connected to each other:
+```                                                                                                                                                                              
+                           browser - internal                    browser - public                                                                                        
+                           call centre journey                   digital journey                                                                                         
+                                     |                                  |                                                       
+                                     |                                  |                                                       
+                                     |                                  |                                                       
+            +------------------------+----------------------------------+-----------------------+                               
+            | MDTP                   |                                  |                       |                               
+            |                        |                                  |                       |                               
+            |        +---------------+--------------+   +---------------+--------------+        |                               
+            |        |                              |   |                              |        |                               
+            |        | help-to-save-stride-frontend |   |    help-to-save-frontend     |        |                               
+            |        |                              |   |                              |        |                               
+            |        +---------------+--------------+   +---------------+--------------+        |                               
+            |                        |                                  |                       |                               
+            |                        |                                  |                       |                               
+            |                        +---------+              +---------+                       |                               
+            |                                  |              |                                 |                               
+            |                          +-------+--------------+-------+                         |
+            |                          |                              |                         |
+ HoDs ------+--------------------------+         help-to-save         |                         |
+            |                          |                              |                         |
+            |                          +-------+--------------+-------+                         |
+            |                                  |              |                                 |
+            |                       +----------+              +---------+                       |    
+            |                       |                                   |                       |
+            |                       |                                   |                       |
+            |       +---------------+--------------+     +--------------+---------------+       |               
+            |       |                              |     |                              |       |               
+            |       |       help-to-save-api       |     |      help-to-save-proxy      |       |               
+            |       |                              |     |                              |       |               
+            |       +---------------+--------------+     +--------------+---------------+       |
+            |                       |                                   |                       | 
+            +-----------------------+-----------------------------------+-----------------------+                               
+                                    |                                   |                                     
+                                    |                                   |                                                         
+                                    |                                   |                                                         
+                                    |                                   |                                                         
+                                    |                                   |                                                         
+                              incoming requests                requests to third-party                                                               
+                              from third-parties                    services                                                                       
 ```
-sm --start HTS_ALL -f
-```
-
-## How to test
-
-The unit tests can be run by running
-```
-sbt test
-```
-
-## How to deploy
-
-This microservice is deployed as per all MDTP microservices via Jenkins into a Docker slug running on a Cloud Provider.
-
-## Endpoints
-
-# GET /eligibility-check
- Checks whether or not a person is eligible for help to save. This endpoint requires no parameters.
- 
- For example:
- ```
- /eligibility-check
- ```
- If the call is successful, expect a `200` response with JSON containing the eligibility result. If call is not successful expect a `500`
- response.
-
-# GET /:nino/account
- Returns account data for the specified NINO (National Insurance Number), or 404 if there is no account for that NINO.
- 
-# GET /:nino/account/transactions
- Returns transaction for the specified NINO (National Insurance Number), or 404 if there is no account for that NINO.
- 
-  The JSON format for successful `200` responses is:
-
-```json  
-{
-  "transactions": [
-    {
-      "amount": 3.00,
-      "operation": "credit",
-      "transactionDate": "2018-02-18",
-      "accountingDate": "2018-02-18",
-      "description": "Debit card online deposit",
-      "transactionReference": "A1A11AA1A00A0034",
-      "balanceAfter": 3.00
-    },
-    {
-      "amount": 6.67,
-      "operation": "debit",
-      "transactionDate": "2018-02-20",
-      "accountingDate": "2018-02-22",
-      "description": "BACS payment",
-      "transactionReference": "A1A11AA1A00A000I",
-      "balanceAfter": 9.67
-    },
-    {
-      "amount": 5.00,
-      "operation": "debit",
-      "transactionDate": "2018-02-25",
-      "accountingDate": "2018-02-25",
-      "description": "BACS payment",
-      "transactionReference": "A1A11AA1A00A000G",
-      "balanceAfter": 4.67
-    }
-  ]
-}
-```
-
-# GET /enrolment-status
- Checks whether or not a person is enrolled in help to save. This endpoint requires no parameters.
-
-  For example:
-   ```
-   /enrolment-status
-   ```
-  If the call is successful, expect a `200` response with JSON containing the enrolment status. If not successful expect a `500`
-  response.
-
-# GET /enrol-user
- Enrols user into help to save. This endpoint requires no parameters.
-
-  For example:
-   ```
-   /enrol-user
-   ```
-  If enrolment was successful, expect a `200` response. If not successful expect a `500` response.
-
-# GET /set-itmp-flag
- Sets the ITMP flag when a user has successfully enrolled into help to save. This endpoint requires no parameters.
-
-  For example:
-   ```
-   /set-itmp-flag
-   ```
-   If successful, expect a `200` response. If setting flag is unsuccessful expect a `500` response.
-
-# GET /store-email
- Stores the users new email address in help to save mongo collection. This endpoint requires one parameter:
-
-  | parameter      | description                                      |
-  |----------------|--------------------------------------------------|
-  | email          | The user's new email address                     |
-
-  For example:
-   ```
-   /store-email?email=gfgfds%sd32%45
-   ```
-   If successful, expect a `200` response. If storing email is unsuccessful expect a `500` response.
-
-# GET /get-email
- Gets the stored users email. This endpoint requires no parameters.
-
-  For example:
-   ```
-   /get-email
-   ```
-   If successful, expect a `200` response with JSON containing the user's email address. If unsuccessful expect a `500` response.
-
-# GET /account-create-allowed
- Checks if user cap has been reached. This endpoint requires no parameters.
-
-  For example:
-   ```
-   /account-create-allowed
-   ```
-   Expect a `200` response with JSON containing a boolean result.
-
-# POST /update-user-count
- Updates the number of users who have enrolled into help to save. This endpoint requires no parameters.
- Expect a `200` response.
 
 
-### License 
 
+Private Beta User Restriction
+----------------------------
+
+During Private Beta, when a HtS Account is created, per-day-count and total-count counters are incremented. After the customer’s Eligibility
+Check, the counters are checked to ensure that the cap’s haven’t been reached. If they have, they are shuttered, otherwise they may continue
+to create a HtS account.
+
+
+Running and Testing
+===================
+
+Running
+-------
+
+Run `sbt run` on the terminal to start the service. The service runs on port 7004 by default.
+
+Unit tests
+----------
+Run `sbt test` on the terminal to run the unit tests.
+
+
+Endpoints
+=========
+
+| Path                         | Method | Description |
+|:-----------------------------|:-------|:------------|
+| /eligibility-check           | GET  | Checks whether or not a person is eligible for help to save  |
+| /enrolment-status            | GET  | Checks whether or not a person is enrolled in help to save |
+| /set-itmp-flag               | GET  | Sets the ITMP flag for a user to indicate they have created a HTS account |
+| /store-email                 | GET  | Stores the users new email address in persistent storage |
+| /get-email                   | GET  | Get the users email from persistent storage |
+| /account-create-allowed      | GET  | Checks if user cap has been reached |
+| /{NINO}/account              | GET  | Returns account data for the specified NINO, or 404 (NOT FOUND) if there is no account for that NINO |
+| /{NINO}/account/transactions | GET  | Returns transaction for the specified NINO, or 404 (NOT FOUND) if there is no account for that NINO |
+| /create-account              | POST | Created a HTS account |
+| /update-email                | PUT  | Updates email in the HTS account |
+| /paye-personal-details       | GET  | Gets user information for HTS |
+| /validate-bank-details       | POST | Checks that bank details are valid |
+
+License 
+=======
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")
 
 
