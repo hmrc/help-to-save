@@ -47,8 +47,8 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
     handle(setITMPFlagAndUpdateMongo(nino), "set ITMP flag", nino)
   }
 
-  def getEnrolmentStatus(): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
-    handle(enrolmentStore.get(nino), "get enrolment status", nino)
+  def getEnrolmentStatus(nino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(nino) { implicit request ⇒ implicit authNino ⇒
+    handle(enrolmentStore.get(authNino), "get enrolment status", authNino)
   }
 
   private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] = {

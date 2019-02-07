@@ -88,11 +88,6 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
     }
 
-    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResponse]): Unit =
-      (helpToSaveService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(nino, routes.HelpToSaveController.checkEligibility(nino).url, *, *)
-        .returning(EitherT.fromEither[Future](result))
-
     def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
       (emailStore.delete(_: NINO)(_: ExecutionContext))
         .expects(nino, *)
@@ -297,33 +292,6 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
       }
-    }
-
-    "checking eligibility for an API User" must {
-
-      val nino = "AE123456"
-
-        def doRequest(controller: HelpToSaveController) =
-          controller.checkEligibility(nino)(FakeRequest())
-
-      "return with a status 500 if the eligibility check service fails" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
-
-        val result = doRequest(controller)
-        status(result) shouldBe 500
-      }
-
-      "return the eligibility status returned from the eligibility check service if " +
-        "successful" in new TestApparatus {
-          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
-          mockEligibilityCheckerService(nino)(Right(eligibility))
-
-          val result = doRequest(controller)
-          status(result) shouldBe 200
-          contentAsJson(result) shouldBe Json.toJson(eligibility)
-        }
     }
 
     "validating bank details" must {

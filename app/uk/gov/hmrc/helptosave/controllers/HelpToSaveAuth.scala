@@ -18,12 +18,14 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.instances.string._
 import cats.syntax.eq._
+import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, v2}
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, Retrieval, v2}
+import uk.gov.hmrc.helptosave.models.ErrorResponse
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
@@ -46,9 +48,11 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
   override def authConnector: AuthConnector = htsAuthConnector
 
   private type HtsAction = Request[AnyContent] ⇒ Future[Result]
-  private type HtsActionWithNino = Request[AnyContent] ⇒ NINO ⇒ Future[Result]
+  private type HtsActionWithNINO = Request[AnyContent] ⇒ NINO ⇒ Future[Result]
 
-  def ggAuthorisedWithNino(action: HtsActionWithNino)(implicit ec: ExecutionContext): Action[AnyContent] =
+  val authProviders: AuthProviders = AuthProviders(GovernmentGateway, PrivilegedApplication)
+
+  def ggAuthorisedWithNino(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(AuthWithCL200)
         .retrieve(v2Nino) { mayBeNino ⇒
@@ -71,7 +75,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
       }
     }
 
-  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNino)(implicit ec: ExecutionContext): Action[AnyContent] =
+  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request ⇒
       authorised(GGAndPrivilegedProviders).retrieve(v2.Retrievals.authProviderId) {
         case GGCredId(_) ⇒
@@ -122,5 +126,8 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
       logger.warn(s"could not authenticate user due to: ${ex.reason}")
       Forbidden
   }
+
+  val unsupportedCredentialsProviderResult: Result =
+    Forbidden(Json.toJson(ErrorResponse("UNSUPPORTED_CREDENTIALS_PROVIDER", "credentials provider not recognised")))
 }
 

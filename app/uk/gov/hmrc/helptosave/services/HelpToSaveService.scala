@@ -20,7 +20,6 @@ import java.util.UUID
 
 import cats.data.EitherT
 import cats.syntax.eq._
-import cats.syntax.either._
 import cats.instances.int._
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}

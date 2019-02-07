@@ -39,6 +39,11 @@ trait AuthSupport extends TestSupport {
       .expects(predicate, retrieval, *, *)
       .returning(result.fold(e ⇒ Future.failed[A](e), r ⇒ Future.successful(r)))
 
+  def mockAuth[A](retrieval: Retrieval[A])(result: Either[Exception, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
+    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(*, retrieval, *, *)
+      .returning(result.fold(e ⇒ Future.failed[A](e), r ⇒ Future.successful(r)))
+
   def testWithGGAndPrivilegedAccess(f: (() ⇒ Unit) ⇒ Unit): Unit = {
     withClue("For GG access: "){
       f{ () ⇒
