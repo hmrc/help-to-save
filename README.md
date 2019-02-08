@@ -8,7 +8,7 @@ Table of Contents
 =================
 
 * [About Help to Save](#about-help-to-save)
-   * [Keywords](#keywords)
+   * [Abbreviations](#abbreviations)
    * [Product Background](#product-background)
    * [Product Repos](#product-repos)
    * [Private Beta User Restriction](#private-beta-user-restriction)
