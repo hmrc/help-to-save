@@ -31,8 +31,8 @@ class EligibilityCheckController @Inject() (val helpToSaveService: HelpToSaveSer
     transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
   extends HelpToSaveAuth(authConnector) with EligibilityBase {
 
-  def eligibilityCheck(): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
-    checkEligibility(nino, routes.EligibilityCheckController.eligibilityCheck().url)
+  def eligibilityCheck(maybeNino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNino) { implicit request ⇒ implicit nino ⇒
+    checkEligibility(nino, routes.EligibilityCheckController.eligibilityCheck(maybeNino).url)
   }
 
 }

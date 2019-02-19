@@ -24,38 +24,18 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.helptosave.util.Logging._
 
 import scala.concurrent.ExecutionContext
 
-class StrideController @Inject() (val helpToSaveService: HelpToSaveService,
-                                  authConnector:         AuthConnector,
-                                  enrolmentStore:        EnrolmentStore)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig, ec: ExecutionContext)
+class PayePersonalDetailsController @Inject() (val helpToSaveService: HelpToSaveService,
+                                               authConnector:         AuthConnector)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig, ec: ExecutionContext)
 
   extends StrideAuth(authConnector) with EligibilityBase {
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
-
-  def getEnrolmentStatus(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
-    {
-      enrolmentStore.get(nino).fold(
-        {
-          e ⇒
-            logger.warn(s"Could not get enrolments status: $e", nino)
-            InternalServerError
-        }, { status ⇒
-          Ok(Json.toJson(status))
-        }
-      )
-    }
-  }
-
-  def eligibilityCheck(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
-    checkEligibility(nino, routes.StrideController.eligibilityCheck(nino).url)
-  }
 
   def getPayePersonalDetails(nino: String): Action[AnyContent] = authorisedFromStride { implicit request ⇒
     helpToSaveService.getPersonalDetails(nino)

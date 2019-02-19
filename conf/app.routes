@@ -1,7 +1,7 @@
 # microservice specific routes
 
-GET  /eligibility-check           @uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck()
-GET  /enrolment-status            @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getEnrolmentStatus()
+GET  /eligibility-check           @uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck(nino: Option[String])
+GET  /enrolment-status            @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getEnrolmentStatus(nino: Option[String])
 GET  /set-itmp-flag               @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag()
 GET  /store-email                 @uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String, nino: Option[String])
 GET  /get-email                   @uk.gov.hmrc.helptosave.controllers.EmailStoreController.get()
@@ -11,11 +11,7 @@ GET  /:nino/account/transactions  @uk.gov.hmrc.helptosave.controllers.Transactio
 
 POST /create-account              @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.createAccount()
 PUT  /update-email                @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.updateEmail()
-GET  /api/eligibility-check/:nino @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.checkEligibility(nino: String)
 
+GET  /paye-personal-details       @uk.gov.hmrc.helptosave.controllers.PayePersonalDetailsController.getPayePersonalDetails(nino: String)
 
-GET  /stride/enrolment-status      @uk.gov.hmrc.helptosave.controllers.StrideController.getEnrolmentStatus(nino: String)
-GET  /stride/eligibility-check     @uk.gov.hmrc.helptosave.controllers.StrideController.eligibilityCheck(nino: String)
-GET  /stride/paye-personal-details @uk.gov.hmrc.helptosave.controllers.StrideController.getPayePersonalDetails(nino: String)
-
-POST /validate-bank-details  @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.doBarsCheck()
+POST /validate-bank-details       @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.doBarsCheck()

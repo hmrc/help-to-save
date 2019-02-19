@@ -103,10 +103,6 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
       }
   }
 
-  def checkEligibility(nino: String): Action[AnyContent] = ggOrPrivilegedAuthorised {
-    implicit request ⇒ checkEligibility(nino, routes.HelpToSaveController.checkEligibility(nino).url)
-  }
-
   def doBarsCheck(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request ⇒
     request.body.asJson.map(_.validate[BankDetailsValidationRequest]) match {
 
