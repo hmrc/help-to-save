@@ -127,7 +127,5 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector) extends BaseController wit
       Forbidden
   }
 
-  val unsupportedCredentialsProviderResult: Result =
-    Forbidden(Json.toJson(ErrorResponse("UNSUPPORTED_CREDENTIALS_PROVIDER", "credentials provider not recognised")))
 }
 

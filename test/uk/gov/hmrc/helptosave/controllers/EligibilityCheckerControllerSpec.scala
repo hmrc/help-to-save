@@ -42,9 +42,9 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with GeneratorD
     def doRequest(controller: EligibilityCheckController, nino: Option[String]): Future[PlayResult] =
       controller.eligibilityCheck(nino)(FakeRequest())
 
-    def mockEligibilityCheckerService(nino: NINO)(result: Either[String, EligibilityCheckResponse]): Unit =
+    def mockEligibilityCheckerService(nino: NINO, expectedPath: String)(result: Either[String, EligibilityCheckResponse]): Unit =
       (eligibilityService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url, *, *)
+        .expects(nino, expectedPath, *, *)
         .returning(EitherT.fromEither[Future](result))
 
     val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector)
@@ -62,7 +62,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with GeneratorD
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
         mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-        mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
+        mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Left("The Eligibility Check service is unavailable"))
 
         val result = doRequest(controller, Some(nino))
         status(result) shouldBe 500
@@ -72,7 +72,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with GeneratorD
         "successful" in new TestApparatus {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
           mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-          mockEligibilityCheckerService(nino)(Right(eligibility))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Right(eligibility))
 
           val result = doRequest(controller, Some(nino))
           status(result) shouldBe 200
@@ -91,7 +91,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with GeneratorD
         new TestApparatus {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
           mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-          mockEligibilityCheckerService(nino)(Right(eligibility))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(None).url)(Right(eligibility))
 
           val result = doRequest(controller, None)
           status(result) shouldBe 200
@@ -105,7 +105,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with GeneratorD
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-          mockEligibilityCheckerService(nino)(Right(eligibility))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Right(eligibility))
         }
 
         val result = doRequest(controller, Some(nino))
@@ -116,7 +116,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with GeneratorD
       "return with a 500 status if the eligibility check service fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-          mockEligibilityCheckerService(nino)(Left("The Eligibility Check service is unavailable"))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Left("The Eligibility Check service is unavailable"))
         }
 
         val result = doRequest(controller, Some(nino))

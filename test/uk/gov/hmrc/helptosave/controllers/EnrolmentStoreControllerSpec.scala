@@ -157,7 +157,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
       }
     }
 
-    "handling requests to get enrolment status via calls from Stride" must {
+    "handling requests to get enrolment status with privileged access" must {
 
       "ask the enrolment store for the enrolment status and return the result" in {
         List[EnrolmentStore.Status](
