@@ -20,6 +20,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework
@@ -59,10 +60,11 @@ class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
     )
   )
 
-  private[repo] def doAggregate(): Future[AggregationFramework.AggregationResult] = {
-    collection.aggregate(
-      Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"))("total" -> SumAll),
-      List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total"))))
+  private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
+    collection.aggregateWith(){ a ⇒
+      a.Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"))("total" -> a.SumAll) →
+        List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total")))
+    }.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur :: acc)
   }
 
   override def getEligibilityStats(): Future[List[EligibilityStats]] = {
@@ -71,7 +73,7 @@ class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
       .map { response ⇒
         val time = timerContext.stop()
         logger.info(s"eligibility stats query took ${nanosToPrettyString(time)}")
-        response.head[EligibilityStats]
+        response
       }.recover {
         case e ⇒
           val _ = timerContext.stop()

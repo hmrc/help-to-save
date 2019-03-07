@@ -27,9 +27,9 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
 
   "The EligibilityStatsStore" when {
 
-    "aggregating the eligibility stats" must {
+    val document = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
 
-      val document = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
+    "aggregating the eligibility stats" must {
 
       "return results as expected" in {
         val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
@@ -43,6 +43,18 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
       val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
       await(store.getEligibilityStats()) shouldBe List.empty
+    }
+
+    "return aggregated results when there is more than one result" in {
+      val document2 = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
+      val document3 = Json.obj("eligibilityReason" -> 8, "source" -> "Digital", "total" -> 1).value
+      val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
+
+      await(store.collection.insert(document))
+      await(store.collection.insert(document2))
+      await(store.collection.insert(document3))
+
+      await(store.getEligibilityStats()) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 2), EligibilityStats(Some(8), Some("Digital"), 1))
     }
   }
 

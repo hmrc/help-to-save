@@ -21,10 +21,10 @@ val dependencies = Seq(
   "uk.gov.hmrc" %% "domain" % "5.3.0",
   "org.typelevel" %% "cats-core" % "1.5.0",
   "com.github.kxbmap" %% "configs" % "0.4.4",
-  "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.12.0-play-25",
   "uk.gov.hmrc" %% "crypto" % "5.2.0",
   "uk.gov.hmrc" %% "bootstrap-play-25" % "4.8.0",
-  "uk.gov.hmrc" %% "mongo-lock" % "5.1.1"
+  "uk.gov.hmrc" %% "mongo-lock" % "6.10.0-play-25"
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
@@ -35,7 +35,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope,
-  "uk.gov.hmrc" %% "reactivemongo-test" % "3.1.0"
+  "uk.gov.hmrc" %% "reactivemongo-test" % "4.8.0-play-25" % scope
 )
 
 lazy val scoverageSettings = {
