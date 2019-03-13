@@ -224,8 +224,8 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
         "Testsurname",
         Some("test@example.com"),
         List(
-          BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
-          BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
+          BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
+          BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
         ),
         None,
         None)

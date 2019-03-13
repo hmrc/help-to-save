@@ -46,8 +46,8 @@ class AccountSpec extends TestSupport {
   val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
                         accountHolderForename = "Testforename", accountHolderSurname = "Testsurname", accountHolderEmail = Some("test@example.com"),
                         Seq(
-      BonusTerm(endDate                = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
-      BonusTerm(endDate                = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
+      BonusTerm(startDate              = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
+      BonusTerm(startDate              = LocalDate.of(2020, 1, 1), endDate = LocalDate.of(2021, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
     ), None, None)
 
   "Account class" when {
@@ -142,9 +142,9 @@ class AccountSpec extends TestSupport {
 
       "return bonus information including calculated bonusPaidOnOrAfterDate" in {
         val returnedAccount = Account(testNsiAccount.copy(
-          terms = Seq(NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 10, 23), endDate = LocalDate.of(2020, 10, 22), bonusEstimate = BigDecimal("65.43"), bonusPaid = 0))))
+          terms = Seq(NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 10, 22), endDate = LocalDate.of(2020, 10, 22), bonusEstimate = BigDecimal("65.43"), bonusPaid = 0))))
 
-        val bonusTerm = BonusTerm(bonusEstimate          = BigDecimal("65.43"), bonusPaid = 0, endDate = LocalDate.of(2020, 10, 22), bonusPaidOnOrAfterDate = LocalDate.of(2020, 10, 23))
+        val bonusTerm = BonusTerm(bonusEstimate          = BigDecimal("65.43"), bonusPaid = 0, startDate = LocalDate.of(2018, 10, 22), endDate = LocalDate.of(2020, 10, 22), bonusPaidOnOrAfterDate = LocalDate.of(2020, 10, 23))
         returnedAccount shouldBe Valid(account.copy(
           openedYearMonth = YearMonth.of(2018, 10),
           balance         = 0,
@@ -160,8 +160,8 @@ class AccountSpec extends TestSupport {
             NsiBonusTerm(termNumber    = 1, startDate = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = BigDecimal("123.45"), bonusPaid = BigDecimal("123.45"))
           )))
 
-        val bonusTerm1 = BonusTerm(bonusEstimate          = BigDecimal("67"), bonusPaid = 0, endDate = LocalDate.of(2021, 12, 31), bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
-        val bonusTerm2 = BonusTerm(bonusEstimate          = BigDecimal("123.45"), bonusPaid = 123.45, endDate = LocalDate.of(2019, 12, 31), bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1))
+        val bonusTerm1 = BonusTerm(bonusEstimate          = BigDecimal("67"), bonusPaid = 0, startDate = LocalDate.of(2020, 1, 1), endDate = LocalDate.of(2021, 12, 31), bonusPaidOnOrAfterDate = LocalDate.of(2022, 1, 1))
+        val bonusTerm2 = BonusTerm(bonusEstimate          = BigDecimal("123.45"), bonusPaid = 123.45, startDate = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1))
         returnedAccount shouldBe Valid(account.copy(
           openedYearMonth = YearMonth.of(2018, 1),
           balance         = 200.34,
