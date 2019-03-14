@@ -28,6 +28,7 @@ import uk.gov.hmrc.helptosave.util.Logging
 
 case class BonusTerm(bonusEstimate:          BigDecimal,
                      bonusPaid:              BigDecimal,
+                     startDate:              LocalDate,
                      endDate:                LocalDate,
                      bonusPaidOnOrAfterDate: LocalDate)
 
@@ -139,6 +140,7 @@ object Account extends Logging {
   private def nsiBonusTermToBonusTerm(nsiBonusTerm: NsiBonusTerm): BonusTerm = BonusTerm(
     bonusEstimate          = nsiBonusTerm.bonusEstimate,
     bonusPaid              = nsiBonusTerm.bonusPaid,
+    startDate              = nsiBonusTerm.startDate,
     endDate                = nsiBonusTerm.endDate,
     bonusPaidOnOrAfterDate = nsiBonusTerm.endDate.plusDays(1)
   )
