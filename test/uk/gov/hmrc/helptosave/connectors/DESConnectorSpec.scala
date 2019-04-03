@@ -23,10 +23,8 @@ import uk.gov.hmrc.helptosave.models.{UCResponse, UCThreshold}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext
 
 class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks with MockPagerDuty with TestData with HttpSupport {
-  MdcLoggingExecutionContext
   val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
   val nino = "NINO"

@@ -114,7 +114,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       eventually{
         val probe = TestProbe()
         probe.send(actor, UCThresholdManager.GetThresholdValue)
-        connectorProxy.expectNoMsg()
+        connectorProxy.expectNoMessage()
       }
   }
 
@@ -156,7 +156,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // make sure retry doesn't happen before it's supposed to
           time.advance(1.second - 1.milli)
-          connectorProxy.expectNoMsg(1.second)
+          connectorProxy.expectNoMessage(1.second)
 
           time.advance(1.milli)
 
@@ -172,7 +172,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(12.0)))
 
           // make sure there are no retries after success
-          schedulerListener.expectNoMsg()
+          schedulerListener.expectNoMessage()
 
           actor ! UCThresholdManager.GetThresholdValue
           expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(12.0)))
@@ -207,7 +207,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         time.advance(10.seconds)
 
         // make sure there are no retries after success
-        connectorProxy.expectNoMsg()
+        connectorProxy.expectNoMessage()
       }
 
       "ask DES for the initial threshold value on startup and call DES again for the threshold value " +
@@ -307,7 +307,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(100.0)))
 
           // there should be no retries
-          schedulerListener.expectNoMsg()
+          schedulerListener.expectNoMessage()
 
         }
 
@@ -335,7 +335,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
         connectorProxy.send(sender1, UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("No threshold found in DES")))
 
         // no retry should be scheduled
-        schedulerListener.expectNoMsg()
+        schedulerListener.expectNoMessage()
       }
 
       "store the threshold value from a successful request to DES following a failed call to DES " +
@@ -372,7 +372,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // make sure retries have been cancelled
           time.advance(10.seconds)
-          connectorProxy.expectNoMsg()
+          connectorProxy.expectNoMessage()
         }
     }
 
@@ -507,7 +507,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           schedulerListener.expectMsg(JobScheduledOnce(5.hours))
 
           // no other retries should be triggered
-          schedulerListener.expectNoMsg()
+          schedulerListener.expectNoMessage()
 
           awaitInReadyState()
 
@@ -615,7 +615,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
             test.schedulerListener.expectMsg(JobScheduledOnce(5.hours))
 
             // there should be no retries
-            test.schedulerListener.expectNoMsg()
+            test.schedulerListener.expectNoMessage()
 
             // we should now be in the ready state
             test.awaitInReadyState()
@@ -720,7 +720,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
             test.schedulerListener.expectMsg(JobScheduledOnce(5.hours))
 
             // there should be no retries
-            test.schedulerListener.expectNoMsg()
+            test.schedulerListener.expectNoMessage()
 
             // we should now be in the ready state
             test.awaitInReadyState()

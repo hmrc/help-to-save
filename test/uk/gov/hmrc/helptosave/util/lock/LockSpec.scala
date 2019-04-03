@@ -125,7 +125,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
         // now actually trigger the stop hook to check  that the lock is released
         await(hook.f())
         // onRelease lock should be called if the release is successful
-        expectNoMsg()
+        expectNoMessage()
       }
 
     "register an application lifecycle stop hook when starting which when triggered will do nothing if the " +
@@ -135,7 +135,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
         // trigger the stop hook to check that nothing happens
         await(hook.f())
         // onRelease lock should be called if the release is successful
-        expectNoMsg()
+        expectNoMessage()
       }
 
     "try to acquire the lock when started and change the state if " +
@@ -153,7 +153,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
 
     "not try to renew the lock while the lock is still active" in {
       time.advance((lockDuration - 2.milli).toMillis)
-      expectNoMsg()
+      expectNoMessage()
     }
 
     "try to renew the lock when the lock expires amd change the state if " +
@@ -168,7 +168,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
       mockTryToAcquireOrRenewLock(Left(""))
 
       time.advance(lockDuration.toMillis)
-      expectNoMsg()
+      expectNoMessage()
     }
 
   }

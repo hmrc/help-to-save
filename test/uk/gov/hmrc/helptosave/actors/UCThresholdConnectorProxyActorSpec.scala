@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.helptosave.actors
 
+import org.scalamock.handlers.CallHandler1
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -53,8 +54,8 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
         mockConnectorGetValue(HttpResponse(500, Some(Json.toJson("error occurred"))))
 
         (mockPagerDuty.alert(_: String))
-          .expects(*)
-          .returning("Received unexpected http status in response to get UC threshold from DES")
+          .expects("Received unexpected http status in response to get UC threshold from DES")
+          .returning(())
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
         expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("Received unexpected status 500")))

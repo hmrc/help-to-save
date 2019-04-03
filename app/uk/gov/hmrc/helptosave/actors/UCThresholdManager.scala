@@ -279,7 +279,7 @@ class UCThresholdManager(thresholdConnectorProxyActor: ActorRef,
 
 object UCThresholdManager {
 
-  private[actors] case class GetDESThresholdValueResponse(requester: Option[ActorRef], response: Either[String, Double])
+  case class GetDESThresholdValueResponse(requester: Option[ActorRef], response: Either[String, Double])
 
   /** Message used to trigger the start of an update window and to end the update window */
   private case object UpdateWindow

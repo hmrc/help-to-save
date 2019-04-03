@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -29,7 +28,7 @@ import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestratorSpec") with Eventually {
@@ -64,8 +63,8 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         .returning(HttpResponse(500, None))
 
       (pagerDutyAlert.alert(_: String))
-        .expects(*)
-        .returning("Received unexpected http status in response to get UC threshold from DES")
+        .expects("Received unexpected http status in response to get UC threshold from DES")
+        .returning(())
 
       (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
