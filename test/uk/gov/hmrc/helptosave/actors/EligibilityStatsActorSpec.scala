@@ -129,7 +129,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
             @tailrec
             def loop(remaining: List[(String, Int)]): Unit = remaining match {
               case Nil ⇒
-                metricsListener.expectNoMsg()
+                metricsListener.expectNoMessage()
 
               case l ⇒
                 val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
@@ -158,7 +158,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
         // gauge should now be registered
         val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
-        metricsListener.expectNoMsg()
+        metricsListener.expectNoMessage()
 
         registered.name shouldBe "backend.create-account.1.some-source"
         registered.gauge.getValue() shouldBe 2

@@ -24,7 +24,7 @@ import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.play.json.ImplicitBSONHandlers._
+import reactivemongo.play.json.ImplicitBSONHandlers.BSONDocumentWrites
 import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -54,7 +54,7 @@ class MongoUserCapStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: E
     )
   )
 
-  private[repo] def doFind(): Future[Option[UserCap]] = collection.find(Json.obj()).one[UserCap]
+  private[repo] def doFind(): Future[Option[UserCap]] = collection.find(BSONDocument(), None).one[UserCap]
 
   override def get(): Future[Option[UserCap]] = doFind()
 

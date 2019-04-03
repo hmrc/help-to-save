@@ -112,7 +112,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
         // retry time should now be double the initial retry time
         exponentialBackoffRetry.retry("a")
         time.advance(2.seconds - 1.milli)
-        probe.expectNoMsg()
+        probe.expectNoMessage()
         time.advance(1.milli)
         probe.expectMsg(TestMessage("a"))
       }
@@ -131,14 +131,13 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
       )
 
       exponentialBackoffRetry.retry("")
-      exponentialBackoffRetry.retry("")
 
       time.advance(1.second)
       probe.expectMsg(TestMessage(""))
 
       // check no other retries happen
       time.advance(1.day)
-      probe.expectNoMsg()
+      probe.expectNoMessage()
     }
 
     "return the correct isActive status" in {
