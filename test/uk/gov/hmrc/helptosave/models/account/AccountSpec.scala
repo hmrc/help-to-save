@@ -43,7 +43,7 @@ class AccountSpec extends TestSupport {
     accountClosingBalance  = None
   )
 
-  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
+  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false, false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
                         accountHolderForename = "Testforename", accountHolderSurname = "Testsurname", accountHolderEmail = Some("test@example.com"),
                         Seq(
       BonusTerm(startDate              = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
@@ -82,12 +82,38 @@ class AccountSpec extends TestSupport {
 
       """return blocking.payments = true when accountBlockingCode or clientBlockingCode is not "00" or "11""" in {
         testBlockingCodes("12", "13", "15", "30", "64"){
-          _ shouldBe Valid(account.copy(blocked = Blocking(true, true), balance = 0))
+          _.map(_.blocked.payments) shouldBe Valid(true)
         }
       }
 
       """return blocking.payments = false when accountBlockingCode or clientBlockingCode is "00" or "11"""" in {
-        testBlockingCodes("00", "11"){ _.map(_.blocked.payments) shouldBe Valid(false) }
+        testBlockingCodes("00", "11"){
+          _.map(_.blocked.payments) shouldBe Valid(false)
+        }
+      }
+
+      """return blocking.withdrawals = true when accountBlockingCode or clientBlockingCode is not "00" or "12" or "15""" in {
+        testBlockingCodes("11", "13", "30", "64"){
+          _.map(_.blocked.withdrawals) shouldBe Valid(true)
+        }
+      }
+
+      """return blocking.withdrawals = false when accountBlockingCode or clientBlockingCode is "00" or "12" or "15""" in {
+        testBlockingCodes("00", "12", "15"){
+          _.map(_.blocked.withdrawals) shouldBe Valid(false)
+        }
+      }
+
+      """return blocking.bonuses = true when accountBlockingCode or clientBlockingCode is not "00" or "12""" in {
+        testBlockingCodes("11", "13", "15", "30", "64"){
+          _.map(_.blocked.bonuses) shouldBe Valid(true)
+        }
+      }
+
+      """return blocking.bonuses = false when accountBlockingCode or clientBlockingCode is "00" or "12""" in {
+        testBlockingCodes("00", "12"){
+          _.map(_.blocked.bonuses) shouldBe Valid(false)
+        }
       }
 
       "return an error for unknown blocking codes" in {

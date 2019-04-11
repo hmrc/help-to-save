@@ -26,9 +26,9 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, _}
 import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, v2}
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, v2}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
-import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.{AuthWithCL200, GGAndPrivilegedProviders}
+import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models.account.{Account, Blocking}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -40,7 +40,7 @@ class AccountControllerSpec extends AuthSupport {
 
   val controller = new AccountController(mockProxyConnector, mockAuthConnector)
 
-  val account = Account(YearMonth.of(1900, 1), "AC01", false, Blocking(false, false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), "Test", "Saver", Some("testsaver@example.com"), List(), None, None)
+  val account = Account(YearMonth.of(1900, 1), "AC01", false, Blocking(false, false, false, false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), "Test", "Saver", Some("testsaver@example.com"), List(), None, None)
 
   val queryString = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
 

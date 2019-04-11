@@ -36,7 +36,7 @@ object BonusTerm {
   implicit val writes: Format[BonusTerm] = Json.format[BonusTerm]
 }
 
-case class Blocking(unspecified: Boolean, payments: Boolean)
+case class Blocking(unspecified: Boolean, payments: Boolean, withdrawals: Boolean, bonuses: Boolean)
 
 object Blocking {
   implicit val writes: Format[Blocking] = Json.format[Blocking]
@@ -131,9 +131,10 @@ object Account extends Logging {
 
           Blocking(
             unspecified = isBlockedFromPredicate(_ =!= "00"),
-            payments    = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "11")
+            payments    = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "11"),
+            withdrawals = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "12" && s =!= "15"),
+            bonuses     = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "12")
           )
-
       }
   }
 
