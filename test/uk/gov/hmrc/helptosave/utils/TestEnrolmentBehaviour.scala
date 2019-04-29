@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.helptosave.utils
 
+import java.time.{LocalDate, YearMonth}
+
 import cats.data.EitherT
 import cats.instances.future._
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.connectors.DESConnector
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.controllers.EnrolmentBehaviour
+import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber, Blocking, BonusTerm}
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
@@ -35,19 +38,25 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val itmpConnector: DESConnector = mock[DESConnector]
   val enrolmentBehaviour: EnrolmentBehaviour = mock[EnrolmentBehaviour]
   val helpToSaveService: HelpToSaveService = mock[HelpToSaveService]
+  val proxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
   def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.update(_: NINO, _: Boolean)(_: HeaderCarrier))
+    (enrolmentStore.updateItmpFlag(_: NINO, _: Boolean)(_: HeaderCarrier))
       .expects(nino, itmpFlag, *)
       .returning(EitherT.fromEither[Future](result))
 
-  def mockEnrolmentStoreInsert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.insert(_: NINO, _: Boolean, _: Option[Int], _: String)(_: HeaderCarrier))
-      .expects(nino, itmpFlag, eligibilityReason, source, *)
+  def mockEnrolmentStoreInsert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String, accountNumber: Option[String])(result: Either[String, Unit]): Unit =
+    (enrolmentStore.insert(_: NINO, _: Boolean, _: Option[Int], _: String, _: Option[String])(_: HeaderCarrier))
+      .expects(nino, itmpFlag, eligibilityReason, source, accountNumber, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
     (enrolmentStore.get(_: NINO)(_: HeaderCarrier))
+      .expects(nino, *)
+      .returning(EitherT.fromEither[Future](result))
+
+  def mockEnrolmentStoreGetAccountNumber(nino: NINO)(result: Either[String, AccountNumber]): Unit =
+    (enrolmentStore.getAccountNumber(_: NINO)(_: HeaderCarrier))
       .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
@@ -101,4 +110,23 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val validUpdateAccountRequest = validCreateAccountRequest.copy(payload = validCreateAccountRequest.payload.copy(systemId = None, version = None))
 
   val validNSIUserInfo = validCreateAccountRequest.payload
+
+  val account = Account(
+    YearMonth.of(2018, 1),
+    "AC01", false,
+    Blocking(false, false, false, false),
+    200.34,
+    34.50,
+    15.50,
+    50.00,
+    LocalDate.parse("2018-02-28"),
+    "Testforename",
+    "Testsurname",
+    Some("test@example.com"),
+    List(
+      BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
+      BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
+    ),
+    None,
+    None)
 }

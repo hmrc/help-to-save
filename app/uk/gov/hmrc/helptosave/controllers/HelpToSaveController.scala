@@ -21,7 +21,7 @@ import cats.instances.int._
 import cats.instances.string._
 import cats.syntax.eq._
 import com.google.inject.Inject
-import play.api.libs.json.{JsError, JsSuccess, Json}
+import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
@@ -133,10 +133,25 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     val nino = payload.nino
     proxyConnector.createAccount(payload).map { response ⇒
       if (response.status === CREATED || response.status === CONFLICT) {
-        enrolUser(createAccountRequest).value.onComplete {
-          case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", nino, additionalParams)
-          case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
-          case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
+        val acNumber = (response.json \ "accountNumber").toOption.map { ac ⇒
+          ac.validate[String]
+        }
+
+        acNumber match {
+          case Some(JsSuccess(accountNumber, _)) ⇒ {
+            enrolUser(createAccountRequest, Some(accountNumber.toString)).value.onComplete {
+              case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS and account number was persisted", nino, additionalParams)
+              case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
+              case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
+            }
+          }
+          case _ ⇒
+            logger.warn("No account number was found in create account NSI response")
+            enrolUser(createAccountRequest, None).value.onComplete {
+              case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", nino, additionalParams)
+              case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
+              case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
+            }
         }
       }
 

@@ -26,18 +26,18 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.HttpResponse
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 // scalastyle:off magic.number
-class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with EitherValues with HttpSupport {
+class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with HttpSupport {
 
   val mockAuditor = mock[HTSAuditor]
 
-  lazy val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor)
+  override val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
   val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
 
@@ -175,60 +175,6 @@ class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with E
 
       val getAccountUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/account"
       val queryParameters = Map("nino" → nino, "correlationId" → correlationId, "version" → version, "systemId" → systemId)
-
-      val nsiAccountJson = Json.parse(
-        """
-          |{
-          |  "accountNumber": "AC01",
-          |  "accountBalance": "200.34",
-          |  "accountClosedFlag": "",
-          |  "accountBlockingCode": "00",
-          |  "clientBlockingCode": "00",
-          |  "currentInvestmentMonth": {
-          |    "investmentRemaining": "15.50",
-          |    "investmentLimit": "50.00",
-          |    "endDate": "2018-02-28"
-          |  },
-          |  "clientForename":"Testforename",
-          |  "clientSurname":"Testsurname",
-          |  "emailAddress":"test@example.com",
-          |  "terms": [
-          |     {
-          |       "termNumber":2,
-          |       "startDate":"2020-01-01",
-          |       "endDate":"2021-12-31",
-          |       "bonusEstimate":"67.00",
-          |       "bonusPaid":"0.00"
-          |    },
-          |    {
-          |       "termNumber":1,
-          |       "startDate":"2018-01-01",
-          |       "endDate":"2019-12-31",
-          |       "bonusEstimate":"123.45",
-          |       "bonusPaid":"123.45"
-          |    }
-          |  ]
-          |}
-        """.stripMargin).as[JsObject]
-
-      val account = Account(
-        YearMonth.of(2018, 1),
-        "AC01", false,
-        Blocking(false, false, false, false),
-        200.34,
-        34.50,
-        15.50,
-        50.00,
-        LocalDate.parse("2018-02-28"),
-        "Testforename",
-        "Testsurname",
-        Some("test@example.com"),
-        List(
-          BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
-          BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
-        ),
-        None,
-        None)
 
       val path = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
         def event(accountJson: JsValue = nsiAccountJson) = GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
