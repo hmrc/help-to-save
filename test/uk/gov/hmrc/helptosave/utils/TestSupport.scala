@@ -26,6 +26,7 @@ import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.json.{JsObject, Json}
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.config.AppConfig
@@ -92,5 +93,40 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
   implicit lazy val transformer: LogMessageTransformer = new LogMessageTransformerImpl(configuration)
 
   implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
+
+  val nsiAccountJson = Json.parse(
+    """
+      |{
+      |  "accountNumber": "AC01",
+      |  "accountBalance": "200.34",
+      |  "accountClosedFlag": "",
+      |  "accountBlockingCode": "00",
+      |  "clientBlockingCode": "00",
+      |  "currentInvestmentMonth": {
+      |    "investmentRemaining": "15.50",
+      |    "investmentLimit": "50.00",
+      |    "endDate": "2018-02-28"
+      |  },
+      |  "clientForename":"Testforename",
+      |  "clientSurname":"Testsurname",
+      |  "emailAddress":"test@example.com",
+      |  "terms": [
+      |     {
+      |       "termNumber":2,
+      |       "startDate":"2020-01-01",
+      |       "endDate":"2021-12-31",
+      |       "bonusEstimate":"67.00",
+      |       "bonusPaid":"0.00"
+      |    },
+      |    {
+      |       "termNumber":1,
+      |       "startDate":"2018-01-01",
+      |       "endDate":"2019-12-31",
+      |       "bonusEstimate":"123.45",
+      |       "bonusPaid":"123.45"
+      |    }
+      |  ]
+      |}
+    """.stripMargin).as[JsObject]
 }
 

@@ -28,11 +28,14 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
   val ninoDifferentSuffix = "AE123456B"
 
+  val accountNumber = "1234567890"
+
   def newMongoEnrolmentStore(reactiveMongoComponent: ReactiveMongoComponent) =
     new MongoEnrolmentStore(reactiveMongoComponent, mockMetrics)
 
-  def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String, store: MongoEnrolmentStore): Either[String, Unit] =
-    await(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel).value)
+  def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String, store: MongoEnrolmentStore,
+             accountNumber: Option[String]): Either[String, Unit] =
+    await(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber).value)
 
   "The MongoEnrolmentStore" when {
 
@@ -41,7 +44,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
       "create a new record in the db when inserted" in {
         val nino = randomNINO()
         val store = newMongoEnrolmentStore(reactiveMongoComponent)
-        create(nino, true, Some(7), "online", store) shouldBe Right(())
+        create(nino, true, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
       }
 
       "return an error" when {
@@ -50,7 +53,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
           withBrokenMongo { reactiveMongoComponent ⇒
             val nino = randomNINO()
             val store = newMongoEnrolmentStore(reactiveMongoComponent)
-            create(nino, true, Some(7), "online", store).isLeft shouldBe true
+            create(nino, true, Some(7), "online", store, Some(accountNumber)).isLeft shouldBe true
           }
         }
       }
@@ -59,12 +62,12 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
     "updating" must {
 
         def update(nino: NINO, itmpNeedsUpdate: Boolean, store: MongoEnrolmentStore): Either[String, Unit] =
-          Await.result(store.update(nino, itmpNeedsUpdate).value, 5.seconds)
+          Await.result(store.updateItmpFlag(nino, itmpNeedsUpdate).value, 5.seconds)
 
       "update the mongodb collection" in {
         val nino = randomNINO()
         val store = newMongoEnrolmentStore(reactiveMongoComponent)
-        create(nino, false, Some(7), "online", store) shouldBe Right(())
+        create(nino, false, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         update(nino, true, store) shouldBe Right(())
       }
 
@@ -83,7 +86,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
       "update the enrolment when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"
         val store = newMongoEnrolmentStore(reactiveMongoComponent)
-        create(nino, false, Some(7), "online", store) shouldBe Right(())
+        create(nino, false, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         update(ninoDifferentSuffix, true, store) shouldBe Right(())
       }
     }
@@ -102,7 +105,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
       "return an enrolled status if an entry is found" in {
         val nino = randomNINO()
         val store = newMongoEnrolmentStore(reactiveMongoComponent)
-        create(nino, true, Some(7), "online", store) shouldBe Right(())
+        create(nino, true, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
@@ -123,7 +126,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
       "return an enrolled status when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"
         val store = newMongoEnrolmentStore(reactiveMongoComponent)
-        create(nino, true, Some(7), "online", store) shouldBe Right(())
+        create(nino, true, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
         get(ninoDifferentSuffix, store) shouldBe Right(Enrolled(true))
       }

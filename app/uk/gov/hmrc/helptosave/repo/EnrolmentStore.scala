@@ -26,6 +26,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.models.account.AccountNumber
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
@@ -43,9 +44,13 @@ trait EnrolmentStore {
 
   def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
 
-  def update(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
+  def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
-  def insert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
+  def updateWithAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
+
+  def insert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String, accountNumber: Option[String])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
+
+  def getAccountNumber(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, AccountNumber]
 
 }
 
@@ -104,16 +109,33 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
   private[repo] def doInsert(nino:              NINO,
                              eligibilityReason: Option[Int],
                              source:            String,
-                             itmpFlag:          Boolean)(implicit ec: ExecutionContext): Future[WriteResult] =
-    collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag, "eligibilityReason" -> eligibilityReason, "source" -> source))
+                             itmpFlag:          Boolean,
+                             accountNumber:     Option[String])(implicit ec: ExecutionContext): Future[WriteResult] = {
+    accountNumber match {
+      case Some(accountNum) ⇒ collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
+        "eligibilityReason" -> eligibilityReason, "source" -> source, "accountNumber" -> accountNum))
 
-  private[repo] def doUpdate(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
+      case None ⇒ collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
+        "eligibilityReason" -> eligibilityReason, "source" -> source))
+    }
+  }
+
+  private[repo] def doUpdateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
     collection.findAndUpdate(
       BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
       BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
       fetchNewObject = true,
       upsert         = false
     ).map(_.result[EnrolmentData])
+
+  private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] = {
+    collection.findAndUpdate(
+      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
+      BSONDocument("$set" -> BSONDocument("accountNumber" -> accountNumber)),
+      fetchNewObject = true,
+      upsert         = false
+    ).map(_.result[EnrolmentData])
+  }
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] = EitherT(
     {
@@ -132,11 +154,11 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
       }
     })
 
-  override def update(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
+  override def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
     EitherT({
       val timerContext = metrics.enrolmentStoreUpdateTimer.time()
 
-      doUpdate(nino, itmpFlag).map[Either[String, Unit]] { result ⇒
+      doUpdateItmpFlag(nino, itmpFlag).map[Either[String, Unit]] { result ⇒
         val time = timerContext.stop()
 
         result.fold[Either[String, Unit]] {
@@ -156,12 +178,37 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
     )
   }
 
+  override def updateWithAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
+    EitherT({
+      val timerContext = metrics.enrolmentStoreUpdateTimer.time()
+
+      persistAccountNumber(nino, accountNumber).map[Either[String, Unit]] { result ⇒
+        val time = timerContext.stop()
+
+        result.fold[Either[String, Unit]] {
+          metrics.enrolmentStoreUpdateErrorCounter.inc()
+          Left(s"For NINO [$nino]: Could not update enrolment store with account number (round-trip time: ${nanosToPrettyString(time)})")
+        } { _ ⇒
+          Right(())
+        }
+      }.recover {
+        case e ⇒
+          val time = timerContext.stop()
+          metrics.enrolmentStoreUpdateErrorCounter.inc()
+
+          Left(s"Failed to write to enrolments store: ${e.getMessage}")
+      }
+    }
+    )
+  }
+
   override def insert(nino:              NINO,
                       itmpFlag:          Boolean,
                       eligibilityReason: Option[Int],
-                      source:            String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
+                      source:            String,
+                      accountNumber:     Option[String])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     EitherT(
-      doInsert(nino, eligibilityReason, source, itmpFlag)
+      doInsert(nino, eligibilityReason, source, itmpFlag, accountNumber)
         .map[Either[String, Unit]] { writeResult ⇒
           if (writeResult.writeErrors.nonEmpty) {
             Left(writeResult.writeErrors.map(_.errmsg).mkString(","))
@@ -173,11 +220,35 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
             Left(e.getMessage)
         }
     )
+
+  override def getAccountNumber(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, AccountNumber] =
+    EitherT(
+      {
+        val timerContext = metrics.enrolmentStoreGetTimer.time()
+
+        find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map[Either[String, AccountNumber]] { res ⇒
+          val time = timerContext.stop()
+
+          //Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
+
+          Right(AccountNumber(res.headOption.flatMap(_.accountNumber)))
+        }.recover {
+          case e ⇒
+            val time = timerContext.stop()
+            metrics.enrolmentStoreGetErrorCounter.inc()
+
+            Left(s"For NINO [$nino]: Could not read account number from enrolment store: ${e.getMessage}")
+        }
+      })
 }
 
 object MongoEnrolmentStore {
 
-  private[repo] case class EnrolmentData(nino: String, itmpHtSFlag: Boolean, eligibilityReason: Option[Int] = None, source: Option[String] = None)
+  private[repo] case class EnrolmentData(nino:              String,
+                                         itmpHtSFlag:       Boolean,
+                                         eligibilityReason: Option[Int]    = None,
+                                         source:            Option[String] = None,
+                                         accountNumber:     Option[String] = None)
 
   private[repo] object EnrolmentData {
     implicit val ninoFormat: Format[EnrolmentData] = Json.format[EnrolmentData]

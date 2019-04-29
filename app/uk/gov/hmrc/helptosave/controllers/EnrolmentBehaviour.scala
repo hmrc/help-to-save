@@ -36,21 +36,26 @@ trait EnrolmentBehaviour {
 
   def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = for {
     _ ← helpToSaveService.setFlag(nino)
-    _ ← enrolmentStore.update(nino, itmpFlag = true)
+    _ ← enrolmentStore.updateItmpFlag(nino, itmpFlag = true)
   } yield ()
 
-  def enrolUser(createAccountRequest: CreateAccountRequest)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
+  def setAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] =
+    enrolmentStore.updateWithAccountNumber(nino, accountNumber)
+
+  def enrolUser(createAccountRequest: CreateAccountRequest, accountNumber: Option[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
     if (createAccountRequest.source === "Stride-Manual") { //HTS-1403: set the itmpFlag to true in mongo straightaway without actually calling ITMP
       enrolmentStore.insert(createAccountRequest.payload.nino,
                             itmpFlag = true,
                             createAccountRequest.eligibilityReason,
-                            createAccountRequest.source)
+                            createAccountRequest.source,
+                            accountNumber)
     } else {
       for {
         _ ← enrolmentStore.insert(createAccountRequest.payload.nino,
                                   itmpFlag = false,
                                   createAccountRequest.eligibilityReason,
-                                  createAccountRequest.source)
+                                  createAccountRequest.source,
+                                  accountNumber)
         _ ← setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
       } yield ()
     }
