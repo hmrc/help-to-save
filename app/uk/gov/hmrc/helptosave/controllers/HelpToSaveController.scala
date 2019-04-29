@@ -133,11 +133,19 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     val nino = payload.nino
     proxyConnector.createAccount(payload).map { response ⇒
       if (response.status === CREATED || response.status === CONFLICT) {
-        enrolUser(createAccountRequest).value.onComplete {
-          case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", nino, additionalParams)
-          case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
-          case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
+        (response.json \ "accountNumber").toOption match {
+          case Some(accountNumber) ⇒ enrolUser(createAccountRequest, accountNumber.toString).value.onComplete {
+            case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", nino, additionalParams)
+            case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
+            case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
+          }
+          case None ⇒ enrolUser(createAccountRequest, "0000000000").value.onComplete {
+            case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", nino, additionalParams)
+            case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
+            case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
+          }
         }
+
       }
 
       if (response.status === CREATED) {

@@ -54,6 +54,7 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
     val timerContext = metrics.barsTimer.time()
     val trackingId = UUID.randomUUID()
     val nino = barsRequest.nino
+
     barsConnector.validate(barsRequest, trackingId).map[Either[String, BankDetailsValidationResult]] {
       response ⇒
         val _ = timerContext.stop()

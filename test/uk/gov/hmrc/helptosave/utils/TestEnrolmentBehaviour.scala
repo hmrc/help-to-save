@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.utils
 import cats.data.EitherT
 import cats.instances.future._
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.connectors.DESConnector
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.controllers.EnrolmentBehaviour
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
@@ -35,15 +35,16 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val itmpConnector: DESConnector = mock[DESConnector]
   val enrolmentBehaviour: EnrolmentBehaviour = mock[EnrolmentBehaviour]
   val helpToSaveService: HelpToSaveService = mock[HelpToSaveService]
+  val proxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
   def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.update(_: NINO, _: Boolean)(_: HeaderCarrier))
+    (enrolmentStore.updateItmpFlag(_: NINO, _: Boolean)(_: HeaderCarrier))
       .expects(nino, itmpFlag, *)
       .returning(EitherT.fromEither[Future](result))
 
-  def mockEnrolmentStoreInsert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.insert(_: NINO, _: Boolean, _: Option[Int], _: String)(_: HeaderCarrier))
-      .expects(nino, itmpFlag, eligibilityReason, source, *)
+  def mockEnrolmentStoreInsert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String, accountNumber: String)(result: Either[String, Unit]): Unit =
+    (enrolmentStore.insert(_: NINO, _: Boolean, _: Option[Int], _: String, _: String)(_: HeaderCarrier))
+      .expects(nino, itmpFlag, eligibilityReason, source, accountNumber, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
@@ -54,6 +55,11 @@ trait TestEnrolmentBehaviour extends TestSupport {
   def mockSetFlag(nino: NINO)(result: Either[String, Unit]): Unit =
     (helpToSaveService.setFlag(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
+      .returning(EitherT.fromEither[Future](result))
+
+  def mockUpdateWithAccountNumber(nino: NINO, accountNumber: String)(result: Either[String, Unit]): Unit =
+    (enrolmentStore.updateWithAccountNumber(_: NINO, _: String)(_: HeaderCarrier))
+      .expects(nino, accountNumber, *)
       .returning(EitherT.fromEither[Future](result))
 
   def payloadJson(dobValue: String, communicationPreference: String = "02"): String =

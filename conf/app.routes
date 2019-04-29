@@ -3,6 +3,7 @@
 GET  /eligibility-check           @uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck(nino: Option[String])
 GET  /enrolment-status            @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getEnrolmentStatus(nino: Option[String])
 GET  /set-itmp-flag               @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag()
+GET  /get-account-number          @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getAccountNumber()
 GET  /store-email                 @uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String, nino: Option[String])
 GET  /get-email                   @uk.gov.hmrc.helptosave.controllers.EmailStoreController.get()
 GET  /account-create-allowed      @uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()

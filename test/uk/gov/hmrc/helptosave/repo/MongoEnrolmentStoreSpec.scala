@@ -28,11 +28,13 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
   val ninoDifferentSuffix = "AE123456B"
 
+  val accountNumber = "1234567890"
+
   def newMongoEnrolmentStore(reactiveMongoComponent: ReactiveMongoComponent) =
     new MongoEnrolmentStore(reactiveMongoComponent, mockMetrics)
 
   def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String, store: MongoEnrolmentStore): Either[String, Unit] =
-    await(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel).value)
+    await(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber).value)
 
   "The MongoEnrolmentStore" when {
 
@@ -59,7 +61,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
     "updating" must {
 
         def update(nino: NINO, itmpNeedsUpdate: Boolean, store: MongoEnrolmentStore): Either[String, Unit] =
-          Await.result(store.update(nino, itmpNeedsUpdate).value, 5.seconds)
+          Await.result(store.updateItmpFlag(nino, itmpNeedsUpdate).value, 5.seconds)
 
       "update the mongodb collection" in {
         val nino = randomNINO()

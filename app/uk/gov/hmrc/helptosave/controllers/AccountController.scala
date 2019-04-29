@@ -21,7 +21,7 @@ import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
-import uk.gov.hmrc.helptosave.util.LogMessageTransformer
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
 import scala.concurrent.ExecutionContext
 

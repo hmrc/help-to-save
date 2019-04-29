@@ -247,6 +247,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
   private def isAccountDoesntExistResponse(response: HttpResponse): Boolean =
     response.status === Status.BAD_REQUEST &&
       response.parseJson[GetAccountErrorResponse].toOption.exists(_.errors.exists(_.errorMessageId === noAccountErrorCode))
+
 }
 
 object HelpToSaveProxyConnectorImpl {

@@ -67,6 +67,15 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       mockAuditor,
       barsService)
 
+    val accountNumber = "1234567890"
+
+    val responseJson = Json.parse(
+      s"""
+        |{
+        |  "accountNumber" : $accountNumber
+        |}
+      """.stripMargin)
+
     def mockSendAuditEvent(event: HTSEvent, nino: String) =
       (mockAuditor.sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
         .expects(event, nino, *)
@@ -106,8 +115,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(responseStatus = CREATED, responseJson = Some(responseJson)))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -127,8 +136,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json and the details have been manually entered" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(responseStatus = CREATED, responseJson = Some(responseJson)))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -148,8 +157,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the enrolment store fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Left("error!"))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(responseStatus = CREATED, responseJson = Some(responseJson)))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Left("error!"))
           inAnyOrder {
             mockUserCapServiceUpdate(Right(()))
             mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", false), "nino")
@@ -164,8 +173,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account but dont call ITMP to set the flag if the source is Stride-Manual" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", true, Some(7), "Stride-Manual")(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(responseStatus = CREATED, responseJson = Some(responseJson)))
+          mockEnrolmentStoreInsert("nino", true, Some(7), "Stride-Manual", accountNumber)(Right(()))
           inAnyOrder {
             mockUserCapServiceUpdate(Right(()))
             mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Stride-Manual", false), "nino")
@@ -181,8 +190,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(responseStatus = CREATED, responseJson = Some(responseJson)))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -204,8 +213,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockEmailDelete("nino")(Right(()))
-          mockCreateAccount(payloadDE)(HttpResponse(CREATED))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
+          mockCreateAccount(payloadDE)(HttpResponse(responseStatus = CREATED, responseJson = Some(responseJson)))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))
@@ -251,8 +260,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "handle 409 response from proxy" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital")(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(responseStatus = CONFLICT, responseJson = Some(responseJson)))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockEnrolmentStoreUpdate("nino", true)(Right(()))

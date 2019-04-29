@@ -26,18 +26,18 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 // scalastyle:off magic.number
-class HelpToSaveProxyConnectorSpec extends TestSupport with MockPagerDuty with EitherValues with HttpSupport {
+class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with HttpSupport {
 
   val mockAuditor = mock[HTSAuditor]
 
-  lazy val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor)
+  override val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
   val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
 
