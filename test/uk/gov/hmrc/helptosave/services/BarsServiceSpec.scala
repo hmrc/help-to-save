@@ -148,29 +148,6 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
         result shouldBe Left("unexpected error from bars check")
       }
 
-      "handle the case when a given sort code contains spaces, spaces should be removed" in {
-        val barsRequestWithSpaces = BankDetailsValidationRequest(nino, "12 34 56", "accountNumber")
-        val response = newResponse(true, "yes")
-
-        inSequence {
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
-          mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
-        }
-        val result = await(service.validate(barsRequestWithSpaces))
-        result shouldBe Right(BankDetailsValidationResult(true, true))
-      }
-
-      "handle the case when a given sort code contains hyphens, hyphens should be removed" in {
-        val barsRequestWithHyphens = BankDetailsValidationRequest(nino, "12-34-56", "accountNumber")
-        val response = newResponse(true, "yes")
-
-        inSequence {
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
-          mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
-        }
-        val result = await(service.validate(barsRequestWithHyphens))
-        result shouldBe Right(BankDetailsValidationResult(true, true))
-      }
     }
 
   }
