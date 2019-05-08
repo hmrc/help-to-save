@@ -54,12 +54,13 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
     val timerContext = metrics.barsTimer.time()
     val trackingId = UUID.randomUUID()
     val nino = barsRequest.nino
-    barsConnector.validate(barsRequest, trackingId).map[Either[String, BankDetailsValidationResult]] {
+    val barsRequestWithCleanSortCode = barsRequest.copy(sortCode = cleanSortCode(barsRequest.sortCode))
+    barsConnector.validate(barsRequestWithCleanSortCode, trackingId).map[Either[String, BankDetailsValidationResult]] {
       response ⇒
         val _ = timerContext.stop()
         response.status match {
           case Status.OK ⇒
-            auditor.sendEvent(BARSCheck(barsRequest, response.json, request.uri), nino)
+            auditor.sendEvent(BARSCheck(barsRequestWithCleanSortCode, response.json, request.uri), nino)
 
             (response.json \ "accountNumberWithSortCodeIsValid").asOpt[Boolean] →
               (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {
@@ -93,5 +94,10 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
         alerting.alert("unexpected error from bars check")
         Left("unexpected error from bars check")
     }
+  }
+
+  private def cleanSortCode(sortCode: String): String = {
+    val allowedSeparators = Set(' ', '-', '–', '−', '—')
+    sortCode.filterNot(allowedSeparators.contains)
   }
 }
