@@ -57,11 +57,6 @@ trait TestEnrolmentBehaviour extends TestSupport {
       .expects(nino, *, *)
       .returning(EitherT.fromEither[Future](result))
 
-  def mockUpdateWithAccountNumber(nino: NINO, accountNumber: String)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.updateWithAccountNumber(_: NINO, _: String)(_: HeaderCarrier))
-      .expects(nino, accountNumber, *)
-      .returning(EitherT.fromEither[Future](result))
-
   def payloadJson(dobValue: String, communicationPreference: String = "02"): String =
     s"""{
             "nino" : "nino",
