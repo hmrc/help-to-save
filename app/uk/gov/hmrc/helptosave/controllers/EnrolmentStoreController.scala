@@ -34,7 +34,7 @@ import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
                                           val helpToSaveService: HelpToSaveService,
@@ -75,7 +75,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
 
   private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], description: String, nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] = {
     val additionalParams = "apiCorrelationId" -> getApiCorrelationId
-    f.leftMap {
+    f.leftMap { // why am I using a leftMap?????
       case e ⇒
         logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
         getAccountNumberFromNSI(nino, uri).fold(
@@ -84,6 +84,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
             InternalServerError
           }, {
             accountNumber ⇒
+              println(s"############# do we get here????? ########### accountNumber is: $accountNumber, from NSI")
               Ok(Json.toJson(accountNumber))
           }
         )
@@ -91,6 +92,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
       { e ⇒
         Ok("Error occurred")
       }, { accountNumber ⇒
+        println(s"############# do we get here????? ########### accountNumber is: $accountNumber, we have the account number in mongo")
         Ok(Json.toJson(accountNumber))
       }
     )

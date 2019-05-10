@@ -16,6 +16,10 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import java.util.UUID
+
+import cats.data.EitherT
+import cats.instances.future._
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import play.api.libs.json.{JsSuccess, Json}
@@ -24,13 +28,16 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino ⇒ v2Nino}
+import uk.gov.hmrc.helptosave.connectors.HttpSupport
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
+import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
+import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrivenPropertyChecks with TestEnrolmentBehaviour {
+class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrivenPropertyChecks with TestEnrolmentBehaviour with HttpSupport {
 
   implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
     Arbitrary(Gen.oneOf[EnrolmentStore.Status](
@@ -40,6 +47,16 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
 
   val privilegedCredentials = PAClientId("id")
   val ggCredentials = GGCredId("123-gg")
+
+  def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(result: Either[String, Option[Account]]): Unit =
+    (proxyConnector.getAccount(_: String, _: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(nino, systemId, correlationId, path, *, *)
+      .returning(EitherT.fromEither[Future](result))
+
+  def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit =
+    (enrolmentStore.updateWithAccountNumber(_: String, _: String)(_: HeaderCarrier))
+      .expects(nino, accountNumber, *)
+      .returning(EitherT.fromEither[Future](result))
 
   "The EnrolmentStoreController" when {
 
@@ -98,6 +115,42 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
 
     }
 
+    "getting the user's account number" must {
+
+        def getAccountNumber(): Future[Result] =
+          controller.getAccountNumber()(FakeRequest())
+
+      val accountNumber = AccountNumber(Some("1234567890123"))
+
+      val randomNino = randomNINO()
+      val correlationId = "-"
+      val systemId = "help-to-save"
+      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
+
+      val getAccountUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/account"
+      val queryParameters = Map("nino" → randomNino, "correlationId" → correlationId, "version" → version, "systemId" → systemId)
+
+      "get the account number from the enrolment store" in {
+        mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+        mockEnrolmentStoreGetAccountNumber(nino)(Right(accountNumber))
+
+        val result = await(getAccountNumber())
+        contentAsJson(result) shouldBe Json.toJson(accountNumber)
+      }
+
+      "call NSI when the account number cannot be obtained from the enrolment store" in {
+        mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+        mockEnrolmentStoreGetAccountNumber(nino)(Right(AccountNumber(None)))
+        mockGetAccountFromNSI(nino, systemId, correlationId, "/")(Right(Some(account)))
+        //mockSetAccountNumber(nino, accountNumber.accountNumber.fold("")(_.toString))(Right(()))
+
+        val result = await(getAccountNumber())
+        status(result) shouldBe OK
+        contentAsJson(result) shouldBe Json.toJson(accountNumber)
+      }
+
+    }
+
     "getting the user enrolment status" must {
 
         def getEnrolmentStatus(nino: Option[String]): Future[Result] =
@@ -109,6 +162,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
         mockEnrolmentStoreGet(nino)(Left(""))
 
         await(getEnrolmentStatus(Some(nino)))
+
       }
 
       "return the enrolment status if the call was successful" in {
