@@ -73,27 +73,58 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
     )
   }
 
+  //  private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], description: String, nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] = {
+  //    val additionalParams = "apiCorrelationId" -> getApiCorrelationId
+  //    f.leftMap { // why am I using a leftMap?????
+  //      case e ⇒
+  //        println("####################### leftMap case e")
+  //        logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
+  //        getAccountNumberFromNSI(nino, uri).fold(
+  //          { e ⇒
+  //            println("##################### getAccountNumberFromNSI fold error section")
+  //            logger.info("Call to getAccountNumberFromNSI returned error response")
+  //            InternalServerError
+  //          }, {
+  //            accountNumber ⇒
+  //              println(s"############# do we get here????? ########### accountNumber is: $accountNumber, from NSI")
+  //              Ok(Json.toJson(accountNumber))
+  //          }
+  //        )
+  //    }.fold(
+  //      { e ⇒
+  //        Ok("Error occurred")
+  //      }, { accountNumber ⇒
+  //        println(s"############# do we get here????? ########### accountNumber is: $accountNumber, we have the account number in mongo")
+  //        Ok(Json.toJson(accountNumber))
+  //      }
+  //    )
+  //  }
+
   private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], description: String, nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] = {
     val additionalParams = "apiCorrelationId" -> getApiCorrelationId
-    f.leftMap { // why am I using a leftMap?????
+    f.leftFlatMap {
       case e ⇒
+        println("####################### leftMap case e")
         logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
-        getAccountNumberFromNSI(nino, uri).fold(
-          { e ⇒
-            logger.info("Call to getAccountNumberFromNSI returned error response")
-            InternalServerError
-          }, {
-            accountNumber ⇒
-              println(s"############# do we get here????? ########### accountNumber is: $accountNumber, from NSI")
-              Ok(Json.toJson(accountNumber))
-          }
-        )
+        liftF(getAccountNumberFromNSI(nino, uri))
+          .fold(
+            { e: String ⇒
+              println("##################### getAccountNumberFromNSI fold error section")
+              logger.info("Call to getAccountNumberFromNSI returned error response")
+              "Call to getAccountNumberFromNSI returned error response"
+            }, {
+              accountNumber ⇒
+                println(s"############# do we get here????? ########### accountNumber is: $accountNumber, from NSI")
+                accountNumber
+            }
+          )
     }.fold(
       { e ⇒
-        Ok("Error occurred")
+        logger.warn("Error occurred when trying to get account number")
+        InternalServerError
       }, { accountNumber ⇒
         println(s"############# do we get here????? ########### accountNumber is: $accountNumber, we have the account number in mongo")
-        Ok(Json.toJson(accountNumber))
+        Ok(accountNumber)
       }
     )
   }
