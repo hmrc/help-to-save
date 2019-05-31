@@ -35,7 +35,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
   def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String, store: MongoEnrolmentStore,
              accountNumber: Option[String]): Either[String, Unit] =
-    await(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber).value)
+    Await.result(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber).value, 5.second)
 
   "The MongoEnrolmentStore" when {
 
