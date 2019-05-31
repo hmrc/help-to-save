@@ -136,8 +136,8 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
       upsert         = false
     ).map(_.result[EnrolmentData])
 
-  override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] = EitherT
-  [Future, String, EnrolmentStore.Status](
+  override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =
+    EitherT[Future, String, EnrolmentStore.Status](
     {
       val timerContext = metrics.enrolmentStoreGetTimer.time()
 
