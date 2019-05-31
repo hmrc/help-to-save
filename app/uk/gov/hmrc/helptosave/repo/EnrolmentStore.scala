@@ -128,16 +128,16 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
       upsert         = false
     ).map(_.result[EnrolmentData])
 
-  private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] = {
+  private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
     collection.findAndUpdate(
       BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
       BSONDocument("$set" -> BSONDocument("accountNumber" -> accountNumber)),
       fetchNewObject = true,
       upsert         = false
     ).map(_.result[EnrolmentData])
-  }
 
-  override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] = EitherT(
+  override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] = EitherT
+  [Future, String, EnrolmentStore.Status](
     {
       val timerContext = metrics.enrolmentStoreGetTimer.time()
 
