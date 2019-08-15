@@ -138,21 +138,21 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =
     EitherT[Future, String, EnrolmentStore.Status](
-    {
-      val timerContext = metrics.enrolmentStoreGetTimer.time()
+      {
+        val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-      find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
-        val time = timerContext.stop()
-
-        Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
-      }.recover {
-        case e ⇒
+        find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
           val time = timerContext.stop()
-          metrics.enrolmentStoreGetErrorCounter.inc()
 
-          Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
-      }
-    })
+          Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
+        }.recover {
+          case e ⇒
+            val time = timerContext.stop()
+            metrics.enrolmentStoreGetErrorCounter.inc()
+
+            Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
+        }
+      })
 
   override def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
     EitherT({
