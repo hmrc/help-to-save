@@ -47,7 +47,7 @@ class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppCon
 
   private def roleMatch(enrolments: Enrolments): Boolean = {
     val enrolmentKeys = enrolments.enrolments.map(_.key)
-    standardRoles.forall(enrolmentKeys.contains) || secureRoles.forall(enrolmentKeys.contains)
+    standardRoles.exists(enrolmentKeys.contains) || secureRoles.exists(enrolmentKeys.contains)
   }
 
   def authorisedFromStride(action: Request[AnyContent] ⇒ Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =

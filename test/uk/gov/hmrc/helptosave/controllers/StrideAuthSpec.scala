@@ -80,12 +80,12 @@ class StrideAuthSpec extends TestSupport {
         "the requester does not have the necessary roles" in {
           List(
             Set("x"),
-            Set("a"),
-            Set("a", "c"),
-            Set("d"),
+            Set("y"),
+            Set("e", "f"),
+            Set("e"),
             Set.empty
           ).foreach { enrolments ⇒
-              withClue(s"For enrolements $enrolments: ") {
+              withClue(s"For enrolments $enrolments: ") {
                 mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(enrolments.map(Enrolment(_)))))
                 status(action(FakeRequest())) shouldBe UNAUTHORIZED
               }
@@ -99,7 +99,7 @@ class StrideAuthSpec extends TestSupport {
           standardRoles,
           secureRoles
         ).foreach{ enrolments ⇒
-          withClue(s"For enrolements $enrolments: ") {
+          withClue(s"For enrolments $enrolments: ") {
             mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(enrolments.map(Enrolment(_)).toSet)))
             status(action(FakeRequest())) shouldBe OK
           }
