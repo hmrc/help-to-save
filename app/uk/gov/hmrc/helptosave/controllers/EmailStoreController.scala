@@ -21,7 +21,7 @@ import java.util.Base64
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.{Format, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
@@ -31,11 +31,12 @@ import uk.gov.hmrc.helptosave.util.TryOps._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class EmailStoreController @Inject() (emailStore: EmailStore, htsAuthConnector: AuthConnector)(
+class EmailStoreController @Inject() (emailStore:           EmailStore,
+                                      htsAuthConnector:     AuthConnector,
+                                      controllerComponents: ControllerComponents)(
     implicit
-    transformer: LogMessageTransformer, ec: ExecutionContext
-)
-  extends HelpToSaveAuth(htsAuthConnector) {
+    transformer: LogMessageTransformer, ec: ExecutionContext)
+  extends HelpToSaveAuth(htsAuthConnector, controllerComponents) {
 
   import uk.gov.hmrc.helptosave.controllers.EmailStoreController._
 

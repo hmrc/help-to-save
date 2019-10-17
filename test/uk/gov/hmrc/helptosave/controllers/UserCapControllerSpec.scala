@@ -36,7 +36,7 @@ class UserCapControllerSpec extends AuthSupport {
 
   val userCapService = mock[UserCapService]
 
-  val controller = new UserCapController(userCapService, mockAuthConnector)
+  val controller = new UserCapController(userCapService, mockAuthConnector, testCC)
 
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 

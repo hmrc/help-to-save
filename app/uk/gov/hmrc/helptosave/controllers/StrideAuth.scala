@@ -25,12 +25,13 @@ import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class StrideAuth(htsAuthConnector: AuthConnector)(implicit val appConfig: AppConfig)
-  extends BaseController with AuthorisedFunctions with Logging {
+class StrideAuth(htsAuthConnector:     AuthConnector,
+                 controllerComponents: ControllerComponents)(implicit val appConfig: AppConfig)
+  extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
 
   override def authConnector: AuthConnector = htsAuthConnector
 

@@ -50,7 +50,7 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
-    val controller = new PayePersonalDetailsController(helpToSaveService, mockAuthConnector)
+    val controller = new PayePersonalDetailsController(helpToSaveService, mockAuthConnector, testCC)
   }
 
   "The PayePersonalDetailsController" when {

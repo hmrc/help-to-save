@@ -18,15 +18,16 @@ package uk.gov.hmrc.helptosave.controllers
 
 import com.google.inject.Inject
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.services.UserCapService
 
 import scala.concurrent.ExecutionContext
 
-class UserCapController @Inject() (userCapService: UserCapService,
-                                   authConnector:  AuthConnector)(implicit ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector) {
+class UserCapController @Inject() (userCapService:       UserCapService,
+                                   authConnector:        AuthConnector,
+                                   controllerComponents: ControllerComponents)(implicit ec: ExecutionContext)
+  extends HelpToSaveAuth(authConnector, controllerComponents) {
 
   def isAccountCreateAllowed: Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
     userCapService.isAccountCreateAllowed().map(userCapResponse ⇒ Ok(Json.toJson(userCapResponse)))
