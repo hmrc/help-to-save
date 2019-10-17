@@ -60,7 +60,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
 
   "The EnrolmentStoreController" when {
 
-    val controller = new EnrolmentStoreController(enrolmentStore, helpToSaveService, mockAuthConnector, proxyConnector)
+    val controller = new EnrolmentStoreController(enrolmentStore, helpToSaveService, mockAuthConnector, proxyConnector, testCC)
     val nino = "AE123456C"
 
     "setting the ITMP flag" must {

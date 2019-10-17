@@ -37,7 +37,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
   val mockAuditor = mock[HTSAuditor]
 
-  override val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor)
+  override val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
   val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
 

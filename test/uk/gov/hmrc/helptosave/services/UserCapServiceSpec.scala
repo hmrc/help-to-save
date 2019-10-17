@@ -18,12 +18,13 @@ package uk.gov.hmrc.helptosave.services
 
 import java.time.LocalDate
 
+import com.typesafe.config.ConfigFactory
 import play.api.Configuration
-import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -35,9 +36,10 @@ class UserCapServiceSpec extends TestSupport {
 
   def result[T](awaitable: Future[T]): T = Await.result(awaitable, 5.seconds)
 
-  def newUserCapService(config: (String, Any)*) = {
-    implicit val appConfig: AppConfig = buildFakeApplication(Configuration.from(config.toMap)).injector.instanceOf[AppConfig]
-    new UserCapServiceImpl(userCapStore)
+  def newUserCapService(config: String) = {
+    val servicesConfig: ServicesConfig = buildFakeApplication(Configuration(
+      ConfigFactory.parseString(config))).injector.instanceOf[ServicesConfig]
+    new UserCapServiceImpl(userCapStore, servicesConfig)
   }
 
   "The UserCapService" when {
@@ -46,9 +48,9 @@ class UserCapServiceSpec extends TestSupport {
 
     val yesterday = today.minusDays(1)
 
-    lazy val dailyLimit = appConfig.getInt("microservice.user-cap.daily.limit")
+    lazy val dailyLimit = servicesConfig.getInt("microservice.user-cap.daily.limit")
 
-    lazy val totalLimit = appConfig.getInt("microservice.user-cap.total.limit")
+    lazy val totalLimit = servicesConfig.getInt("microservice.user-cap.total.limit")
 
       def mockUserCapStoreGetOne(userCap: Option[UserCap]) =
         (userCapStore.get: () ⇒ Future[Option[UserCap]]).expects()
@@ -66,7 +68,11 @@ class UserCapServiceSpec extends TestSupport {
 
       "return response with isDailyCapDisabled = true and isTotalCapDisabled = true if both caps are set to 0" in {
 
-        val userCapService = newUserCapService("microservice.user-cap.daily.limit" -> 0, "microservice.user-cap.total.limit" -> 0)
+        val userCapService = newUserCapService(
+          """
+            | microservice.user-cap.daily.limit = 0
+            | microservice.user-cap.total.limit = 0
+          """.stripMargin)
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isDailyCapDisabled = true, isTotalCapDisabled = true)
 
@@ -74,7 +80,10 @@ class UserCapServiceSpec extends TestSupport {
 
       "show daily cap has been reached page if daily-cap is set to 0 but total-cap is not 0" in {
 
-        val userCapService = newUserCapService("microservice.user-cap.daily.limit" -> 0)
+        val userCapService = newUserCapService(
+          """
+            | microservice.user-cap.daily.limit = 0
+          """.stripMargin)
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isDailyCapDisabled = true)
 
@@ -82,7 +91,10 @@ class UserCapServiceSpec extends TestSupport {
 
       "show total cap has been reached page if total-cap is set to 0 but daily-cap is not 0" in {
 
-        val userCapService = newUserCapService("microservice.user-cap.total.limit" -> 0)
+        val userCapService = newUserCapService(
+          """
+            | microservice.user-cap.total.limit = 0
+          """.stripMargin)
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isTotalCapDisabled = true)
 
@@ -90,7 +102,7 @@ class UserCapServiceSpec extends TestSupport {
 
       "allow account creation incase of any exceptions" in {
         mockUserCapStoreGetOneFailure()
-        val userCapService = newUserCapService()
+        val userCapService = newUserCapService("")
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse()
       }
@@ -98,7 +110,7 @@ class UserCapServiceSpec extends TestSupport {
 
     "checking if account create is allowed when both dailyCap and totalCap are enabled" must {
 
-      val userCapService = newUserCapService()
+      val userCapService = newUserCapService("")
 
       "allow account creation if both dailyCap and totalCap are not reached" in {
 
@@ -150,7 +162,10 @@ class UserCapServiceSpec extends TestSupport {
 
     "checking if account create is allowed when dailyCap is disabled and totalCap is enabled" must {
 
-      val userCapService = newUserCapService("microservice.user-cap.daily.enabled" -> false)
+      val userCapService = newUserCapService(
+        """
+          | microservice.user-cap.daily.enabled = false
+        """.stripMargin)
 
       "allow account creation as long as totalCap is not reached" in {
         val userCap = UserCap(yesterday, dailyLimit, totalLimit - 1)
@@ -170,7 +185,10 @@ class UserCapServiceSpec extends TestSupport {
 
     "checking if account create is allowed when dailyCap is enabled and totalCap is disabled" must {
 
-      val userCapService = newUserCapService("microservice.user-cap.total.enabled" -> false)
+      val userCapService = newUserCapService(
+        """
+          | microservice.user-cap.total.enabled = false
+        """.stripMargin)
 
       "allow account creation as long as dailyCap is not reached with no record today " in {
         val userCap = UserCap(yesterday, dailyLimit, totalLimit)
@@ -196,8 +214,11 @@ class UserCapServiceSpec extends TestSupport {
 
     "checking if account create is allowed when both dailyCap and totalCap are disabled" must {
 
-      val userCapService = newUserCapService("microservice.user-cap.daily.enabled" -> false,
-        "microservice.user-cap.total.enabled" -> false)
+      val userCapService = newUserCapService(
+        """
+          | microservice.user-cap.daily.enabled = false
+          | microservice.user-cap.total.enabled = false
+        """.stripMargin)
 
       "always allow account creation" in {
         val userCap = UserCap(today, dailyLimit, totalLimit)
@@ -211,7 +232,7 @@ class UserCapServiceSpec extends TestSupport {
 
       "any one of dailyCap or totalCap is enabled" must {
 
-        val userCapService = newUserCapService()
+        val userCapService = newUserCapService("")
 
         "successfully update the daily count and total counts if there are no existing records" in {
           mockUserCapStoreGetOne(None)
@@ -240,8 +261,13 @@ class UserCapServiceSpec extends TestSupport {
 
       "both dailyCap and totalCap are disabled" must {
 
-        val userCapService = newUserCapService("microservice.user-cap.daily.enabled" -> false, "microservice.user-cap.total.enabled" -> false)
+        val userCapService = newUserCapService(
+          """
+            | microservice.user-cap.daily.enabled = false
+            | microservice.user-cap.total.enabled = false
+          """.stripMargin)
 
+        // true true
         "update both the counts as 0 - given there is an existing record" in {
           val userCap = UserCap(yesterday, 1, 10)
           mockUserCapStoreGetOne(Some(userCap))
@@ -250,6 +276,7 @@ class UserCapServiceSpec extends TestSupport {
           result(userCapService.update()) shouldBe ((): Unit)
         }
 
+        // false false
         "update both the counts as 0 - given there is no existing record" in {
           mockUserCapStoreGetOne(None)
           mockUserCapStoreUpsert(UserCap(today, 0, 0))

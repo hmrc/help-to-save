@@ -65,7 +65,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       helpToSaveService,
       mockAuthConnector,
       mockAuditor,
-      barsService)
+      barsService,
+      testCC)
 
     val accountNumber = Some("AC01")
 

@@ -36,8 +36,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class StrideAuthSpec extends TestSupport {
 
-  val standardRoles = List("a", "b")
-  val secureRoles = List("c", "d")
+  lazy val standardRoles = List("a", "b")
+  lazy val secureRoles = List("c", "d")
 
   override lazy val additionalConfig: Configuration = {
       def toConfigValue(rolesList: List[String]): List[String] =
@@ -61,7 +61,7 @@ class StrideAuthSpec extends TestSupport {
 
     val call = Call("GET", "url")
 
-    lazy val strideAuth = new StrideAuth(mockAuthConnector)
+    lazy val strideAuth = new StrideAuth(mockAuthConnector, testCC)
 
     lazy val action = strideAuth.authorisedFromStride { _ ⇒ Ok }
 

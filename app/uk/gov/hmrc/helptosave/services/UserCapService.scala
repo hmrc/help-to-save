@@ -20,11 +20,11 @@ import cats.instances.int._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject}
 import javax.inject.Singleton
-import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -39,15 +39,16 @@ trait UserCapService {
 }
 
 @Singleton
-class UserCapServiceImpl @Inject() (userCapStore: UserCapStore)(implicit appConfig: AppConfig) extends UserCapService with Logging {
+class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
+                                    servicesConfig: ServicesConfig) extends UserCapService with Logging {
 
-  private val isDailyCapEnabled = appConfig.getBoolean("microservice.user-cap.daily.enabled")
+  private val isDailyCapEnabled = servicesConfig.getBoolean("microservice.user-cap.daily.enabled")
 
-  private val isTotalCapEnabled = appConfig.getBoolean("microservice.user-cap.total.enabled")
+  private val isTotalCapEnabled = servicesConfig.getBoolean("microservice.user-cap.total.enabled")
 
-  private val dailyCap = appConfig.getInt("microservice.user-cap.daily.limit")
+  private val dailyCap = servicesConfig.getInt("microservice.user-cap.daily.limit")
 
-  private val totalCap = appConfig.getInt("microservice.user-cap.total.limit")
+  private val totalCap = servicesConfig.getInt("microservice.user-cap.total.limit")
 
   require(dailyCap >= 0 && totalCap >= 0)
 

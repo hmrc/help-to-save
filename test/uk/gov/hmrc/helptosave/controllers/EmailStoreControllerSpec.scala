@@ -49,7 +49,7 @@ class EmailStoreControllerSpec extends AuthSupport {
 
   "The EmailStoreController" when {
 
-    val controller = new EmailStoreController(emailStore, mockAuthConnector)
+    val controller = new EmailStoreController(emailStore, mockAuthConnector, testCC)
     val email = "email"
     val encodedEmail = new String(Base64.getEncoder.encode(email.getBytes()))
 

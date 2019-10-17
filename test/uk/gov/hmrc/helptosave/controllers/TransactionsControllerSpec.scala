@@ -39,7 +39,7 @@ class TransactionsControllerSpec extends AuthSupport {
 
   val mockProxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
-  val controller = new TransactionsController(mockProxyConnector, mockAuthConnector)
+  val controller = new TransactionsController(mockProxyConnector, mockAuthConnector, testCC)
 
   val transactions = Transactions(Seq(
     Transaction(

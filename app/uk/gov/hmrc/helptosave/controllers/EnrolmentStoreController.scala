@@ -20,7 +20,7 @@ import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
@@ -38,10 +38,11 @@ import scala.util.{Failure, Success}
 class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
                                           val helpToSaveService: HelpToSaveService,
                                           authConnector:         AuthConnector,
-                                          proxyConnector:        HelpToSaveProxyConnector)(
+                                          proxyConnector:        HelpToSaveProxyConnector,
+                                          controllerComponents:  ControllerComponents)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector) with EnrolmentBehaviour with AccountQuery {
+  extends HelpToSaveAuth(authConnector, controllerComponents) with EnrolmentBehaviour with AccountQuery {
 
   import EnrolmentStoreController._
 

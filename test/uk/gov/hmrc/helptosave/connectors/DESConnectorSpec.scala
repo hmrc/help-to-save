@@ -29,7 +29,7 @@ class DESConnectorSpec extends TestSupport with GeneratorDrivenPropertyChecks wi
 
   val nino = "NINO"
 
-  lazy val connector = new DESConnectorImpl(mockHttp)
+  lazy val connector = new DESConnectorImpl(mockHttp, servicesConfig)
 
   "the isEligible method" when {
 

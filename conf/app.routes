@@ -1,18 +1,18 @@
 # microservice specific routes
 
-GET  /eligibility-check           @uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck(nino: Option[String])
-GET  /enrolment-status            @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getEnrolmentStatus(nino: Option[String])
-GET  /set-itmp-flag               @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag()
-GET  /get-account-number          @uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getAccountNumber()
-GET  /store-email                 @uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String, nino: Option[String])
-GET  /get-email                   @uk.gov.hmrc.helptosave.controllers.EmailStoreController.get()
-GET  /account-create-allowed      @uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()
-GET  /:nino/account               @uk.gov.hmrc.helptosave.controllers.AccountController.getAccount(nino: String, systemId: String, correlationId: Option[String])
-GET  /:nino/account/transactions  @uk.gov.hmrc.helptosave.controllers.TransactionsController.getTransactions(nino: String, systemId: String, correlationId: Option[String])
+GET  /eligibility-check           uk.gov.hmrc.helptosave.controllers.EligibilityCheckController.eligibilityCheck(nino: Option[String])
+GET  /enrolment-status            uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getEnrolmentStatus(nino: Option[String])
+GET  /set-itmp-flag               uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.setITMPFlag()
+GET  /get-account-number          uk.gov.hmrc.helptosave.controllers.EnrolmentStoreController.getAccountNumber()
+GET  /store-email                 uk.gov.hmrc.helptosave.controllers.EmailStoreController.store(email: String, nino: Option[String])
+GET  /get-email                   uk.gov.hmrc.helptosave.controllers.EmailStoreController.get()
+GET  /account-create-allowed      uk.gov.hmrc.helptosave.controllers.UserCapController.isAccountCreateAllowed()
+GET  /:nino/account               uk.gov.hmrc.helptosave.controllers.AccountController.getAccount(nino: String, systemId: String, correlationId: Option[String])
+GET  /:nino/account/transactions  uk.gov.hmrc.helptosave.controllers.TransactionsController.getTransactions(nino: String, systemId: String, correlationId: Option[String])
 
-POST /create-account              @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.createAccount()
-PUT  /update-email                @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.updateEmail()
+POST /create-account              uk.gov.hmrc.helptosave.controllers.HelpToSaveController.createAccount()
+PUT  /update-email                uk.gov.hmrc.helptosave.controllers.HelpToSaveController.updateEmail()
 
-GET  /paye-personal-details       @uk.gov.hmrc.helptosave.controllers.PayePersonalDetailsController.getPayePersonalDetails(nino: String)
+GET  /paye-personal-details       uk.gov.hmrc.helptosave.controllers.PayePersonalDetailsController.getPayePersonalDetails(nino: String)
 
-POST /validate-bank-details       @uk.gov.hmrc.helptosave.controllers.HelpToSaveController.doBarsCheck()
+POST /validate-bank-details       uk.gov.hmrc.helptosave.controllers.HelpToSaveController.doBarsCheck()

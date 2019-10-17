@@ -22,7 +22,7 @@ import cats.instances.string._
 import cats.syntax.eq._
 import com.google.inject.Inject
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
@@ -46,10 +46,11 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
                                       val helpToSaveService:      HelpToSaveService,
                                       override val authConnector: AuthConnector,
                                       auditor:                    HTSAuditor,
-                                      barsService:                BarsService)(
+                                      barsService:                BarsService,
+                                      controllerComponents:       ControllerComponents)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector) with EligibilityBase with EnrolmentBehaviour {
+  extends HelpToSaveAuth(authConnector, controllerComponents) with EligibilityBase with EnrolmentBehaviour {
 
   def createAccount(): Action[AnyContent] = ggOrPrivilegedAuthorised {
     implicit request ⇒

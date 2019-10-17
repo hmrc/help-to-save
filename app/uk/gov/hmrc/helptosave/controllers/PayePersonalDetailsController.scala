@@ -21,7 +21,7 @@ import java.util.Base64
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
@@ -31,9 +31,12 @@ import uk.gov.hmrc.helptosave.util.Logging._
 import scala.concurrent.ExecutionContext
 
 class PayePersonalDetailsController @Inject() (val helpToSaveService: HelpToSaveService,
-                                               authConnector:         AuthConnector)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig, ec: ExecutionContext)
+                                               authConnector:         AuthConnector,
+                                               controllerComponents:  ControllerComponents)(implicit transformer: LogMessageTransformer,
+                                                                                            override val appConfig: AppConfig,
+                                                                                            ec:                     ExecutionContext)
 
-  extends StrideAuth(authConnector) with EligibilityBase {
+  extends StrideAuth(authConnector, controllerComponents) with EligibilityBase {
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 

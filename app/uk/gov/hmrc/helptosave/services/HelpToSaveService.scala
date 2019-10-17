@@ -26,7 +26,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
+import uk.gov.hmrc.helptosave.modules.{ThresholdManagerProvider, UCThresholdOrchestrator}
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -61,7 +61,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
                                        auditor:                  HTSAuditor,
                                        metrics:                  Metrics,
                                        pagerDutyAlerting:        PagerDutyAlerting,
-                                       thresholdManagerProvider: ThresholdManagerProvider)(implicit ninoLogMessageTransformer: LogMessageTransformer,
+                                       ucThresholdProvider:      ThresholdManagerProvider)(implicit ninoLogMessageTransformer: LogMessageTransformer,
                                                                                            appConfig: AppConfig)
   extends HelpToSaveService with Logging {
 
@@ -76,7 +76,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
     }
 
   private def getThresholdValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Double]] =
-    thresholdManagerProvider.thresholdManager.ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
+    ucThresholdProvider.thresholdManager.ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
       .mapTo[GetThresholdValueResponse]
       .map(r ⇒ r.result)
 
@@ -205,7 +205,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
   private def timeString(nanos: Long): String = s"(round-trip time: ${nanosToPrettyString(nanos)})"
 
   private def getUCDetails(nino: NINO, txnId: UUID, threshold: Option[Double])(implicit hc: HeaderCarrier,
-                                                                               ec: ExecutionContext): Future[Option[UCResponse]] =
+                                                                               ec: ExecutionContext): Future[Option[UCResponse]] = {
     threshold.fold[Future[Option[UCResponse]]]({
       logger.warn("call to uc claimant check will not be made as there is no threshold value present", nino)
       None
@@ -217,6 +217,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
         }, Some(_)
         )
     )
+  }
 
 }
 
