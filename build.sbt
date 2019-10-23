@@ -29,12 +29,12 @@ val dependencies = Seq(
 
 def testDependencies(scope: String = "test,it") = Seq(
   "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-26" % scope,
-  "org.scalatest" %% "scalatest" % "3.0.5" % scope,
+  "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-  "org.scalamock" %% "scalamock" % "4.1.0" % scope,
-  "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
+  "org.scalamock" %% "scalamock" % "4.4.0" % scope,
+    "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope,
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.26" % scope,
   "uk.gov.hmrc" %% "reactivemongo-test" % "4.15.0-play-26" % scope
 )
 
@@ -83,7 +83,7 @@ lazy val scalariformSettings = {
     .setPreference(SpacesWithinPatternBinders, true)
 }
 
-lazy val wartRemoverSettings = {
+def wartRemoverSettings(ignoreFiles: File ⇒ Seq[File] = _ ⇒ Seq.empty[File]) = {
   // list of warts here: http://www.wartremover.org/doc/warts.html
   val excludedWarts = Seq(
     Wart.DefaultArguments,
@@ -97,7 +97,23 @@ lazy val wartRemoverSettings = {
     Wart.ToString,
     Wart.Var)
 
-  wartremoverErrors in(Compile, compile) ++= Warts.allBut(excludedWarts: _*)
+  Seq(wartremoverErrors in(Compile, compile) ++= Warts.allBut(excludedWarts: _*),
+    // disable some wart remover checks in tests - (Any, Null, PublicInference) seems to struggle with
+    // scalamock, (Equals) seems to struggle with stub generator AutoGen and (NonUnitStatements) is
+    // imcompatible with a lot of WordSpec
+    wartremoverErrors in(Test, compile) --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference),
+    wartremoverExcluded in(Compile, compile) ++=
+      routes.in(Compile).value ++
+        (baseDirectory.value ** "*.sc").get ++
+        Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
+        (baseDirectory.value ** "UCThresholdManager.scala").get ++
+        (baseDirectory.value ** "UCThresholdConnectorProxyActor.scala").get ++
+        (baseDirectory.value ** "UCThresholdMongoProxy.scala").get ++
+        (baseDirectory.value ** "EligibilityStatsActor.scala").get ++
+        (baseDirectory.value ** "Lock.scala").get ++
+        (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
+    
+  )
 }
 
 lazy val catsSettings = scalacOptions += "-Ypartial-unification"
@@ -113,21 +129,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(defaultSettings(): _*)
   .settings(PlayKeys.playDefaultPort := 7001)
   .settings(scalariformSettings: _*)
-  .settings(wartRemoverSettings)
-  // disable some wart remover checks in tests - (Any, Null, PublicInference) seems to struggle with
-  // scalamock, (Equals) seems to struggle with stub generator AutoGen and (NonUnitStatements) is
-  // imcompatible with a lot of WordSpec
-  .settings(wartremoverErrors in(Test, compile) --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference))
-  .settings(wartremoverExcluded ++=
-    routes.in(Compile).value ++
-      (baseDirectory.value ** "*.sc").get ++
-      Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
-      (baseDirectory.value ** "UCThresholdManager.scala").get ++
-      (baseDirectory.value ** "UCThresholdConnectorProxyActor.scala").get ++
-      (baseDirectory.value ** "UCThresholdMongoProxy.scala").get ++
-      (baseDirectory.value ** "EligibilityStatsActor.scala").get ++
-      (baseDirectory.value ** "Lock.scala").get
-  )
+  .settings(wartRemoverSettings(): _*)
   .settings(catsSettings)
   .settings(scalacOptions += "-Xcheckinit")
   .settings(
