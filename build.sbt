@@ -17,13 +17,13 @@ lazy val plugins: Seq[Plugins] = Seq.empty
 val dependencies = Seq(
   ws,
   "uk.gov.hmrc" %% "bootstrap-play-26" % "1.1.0",
-  "uk.gov.hmrc" %% "auth-client" % "2.30.0-play-26",
-  "uk.gov.hmrc" %% "play-config" % "7.2.0",
-  "uk.gov.hmrc" %% "domain" % "5.3.0",
-  "org.typelevel" %% "cats-core" % "1.5.0",
+  "uk.gov.hmrc" %% "auth-client" % "2.31.0-play-26",
+  "uk.gov.hmrc" %% "play-config" % "7.5.0",
+  "uk.gov.hmrc" %% "domain" % "5.6.0-play-26",
+  "org.typelevel" %% "cats-core" % "2.0.0",
   "com.github.kxbmap" %% "configs" % "0.4.4",
   "uk.gov.hmrc" %% "simple-reactivemongo" % "7.20.0-play-26",
-  "uk.gov.hmrc" %% "crypto" % "5.2.0",
+  "uk.gov.hmrc" %% "crypto" % "5.4.0",
   "uk.gov.hmrc" %% "mongo-lock" % "6.15.0-play-26"
 )
 
