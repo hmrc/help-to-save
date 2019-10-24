@@ -104,6 +104,7 @@ def wartRemoverSettings(ignoreFiles: File ⇒ Seq[File] = _ ⇒ Seq.empty[File])
     wartremoverErrors in(Test, compile) --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference),
     wartremoverExcluded in(Compile, compile) ++=
       routes.in(Compile).value ++
+        ignoreFiles(baseDirectory.value) ++
         (baseDirectory.value ** "*.sc").get ++
         Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
         (baseDirectory.value ** "UCThresholdManager.scala").get ++
@@ -112,8 +113,9 @@ def wartRemoverSettings(ignoreFiles: File ⇒ Seq[File] = _ ⇒ Seq.empty[File])
         (baseDirectory.value ** "EligibilityStatsActor.scala").get ++
         (baseDirectory.value ** "Lock.scala").get ++
         (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
-    
   )
+    wartremoverExcluded in(Test, compile) ++=
+      (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
 }
 
 lazy val catsSettings = scalacOptions += "-Ypartial-unification"
@@ -121,6 +123,7 @@ lazy val catsSettings = scalacOptions += "-Ypartial-unification"
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory) ++ plugins: _*)
   .settings(addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17"))
+  .settings(wartRemoverSettings(): _*)
   .settings(majorVersion := 2)
   .settings(playSettings ++ scoverageSettings: _*)
   .settings(scalaSettings: _*)
@@ -129,7 +132,6 @@ lazy val microservice = Project(appName, file("."))
   .settings(defaultSettings(): _*)
   .settings(PlayKeys.playDefaultPort := 7001)
   .settings(scalariformSettings: _*)
-  .settings(wartRemoverSettings(): _*)
   .settings(catsSettings)
   .settings(scalacOptions += "-Xcheckinit")
   .settings(
