@@ -47,7 +47,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with GeneratorD
         .expects(nino, expectedPath, *, *)
         .returning(EitherT.fromEither[Future](result))
 
-    val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector)
+    val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector, testCC)
 
     val privilegedCredentials = PAClientId("id")
   }

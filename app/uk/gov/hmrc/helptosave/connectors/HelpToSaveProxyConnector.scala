@@ -40,6 +40,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -65,12 +66,13 @@ trait HelpToSaveProxyConnector {
 class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
                                               metrics:           Metrics,
                                               pagerDutyAlerting: PagerDutyAlerting,
-                                              auditor:           HTSAuditor)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+                                              auditor:           HTSAuditor,
+                                              servicesConfig:    ServicesConfig)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
   extends HelpToSaveProxyConnector with Logging {
 
   import HelpToSaveProxyConnectorImpl._
 
-  val proxyURL: String = appConfig.baseUrl("help-to-save-proxy")
+  val proxyURL: String = servicesConfig.baseUrl("help-to-save-proxy")
 
   val getAccountVersion: String = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
   val getTransactionsVersion: String = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")

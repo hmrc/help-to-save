@@ -17,7 +17,7 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import com.google.inject.Inject
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
@@ -26,10 +26,11 @@ import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import scala.concurrent.ExecutionContext
 
 class EligibilityCheckController @Inject() (val helpToSaveService: HelpToSaveService,
-                                            authConnector:         AuthConnector)(
+                                            authConnector:         AuthConnector,
+                                            controllerComponents:  ControllerComponents)(
     implicit
     transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector) with EligibilityBase {
+  extends HelpToSaveAuth(authConnector, controllerComponents) with EligibilityBase {
 
   def eligibilityCheck(maybeNino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNino) { implicit request ⇒ implicit nino ⇒
     checkEligibility(nino, routes.EligibilityCheckController.eligibilityCheck(maybeNino).url)

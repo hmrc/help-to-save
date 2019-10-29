@@ -26,6 +26,7 @@ import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -43,19 +44,20 @@ trait DESConnector {
 }
 
 @Singleton
-class DESConnectorImpl @Inject() (http: HttpClient)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+class DESConnectorImpl @Inject() (http:           HttpClient,
+                                  servicesConfig: ServicesConfig)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
   extends DESConnector with Logging {
 
-  val itmpECBaseURL: String = appConfig.baseUrl("itmp-eligibility-check")
-  val itmpEnrolmentURL: String = appConfig.baseUrl("itmp-enrolment")
-  val payeURL: String = appConfig.baseUrl("paye-personal-details")
-  val itmpThresholdURL: String = s"${appConfig.baseUrl("itmp-threshold")}/universal-credits/threshold-amount"
+  val itmpECBaseURL: String = servicesConfig.baseUrl("itmp-eligibility-check")
+  val itmpEnrolmentURL: String = servicesConfig.baseUrl("itmp-enrolment")
+  val payeURL: String = servicesConfig.baseUrl("paye-personal-details")
+  val itmpThresholdURL: String = s"${servicesConfig.baseUrl("itmp-threshold")}/universal-credits/threshold-amount"
 
   implicit val booleanShow: Show[Boolean] = Show.show(if (_) "Y" else "N")
 
   val body: JsValue = JsNull
 
-  val originatorIdHeader: (String, String) = "Originator-Id" → appConfig.getString("microservice.services.paye-personal-details.originatorId")
+  val originatorIdHeader: (String, String) = "Originator-Id" → servicesConfig.getString("microservice.services.paye-personal-details.originatorId")
 
   def eligibilityCheckUrl(nino: String): String = s"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
 

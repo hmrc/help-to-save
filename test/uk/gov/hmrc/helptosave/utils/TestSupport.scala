@@ -27,12 +27,14 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.ControllerComponents
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
@@ -41,15 +43,20 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
 
   lazy val additionalConfig = Configuration()
 
-  def buildFakeApplication(additionalConfig: Configuration): Application = {
+  def buildFakeApplication(extraConfig: Configuration): Application = {
     new GuiceApplicationBuilder()
       .configure(Configuration(
         ConfigFactory.parseString(
           """
-            | metrics.enabled       = false
-            | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.UCThresholdModule", "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule", "play.modules.reactivemongo.ReactiveMongoHmrcModule" ]
+            | metrics.jvm = false
+            | metrics.enabled = true
+            | mongo-async-driver.akka.loglevel = ERROR
+            | uc-threshold.ask-timeout = 10 seconds
+            | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule",
+            | "play.modules.reactivemongo.ReactiveMongoHmrcModule",
+            |  "play.api.mvc.CookiesModule" ]
           """.stripMargin)
-      ) ++ additionalConfig)
+      ) ++ extraConfig)
       .build()
   }
 
@@ -70,6 +77,10 @@ trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitS
   implicit lazy val configuration: Configuration = fakeApplication.injector.instanceOf[Configuration]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
+
+  val testCC: ControllerComponents = fakeApplication.injector.instanceOf[ControllerComponents]
+
+  val servicesConfig = fakeApplication.injector.instanceOf[ServicesConfig]
 
   val mockMetrics = new Metrics(stub[PlayMetrics]) {
     override def timer(name: String): Timer = new Timer()

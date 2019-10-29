@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.services
 
 import java.util.UUID
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import cats.data.EitherT
 import cats.instances.future._
@@ -36,7 +36,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
+import uk.gov.hmrc.helptosave.modules.{ThresholdManagerProvider, UCThresholdOrchestrator}
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -61,13 +61,21 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
   val thresholdManagerProvider = new TestThresholdProvider
 
+  val UCThresholdOrchestrator = new UCThresholdOrchestrator(fakeApplication.injector.instanceOf[ActorSystem],
+                                                            mockPagerDuty,
+                                                            fakeApplication.injector.instanceOf[Configuration],
+                                                            mockDESConnector
+  )
+
   val service: HelpToSaveServiceImpl = {
     val testConfig = Configuration(ConfigFactory.parseString("""uc-threshold { ask-timeout = 10 seconds }"""))
 
     new HelpToSaveServiceImpl(mockProxyConnector, mockDESConnector, mockAuditor, mockMetrics, mockPagerDuty, thresholdManagerProvider)(
 
       transformer,
-      new AppConfig(fakeApplication.injector.instanceOf[Configuration] ++ testConfig, fakeApplication.injector.instanceOf[Environment])
+      new AppConfig(fakeApplication.injector.instanceOf[Configuration] ++ testConfig,
+        fakeApplication.injector.instanceOf[Environment],
+        servicesConfig)
     )
   }
 
@@ -240,8 +248,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           }
 
           getEligibility(Some(threshold)) shouldBe
-            Left("Could not parse http response JSON: /reasonCode: [error.path.missing]; /result: " +
-              "[error.path.missing]; /resultCode: [error.path.missing]; /reason: [error.path.missing]. Response body was " +
+            Left("Could not parse http response JSON: : [error.expected.jsobject]. Response body was " +
               "\"{\\\"invalid\\\": \\\"foo\\\"}\"")
         }
 

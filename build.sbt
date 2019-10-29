@@ -16,26 +16,26 @@ lazy val plugins: Seq[Plugins] = Seq.empty
 
 val dependencies = Seq(
   ws,
-  "uk.gov.hmrc" %% "auth-client" % "2.19.0-play-25",
-  "uk.gov.hmrc" %% "play-config" % "7.2.0",
-  "uk.gov.hmrc" %% "domain" % "5.3.0",
-  "org.typelevel" %% "cats-core" % "1.5.0",
+  "uk.gov.hmrc" %% "bootstrap-play-26" % "1.1.0",
+  "uk.gov.hmrc" %% "auth-client" % "2.31.0-play-26",
+  "uk.gov.hmrc" %% "play-config" % "7.5.0",
+  "uk.gov.hmrc" %% "domain" % "5.6.0-play-26",
+  "org.typelevel" %% "cats-core" % "2.0.0",
   "com.github.kxbmap" %% "configs" % "0.4.4",
-  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.12.0-play-25",
-  "uk.gov.hmrc" %% "crypto" % "5.2.0",
-  "uk.gov.hmrc" %% "bootstrap-play-25" % "4.11.0",
-  "uk.gov.hmrc" %% "mongo-lock" % "6.10.0-play-25"
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.20.0-play-26",
+  "uk.gov.hmrc" %% "crypto" % "5.4.0",
+  "uk.gov.hmrc" %% "mongo-lock" % "6.15.0-play-26"
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
-  "uk.gov.hmrc" %% "hmrctest" % "3.4.0-play-25" % scope,
-  "org.scalatest" %% "scalatest" % "3.0.5" % scope,
+  "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-26" % scope,
+  "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-  "org.scalamock" %% "scalamock" % "4.1.0" % scope,
+  "org.scalamock" %% "scalamock" % "4.4.0" % scope,
   "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope,
-  "uk.gov.hmrc" %% "reactivemongo-test" % "4.8.0-play-25" % scope
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope, // upgrading to 2.5.26 causes errors
+  "uk.gov.hmrc" %% "reactivemongo-test" % "4.15.0-play-26" % scope
 )
 
 lazy val scoverageSettings = {
@@ -97,7 +97,24 @@ lazy val wartRemoverSettings = {
     Wart.ToString,
     Wart.Var)
 
-  wartremoverErrors in(Compile, compile) ++= Warts.allBut(excludedWarts: _*)
+  Seq(wartremoverErrors in(Compile, compile) ++= Warts.allBut(excludedWarts: _*),
+    // disable some wart remover checks in tests - (Any, Null, PublicInference) seems to struggle with
+    // scalamock, (Equals) seems to struggle with stub generator AutoGen and (NonUnitStatements) is
+    // imcompatible with a lot of WordSpec
+    wartremoverErrors in(Test, compile) --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference),
+    wartremoverExcluded in(Compile, compile) ++=
+      routes.in(Compile).value ++
+        (baseDirectory.value ** "*.sc").get ++
+        Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
+        (baseDirectory.value ** "UCThresholdManager.scala").get ++
+        (baseDirectory.value ** "UCThresholdConnectorProxyActor.scala").get ++
+        (baseDirectory.value ** "UCThresholdMongoProxy.scala").get ++
+        (baseDirectory.value ** "EligibilityStatsActor.scala").get ++
+        (baseDirectory.value ** "Lock.scala").get ++
+        (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
+  )
+  wartremoverExcluded in(Test, compile) ++=
+    (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
 }
 
 lazy val catsSettings = scalacOptions += "-Ypartial-unification"
@@ -114,27 +131,12 @@ lazy val microservice = Project(appName, file("."))
   .settings(PlayKeys.playDefaultPort := 7001)
   .settings(scalariformSettings: _*)
   .settings(wartRemoverSettings)
-  // disable some wart remover checks in tests - (Any, Null, PublicInference) seems to struggle with
-  // scalamock, (Equals) seems to struggle with stub generator AutoGen and (NonUnitStatements) is
-  // imcompatible with a lot of WordSpec
-  .settings(wartremoverErrors in(Test, compile) --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference))
-  .settings(wartremoverExcluded ++=
-    routes.in(Compile).value ++
-      (baseDirectory.value ** "*.sc").get ++
-      Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
-      (baseDirectory.value ** "UCThresholdManager.scala").get ++
-      (baseDirectory.value ** "UCThresholdConnectorProxyActor.scala").get ++
-      (baseDirectory.value ** "UCThresholdMongoProxy.scala").get ++
-      (baseDirectory.value ** "EligibilityStatsActor.scala").get ++
-      (baseDirectory.value ** "Lock.scala").get
-  )
   .settings(catsSettings)
   .settings(scalacOptions += "-Xcheckinit")
   .settings(
     libraryDependencies ++= appDependencies,
     retrieveManaged := false,
-    evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
-    routesGenerator := StaticRoutesGenerator
+    evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false)
   )
   .configs(IntegrationTest)
   .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
