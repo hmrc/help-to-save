@@ -211,7 +211,6 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
-            mockEnrolmentStoreUpdate("nino", true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
             mockSendAuditEvent(AccountCreated(payloadDE, "Digital", false), "nino")
           }
