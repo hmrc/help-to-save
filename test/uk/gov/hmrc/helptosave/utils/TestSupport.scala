@@ -21,10 +21,9 @@ import java.time.LocalDate
 import com.codahale.metrics.{Counter, Gauge, Timer}
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import com.typesafe.config.ConfigFactory
-import uk.gov.hmrc.smartstub._
 import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfterAll
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
@@ -32,14 +31,14 @@ import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl, UnitSpec}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.smartstub._
 
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends WordSpecLike with Matchers with MockFactory with UnitSpec with BeforeAndAfterAll {
+trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll {
 
   lazy val additionalConfig = Configuration()
 

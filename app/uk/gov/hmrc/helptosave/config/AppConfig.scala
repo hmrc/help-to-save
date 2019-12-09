@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.config
 import configs.syntax._
 import com.google.inject.Singleton
 import javax.inject.Inject
-import play.api.Mode.Mode
+import play.api.Mode
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 

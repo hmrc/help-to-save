@@ -21,11 +21,11 @@ import java.util.UUID
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
+import uk.gov.hmrc.helptosave.util.UnitSpec
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.play.test.UnitSpec
 
-class BarsConnectorSpec extends TestSupport with UnitSpec with HttpSupport {
+class BarsConnectorSpec extends TestSupport with HttpSupport {
 
   val connector = new BarsConnectorImpl(mockHttp)
 

@@ -20,10 +20,8 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework
 import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework._
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
@@ -38,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[MongoEligibilityStatsStore])
 trait EligibilityStatsStore {
 
-  def getEligibilityStats(): Future[List[EligibilityStats]]
+  def getEligibilityStats: Future[List[EligibilityStats]]
 
 }
 
@@ -67,7 +65,7 @@ class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
     }.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur :: acc)
   }
 
-  override def getEligibilityStats(): Future[List[EligibilityStats]] = {
+  override def getEligibilityStats: Future[List[EligibilityStats]] = {
     val timerContext = metrics.eligibilityStatsTimer.time()
     doAggregate()
       .map { response ⇒

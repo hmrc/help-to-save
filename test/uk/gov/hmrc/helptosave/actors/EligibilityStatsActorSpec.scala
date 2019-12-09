@@ -39,8 +39,6 @@ import scala.concurrent.duration._
 class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorSpec") with Eventually {
   import TestApparatus._
 
-  import system.dispatcher
-
   implicit val timeout: Timeout = Timeout(10.seconds)
 
   class TestApparatus {
@@ -92,8 +90,8 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
     }
 
     class TestEligibilityStatsStore(reportTo: ActorRef) extends EligibilityStatsStore {
-      def getEligibilityStats(): Future[List[EligibilityStats]] = {
-        await((reportTo ? GetStats).mapTo[GetStatsResponse]).map(_.result)
+      def getEligibilityStats: Future[List[EligibilityStats]] = {
+        (reportTo ? GetStats).mapTo[GetStatsResponse].map(_.result)
       }
     }
 
@@ -161,7 +159,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
         metricsListener.expectNoMessage()
 
         registered.name shouldBe "backend.create-account.1.some-source"
-        registered.gauge.getValue() shouldBe 2
+        registered.gauge.getValue shouldBe 2
 
         // now the table should be pretty printed
         eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.PrettyFormatTableRequestReceived(table))

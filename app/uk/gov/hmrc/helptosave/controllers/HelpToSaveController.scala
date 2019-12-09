@@ -140,7 +140,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
 
         acNumber match {
           case Some(JsSuccess(accountNumber, _)) ⇒ {
-            enrolUser(createAccountRequest, Some(accountNumber.toString)).value.onComplete {
+            enrolUser(createAccountRequest, Some(accountNumber)).value.onComplete {
               case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS and account number was persisted", nino, additionalParams)
               case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
               case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)

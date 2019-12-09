@@ -50,7 +50,7 @@ class EligibilityStatsActor(scheduler:              Scheduler,
   override def receive: Receive = {
     case GetStats ⇒
       logger.info("Getting eligibility stats from mongo")
-      eligibilityStatsStore.getEligibilityStats().map(GetStatsResponse) pipeTo self
+      eligibilityStatsStore.getEligibilityStats.map(GetStatsResponse) pipeTo self
 
     case r: GetStatsResponse ⇒
       val table = eligibilityStatsParser.createTable(r.result)
