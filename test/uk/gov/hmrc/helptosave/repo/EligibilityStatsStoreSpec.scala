@@ -35,14 +35,14 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
         val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
         await(store.collection.insert(document))
-        await(store.getEligibilityStats()) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
+        await(store.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
       }
     }
 
     "handle error while reading from mongo" in {
       val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
-      await(store.getEligibilityStats()) shouldBe List.empty
+      await(store.getEligibilityStats) shouldBe List.empty
     }
 
     "return aggregated results when there is more than one result" in {
@@ -54,7 +54,7 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
       await(store.collection.insert(document2))
       await(store.collection.insert(document3))
 
-      await(store.getEligibilityStats()) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 2), EligibilityStats(Some(8), Some("Digital"), 1))
+      await(store.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 2), EligibilityStats(Some(8), Some("Digital"), 1))
     }
   }
 

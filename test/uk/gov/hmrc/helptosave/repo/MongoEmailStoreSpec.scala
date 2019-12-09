@@ -138,7 +138,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
         def remove(nino: String)(collection: JSONCollection): Unit = {
           val selector = JsObject(Map("nino" → JsString(nino)))
-          await(collection.delete().one(selector).value)
+          collection.delete().one(selector).value
         }
 
       "return a right if the get is successful" in {

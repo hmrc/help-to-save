@@ -25,10 +25,9 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
 import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationRequest, BankDetailsValidationResult, HTSEvent}
-import uk.gov.hmrc.helptosave.util.NINO
+import uk.gov.hmrc.helptosave.util.{NINO, UnitSpec}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 

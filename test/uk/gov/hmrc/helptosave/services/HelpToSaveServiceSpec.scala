@@ -27,7 +27,7 @@ import cats.syntax.eq._
 import com.typesafe.config.ConfigFactory
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.EitherValues
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.helptosave.actors.ActorTestSupport
@@ -45,8 +45,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") with TestEnrolmentBehaviour with EitherValues with MockPagerDuty
-  with GeneratorDrivenPropertyChecks with TestData {
+class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") with TestEnrolmentBehaviour with EitherValues with MockPagerDuty with TestData with ScalaCheckDrivenPropertyChecks {
 
   class TestThresholdProvider extends ThresholdManagerProvider {
     val probe = TestProbe()
@@ -279,9 +278,9 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         val nino = "NINO"
 
         "the call to ITMP comes back with a status which isn't 200 or 403" in {
-          forAll{ status: Int ⇒
-            whenever(status != 200 && status != 403){
-              inSequence{
+          forAll { status: Int ⇒
+            whenever(status != 200 && status != 403) {
+              inSequence {
                 mockSetFlag(nino)(HttpResponse(status))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to setting ITMP flag")

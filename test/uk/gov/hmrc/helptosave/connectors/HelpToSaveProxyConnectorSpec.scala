@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.time.{LocalDate, YearMonth}
+import java.time.LocalDate
 import java.util.UUID
 
 import org.scalatest.EitherValues
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsValue, Json}
 import play.mvc.Http.Status._
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails

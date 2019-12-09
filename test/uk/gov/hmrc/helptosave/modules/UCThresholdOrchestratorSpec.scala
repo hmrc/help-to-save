@@ -28,7 +28,7 @@ import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestratorSpec") with Eventually {
@@ -60,7 +60,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
       (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
-        .returning(HttpResponse(500, None))
+        .returning(Future.successful(HttpResponse(500, None)))
 
       (pagerDutyAlert.alert(_: String))
         .expects("Received unexpected http status in response to get UC threshold from DES")
@@ -68,7 +68,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
       (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
-        .returning(HttpResponse(200, Some(Json.parse(s"""{ "thresholdAmount" : $threshold }"""))))
+        .returning(Future.successful(HttpResponse(200, Some(Json.parse(s"""{ "thresholdAmount" : $threshold }""")))))
 
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 

@@ -16,18 +16,16 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.UUID
-
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.{JsSuccess, JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino ⇒ v2Nino}
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.helptosave.connectors.HttpSupport
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
@@ -37,7 +35,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrivenPropertyChecks with TestEnrolmentBehaviour with HttpSupport {
+class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks with TestEnrolmentBehaviour with HttpSupport {
 
   implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
     Arbitrary(Gen.oneOf[EnrolmentStore.Status](
@@ -135,7 +133,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
         mockEnrolmentStoreGetAccountNumber(nino)(Right(accountNumber))
 
         val result = await(getAccountNumber())
-        contentAsJson(result) shouldBe Json.toJson(accountNumber)
+        contentAsJson(Future.successful(result)) shouldBe Json.toJson(accountNumber)
       }
 
       "call NSI when the account number cannot be obtained from the enrolment store" in {
@@ -148,7 +146,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
 
         val result = await(getAccountNumber())
         status(result) shouldBe OK
-        contentAsJson(result) shouldBe jsonResult
+        contentAsJson(Future.successful(result)) shouldBe jsonResult
       }
 
       "return an InternalServerError when call to get account from NSI fails" in {
@@ -200,7 +198,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
             """.stripMargin
         )
 
-        m.foreach{
+        m.foreach {
           case (s, j) ⇒
             mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
             mockAuth(v2Nino)(Right(mockedNinoRetrieval))
@@ -228,7 +226,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with GeneratorDrive
           EnrolmentStore.Enrolled(true),
           EnrolmentStore.Enrolled(false),
           EnrolmentStore.NotEnrolled
-        ).foreach{ status ⇒
+        ).foreach { status ⇒
             inSequence {
               mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
               mockEnrolmentStoreGet(nino)(Right(status))

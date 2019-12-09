@@ -16,10 +16,7 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import org.scalatest.Matchers
-import uk.gov.hmrc.play.test.UnitSpec
-
-class UtilSpec extends Matchers with UnitSpec {
+class UtilSpec extends UnitSpec {
 
   "Util.maskNino(*)" must {
     "mask ninos in the given string" in {

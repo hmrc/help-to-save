@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import org.scalatest.Matchers
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
-class EligibilityStatsParserSpec extends TestSupport with Matchers {
+class EligibilityStatsParserSpec extends TestSupport {
 
   val parser = new EligibilityStatsParserImpl()
 
