@@ -30,7 +30,7 @@ val dependencies = Seq(
 def testDependencies(scope: String = "test,it") = Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % "test, it",
   "uk.gov.hmrc" %% "service-integration-test" % "0.9.0-play-26" % "test,it",
-  "org.scalatest" %% "scalatest" % "3.0.8" %scope,
+  "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "org.scalamock" %% "scalamock" % "4.4.0" % scope,
   "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
@@ -43,8 +43,9 @@ lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
   Seq(
     // Semicolon-separated list of regexs matching classes to exclude
-    ScoverageKeys.coverageExcludedPackages := "<empty>;.*config.*;.*(AuthService|BuildInfo|Routes|JsErrorOps|EligibilityStatsProviderImpl|HttpClient).*",
-    ScoverageKeys.coverageMinimum := 90,
+    ScoverageKeys.coverageExcludedPackages := "<empty>;.*audit.*;.*config.*;.*com.kenshoo.*;.*javascript.*;" +
+      ".*(AuthService|BuildInfo|Routes|JsErrorOps|EligibilityStatsProviderImpl|HttpClient).*",
+    ScoverageKeys.coverageMinimum := 85,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true,
     parallelExecution in Test := false
