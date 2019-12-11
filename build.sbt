@@ -44,7 +44,7 @@ lazy val scoverageSettings = {
   Seq(
     ScoverageKeys.coverageExcludedPackages :=
       """<empty>;.*\.config\..*;
-        |.*\.(BuildInfo|EligibilityStatsProviderImpl|HTSAuditor|HttpClient.*|JsErrorOps|Reverse.*|Routes.*)"""
+        |.*\.(BuildInfo|EligibilityStatsProviderImpl|HttpClient.*|JsErrorOps|Reverse.*|Routes.*)"""
         .stripMargin,
     ScoverageKeys.coverageMinimum := 90,
     ScoverageKeys.coverageFailOnMinimum := true,
