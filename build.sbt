@@ -9,6 +9,7 @@ import uk.gov.hmrc.versioning.SbtGitVersioning
 import wartremover.{Wart, Warts, wartremoverErrors, wartremoverExcluded}
 
 val appName = "help-to-save"
+val hmrc = "uk.gov.hmrc"
 
 lazy val appDependencies: Seq[ModuleID] = dependencies ++ testDependencies()
 lazy val playSettings: Seq[Setting[_]] = Seq.empty
@@ -16,27 +17,26 @@ lazy val plugins: Seq[Plugins] = Seq.empty
 
 val dependencies = Seq(
   ws,
-  "uk.gov.hmrc" %% "bootstrap-play-26" % "1.3.0",
-  "uk.gov.hmrc" %% "auth-client" % "2.31.0-play-26",
-  "uk.gov.hmrc" %% "play-config" % "7.5.0",
-  "uk.gov.hmrc" %% "domain" % "5.6.0-play-26",
+  hmrc %% "bootstrap-play-26" % "1.3.0",
+  hmrc %% "auth-client" % "2.32.0-play-26",
+  hmrc %% "play-config" % "7.5.0",
+  hmrc %% "domain" % "5.6.0-play-26",
+  hmrc %% "simple-reactivemongo" % "7.21.0-play-26",
+  hmrc %% "crypto" % "5.4.0",
+  hmrc %% "mongo-lock" % "6.15.0-play-26",
   "org.typelevel" %% "cats-core" % "2.0.0",
-  "com.github.kxbmap" %% "configs" % "0.4.4",
-  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.21.0-play-26",
-  "uk.gov.hmrc" %% "crypto" % "5.4.0",
-  "uk.gov.hmrc" %% "mongo-lock" % "6.15.0-play-26"
+  "com.github.kxbmap" %% "configs" % "0.4.4"
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
-  "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % "test, it",
-  "uk.gov.hmrc" %% "service-integration-test" % "0.9.0-play-26" % "test,it",
+  hmrc %% "stub-data-generator" % "0.5.3" % scope,
+  hmrc %% "reactivemongo-test" % "4.15.0-play-26" % scope,
+  hmrc %% "service-integration-test" % "0.9.0-play-26" % "test,it",
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "org.scalamock" %% "scalamock" % "4.4.0" % scope,
-  "uk.gov.hmrc" %% "stub-data-generator" % "0.5.3" % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope, // upgrading to 2.5.26 causes errors
-  "uk.gov.hmrc" %% "reactivemongo-test" % "4.15.0-play-26" % scope
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope // upgrading to 2.5.26 causes errors
 )
 
 lazy val scoverageSettings = {
@@ -44,8 +44,8 @@ lazy val scoverageSettings = {
   Seq(
     // Semicolon-separated list of regexs matching classes to exclude
     ScoverageKeys.coverageExcludedPackages := "<empty>;.*audit.*;.*config.*;.*com.kenshoo.*;.*javascript.*;" +
-      ".*(AuthService|BuildInfo|Routes|JsErrorOps|EligibilityStatsProviderImpl|HttpClient).*",
-    ScoverageKeys.coverageMinimum := 85,
+      ".*(AuthService|BuildInfo|Routes|JsErrorOps|Reverse|EligibilityStatsProviderImpl|HttpClient).*",
+    ScoverageKeys.coverageMinimum := 90,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true,
     parallelExecution in Test := false
