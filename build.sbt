@@ -42,9 +42,10 @@ def testDependencies(scope: String = "test,it") = Seq(
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
   Seq(
-    // Semicolon-separated list of regexs matching classes to exclude
-    ScoverageKeys.coverageExcludedPackages := "<empty>;.*audit.*;.*config.*;.*com.kenshoo.*;.*javascript.*;" +
-      ".*(AuthService|BuildInfo|Routes|JsErrorOps|Reverse|EligibilityStatsProviderImpl|HttpClient).*",
+    ScoverageKeys.coverageExcludedPackages :=
+      """<empty>;.*\.config\..*;
+        |.*\.(BuildInfo|EligibilityStatsProviderImpl|HTSAuditor|HttpClient.*|JsErrorOps|Reverse.*|Routes.*)"""
+        .stripMargin,
     ScoverageKeys.coverageMinimum := 90,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true,
