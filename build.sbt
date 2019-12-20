@@ -31,10 +31,10 @@ val dependencies = Seq(
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc %% "stub-data-generator" % "0.5.3" % scope,
   hmrc %% "reactivemongo-test" % "4.15.0-play-26" % scope,
-  hmrc %% "service-integration-test" % "0.9.0-play-26" % "test,it",
+  hmrc %% "service-integration-test" % "0.9.0-play-26" % scope,
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
-  "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "org.scalamock" %% "scalamock" % "4.4.0" % scope,
+  "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope // upgrading to 2.5.26 causes errors
 )
@@ -120,7 +120,7 @@ lazy val wartRemoverSettings = {
     (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
 }
 
-lazy val catsSettings = scalacOptions += "-Ypartial-unification"
+lazy val catsSettings = scalacOptions ++= Seq("-Ypartial-unification","-deprecation", "-feature")
 
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory) ++ plugins: _*)

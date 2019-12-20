@@ -8,11 +8,11 @@ resolvers += Resolver.url("scoverage-bintray", url("https://dl.bintray.com/sksam
 
 addSbtPlugin("uk.gov.hmrc" % "sbt-auto-build" % "2.3.0")
 
-addSbtPlugin("uk.gov.hmrc" % "sbt-git-versioning" % "2.0.0")
+addSbtPlugin("uk.gov.hmrc" % "sbt-git-versioning" % "2.1.0")
 
 addSbtPlugin("uk.gov.hmrc" % "sbt-artifactory" % "1.0.0")
 
-addSbtPlugin("uk.gov.hmrc" % "sbt-distributables" % "1.6.0")
+addSbtPlugin("uk.gov.hmrc" % "sbt-distributables" % "2.0.0")
 
 addSbtPlugin("uk.gov.hmrc" % "sbt-bobby" % "1.0.0")
 
@@ -24,4 +24,4 @@ addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "1.0.0")
 
 addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.3")
 
-addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.2.1")
+addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.3.7")
