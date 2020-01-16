@@ -21,7 +21,7 @@ val dependencies = Seq(
   hmrc %% "auth-client" % "2.32.0-play-26",
   hmrc %% "play-config" % "7.5.0",
   hmrc %% "domain" % "5.6.0-play-26",
-  hmrc %% "simple-reactivemongo" % "7.21.0-play-26",
+  hmrc %% "simple-reactivemongo" % "7.22.0-play-26",
   hmrc %% "crypto" % "5.4.0",
   hmrc %% "mongo-lock" % "6.15.0-play-26",
   "org.typelevel" %% "cats-core" % "2.0.0",
