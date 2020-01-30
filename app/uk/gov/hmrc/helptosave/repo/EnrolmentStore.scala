@@ -112,10 +112,10 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
                              itmpFlag:          Boolean,
                              accountNumber:     Option[String])(implicit ec: ExecutionContext): Future[WriteResult] = {
     accountNumber match {
-      case Some(accountNum) ⇒ collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
+      case Some(accountNum) ⇒ collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
         "eligibilityReason" -> eligibilityReason, "source" -> source, "accountNumber" -> accountNum))
 
-      case None ⇒ collection.insert(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
+      case None ⇒ collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
         "eligibilityReason" -> eligibilityReason, "source" -> source))
     }
   }
