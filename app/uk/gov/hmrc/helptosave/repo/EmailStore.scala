@@ -135,7 +135,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
   }
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] =
-    collection.update(
+    collection.update(ordered = false).one(
       BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
       BSONDocument("$set" -> BSONDocument("nino" -> nino, "email" -> encryptedEmail)),
       upsert = true

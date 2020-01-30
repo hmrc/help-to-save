@@ -15,7 +15,7 @@
  */
 
 package uk.gov.hmrc.helptosave.util
-
+import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 
 object TryOps {
