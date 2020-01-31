@@ -22,15 +22,15 @@ val dependencies = Seq(
   hmrc %% "play-config" % "7.5.0",
   hmrc %% "domain" % "5.6.0-play-26",
   hmrc %% "simple-reactivemongo" % "7.22.0-play-26",
-  hmrc %% "crypto" % "5.4.0",
-  hmrc %% "mongo-lock" % "6.15.0-play-26",
+  hmrc %% "crypto" % "5.5.0",
+  hmrc %% "mongo-lock" % "6.18.0-play-26",
   "org.typelevel" %% "cats-core" % "2.0.0",
   "com.github.kxbmap" %% "configs" % "0.4.4"
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc %% "stub-data-generator" % "0.5.3" % scope,
-  hmrc %% "reactivemongo-test" % "4.15.0-play-26" % scope,
+  hmrc %% "reactivemongo-test" % "4.16.0-play-26" % scope,
   hmrc %% "service-integration-test" % "0.9.0-play-26" % scope,
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "org.scalamock" %% "scalamock" % "4.4.0" % scope,
