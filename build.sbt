@@ -15,13 +15,28 @@ lazy val appDependencies: Seq[ModuleID] = dependencies ++ testDependencies()
 lazy val playSettings: Seq[Setting[_]] = Seq.empty
 lazy val plugins: Seq[Plugins] = Seq.empty
 
+val akkaVersion     = "2.5.23"
+
+val akkaHttpVersion = "10.0.15"
+
+
+dependencyOverrides += "com.typesafe.akka" %% "akka-stream"    % akkaVersion
+
+dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"  % akkaVersion
+
+dependencyOverrides += "com.typesafe.akka" %% "akka-slf4j"     % akkaVersion
+
+dependencyOverrides += "com.typesafe.akka" %% "akka-actor"     % akkaVersion
+
+dependencyOverrides += "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+
 val dependencies = Seq(
   ws,
   hmrc %% "bootstrap-play-26" % "1.3.0",
-  hmrc %% "auth-client" % "2.32.0-play-26",
+  hmrc %% "auth-client" % "2.33.0-play-26",
   hmrc %% "play-config" % "7.5.0",
   hmrc %% "domain" % "5.6.0-play-26",
-  hmrc %% "simple-reactivemongo" % "7.22.0-play-26",
+  hmrc %% "simple-reactivemongo" % "7.23.0-play-26",
   hmrc %% "crypto" % "5.5.0",
   hmrc %% "mongo-lock" % "6.18.0-play-26",
   "org.typelevel" %% "cats-core" % "2.0.0",
@@ -36,7 +51,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "org.scalamock" %% "scalamock" % "4.4.0" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.13" % scope // upgrading to 2.5.26 causes errors
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.23" % scope // upgrading to 2.5.26 causes errors
 )
 
 lazy val scoverageSettings = {
