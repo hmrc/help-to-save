@@ -129,10 +129,9 @@ lazy val wartRemoverSettings = {
         (baseDirectory.value ** "UCThresholdMongoProxy.scala").get ++
         (baseDirectory.value ** "EligibilityStatsActor.scala").get ++
         (baseDirectory.value ** "Lock.scala").get ++
-        (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
-  )
-  wartremoverExcluded in(Test, compile) ++=
-    (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
+        (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get,
+    wartremoverExcluded in(Test, compile) ++=
+      (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get)
 }
 
 lazy val catsSettings = scalacOptions ++= Seq("-Ypartial-unification","-deprecation", "-feature")
