@@ -130,16 +130,9 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
             val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
             result.fold({
               e ⇒
-                val errorCheck = "is undefined on object"
                 metrics.payePersonalDetailsErrorCounter.inc()
-                if (e.contains(errorCheck)) {
-                  logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK):" +
-                    s" ${e.split(errorCheck).head + errorCheck}] ${timeString(time)}", nino, additionalParams)
-                  pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response - Bad Data")
-                } else {
                   logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, additionalParams)
                   pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
-                }
             }, _ ⇒
               logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
             )

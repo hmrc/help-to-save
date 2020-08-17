@@ -16,14 +16,16 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import play.api.libs.json.{Format, JsValue, Json}
+import play.api.libs.json.{Format, JsError, JsValue, Json}
+import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.helptosave.utils.TestData
 
 import scala.util.Right
 
-class HttpResponseOpsSpec extends TestSupport {
+class HttpResponseOpsSpec extends TestSupport  with TestData {
 
   case class Test1(a: Int)
   case class Test2(b: String)
@@ -54,6 +56,12 @@ class HttpResponseOpsSpec extends TestSupport {
 
       // test when everything is ok
       HttpResponse(status, Some(Json.toJson(data))).parseJson[Test1] shouldBe Right(data)
+    }
+    "ensure PII is expunged when using parseJsonWithoutLoggingBody" in {
+      val data = payeDetailsNoPostCode("AE123456C")
+
+      HttpResponse(200, Some(Json.parse(data))).parseJsonWithoutLoggingBody[PayePersonalDetails] shouldBe
+        Left("Could not parse http response JSON: : ['postcode' is undefined on object: <expunged>]")
     }
   }
 }
