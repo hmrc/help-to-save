@@ -61,7 +61,6 @@ trait TestData {
        |  }
        |}""".stripMargin
 
-
   def payeDetailsNoPostCode(nino: String): String =
     s"""{
        |  "nino": "${nino.dropRight(1)}",
