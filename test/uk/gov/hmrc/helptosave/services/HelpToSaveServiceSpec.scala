@@ -328,7 +328,6 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         Await.result(service.getPersonalDetails(nino).value, 15.seconds).isLeft shouldBe true
       }
 
-
       "handle errors when parsing json with personal details containing no Postcode " in {
         inSequence {
           mockPayeGet(nino)(Some(HttpResponse(200, Some(Json.parse(payeDetailsNoPostCode(nino))))))

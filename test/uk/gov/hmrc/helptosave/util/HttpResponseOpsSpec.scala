@@ -25,7 +25,7 @@ import uk.gov.hmrc.helptosave.utils.TestData
 
 import scala.util.Right
 
-class HttpResponseOpsSpec extends TestSupport  with TestData {
+class HttpResponseOpsSpec extends TestSupport with TestData {
 
   case class Test1(a: Int)
   case class Test2(b: String)
@@ -61,7 +61,7 @@ class HttpResponseOpsSpec extends TestSupport  with TestData {
       val data = payeDetailsNoPostCode("AE123456C")
 
       HttpResponse(200, Some(Json.parse(data))).parseJsonWithoutLoggingBody[PayePersonalDetails] shouldBe
-        Left("Could not parse http response JSON: : ['postcode' is undefined on object: <expunged>]")
+        Left("Could not parse http response JSON: : ['postcode' is undefined on object: Set(line1, line2, line3, line4, countryCode, line5, sequenceNumber, startDate)]")
     }
   }
 }

@@ -131,8 +131,8 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
             result.fold({
               e ⇒
                 metrics.payePersonalDetailsErrorCounter.inc()
-                  logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, additionalParams)
-                  pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
+                logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, additionalParams)
+                pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
             }, _ ⇒
               logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
             )

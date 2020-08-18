@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter
 import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
+import uk.gov.hmrc.helptosave.util.JsLookupHelper._
 import uk.gov.hmrc.helptosave.models.CallingCodes.callingCodes
 import uk.gov.hmrc.helptosave.models.CountryCode.countryCodes
 
@@ -104,15 +105,15 @@ object PayePersonalDetails {
         JsError("No Address found in the DES response")
       )(v ⇒
           for {
-            line1 ← (v \ "line1").validate[String]
-            line2 ← (v \ "line2").validate[String]
-            line3 ← (v \ "line3").validateOpt[String]
-            line4 ← (v \ "line4").validateOpt[String]
-            line5 ← (v \ "line5").validateOpt[String]
-            postcode ← (v \ "postcode").validate[String]
-            countryCode ← (v \ "countryCode").validateOpt[Int]
+            line1 ← lookup("line1", v).validate[String]
+            line2 ← lookup("line2", v).validate[String]
+            line3 ← lookup("line3", v).validateOpt[String]
+            line4 ← lookup("line4", v).validateOpt[String]
+            line5 ← lookup("line5", v).validateOpt[String]
+            postcode ← lookup("postcode", v).validate[String]
+            countryCode ← lookup("countryCode", v).validateOpt[Int]
           } yield Address(line1, line2, line3, line4, line5, postcode, countryCode.flatMap(countryCodes.get).map(_.take(2)))
-        )
+      )
   }
 
   def readPhoneNumber(json: JsValue): JsResult[Option[String]] = {

@@ -41,7 +41,7 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
   def parseJsonWithoutLoggingBody[A](implicit reads: Reads[A]): Either[String, A] =
     parseJsonImpl(
       couldntReadJson  = (_, ex: Throwable) ⇒ s"Could not read http response as JSON (${ex.getMessage})",
-      couldntParseJson = (_, e: JsError) ⇒ s"Could not parse http response JSON: ${e.prettyPrintRemoveObj()}"
+      couldntParseJson = (_, e: JsError) ⇒ s"Could not parse http response JSON: ${e.prettyPrint()}"
     )
 
   def desCorrelationId: String = response.header("CorrelationId").getOrElse("-")
