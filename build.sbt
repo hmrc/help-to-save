@@ -34,7 +34,6 @@ val dependencies = Seq(
   ws,
   hmrc %% "bootstrap-backend-play-26" % "2.24.0",
   hmrc %% "auth-client" % "2.33.0-play-26",
-  hmrc %% "play-config" % "7.5.0",
   hmrc %% "domain" % "5.9.0-play-26",
   hmrc %% "simple-reactivemongo" % "7.30.0-play-26",
   hmrc %% "crypto" % "5.6.0",
@@ -143,7 +142,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(majorVersion := 2)
   .settings(playSettings ++ scoverageSettings: _*)
   .settings(scalaSettings: _*)
-  .settings(scalaVersion := "2.11.12")
+  .settings(scalaVersion := "2.12.11")
   .settings(publishingSettings: _*)
   .settings(defaultSettings(): _*)
   .settings(PlayKeys.playDefaultPort := 7001)
