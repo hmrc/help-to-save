@@ -122,9 +122,9 @@ object PayePersonalDetails {
         JsSuccess(None)
       )(v ⇒
           for {
-            callingCode ← (v \ "callingCode").validateOpt[Int]
-            convertedAreaDiallingCode ← (v \ "convertedAreaDiallingCode").validateOpt[String]
-            telephoneNumber ← (v \ "telephoneNumber").validateOpt[String]
+            callingCode ← lookup("callingCode", v).validateOpt[Int]
+            convertedAreaDiallingCode ← lookup("convertedAreaDiallingCode", v).validateOpt[String]
+            telephoneNumber ← lookup("telephoneNumber", v).validateOpt[String]
           } yield {
             (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
               case (Some(cc), Some(cadc), Some(t)) ⇒
