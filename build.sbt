@@ -45,11 +45,11 @@ val dependencies = Seq(
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc %% "stub-data-generator" % "0.5.3" % scope,
   hmrc %% "reactivemongo-test" % "4.21.0-play-26" % scope,
-  hmrc %% "service-integration-test" % "0.9.0-play-26" % scope,
+  hmrc %% "service-integration-test" % "0.12.0-play-26" % scope,
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
-  "org.scalamock" %% "scalamock" % "4.4.0" % scope,
+  "org.scalamock" %% "scalamock" % "5.0.0" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-  "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.5" % scope,
+  "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.23" % scope // upgrading to 2.5.26 causes errors
 )
 
