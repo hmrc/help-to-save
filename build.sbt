@@ -38,7 +38,7 @@ val dependencies = Seq(
   hmrc %% "simple-reactivemongo" % "7.30.0-play-26",
   hmrc %% "crypto" % "5.6.0",
   hmrc %% "mongo-lock" % "6.23.0-play-26",
-  "org.typelevel" %% "cats-core" % "2.0.0",
+  "org.typelevel" %% "cats-core" % "2.1.1",
   "com.github.kxbmap" %% "configs" % "0.4.4"
 )
 
