@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.actors
 
 import java.time.{Clock, LocalTime}
-import java.util.TimeZone
 
 import cats.instances.double._
 import cats.syntax.eq._
