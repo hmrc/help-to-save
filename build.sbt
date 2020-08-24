@@ -6,7 +6,7 @@ import uk.gov.hmrc.SbtAutoBuildPlugin
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin.publishingSettings
 import uk.gov.hmrc.versioning.SbtGitVersioning
-import wartremover.{Wart, Warts, wartremoverErrors, wartremoverExcluded}
+import wartremover.{Wart, Warts}
 
 val appName = "help-to-save"
 val hmrc = "uk.gov.hmrc"
