@@ -36,8 +36,7 @@ import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting, Result}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig

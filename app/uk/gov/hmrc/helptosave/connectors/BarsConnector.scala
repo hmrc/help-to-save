@@ -24,8 +24,7 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.http.HttpClient._
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.Logging
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -27,7 +27,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, Retrieval, v2}
 import uk.gov.hmrc.helptosave.models.ErrorResponse
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
