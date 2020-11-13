@@ -61,6 +61,44 @@ trait TestData {
        |  }
        |}""".stripMargin
 
+  def payeDetailsNoPostCode(nino: String): String =
+    s"""{
+       |  "nino": "${nino.dropRight(1)}",
+       |  "ninoSuffix": "${nino.takeRight(1)}",
+       |  "names": {
+       |    "1": {
+       |      "sequenceNumber": 12345,
+       |      "firstForenameOrInitial": "A",
+       |      "surname": "Smith",
+       |      "startDate": "2000-01-01"
+       |    }
+       |  },
+       |  "sex": "M",
+       |  "dateOfBirth": "1980-01-01",
+       |  "deceased": false,
+       |  "addresses": {
+       |    "1": {
+       |      "line1": "1 Station Road",
+       |      "line2": "Town Centre",
+       |      "line3": "Sometown",
+       |      "line4": "Anyshire",
+       |      "countryCode": 8,
+       |      "line5": "UK",
+       |      "sequenceNumber": 1,
+       |      "startDate": "2000-01-01"
+       |    }
+       |  },
+       | "phoneNumbers": {
+       |   "1": {
+       |      "callingCode": 1,
+       |      "telephoneType": 1,
+       |      "areaDiallingCode": "03000",
+       |      "telephoneNumber": "599614",
+       |      "convertedAreaDiallingCode": "020"
+       |    }
+       |  }
+       |}""".stripMargin
+
   val ppDetails = PayePersonalDetails(
     Name("A", "Smith"),
     LocalDate.parse("1980-01-01"),
