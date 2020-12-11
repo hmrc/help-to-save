@@ -32,13 +32,12 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
 
 val dependencies = Seq(
   ws,
-  hmrc %% "bootstrap-backend-play-26" % "2.24.0",
-  hmrc %% "auth-client" % "3.0.0-play-26",
-  hmrc %% "domain" % "5.9.0-play-26",
+  hmrc %% "bootstrap-backend-play-26" % "3.2.0",
+  hmrc %% "domain" % "5.10.0-play-26",
   hmrc %% "simple-reactivemongo" % "7.30.0-play-26",
   hmrc %% "crypto" % "5.6.0",
   hmrc %% "mongo-lock" % "6.23.0-play-26",
-  "org.typelevel" %% "cats-core" % "2.1.1",
+  "org.typelevel" %% "cats-core" % "2.2.0",
   "com.github.kxbmap" %% "configs" % "0.4.4"
 )
 
