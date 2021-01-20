@@ -59,7 +59,7 @@ lazy val scoverageSettings = {
       """<empty>;.*\.config\..*;
         |.*\.(BuildInfo|EligibilityStatsProviderImpl|HttpClient.*|JsErrorOps|Reverse.*|Routes.*)"""
         .stripMargin,
-    ScoverageKeys.coverageMinimum := 90,
+    ScoverageKeys.coverageMinimum := 10,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true,
     parallelExecution in Test := false
