@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplicat
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino}
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, Retrieval, v2}
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, GGCredId, PAClientId, Retrieval, v2}
 import uk.gov.hmrc.helptosave.models.ErrorResponse
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -78,6 +78,16 @@ class HelpToSaveAuth(htsAuthConnector:     AuthConnector,
 
   def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request ⇒
+      authorised(GGAndPrivilegedProviders).retrieve(v2.Retrievals.credentials) {
+        case Some(Credentials(_, providerType)) ⇒ {
+          logger.info(s"providerType: $providerType")
+        }
+      }
+
+      authorised(GGAndPrivilegedProviders).retrieve(v2.Retrievals.authProviderId) { providerId ⇒
+        logger.info(s"authProviderId: ${providerId.getClass.getSimpleName}")
+      }
+
       authorised(GGAndPrivilegedProviders).retrieve(v2.Retrievals.authProviderId) {
         case GGCredId(_) ⇒
           authorised().retrieve(v2Nino) { retrievedNINO ⇒
