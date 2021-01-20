@@ -44,22 +44,5 @@ trait AuthSupport extends TestSupport {
       .expects(*, retrieval, *, *)
       .returning(result.fold(e ⇒ Future.failed[A](e), r ⇒ Future.successful(r)))
 
-  def testWithGGAndPrivilegedAccess(f: (() ⇒ Unit) ⇒ Unit): Unit = {
-    withClue("For GG access: "){
-      f{ () ⇒
-        inSequence {
-          mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(GGCredId("id")))
-          mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(Some(nino)))
-        }
-      }
-    }
-
-    withClue("For privileged access: "){
-      f{ () ⇒
-        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(PAClientId("id")))
-      }
-    }
-  }
-
 }
 
