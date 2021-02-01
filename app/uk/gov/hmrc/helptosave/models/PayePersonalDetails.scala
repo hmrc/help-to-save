@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ object PayePersonalDetails {
             postcode ← lookup("postcode", v).validate[String]
             countryCode ← lookup("countryCode", v).validateOpt[Int]
           } yield Address(line1, line2, line3, line4, line5, postcode, countryCode.flatMap(countryCodes.get).map(_.take(2)))
-      )
+        )
   }
 
   def readPhoneNumber(json: JsValue): JsResult[Option[String]] = {
