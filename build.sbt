@@ -32,7 +32,7 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
 
 val dependencies = Seq(
   ws,
-  hmrc %% "bootstrap-backend-play-26" % "4.3.0",
+  hmrc %% "bootstrap-backend-play-26" % "5.0.0",
   hmrc %% "domain" % "5.11.0-play-26",
   hmrc %% "simple-reactivemongo" % "8.0.0-play-26",
   hmrc %% "crypto" % "6.0.0",
@@ -45,10 +45,10 @@ val dependencies = Seq(
 
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc %% "stub-data-generator" % "0.5.3" % scope,
-  hmrc %% "reactivemongo-test" % "4.21.0-play-26" % scope,
-  hmrc %% "service-integration-test" % "0.12.0-play-26" % scope,
+  hmrc %% "reactivemongo-test" % "4.22.0-play-26" % scope,
+  hmrc %% "service-integration-test" % "1.1.0-play-26" % scope,
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
-  "org.scalamock" %% "scalamock" % "5.0.0" % scope,
+  "org.scalamock" %% "scalamock" % "5.1.0" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.23" % scope // upgrading to 2.5.26 causes errors

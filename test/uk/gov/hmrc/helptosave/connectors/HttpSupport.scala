@@ -31,22 +31,22 @@ trait HttpSupport { this: MockFactory with Matchers ⇒
 
   def mockGet(url: String, queryParams: Map[String, String] = emptyMap, headers: Map[String, String] = emptyMap)(response: Option[HttpResponse]) =
     (mockHttp.GET(_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext))
-      .expects(where{ (u: String, q: Seq[(String, String)], _: Seq[(String, String)], _: HttpReads[HttpResponse], h: HeaderCarrier, _: ExecutionContext) ⇒
+      .expects(where{ (u: String, q: Seq[(String, String)], h: Seq[(String, String)], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext) ⇒
         // use matchers here to get useful error messages when the following predicates
         // are not satisfied - otherwise it is difficult to tell in the logs what went wrong
         u shouldBe url
         q shouldBe queryParams.toSeq
-        //h.extraHeaders shouldBe headers.toSeq
+        h shouldBe headers.toSeq
         true
       })
       .returning(response.fold(Future.failed[HttpResponse](new Exception("Test exception message")))(Future.successful))
 
   def mockPut[A](url: String, body: A, headers: Map[String, String] = Map.empty[String, String])(result: Option[HttpResponse]): Unit =
     (mockHttp.PUT(_: String, _: A, _: Seq[(String, String)])(_: Writes[A], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext))
-      .expects(where{ (u: String, a: A, _: Seq[(String, String)], _: Writes[A], _: HttpReads[HttpResponse], hc: HeaderCarrier, _: ExecutionContext) ⇒
+      .expects(where{ (u: String, a: A, h: Seq[(String, String)], _: Writes[A], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext) ⇒
         u shouldBe url
         a shouldBe body
-        //hc.extraHeaders shouldBe headers.toSeq
+        h shouldBe headers.toSeq
         true
       })
       .returning(result.fold[Future[HttpResponse]](Future.failed(new Exception("Test exception message")))(Future.successful))
