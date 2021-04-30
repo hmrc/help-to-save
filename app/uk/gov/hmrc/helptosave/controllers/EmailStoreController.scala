@@ -26,7 +26,6 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.TryOps._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -42,7 +41,7 @@ class EmailStoreController @Inject() (emailStore:           EmailStore,
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
-  def store(email: String, maybeNINO: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNINO) { implicit request ⇒ nino ⇒
+  def store(email: String, maybeNINO: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNINO) { _ ⇒ nino ⇒
     Try(new String(base64Decoder.decode(email))).fold(
       { error ⇒
         logger.warn(s"Could not store email. Could not decode email: $error", nino)
@@ -60,7 +59,7 @@ class EmailStoreController @Inject() (emailStore:           EmailStore,
     )
   }
 
-  def get(): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
+  def get(): Action[AnyContent] = ggAuthorisedWithNino { _ ⇒ implicit nino ⇒
     emailStore.get(nino).fold(
       { e ⇒
         logger.warn(e, nino)

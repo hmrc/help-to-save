@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import scala.concurrent.{Await, ExecutionContext}
 class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with HttpSupport {
 
   val mockAuditor = mock[HTSAuditor]
-
+  val returnHeaders = Map[String, Seq[String]]()
   override val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
   val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
@@ -61,7 +61,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle 201 response from the help-to-save-proxy" in {
 
-        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(CREATED)))
+        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(CREATED, "")))
         val result = await(proxyConnector.createAccount(userInfo))
 
         result.status shouldBe CREATED
@@ -69,7 +69,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle 409 response from the help-to-save-proxy" in {
 
-        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(CONFLICT)))
+        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(CONFLICT, "")))
         val result = await(proxyConnector.createAccount(userInfo))
 
         result.status shouldBe CONFLICT
@@ -77,7 +77,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle bad_request response from frontend" in {
 
-        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(BAD_REQUEST)))
+        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(BAD_REQUEST, "")))
         val result = await(proxyConnector.createAccount(userInfo))
 
         result.status shouldBe BAD_REQUEST
@@ -102,7 +102,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
     "update email" must {
 
       "handle 200 response from the help-to-save-proxy" in {
-        mockPut(updateEmailURL, userInfo)(Some(HttpResponse(OK)))
+        mockPut(updateEmailURL, userInfo)(Some(HttpResponse(OK, "")))
         val result = await(proxyConnector.updateEmail(userInfo))
 
         result.status shouldBe OK
@@ -122,7 +122,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
           def test(uCResponse: UCResponse): Unit = {
             withClue(s"For UCResponse $uCResponse:"){
-              mockGet(url, queryParams)(Some(HttpResponse(OK, Some(Json.toJson(uCResponse)))))
+              mockGet(url, queryParams)(Some(HttpResponse(OK, Json.toJson(uCResponse), returnHeaders)))
 
               val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
 
@@ -137,7 +137,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
       }
 
       "handle bad_request response from frontend" in {
-        mockGet(url, queryParams)(Some(HttpResponse(BAD_REQUEST)))
+        mockGet(url, queryParams)(Some(HttpResponse(BAD_REQUEST, "")))
         val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
 
         result shouldBe Left("Received unexpected status(400) from UniversalCredit check")
@@ -147,7 +147,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
           def test(json: String) = {
             withClue(s"For json $json:") {
-              mockGet(url, queryParams)(Some(HttpResponse(OK, Some(Json.parse(json)))))
+              mockGet(url, queryParams)(Some(HttpResponse(OK, Json.parse(json), returnHeaders)))
 
               val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
               result.left.value contains "unable to parse UCResponse from proxy"
@@ -180,7 +180,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
         def event(accountJson: JsValue = nsiAccountJson) = GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
 
       "handle success response with Accounts having Terms" in {
-        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, Some(nsiAccountJson))))
+        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, nsiAccountJson, returnHeaders)))
         mockSendAuditEvent(event(), nino)
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
@@ -192,7 +192,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
         val json = nsiAccountJson + ("terms" -> Json.arr())
 
         inSequence {
-          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, Some(json))))
+          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
           mockSendAuditEvent(event(json), nino)
           mockPagerDutyAlert("Could not parse JSON in the getAccount response")
         }
@@ -206,7 +206,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
         val json = nsiAccountJson - "accountBalance"
 
         inSequence {
-          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, Some(json))))
+          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
           mockSendAuditEvent(event(json), nino)
           mockPagerDutyAlert("Could not parse JSON in the getAccount response")
         }
@@ -218,7 +218,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "succeed when the NS&I response omits the emailAddress optional field" in {
         val json = nsiAccountJson - "emailAddress"
-        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, Some(json))))
+        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
         mockSendAuditEvent(event(json), nino)
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
 
@@ -227,7 +227,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle non 200 responses from help-to-save-proxy" in {
         inSequence {
-          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400)))
+          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400, "")))
           mockPagerDutyAlert("Received unexpected http status in response to getAccount")
         }
 
@@ -265,7 +265,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
                |}
           """.stripMargin)
 
-        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400, Some(errorResponse))))
+        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400, errorResponse, returnHeaders)))
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result shouldBe Right(None)
@@ -345,7 +345,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
             |""".stripMargin
         )
 
-        mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, Some(json))))
+        mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
 
         val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
@@ -379,7 +379,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
         )
 
         inSequence {
-          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, Some(json))))
+          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
           mockPagerDutyAlert("Could not parse get transactions response")
         }
 
@@ -411,7 +411,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
         )
 
         inSequence {
-          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, Some(json))))
+          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
           mockPagerDutyAlert("Could not parse get transactions response")
         }
 
@@ -425,7 +425,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle non 200 responses from help-to-save-proxy" in {
         inSequence {
-          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(400)))
+          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(400, "")))
           mockPagerDutyAlert("Received unexpected http status in response to get transactions")
         }
 
@@ -469,7 +469,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
                |}
           """.stripMargin)
 
-        mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(400, Some(errorResponse))))
+        mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(400, errorResponse, returnHeaders)))
 
         val result = await(proxyConnector.getTransactions(nino, systemId, correlationId).value)
         result shouldBe Right(None)

@@ -81,7 +81,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
       doUpdate(crypto.encrypt(email), nino)
         .map[Either[String, Unit]] { result ⇒
-          val time = timerContext.stop()
+          timerContext.stop()
 
           if (!result) {
             metrics.emailStoreUpdateErrorCounter.inc()
@@ -90,7 +90,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
         }
         .recover {
           case NonFatal(e) ⇒
-            val time = timerContext.stop()
+            timerContext.stop()
             metrics.emailStoreUpdateErrorCounter.inc()
             Left(s"${e.getMessage}")
         }
@@ -100,7 +100,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
     val timerContext = metrics.emailStoreGetTimer.time()
 
     find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
-      val time = timerContext.stop()
+      timerContext.stop()
 
       val decryptedEmail = res.headOption
         .map(data ⇒ crypto.decrypt(data.email))
@@ -113,7 +113,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
       }
     }.recover {
       case e ⇒
-        val time = timerContext.stop()
+        timerContext.stop()
         metrics.emailStoreGetErrorCounter.inc()
         Left(s"Could not read from email store: ${e.getMessage}")
     }

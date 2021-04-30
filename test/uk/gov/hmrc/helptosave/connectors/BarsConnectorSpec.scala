@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.util.UUID
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
-import uk.gov.hmrc.helptosave.util.UnitSpec
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HttpResponse
 
@@ -56,7 +55,7 @@ class BarsConnectorSpec extends TestSupport with HttpSupport {
             |  "directDebitInstructionsDisallowed": "yes"
             |}""".stripMargin
 
-        mockPost("http://localhost:7002/validateBankDetails", headers, body)(Some(HttpResponse(Status.OK, Some(Json.parse(response)))))
+        mockPost("http://localhost:7002/validateBankDetails", headers, body)(Some(HttpResponse(Status.OK, Json.parse(response), Map[String, Seq[String]]())))
         val result = await(connector.validate(BankDetailsValidationRequest("AE123456C", "123456", "0201234"), trackingId))
 
         result.status shouldBe 200

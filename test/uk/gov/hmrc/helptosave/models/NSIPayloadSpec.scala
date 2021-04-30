@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.models
 import java.time.LocalDate
 
 import org.scalatest.{Matchers, WordSpec}
-import play.api.libs.json.{JsSuccess, JsValue, Json}
+import play.api.libs.json.{JsSuccess, Json}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 
 class NSIPayloadSpec extends WordSpec with Matchers {

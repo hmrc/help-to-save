@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
   private val mockBarsConnector: BarsConnector = mock[BarsConnector]
 
   val mockAuditor = mock[HTSAuditor]
-
+  val returnHeaders = Map[String, Seq[String]]()
   def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: Option[HttpResponse]): CallHandler4[BankDetailsValidationRequest, UUID, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
     (mockBarsConnector.validate(_: BankDetailsValidationRequest, _: UUID)(_: HeaderCarrier, _: ExecutionContext)).expects(barsRequest, *, *, *)
       .returning(response.fold[Future[HttpResponse]](Future.failed(new Exception("")))(r ⇒ Future.successful(r)))
@@ -72,7 +72,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
         val response = newResponse(true, "yes")
 
         inSequence {
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
+          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
         val result = await(service.validate(barsRequest))
@@ -83,7 +83,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
         val response = newResponse(false, "no")
 
         inSequence {
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
+          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
         val result = await(service.validate(barsRequest))
@@ -94,7 +94,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
         val response = newResponse(true, "no")
 
         inSequence {
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
+          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
         val result = await(service.validate(barsRequest))
@@ -105,7 +105,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
         val response = newResponse(true, "blah")
 
         inSequence {
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
+          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         }
         val result = await(service.validate(barsRequest))
@@ -124,7 +124,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
             |}""".stripMargin
 
         inSequence {
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Some(Json.parse(response)))))
+          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
 
         }
@@ -134,7 +134,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       }
 
       "handle unsuccessful response from bars check" in {
-        mockBarsConnector(barsRequest)(Some(HttpResponse(400)))
+        mockBarsConnector(barsRequest)(Some(HttpResponse(400, "")))
         mockPagerDutyAlert("unexpected status from bars check")
         val result = await(service.validate(barsRequest))
         result shouldBe Left("unexpected status from bars check")

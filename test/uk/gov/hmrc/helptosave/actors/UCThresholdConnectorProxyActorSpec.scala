@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import org.scalamock.handlers.CallHandler1
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
@@ -26,8 +25,7 @@ import uk.gov.hmrc.helptosave.utils.MockPagerDuty
 import scala.concurrent.ExecutionContext
 
 class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") with MockPagerDuty {
-  import system.dispatcher
-
+  val returnHeaders = Map[String, Seq[String]]()
   val connector = mock[DESConnector]
 
   val actor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, mockPagerDuty))
@@ -43,7 +41,7 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
 
       "ask for and return the value from the threshold connector" in {
 
-        mockConnectorGetValue(HttpResponse(200, Some(Json.parse("""{"thresholdAmount" : 100.0}"""))))
+        mockConnectorGetValue(HttpResponse(200, Json.parse("""{"thresholdAmount" : 100.0}"""), returnHeaders))
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
         expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(100.0)))
@@ -51,7 +49,7 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
 
       "ask for and return an error from the threshold connector if an error occurs" in {
 
-        mockConnectorGetValue(HttpResponse(500, Some(Json.toJson("error occurred"))))
+        mockConnectorGetValue(HttpResponse(500, Json.toJson("error occurred"), returnHeaders))
 
         (mockPagerDuty.alert(_: String))
           .expects("Received unexpected http status in response to get UC threshold from DES")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.util.Base64
 
 import play.api.Configuration
 import play.api.mvc.Results._
-import play.api.mvc.{AnyContentAsEmpty, Call}
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
@@ -58,8 +58,6 @@ class StrideAuthSpec extends TestSupport {
       .returning(result.fold(Future.failed, Future.successful))
 
   "StrideAuth" must {
-
-    val call = Call("GET", "url")
 
     lazy val strideAuth = new StrideAuth(mockAuthConnector, testCC)
 

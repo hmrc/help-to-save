@@ -21,6 +21,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.WriteConcern
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
@@ -30,7 +31,7 @@ import uk.gov.hmrc.helptosave.models.account.AccountNumber
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, NINO}
+import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -87,7 +88,7 @@ object EnrolmentStore {
 
 @Singleton
 class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
-                                     metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
+                                     metrics: Metrics)(implicit ec: ExecutionContext)
   extends ReactiveRepository[EnrolmentData, BSONObjectID](
     collectionName = "enrolments",
     mongo          = mongo.mongoConnector.db,
@@ -124,16 +125,30 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
     collection.findAndUpdate(
       BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
       BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
-      fetchNewObject = true,
-      upsert         = false
+      fetchNewObject           = true,
+      upsert                   = false,
+      sort                     = None,
+      fields                   = None,
+      bypassDocumentValidation = false,
+      writeConcern             = WriteConcern.Default,
+      maxTime                  = None,
+      collation                = None,
+      arrayFilters             = Nil
     ).map(_.result[EnrolmentData])
 
   private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
     collection.findAndUpdate(
       BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
       BSONDocument("$set" -> BSONDocument("accountNumber" -> accountNumber)),
-      fetchNewObject = true,
-      upsert         = false
+      fetchNewObject           = true,
+      upsert                   = false,
+      sort                     = None,
+      fields                   = None,
+      bypassDocumentValidation = false,
+      writeConcern             = WriteConcern.Default,
+      maxTime                  = None,
+      collation                = None,
+      arrayFilters             = Nil
     ).map(_.result[EnrolmentData])
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =
@@ -142,12 +157,12 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
         find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
-          val time = timerContext.stop()
+          timerContext.stop()
 
           Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
         }.recover {
           case e ⇒
-            val time = timerContext.stop()
+            timerContext.stop()
             metrics.enrolmentStoreGetErrorCounter.inc()
 
             Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
@@ -169,7 +184,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
         }
       }.recover {
         case e ⇒
-          val time = timerContext.stop()
+          timerContext.stop()
           metrics.enrolmentStoreUpdateErrorCounter.inc()
 
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
@@ -193,7 +208,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
         }
       }.recover {
         case e ⇒
-          val time = timerContext.stop()
+          timerContext.stop()
           metrics.enrolmentStoreUpdateErrorCounter.inc()
 
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
@@ -227,14 +242,14 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
         find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map[Either[String, AccountNumber]] { res ⇒
-          val time = timerContext.stop()
+          timerContext.stop()
 
           //Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
 
           Right(AccountNumber(res.headOption.flatMap(_.accountNumber)))
         }.recover {
           case e ⇒
-            val time = timerContext.stop()
+            timerContext.stop()
             metrics.enrolmentStoreGetErrorCounter.inc()
 
             Left(s"For NINO [$nino]: Could not read account number from enrolment store: ${e.getMessage}")

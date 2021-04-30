@@ -39,7 +39,7 @@ trait EnrolmentBehaviour {
     _ ← enrolmentStore.updateItmpFlag(nino, itmpFlag = true)
   } yield ()
 
-  def setAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] =
+  def setAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     enrolmentStore.updateWithAccountNumber(nino, accountNumber)
 
   def enrolUser(createAccountRequest: CreateAccountRequest, accountNumber: Option[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {

@@ -18,7 +18,6 @@ package uk.gov.hmrc.helptosave.actors
 
 import akka.pattern.pipe
 import akka.actor.{Actor, Props}
-import cats.syntax.either._
 import play.api.http.Status
 import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxyActor.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
@@ -27,14 +26,14 @@ import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerting: PagerDutyAlerting) extends Actor with Logging {
   import context.dispatcher
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, Double]] =
+  def getThreshold()(implicit hc: HeaderCarrier): Future[Either[String, Double]] =
     dESConnector.getThreshold().map[Either[String, Double]] { response ⇒
 
       val additionalParams = "DesCorrelationId" -> response.desCorrelationId

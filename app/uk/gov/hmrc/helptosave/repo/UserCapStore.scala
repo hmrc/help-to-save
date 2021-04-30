@@ -18,10 +18,10 @@ package uk.gov.hmrc.helptosave.repo
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZoneId}
-
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo._
+import reactivemongo.api.WriteConcern
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers.BSONDocumentWrites
@@ -62,8 +62,15 @@ class MongoUserCapStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: E
     collection.findAndUpdate(
       BSONDocument(),
       BSONDocument("$set" -> BSONDocument("date" -> dateFormat.format(userCap.date), "dailyCount" -> userCap.dailyCount, "totalCount" -> userCap.totalCount)),
-      fetchNewObject = true,
-      upsert         = true
+      fetchNewObject           = true,
+      upsert                   = true,
+      sort                     = None,
+      fields                   = None,
+      bypassDocumentValidation = false,
+      writeConcern             = WriteConcern.Default,
+      maxTime                  = None,
+      collation                = None,
+      arrayFilters             = Seq()
     ).map(_.result[UserCap])
   }
 

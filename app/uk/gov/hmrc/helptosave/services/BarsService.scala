@@ -19,7 +19,6 @@ package uk.gov.hmrc.helptosave.services
 import java.util.UUID
 
 import cats.instances.string._
-import cats.syntax.either._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
@@ -30,7 +29,7 @@ import uk.gov.hmrc.helptosave.connectors.BarsConnector
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationResult, BankDetailsValidationRequest}
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}

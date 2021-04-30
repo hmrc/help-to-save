@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
   private val mockDESConnector = mock[DESConnector]
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
   val mockAuditor = mock[HTSAuditor]
+  val returnHeaders = Map[String, Seq[String]]()
 
   val threshold = 1.23
 
@@ -152,7 +153,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           whenever(eligibilityCheckResponse.resultCode =!= 4) {
             inSequence {
               mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(eligibilityCheckResponse)))) // scalastyle:ignore magic.number
+              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
               mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
             }
 
@@ -164,7 +165,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       "call DES even if there is an errors during UC claimant check" in {
         inSequence {
           mockUCClaimantCheck(nino, threshold)(Left("unexpected error during UCClaimant check"))
-          mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
+          mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
           mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
         }
 
@@ -173,7 +174,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
       "continue the eligibility check when the threshold cannot be retrieved and the applicant is eligible from a WTC perspective" in {
         inSequence {
-          mockDESEligibilityCheck(nino, None)(HttpResponse(200, Some(Json.parse(jsonCheckResponse))))
+          mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
           mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
         }
 
@@ -186,7 +187,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           whenever(eligibilityCheckResponse.resultCode =!= 4) {
             inSequence {
               mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(eligibilityCheckResponse)))) // scalastyle:ignore magic.number
+              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
               mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
             }
 
@@ -201,7 +202,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           whenever(eligibilityCheckResponse.resultCode =!= 4) {
             inSequence {
               mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson(eligibilityCheckResponse)))) // scalastyle:ignore magic.number
+              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
               mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
             }
 
@@ -214,7 +215,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         "the call to DES fails" in {
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, None))
+            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, ""))
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to check eligibility")
           }
@@ -227,7 +228,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
             whenever(status > 0 && status =!= 200 && status =!= 404) {
               inSequence {
                 mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-                mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(status, None))
+                mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(status, ""))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
               }
@@ -240,7 +241,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         "parsing invalid json" in {
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}""")))) // scalastyle:ignore magic.number
+            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders)) // scalastyle:ignore magic.number
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Could not parse JSON in eligibility check response")
           }
@@ -253,7 +254,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         "DES returns result code 4" in {
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Some(Json.parse(jsonCheckResponseReasonCode4))))
+            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.parse(jsonCheckResponseReasonCode4), returnHeaders))
             mockPagerDutyAlert("Received result code 4 from DES eligibility check")
           }
 
@@ -266,7 +267,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
     "handling setFlag calls" must {
 
       "return a Right when call to ITMP comes back with 200" in {
-        mockSetFlag(nino)(HttpResponse(200))
+        mockSetFlag(nino)(HttpResponse(200, ""))
 
         await(service.setFlag(nino).value).isRight shouldBe true
 
@@ -280,7 +281,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           forAll { status: Int ⇒
             whenever(status != 200 && status != 403) {
               inSequence {
-                mockSetFlag(nino)(HttpResponse(status))
+                mockSetFlag(nino)(HttpResponse(status, ""))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to setting ITMP flag")
               }
@@ -292,7 +293,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
         "an error occurs while calling the ITMP endpoint" in {
           inSequence {
-            mockSetFlag(nino)(HttpResponse(500))
+            mockSetFlag(nino)(HttpResponse(500, ""))
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to set ITMP flag")
           }
@@ -308,19 +309,19 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       val nino = "AA123456A"
 
       "return a Right when nino is successfully found in DES" in {
-        mockPayeGet(nino)(Some(HttpResponse(200, Some(Json.parse(payeDetails(nino))))))
+        mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders)))
         Await.result(service.getPersonalDetails(nino).value, 5.seconds).isRight shouldBe true
       }
 
       "handle 404 response when a nino is not found in DES" in {
-        mockPayeGet(nino)(Some(HttpResponse(404, None))) // scalastyle:ignore magic.number
+        mockPayeGet(nino)(Some(HttpResponse(404, ""))) // scalastyle:ignore magic.number
         mockPagerDutyAlert("Received unexpected http status in response to paye-personal-details")
         Await.result(service.getPersonalDetails(nino).value, 5.seconds).isLeft shouldBe true
       }
 
       "handle errors when parsing invalid json" in {
         inSequence {
-          mockPayeGet(nino)(Some(HttpResponse(200, Some(Json.toJson("""{"invalid": "foo"}"""))))) // scalastyle:ignore magic.number
+          mockPayeGet(nino)(Some(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders))) // scalastyle:ignore magic.number
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("Could not parse JSON in the paye-personal-details response")
         }
@@ -329,7 +330,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
       "handle errors when parsing json with personal details containing no Postcode " in {
         inSequence {
-          mockPayeGet(nino)(Some(HttpResponse(200, Some(Json.parse(payeDetailsNoPostCode(nino))))))
+          mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetailsNoPostCode(nino)), returnHeaders)))
           mockPagerDutyAlert("Could not parse JSON in the paye-personal-details response")
         }
         Await.result(service.getPersonalDetails(nino).value, 15.seconds).isLeft shouldBe true
@@ -350,7 +351,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           forAll { status: Int ⇒
             whenever(status > 0 && status =!= 200 && status =!= 404) {
               inSequence {
-                mockPayeGet(nino)(Some(HttpResponse(status)))
+                mockPayeGet(nino)(Some(HttpResponse(status, "")))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to paye-personal-details")
               }

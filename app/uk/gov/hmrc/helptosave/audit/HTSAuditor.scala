@@ -30,7 +30,7 @@ class HTSAuditor @Inject() (val auditConnector: AuditConnector)(implicit transfo
 
   def sendEvent(event: HTSEvent, nino: NINO)(implicit ec: ExecutionContext): Unit = {
     val checkEventResult = auditConnector.sendExtendedEvent(event.value)
-    checkEventResult.onFailure {
+    checkEventResult.failed.foreach {
       case NonFatal(e) ⇒
         logger.warn(s"Unable to post audit event of type ${event.value.auditType} to audit connector - ${e.getMessage}", e, nino)
     }

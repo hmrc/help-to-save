@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggAuthorisedWithNINO" must {
 
-        def callAuth = htsAuth.ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
+        def callAuth = htsAuth.ggAuthorisedWithNino { _ ⇒ _ ⇒
           Future.successful(Ok("authSuccess"))
         }
 
@@ -81,7 +81,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggOrPrivilegedAuthorised" must {
 
-        def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { implicit request ⇒
+        def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { _ ⇒
           Future.successful(Ok("authSuccess"))
         }
 
@@ -96,7 +96,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggOrPrivilegedAuthorisedWithNINO" when {
 
-        def callAuth(nino: Option[String]) = htsAuth.ggOrPrivilegedAuthorisedWithNINO(nino) { implicit request ⇒ _ ⇒
+        def callAuth(nino: Option[String]) = htsAuth.ggOrPrivilegedAuthorisedWithNINO(nino) { _ ⇒ _ ⇒
           Future.successful(Ok("authSuccess"))
         }
 
