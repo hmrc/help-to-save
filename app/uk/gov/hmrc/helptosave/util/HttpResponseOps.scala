@@ -18,9 +18,7 @@ package uk.gov.hmrc.helptosave.util
 
 import play.api.libs.json.{JsError, JsSuccess, Reads}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
-import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.http.HttpResponse
-
 import scala.language.implicitConversions
 import scala.util.Try
 

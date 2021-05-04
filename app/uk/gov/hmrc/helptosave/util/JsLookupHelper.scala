@@ -30,7 +30,7 @@ object JsLookupHelper {
       obj.value.get(fieldName).map(JsDefined.apply)
         .getOrElse(JsUndefined(s"'$fieldName' is undefined on object: ${obj.keys.mkString(",")}"))
     case JsDefined(o) ⇒
-      JsUndefined(s"submitted json is not an object")
+      JsUndefined("submitted json is not an object")
     case undef ⇒ undef
   }
 

@@ -22,12 +22,11 @@ import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.collection.JSONBatchCommands.AggregationFramework._
+import reactivemongo.play.json.commands.JSONAggregationFramework._
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
-import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
@@ -42,7 +41,7 @@ trait EligibilityStatsStore {
 
 @Singleton
 class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
-                                            metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
+                                            metrics: Metrics)(implicit ec: ExecutionContext)
   extends ReactiveRepository[EnrolmentData, BSONObjectID](
     collectionName = "enrolments",
     mongo          = mongo.mongoConnector.db,

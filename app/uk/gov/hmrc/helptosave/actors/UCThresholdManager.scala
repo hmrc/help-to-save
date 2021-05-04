@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import java.time.{Clock, LocalTime}
-
+import java.time.LocalTime
 import cats.instances.double._
 import cats.syntax.eq._
 import configs.syntax._

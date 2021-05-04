@@ -22,7 +22,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue, Writes}
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.UCResponse
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO}
+import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -44,7 +44,7 @@ trait DESConnector {
 
 @Singleton
 class DESConnectorImpl @Inject() (http:           HttpClient,
-                                  servicesConfig: ServicesConfig)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+                                  servicesConfig: ServicesConfig)(implicit appConfig: AppConfig)
   extends DESConnector with Logging {
 
   val itmpECBaseURL: String = servicesConfig.baseUrl("itmp-eligibility-check")

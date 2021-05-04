@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,14 +119,8 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
           controller.getAccountNumber()(FakeRequest())
 
       val accountNumber = AccountNumber(Some("1234567890123"))
-
-      val randomNino = randomNINO()
       val correlationId = "-"
       val systemId = "help-to-save"
-      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
-
-      val getAccountUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/account"
-      val queryParameters = Map("nino" → randomNino, "correlationId" → correlationId, "version" → version, "systemId" → systemId)
 
       "get the account number from the enrolment store" in {
         mockAuth(v2Nino)(Right(mockedNinoRetrieval))

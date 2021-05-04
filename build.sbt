@@ -32,21 +32,23 @@ dependencyOverrides += "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
 
 val dependencies = Seq(
   ws,
-  hmrc %% "bootstrap-backend-play-26" % "3.2.0",
-  hmrc %% "domain" % "5.10.0-play-26",
-  hmrc %% "simple-reactivemongo" % "7.30.0-play-26",
-  hmrc %% "crypto" % "5.6.0",
-  hmrc %% "mongo-lock" % "6.23.0-play-26",
+  hmrc %% "bootstrap-backend-play-26" % "5.0.0",
+  hmrc %% "domain" % "5.11.0-play-26",
+  hmrc %% "simple-reactivemongo" % "8.0.0-play-26",
+  hmrc %% "crypto" % "6.0.0",
+  hmrc %% "mongo-lock" % "7.0.0-play-26",
   "org.typelevel" %% "cats-core" % "2.2.0",
-  "com.github.kxbmap" %% "configs" % "0.4.4"
+  "com.github.kxbmap" %% "configs" % "0.6.1",
+  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.1" cross CrossVersion.full),
+  "com.github.ghik" % "silencer-lib" % "1.7.1" % Provided cross CrossVersion.full
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc %% "stub-data-generator" % "0.5.3" % scope,
-  hmrc %% "reactivemongo-test" % "4.21.0-play-26" % scope,
-  hmrc %% "service-integration-test" % "0.12.0-play-26" % scope,
+  hmrc %% "reactivemongo-test" % "4.22.0-play-26" % scope,
+  hmrc %% "service-integration-test" % "1.1.0-play-26" % scope,
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
-  "org.scalamock" %% "scalamock" % "5.0.0" % scope,
+  "org.scalamock" %% "scalamock" % "5.1.0" % scope,
   "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
   "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.23" % scope // upgrading to 2.5.26 causes errors
@@ -162,8 +164,4 @@ lazy val microservice = Project(appName, file("."))
     addTestReportOption(IntegrationTest, "int-test-reports"),
     //testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
     parallelExecution in IntegrationTest := false)
-  .settings(resolvers ++= Seq(
-    Resolver.bintrayRepo("hmrc", "releases"),
-    Resolver.jcenterRepo,
-    Resolver.bintrayRepo("hmrclt", "maven")
-  ))
+  .settings(scalacOptions += "-P:silencer:pathFilters=routes")

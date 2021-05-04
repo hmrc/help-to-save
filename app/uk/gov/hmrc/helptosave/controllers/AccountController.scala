@@ -19,7 +19,6 @@ package uk.gov.hmrc.helptosave.controllers
 import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 
@@ -28,8 +27,7 @@ import scala.concurrent.ExecutionContext
 class AccountController @Inject() (proxyConnector:       HelpToSaveProxyConnector,
                                    authConnector:        AuthConnector,
                                    controllerComponents: ControllerComponents)(implicit transformer: LogMessageTransformer,
-                                                                               appConfig: AppConfig,
-                                                                               ec:        ExecutionContext)
+                                                                               ec: ExecutionContext)
   extends HelpToSaveAuth(authConnector, controllerComponents) with AccountQuery {
 
   def getAccount(nino: String, systemId: String, correlationId: Option[String]): Action[AnyContent] =

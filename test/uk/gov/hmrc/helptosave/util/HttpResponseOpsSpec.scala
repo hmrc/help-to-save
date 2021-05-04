@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import play.api.libs.json.{Format, JsError, JsValue, Json}
+import play.api.libs.json.{Format, JsValue, Json}
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.utils.TestSupport
@@ -32,6 +32,8 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
 
   implicit val test1Format: Format[Test1] = Json.format[Test1]
   implicit val test2Format: Format[Test2] = Json.format[Test2]
+
+  val returnHeaders = Map[String, Seq[String]]()
 
   case class ThrowingHttpResponse() extends HttpResponse {
     override def json: JsValue = sys.error("")
@@ -51,18 +53,18 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
       ThrowingHttpResponse().parseJson[Test1].isLeft shouldBe true
 
       // test when there is no JSON
-      HttpResponse(status).parseJson[Test1].isLeft shouldBe true
+      HttpResponse(status, "").parseJson[Test1].isLeft shouldBe true
 
       // test when the JSON isn't the right format
-      HttpResponse(status, Some(Json.toJson(data))).parseJson[Test2].isLeft shouldBe true
+      HttpResponse(status, Json.toJson(data), returnHeaders).parseJson[Test2].isLeft shouldBe true
 
       // test when everything is ok
-      HttpResponse(status, Some(Json.toJson(data))).parseJson[Test1] shouldBe Right(data)
+      HttpResponse(status, Json.toJson(data), returnHeaders).parseJson[Test1] shouldBe Right(data)
     }
     "ensure PII is expunged when using parseJsonWithoutLoggingBody" in {
       val data = payeDetailsNoPostCode("AE123456C")
 
-      HttpResponse(200, Some(Json.parse(data))).parseJsonWithoutLoggingBody[PayePersonalDetails] shouldBe
+      HttpResponse(200, Json.parse(data), returnHeaders).parseJsonWithoutLoggingBody[PayePersonalDetails] shouldBe
         Left("Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
     }
   }

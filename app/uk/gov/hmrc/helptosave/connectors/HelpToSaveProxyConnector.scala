@@ -87,7 +87,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
             userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
 
           val errorJson = ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
-          HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
+          HttpResponse(INTERNAL_SERVER_ERROR, errorJson.toString)
       }
   }
 
@@ -100,7 +100,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
             userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
 
           val errorJson = ErrorResponse("unexpected error from proxy during /update-email", s"${e.getMessage}").toJson()
-          HttpResponse(INTERNAL_SERVER_ERROR, responseJson = Some(errorJson))
+          HttpResponse(INTERNAL_SERVER_ERROR, errorJson.toString)
       }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
       (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
-        .returning(Future.successful(HttpResponse(500, None)))
+        .returning(Future.successful(HttpResponse(500, "")))
 
       (pagerDutyAlert.alert(_: String))
         .expects("Received unexpected http status in response to get UC threshold from DES")
@@ -68,7 +68,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
       (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
-        .returning(Future.successful(HttpResponse(200, Some(Json.parse(s"""{ "thresholdAmount" : $threshold }""")))))
+        .returning(Future.successful(HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]())))
 
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 

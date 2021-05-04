@@ -53,7 +53,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
   }
 
   def getAccountNumber(): Action[AnyContent] = ggAuthorisedWithNino { implicit request ⇒ implicit nino ⇒
-    handleAccountNumber(enrolmentStore.getAccountNumber(nino), "get account number", nino, request.uri)
+    handleAccountNumber(enrolmentStore.getAccountNumber(nino), nino, request.uri)
   }
 
   def getEnrolmentStatus(maybeNino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNino) { implicit request ⇒ implicit nino ⇒
@@ -73,8 +73,7 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
     )
   }
 
-  private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], description: String, nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] = {
-    val additionalParams = "apiCorrelationId" -> getApiCorrelationId
+  private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] = {
     f.leftFlatMap {
       case e ⇒
         logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")

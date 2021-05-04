@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
       "return results as expected" in {
         val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
-        await(store.collection.insert(document))
+        await(store.collection.insert(ordered = false).one(document))
         await(store.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
       }
     }
@@ -50,9 +50,9 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
       val document3 = Json.obj("eligibilityReason" -> 8, "source" -> "Digital", "total" -> 1).value
       val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
-      await(store.collection.insert(document))
-      await(store.collection.insert(document2))
-      await(store.collection.insert(document3))
+      await(store.collection.insert(ordered = false).one(document))
+      await(store.collection.insert(ordered = false).one(document2))
+      await(store.collection.insert(ordered = false).one(document3))
 
       await(store.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 2), EligibilityStats(Some(8), Some("Digital"), 1))
     }

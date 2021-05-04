@@ -36,7 +36,7 @@ object HttpClient {
             queryParams: Map[String, String] = Map.empty[String, String],
             headers:     Map[String, String] = Map.empty[String, String]
     )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-      http.GET(url, queryParams.toSeq)(rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
+      http.GET(url, queryParams.toSeq, headers.toSeq)(rawHttpReads, hc, ec)
 
     def post[A](url:     String,
                 body:    A,
@@ -48,7 +48,7 @@ object HttpClient {
                body:    A,
                headers: Map[String, String] = Map.empty[String, String]
     )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-      http.PUT(url, body)(w, rawHttpReads, hc.withExtraHeaders(headers.toSeq: _*), ec)
+      http.PUT(url, body, headers.toSeq)(w, rawHttpReads, hc, ec)
   }
 
 }
