@@ -41,7 +41,7 @@ class BarsConnectorImpl @Inject() (http: HttpClient)(implicit appConfig: AppConf
 
   private val barsEndpoint: String = s"${appConfig.barsUrl}/validateBankDetails"
 
-  private val headers = Map("User-Agent" -> "help-to-save", "Content-Type" -> "application/json")
+  private val headers = Map("Content-Type" -> "application/json")
 
   override def validate(request: BankDetailsValidationRequest, trackingId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.post(barsEndpoint, bodyJson(request), headers.+("X-Tracking-Id" -> trackingId.toString))
