@@ -34,7 +34,7 @@ class BarsConnectorSpec extends TestSupport with HttpSupport {
 
       "set headers and request body as expected and return http response to the caller" in {
         val trackingId = UUID.randomUUID()
-        val headers = Map("User-Agent" -> "help-to-save", "Content-Type" -> "application/json", "X-Tracking-Id" -> trackingId.toString)
+        val headers = Map("Content-Type" -> "application/json", "X-Tracking-Id" -> trackingId.toString)
         val body = Json.parse(
           """{
             | "account": {
