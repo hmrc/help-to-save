@@ -55,7 +55,6 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
     val nino = barsRequest.nino
     barsConnector.validate(barsRequest, trackingId).map[Either[String, BankDetailsValidationResult]] {
       response ⇒
-        logger.error(response.body)
         val _ = timerContext.stop()
         response.status match {
           case Status.OK ⇒
