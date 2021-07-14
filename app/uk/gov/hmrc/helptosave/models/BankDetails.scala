@@ -29,6 +29,7 @@ case class BankDetailsValidationRequest(nino: String, sortCode: String, accountN
 object BankDetailsValidationRequest {
   implicit val barsRequestFormat: Format[BankDetailsValidationRequest] = Json.format[BankDetailsValidationRequest]
 }
+//case class BankDetailsValidationResult(isValid: Boolean, nonStandard: Boolean, sortCodeExists: Boolean, BACS: Option[Boolean] = None, a: Option[Boolean] = None, b: Option[Boolean] = None, c: Option[Boolean] = None, d: Option[String] = None, e: Option[String] = None)
 
 case class BankDetailsValidationResult(isValid: Boolean, sortCodeExists: Boolean)
 
