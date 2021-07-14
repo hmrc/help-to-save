@@ -39,7 +39,7 @@ class BarsConnectorImpl @Inject() (http: HttpClient)(implicit appConfig: AppConf
 
   import uk.gov.hmrc.helptosave.connectors.BarsConnectorImpl._
 
-  private val barsEndpoint: String = s"${appConfig.barsUrl}/validateBankDetails"
+  private val barsEndpoint: String = s"${appConfig.barsUrl}/v2/validateBankDetails"
 
   private val headers = Map("Content-Type" -> "application/json")
 
