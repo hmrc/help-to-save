@@ -16,7 +16,7 @@ addSbtPlugin("uk.gov.hmrc" % "sbt-bobby" % "3.4.0")
 
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.23")
 
-addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.6.0")
+addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.8.0")
 
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "1.0.0")
 
