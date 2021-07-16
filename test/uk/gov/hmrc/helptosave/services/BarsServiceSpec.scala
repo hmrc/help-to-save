@@ -57,9 +57,9 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       implicit val request: Request[JsValue] = FakeRequest("GET", "/validate-bank-details").withBody(Json.toJson(barsRequest))
       val path = request.uri
 
-        def newResponse(accountNumberWithSortCodeIsValid: Boolean, sortCodeIsPresentOnEISCD: String): String =
+        def newResponse(accountNumberWithSortCodeIsValid: String, sortCodeIsPresentOnEISCD: String): String =
           s"""{
-           |  "accountNumberWithSortCodeIsValid": $accountNumberWithSortCodeIsValid,
+           |  "accountNumberWithSortCodeIsValid": "$accountNumberWithSortCodeIsValid",
            |  "nonStandardAccountDetailsRequiredForBacs": "no",
            |  "sortCodeIsPresentOnEISCD":"$sortCodeIsPresentOnEISCD",
            |  "supportsBACS":"yes",
@@ -69,18 +69,18 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
            |}""".stripMargin
 
       "handle the case when the bank details are valid and the sort code exists" in {
-        val response = newResponse(true, "yes")
+        val response = newResponse("yes", "yes")
 
         inSequence {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
-          mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
+          mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)()
         }
         val result = await(service.validate(barsRequest))
         result shouldBe Right(BankDetailsValidationResult(true, true))
       }
 
       "handle the case when the bank details are not valid" in {
-        val response = newResponse(false, "no")
+        val response = newResponse("no", "no")
 
         inSequence {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
@@ -91,7 +91,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       }
 
       "handle the case when the bank details are valid but the sort code does not exist" in {
-        val response = newResponse(true, "no")
+        val response = newResponse("yes", "no")
 
         inSequence {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
@@ -102,7 +102,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       }
 
       "handle the case when the bank details are valid but the sort code response cannot be parsed" in {
-        val response = newResponse(true, "blah")
+        val response = newResponse("yes", "blah")
 
         inSequence {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
