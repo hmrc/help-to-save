@@ -60,7 +60,7 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
           case Status.OK ⇒
             auditor.sendEvent(BARSCheck(barsRequest, response.json, request.uri), nino)
 
-            (response.json \ "accountNumberWithSortCodeIsValid").asOpt[Boolean] →
+            (response.json \ "accountNumberWithSortCodeIsValid").asOpt[String] →
               (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {
                 case (Some(accountNumberWithSortCodeIsValid), Some(sortCodeIsPresentOnEISCD)) ⇒
                   val sortCodeExists: Either[String, Boolean] =
@@ -69,11 +69,28 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
                     } else if (sortCodeIsPresentOnEISCD === "no") {
                       logger.info("BARS response: bank details were valid but sort code was not present on EISCD", nino)
                       Right(false)
+                    } else if ((sortCodeIsPresentOnEISCD === "error")) {
+                      logger.info("BARS response: Sort code check on EISCD returned Error", nino)
+                      Right(false)
                     } else {
                       Left(s"Could not parse value for 'sortCodeIsPresentOnEISCD': $sortCodeIsPresentOnEISCD")
                     }
 
-                  sortCodeExists.map{ BankDetailsValidationResult(accountNumberWithSortCodeIsValid, _) }
+                  val accountNumbersValid: Boolean =
+                    if (accountNumberWithSortCodeIsValid === "yes") {
+                      true
+                    } else if (accountNumberWithSortCodeIsValid === "no") {
+                      logger.info("BARS response: bank details were NOT valid", nino)
+                      false
+                    } else if (accountNumberWithSortCodeIsValid === "indeterminate") {
+                      logger.info("BARS response: bank details were marked as indeterminate", nino)
+                      false
+                    } else {
+                      logger.warn("BARS response: Unexpected Return for valid vank details", nino)
+                      false
+                    }
+
+                  sortCodeExists.map{ BankDetailsValidationResult(accountNumbersValid, _) }
                 case _ ⇒
                   logger.warn(s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}")
                   alerting.alert("error parsing the response json from bars check")
