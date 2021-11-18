@@ -28,7 +28,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestScheduler.JobScheduledOnce
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.{TestScheduler, TestTimeCalculator}
-import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestTimeCalculator.{IsTimeInBetweenRequest, IsTimeInBetweenResponse, TimeUntilRequest, TimeUntilResponse}
+import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestTimeCalculator._
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 
 import scala.concurrent.duration._

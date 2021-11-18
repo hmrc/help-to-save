@@ -6,52 +6,44 @@ import uk.gov.hmrc.SbtAutoBuildPlugin
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin.publishingSettings
 import uk.gov.hmrc.versioning.SbtGitVersioning
-import wartremover.{Wart, Warts, wartremoverErrors, wartremoverExcluded}
+import wartremover.{Wart, Warts}
+import wartremover.WartRemover.autoImport.{wartremoverErrors, wartremoverExcluded}
 
 val appName = "help-to-save"
-val hmrc = "uk.gov.hmrc"
 
 lazy val appDependencies: Seq[ModuleID] = dependencies ++ testDependencies()
 lazy val playSettings: Seq[Setting[_]] = Seq.empty
 lazy val plugins: Seq[Plugins] = Seq.empty
 
-val akkaVersion     = "2.5.23"
-
-val akkaHttpVersion = "10.0.15"
-
-
-dependencyOverrides += "com.typesafe.akka" %% "akka-stream"    % akkaVersion
-
-dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf"  % akkaVersion
-
-dependencyOverrides += "com.typesafe.akka" %% "akka-slf4j"     % akkaVersion
-
-dependencyOverrides += "com.typesafe.akka" %% "akka-actor"     % akkaVersion
-
-dependencyOverrides += "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+val hmrc = "uk.gov.hmrc"
+val playVersion = "play-28"
 
 val dependencies = Seq(
   ws,
-  hmrc %% "bootstrap-backend-play-26" % "5.0.0",
-  hmrc %% "domain" % "5.11.0-play-26",
-  hmrc %% "simple-reactivemongo" % "8.0.0-play-26",
-  hmrc %% "crypto" % "6.0.0",
-  hmrc %% "mongo-lock" % "7.0.0-play-26",
-  "org.typelevel" %% "cats-core" % "2.2.0",
-  "com.github.kxbmap" %% "configs" % "0.6.1",
-  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.1" cross CrossVersion.full),
-  "com.github.ghik" % "silencer-lib" % "1.7.1" % Provided cross CrossVersion.full
+  hmrc                %% s"bootstrap-backend-$playVersion"  % "5.12.0",
+  hmrc                %% "domain"                           % s"6.2.0-$playVersion",
+  hmrc                %% "simple-reactivemongo"             % s"8.0.0-$playVersion",
+  hmrc                %% "crypto"                           % "6.0.0",
+  hmrc                %% "mongo-lock"                       % s"7.0.0-$playVersion",
+  "org.typelevel"     %% "cats-core"                        % "2.2.0",
+  "com.github.kxbmap" %% "configs"                          % "0.6.1",
+  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.5" cross CrossVersion.full),
+  "com.github.ghik" % "silencer-lib" % "1.7.5" % Provided cross CrossVersion.full
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
-  hmrc %% "stub-data-generator" % "0.5.3" % scope,
-  hmrc %% "reactivemongo-test" % "4.22.0-play-26" % scope,
-  hmrc %% "service-integration-test" % "1.1.0-play-26" % scope,
-  "org.scalatest" %% "scalatest" % "3.0.8" % scope,
-  "org.scalamock" %% "scalamock" % "5.1.0" % scope,
-  "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-  "com.miguno.akka" %% "akka-mock-scheduler" % "0.5.1" % scope,
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.23" % scope // upgrading to 2.5.26 causes errors
+  hmrc                    %% s"bootstrap-test-$playVersion"   % "5.12.0"                % scope,
+  hmrc                    %% "service-integration-test"       % s"1.1.0-$playVersion"   % scope,
+  hmrc                    %% "domain"                         % s"6.2.0-$playVersion"   % scope,
+  hmrc                    %% "stub-data-generator"            % "0.5.3"                 % scope,
+  hmrc                    %% "reactivemongo-test"             % s"5.0.0-$playVersion"   % scope,
+  "org.scalatest"         %% "scalatest"                      % "3.2.9"                 % scope,
+  "org.scalatestplus"     %% "scalatestplus-scalacheck"       % "3.1.0.0-RC2"           % scope,
+  "com.vladsch.flexmark"  %  "flexmark-all"                   % "0.35.10"               % scope,
+  "com.typesafe.play"     %% "play-test"                      % PlayVersion.current     % scope,
+  "org.scalamock"         %% "scalamock-scalatest-support"    % "3.6.0"                 % scope,
+  "com.miguno.akka"       %% "akka-mock-scheduler"            % "0.5.1"                 % scope,
+  "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.14"                % scope
 )
 
 lazy val scoverageSettings = {
@@ -61,10 +53,10 @@ lazy val scoverageSettings = {
       """<empty>;.*\.config\..*;
         |.*\.(BuildInfo|EligibilityStatsProviderImpl|HttpClient.*|JsErrorOps|Reverse.*|Routes.*)"""
         .stripMargin,
-    ScoverageKeys.coverageMinimum := 90,
+    ScoverageKeys.coverageMinimumStmtTotal := 90,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true,
-    parallelExecution in Test := false
+    Test / parallelExecution := false
   )
 }
 
@@ -143,7 +135,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(majorVersion := 2)
   .settings(playSettings ++ scoverageSettings: _*)
   .settings(scalaSettings: _*)
-  .settings(scalaVersion := "2.12.11")
+  .settings(scalaVersion := "2.12.13")
   .settings(publishingSettings: _*)
   .settings(defaultSettings(): _*)
   .settings(PlayKeys.playDefaultPort := 7001)
@@ -153,15 +145,13 @@ lazy val microservice = Project(appName, file("."))
   .settings(scalacOptions += "-Xcheckinit")
   .settings(
     libraryDependencies ++= appDependencies,
-    retrieveManaged := false,
-    evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false)
+    retrieveManaged := false
   )
   .configs(IntegrationTest)
   .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
   .settings(
-    Keys.fork in IntegrationTest := false,
-    unmanagedSourceDirectories in IntegrationTest := Seq((baseDirectory in IntegrationTest).value / "it"),
+    IntegrationTest / Keys.fork  := false,
+    IntegrationTest / unmanagedSourceDirectories := Seq((IntegrationTest / baseDirectory).value / "it"),
     addTestReportOption(IntegrationTest, "int-test-reports"),
-    //testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
-    parallelExecution in IntegrationTest := false)
+    IntegrationTest / parallelExecution  := false)
   .settings(scalacOptions += "-P:silencer:pathFilters=routes")

@@ -119,8 +119,6 @@ object Transactions {
       .map(sortLikeNsiWeb _ andThen runningBalance andThen Transactions.apply)
   }
 
-  private implicit val eqLocalDate: Eq[LocalDate] = Eq.instance(_.isEqual(_))
-
   private def sortLikeNsiWeb(transactions: Seq[ValidNsiTransaction]): Seq[ValidNsiTransaction] = {
     transactions.sortWith { (t1, t2) ⇒ t1.sequence < t2.sequence }
   }

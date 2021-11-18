@@ -18,10 +18,11 @@ package uk.gov.hmrc.helptosave.models.account
 
 import java.time.YearMonth
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsString, Json}
 
-class YearMonthJsonSpec extends WordSpec with Matchers {
+class YearMonthJsonSpec extends AnyWordSpec with Matchers {
   "YearMonth JSON" should {
     "be YYYY-MM" in {
       import Account.YearMonthWrites

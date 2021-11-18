@@ -75,7 +75,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
       EligibilityCheckResponse(result, threshold)
     }
 
-  private def getThresholdValue()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Double]] =
+  private def getThresholdValue()(implicit ec: ExecutionContext): Future[Option[Double]] =
     ucThresholdProvider.thresholdManager.ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
       .mapTo[GetThresholdValueResponse]
       .map(r ⇒ r.result)

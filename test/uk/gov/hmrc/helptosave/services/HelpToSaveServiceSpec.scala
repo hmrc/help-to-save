@@ -72,9 +72,9 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
     new HelpToSaveServiceImpl(mockProxyConnector, mockDESConnector, mockAuditor, mockMetrics, mockPagerDuty, thresholdManagerProvider)(
 
       transformer,
-      new AppConfig(fakeApplication.injector.instanceOf[Configuration] ++ testConfig,
-        fakeApplication.injector.instanceOf[Environment],
-        servicesConfig)
+      new AppConfig(fakeApplication.injector.instanceOf[Configuration].withFallback(testConfig),
+                    fakeApplication.injector.instanceOf[Environment],
+                    servicesConfig)
     )
   }
 

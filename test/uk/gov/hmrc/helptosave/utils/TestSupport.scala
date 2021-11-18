@@ -47,15 +47,16 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll {
       .configure(Configuration(
         ConfigFactory.parseString(
           """
-            | metrics.jvm = false
-            | metrics.enabled = true
-            | mongo-async-driver.akka.loglevel = ERROR
-            | uc-threshold.ask-timeout = 10 seconds
-            | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule",
-            | "play.modules.reactivemongo.ReactiveMongoHmrcModule",
-            |  "play.api.mvc.CookiesModule" ]
-          """.stripMargin)
-      ) ++ extraConfig)
+              | metrics.jvm = false
+              | metrics.enabled = true
+              | mongo-async-driver.akka.loglevel = ERROR
+              | uc-threshold.ask-timeout = 10 seconds
+              | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule",
+              | "play.modules.reactivemongo.ReactiveMongoHmrcModule",
+              |  "play.api.mvc.CookiesModule" ]
+            """.stripMargin)
+      ).withFallback(extraConfig)
+      )
       .build()
   }
 

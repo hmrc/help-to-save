@@ -115,7 +115,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
         "retrieve a NINO and return successfully if a NINO is not given and a NINO is successfully retrieved" in {
           inSequence {
-            mockAuth(GGAndPrivilegedProviders, Retrievals.authProviderId)(Right(ggCredentials))
+            mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(ggCredentials))
             mockAuth(EmptyPredicate, v2Nino)(Right(Some("nino")))
           }
 
