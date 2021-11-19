@@ -54,7 +54,10 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
       await(store.collection.insert(ordered = false).one(document2))
       await(store.collection.insert(ordered = false).one(document3))
 
-      await(store.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 2), EligibilityStats(Some(8), Some("Digital"), 1))
+      await(store.getEligibilityStats) shouldBe List(
+        EligibilityStats(Some(7), Some("Digital"), 2),
+        EligibilityStats(Some(8), Some("Digital"), 1)
+      )
     }
   }
 
