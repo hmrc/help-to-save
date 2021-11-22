@@ -18,11 +18,12 @@ package uk.gov.hmrc.helptosave.actors
 
 import java.time._
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.duration._
 
 // scalastyle:off magic.number
-class TimeCalculatorImplTest extends WordSpec with Matchers {
+class TimeCalculatorImplTest extends AnyWordSpec with Matchers {
 
   "TimeCalculatorImpl" must {
 

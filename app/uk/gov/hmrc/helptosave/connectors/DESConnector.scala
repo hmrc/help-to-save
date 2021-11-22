@@ -75,7 +75,7 @@ class DESConnectorImpl @Inject() (http:           HttpClient,
     http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.desHeaders)(hc.copy(authorization = None), ec)
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.JsValueWrites, hc.copy(authorization = None), ec)
+    http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.jsValueWrites, hc.copy(authorization = None), ec)
 
   override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.get(payePersonalDetailsUrl(nino), headers = appConfig.desHeaders + originatorIdHeader)(hc.copy(authorization = None), ec)

@@ -18,11 +18,12 @@ package uk.gov.hmrc.helptosave.models
 
 import java.time.LocalDate
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsSuccess, Json}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 
-class NSIPayloadSpec extends WordSpec with Matchers {
+class NSIPayloadSpec extends AnyWordSpec with Matchers {
 
   "NSIPayload" must {
 

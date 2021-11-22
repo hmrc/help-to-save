@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsString, Writes}
 
-class OperationJsonSpec extends WordSpec with Matchers {
+class OperationJsonSpec extends AnyWordSpec with Matchers {
   "JSON for Operation" should {
     """be a "credit" or "debit" String """ in {
       val writes = implicitly[Writes[Operation]]
