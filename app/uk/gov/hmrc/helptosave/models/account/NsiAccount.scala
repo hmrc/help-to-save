@@ -54,7 +54,11 @@ case class NsiAccount(
     emailAddress:           Option[String],
     terms:                  Seq[NsiBonusTerm],
     accountClosureDate:     Option[LocalDate]         = None,
-    accountClosingBalance:  Option[BigDecimal]        = None
+    accountClosingBalance:  Option[BigDecimal]        = None,
+    nbaAccountNumber:       Option[String]            = None,
+    nbaPayee:               Option[String]            = None,
+    nbaRollNumber:          Option[String]            = None,
+    nbaSortCode:            Option[String]            = None
 )
 
 object NsiAccount {
