@@ -56,7 +56,11 @@ case class Account(openedYearMonth:        YearMonth,
                    accountHolderEmail:     Option[String],
                    bonusTerms:             Seq[BonusTerm],
                    closureDate:            Option[LocalDate]  = None,
-                   closingBalance:         Option[BigDecimal] = None)
+                   closingBalance:         Option[BigDecimal] = None,
+                   nbaAccountNumber:       Option[String]     = None,
+                   nbaPayee:               Option[String]     = None,
+                   nbaRollNumber:          Option[String]     = None,
+                   nbaSortCode:            Option[String]     = None)
 
 object Account extends Logging {
 
@@ -109,7 +113,11 @@ object Account extends Logging {
           accountHolderEmail     = nsiAccount.emailAddress,
           bonusTerms             = sortedNsiTerms.map(nsiBonusTermToBonusTerm),
           closureDate            = nsiAccount.accountClosureDate,
-          closingBalance         = nsiAccount.accountClosingBalance
+          closingBalance         = nsiAccount.accountClosingBalance,
+          nbaAccountNumber       = nsiAccount.nbaAccountNumber,
+          nbaPayee               = nsiAccount.nbaPayee,
+          nbaRollNumber          = nsiAccount.nbaRollNumber,
+          nbaSortCode            = nsiAccount.nbaSortCode
         )
 
     }
