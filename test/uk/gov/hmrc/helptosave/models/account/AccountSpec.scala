@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ class AccountSpec extends TestSupport {
     accountClosingBalance  = None
   )
 
-  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false, false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
+  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(false, false, false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
                         accountHolderForename = "Testforename", accountHolderSurname = "Testsurname", accountHolderEmail = Some("test@example.com"),
                         Seq(
       BonusTerm(startDate              = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),
@@ -73,12 +73,6 @@ class AccountSpec extends TestSupport {
                 withClue(s"For NsiAccount: $nsiAccount") { assertion(Account(nsiAccount)) }
               }
           }
-
-      """return blocking.unspecified = true when accountBlockingCode or clientBlockingCode is not "00"""" in {
-        testBlockingCodes("11", "12", "13", "15", "30", "64"){
-          _.map(_.blocked.unspecified) shouldBe Valid(true)
-        }
-      }
 
       """return blocking.payments = true when accountBlockingCode or clientBlockingCode is not "00" or "11""" in {
         testBlockingCodes("12", "13", "15", "30", "64"){

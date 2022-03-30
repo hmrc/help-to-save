@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ object BonusTerm {
   implicit val writes: Format[BonusTerm] = Json.format[BonusTerm]
 }
 
-case class Blocking(unspecified: Boolean, payments: Boolean, withdrawals: Boolean, bonuses: Boolean)
+case class Blocking(payments: Boolean, withdrawals: Boolean, bonuses: Boolean)
 
 object Blocking {
   implicit val writes: Format[Blocking] = Json.format[Blocking]
@@ -138,7 +138,6 @@ object Account extends Logging {
               predicate(accountBlockingCode) || predicate(clientBlockingCode)
 
           Blocking(
-            unspecified = isBlockedFromPredicate(_ =!= "00"),
             payments    = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "11"),
             withdrawals = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "12" && s =!= "15"),
             bonuses     = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "12")
