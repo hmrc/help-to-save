@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import java.time.{LocalDate, ZoneId}
-
-import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.mongo.MongoComponent
 
-class UserCapStoreSpec extends TestSupport with MongoSupport {
+import java.time.{LocalDate, ZoneId}
 
-  def newUserCapMongoStore(reactiveMongoComponent: ReactiveMongoComponent) =
-    new MongoUserCapStore(reactiveMongoComponent)
+class UserCapStoreSpec extends TestSupport {
+  def repository: MongoUserCapStore = fakeApplication.injector.instanceOf[MongoUserCapStore]
+  def newUserCapMongoStore(mongoComponent: MongoComponent) =
+    new MongoUserCapStore(mongoComponent)
 
   "The UserCapStore" when {
 
@@ -34,13 +34,13 @@ class UserCapStoreSpec extends TestSupport with MongoSupport {
     "getting the user-cap" should {
 
       "return the existing record successfully" in {
-        val store = newUserCapMongoStore(reactiveMongoComponent)
+        val store = repository
         await(store.doUpdate(record))
         await(store.get()) shouldBe Some(record)
       }
 
       "returns None if no record exists" in {
-        val store = newUserCapMongoStore(reactiveMongoComponent)
+        val store = repository
         await(store.get()) shouldBe None
       }
     }

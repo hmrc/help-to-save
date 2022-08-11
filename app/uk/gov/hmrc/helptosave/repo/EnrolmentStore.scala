@@ -18,23 +18,21 @@ package uk.gov.hmrc.helptosave.repo
 
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Logger
+import com.mongodb.client.model.ReturnDocument
+import org.mongodb.scala.model.Filters.regex
+import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
+import play.api.Logging
 import play.api.libs.json._
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.WriteConcern
-import reactivemongo.api.commands.WriteResult
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.account.AccountNumber
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
-import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.NINO
+import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -87,76 +85,111 @@ object EnrolmentStore {
 }
 
 @Singleton
-class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
+class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
                                      metrics: Metrics)(implicit ec: ExecutionContext)
-  extends ReactiveRepository[EnrolmentData, BSONObjectID](
+  extends PlayMongoRepository[EnrolmentData](
+    mongoComponent = mongo,
     collectionName = "enrolments",
-    mongo          = mongo.mongoConnector.db,
-    EnrolmentData.ninoFormat,
-    ReactiveMongoFormats.objectIdFormats)
-  with EnrolmentStore {
+    domainFormat   = EnrolmentData.ninoFormat,
+    indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex").unique(false)))
+  )
+  with EnrolmentStore with Logging {
 
-  val log: Logger = new Logger(logger)
+  //  val log: Logger = new Logger(logger)
 
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
 
-  override def indexes: Seq[Index] = Seq(
-    Index(
-      key  = Seq("nino" → IndexType.Ascending),
-      name = Some("ninoIndex")
-    )
-  )
+  //  override def indexes: Seq[Index] = Seq(
+  //    Index(
+  //      key  = Seq("nino" → IndexType.Ascending),
+  //      name = Some("ninoIndex")
+  //    )
+  //  )
 
   private[repo] def doInsert(nino:              NINO,
                              eligibilityReason: Option[Int],
                              source:            String,
                              itmpFlag:          Boolean,
-                             accountNumber:     Option[String])(implicit ec: ExecutionContext): Future[WriteResult] = {
+                             accountNumber:     Option[String])(implicit ec: ExecutionContext): Future[Unit] = {
     accountNumber match {
-      case Some(accountNum) ⇒ collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
-        "eligibilityReason" -> eligibilityReason, "source" -> source, "accountNumber" -> accountNum))
+      case Some(accountNumber) ⇒
+        collection.insertOne(
+          EnrolmentData(
+            nino              = nino,
+            itmpHtSFlag       = itmpFlag,
+            eligibilityReason = eligibilityReason,
+            source            = Some(source),
+            accountNumber     = Some(accountNumber))
+        ).toFuture().map(_ ⇒ ())
 
-      case None ⇒ collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
-        "eligibilityReason" -> eligibilityReason, "source" -> source))
+      //      case Some(accountNum) ⇒ collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
+      //        "eligibilityReason" -> eligibilityReason, "source" -> source, "accountNumber" -> accountNum))
+
+      case None ⇒
+        collection.insertOne(
+          EnrolmentData(
+            nino              = nino,
+            itmpHtSFlag       = itmpFlag,
+            eligibilityReason = eligibilityReason,
+            source            = Some(source))
+        ).toFuture().map(_ ⇒ ())
+
+      //        collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
+      //        "eligibilityReason" -> eligibilityReason, "source" -> source))
     }
   }
 
-  private[repo] def doUpdateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
-    collection.findAndUpdate(
-      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
-      BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
-      fetchNewObject           = true,
-      upsert                   = false,
-      sort                     = None,
-      fields                   = None,
-      bypassDocumentValidation = false,
-      writeConcern             = WriteConcern.Default,
-      maxTime                  = None,
-      collation                = None,
-      arrayFilters             = Nil
-    ).map(_.result[EnrolmentData])
+  private[repo] def doUpdateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] = {
+    collection.findOneAndUpdate(
+      filter  = regex("nino", getRegex(nino)),
+      update  = Updates.set("itmpHtSFlag", itmpFlag),
+      options = FindOneAndUpdateOptions().upsert(false).bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
+    ).toFutureOption()
+
+    //    collection.findAndUpdate(
+    //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
+    //      BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
+    //      fetchNewObject           = true,
+    //      upsert                   = false,
+    //      sort                     = None,
+    //      fields                   = None,
+    //      bypassDocumentValidation = false,
+    //      writeConcern             = WriteConcern.Default,
+    //      maxTime                  = None,
+    //      collation                = None,
+    //      arrayFilters             = Nil
+    //    ).map(_.result[EnrolmentData])
+  }
 
   private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
-    collection.findAndUpdate(
-      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
-      BSONDocument("$set" -> BSONDocument("accountNumber" -> accountNumber)),
-      fetchNewObject           = true,
-      upsert                   = false,
-      sort                     = None,
-      fields                   = None,
-      bypassDocumentValidation = false,
-      writeConcern             = WriteConcern.Default,
-      maxTime                  = None,
-      collation                = None,
-      arrayFilters             = Nil
-    ).map(_.result[EnrolmentData])
+    collection.findOneAndUpdate(
+      filter  = regex("nino", getRegex(nino)),
+      update  = Updates.set("accountNumber", accountNumber),
+      options = FindOneAndUpdateOptions().upsert(false).bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
+    ).toFutureOption()
+
+  //    collection.findAndUpdate(
+  //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
+  //      BSONDocument("$set" -> BSONDocument("accountNumber" -> accountNumber)),
+  //      fetchNewObject           = true,
+  //      upsert                   = false,
+  //      sort                     = None,
+  //      fields                   = None,
+  //      bypassDocumentValidation = false,
+  //      writeConcern             = WriteConcern.Default,
+  //      maxTime                  = None,
+  //      collation                = None,
+  //      arrayFilters             = Nil
+  //    ).map(_.result[EnrolmentData])
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =
     EitherT[Future, String, EnrolmentStore.Status](
       {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-        find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
+        //        find("nino" → Json.obj("$regex" → JsString(getRegex(nino))))
+
+        collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
           timerContext.stop()
 
           Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
@@ -224,12 +257,7 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
                       accountNumber:     Option[String])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     EitherT(
       doInsert(nino, eligibilityReason, source, itmpFlag, accountNumber)
-        .map[Either[String, Unit]] { writeResult ⇒
-          if (writeResult.writeErrors.nonEmpty) {
-            Left(writeResult.writeErrors.map(_.errmsg).mkString(","))
-          } else {
-            Right(())
-          }
+        .map[Either[String, Unit]] { writeResult ⇒ Right(())
         }.recover {
           case e ⇒
             Left(e.getMessage)
@@ -241,7 +269,9 @@ class MongoEnrolmentStore @Inject() (mongo:   ReactiveMongoComponent,
       {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-        find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map[Either[String, AccountNumber]] { res ⇒
+        //        find("nino" → Json.obj("$regex" → JsString(getRegex(nino))))
+
+        collection.find(regex("nino", getRegex(nino))).toFuture().map[Either[String, AccountNumber]] { res ⇒
           timerContext.stop()
 
           //Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))

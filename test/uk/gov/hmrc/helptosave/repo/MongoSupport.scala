@@ -16,42 +16,42 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import org.mongodb.scala.{MongoClient, MongoDatabase, MongoSocketOpenException}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.FailoverStrategy
 import reactivemongo.core.actors.Exceptions.PrimaryUnavailableException
-import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
+import uk.gov.hmrc.mongo.{MongoComponent, MongoConnector}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+trait MongoSupport extends BeforeAndAfterEach with BeforeAndAfterAll { this: Suite ⇒
 
-trait MongoSupport extends MongoSpecSupport with BeforeAndAfterEach with BeforeAndAfterAll { this: Suite ⇒
+  val reactiveMongoComponent: MongoComponent = new MongoComponent {
+    override def client: MongoClient = MongoClient(s"mongodb://127.0.0.1:27018/mongodb")
 
-  val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
-    override def mongoConnector: MongoConnector = mongoConnectorForTest
+    override def database: MongoDatabase = client.getDatabase("mongodb")
   }
 
-  def withBrokenMongo(f: ReactiveMongoComponent ⇒ Unit): Unit =
-    scala.util.control.Exception.ignoring(classOf[PrimaryUnavailableException]) {
-      val reactiveMongoComponent: ReactiveMongoComponent = new ReactiveMongoComponent {
-        override def mongoConnector: MongoConnector =
-          MongoConnector(s"mongodb://127.0.0.1:27018/$databaseName", Some(FailoverStrategy(retries = 0)))
-      }
+  //    new ReactiveMongoComponent {
+  //    override def mongoConnector: MongoConnector = mongoConnectorForTest
+  //  }
 
+  def withBrokenMongo(f: MongoComponent ⇒ Unit): Unit =
+    scala.util.control.Exception.ignoring(classOf[MongoSocketOpenException]) {
       try {
         f(reactiveMongoComponent)
       } finally {
-        reactiveMongoComponent.mongoConnector.helper.driver.close()
+        reactiveMongoComponent.client.close()
       }
     }
 
   abstract override def beforeEach(): Unit = {
     super.beforeEach()
-    mongo().drop()
+    reactiveMongoComponent.database.drop()
   }
 
   abstract override def afterAll(): Unit = {
     super.afterAll()
-    reactiveMongoComponent.mongoConnector.helper.driver.close()
+    reactiveMongoComponent.client.close()
   }
 
 }

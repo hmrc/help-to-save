@@ -22,19 +22,18 @@ import cats.instances.try_._
 import cats.syntax.either._
 import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Logger
-import play.api.libs.json.{Format, JsString, Json}
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.play.json.ImplicitBSONHandlers._
+import org.mongodb.scala.model.Filters.regex
+import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
+import play.api.Logging
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.helptosave.util.{Crypto, LogMessageTransformer, NINO}
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -52,28 +51,26 @@ trait EmailStore {
 }
 
 @Singleton
-class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
+class MongoEmailStore @Inject() (mongo:   MongoComponent,
                                  crypto:  Crypto,
-                                 metrics: Metrics)(
-    implicit
-    transformer: LogMessageTransformer)
-  extends ReactiveRepository[EmailData, BSONObjectID](
+                                 metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
+  extends PlayMongoRepository[EmailData](
+    mongoComponent = mongo,
     collectionName = "emails",
-    mongo          = mongo.mongoConnector.db,
-    EmailData.emailDataFormat,
-    ReactiveMongoFormats.objectIdFormats)
-  with EmailStore {
+    domainFormat   = EmailData.emailDataFormat,
+    indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex").unique(false)))
+  ) with EmailStore with Logging {
 
-  val log: Logger = new Logger(logger)
+  //  val log: Logger = new Logger(logger)
 
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
 
-  override def indexes: Seq[Index] = Seq(
-    Index(
-      key  = Seq("nino" → IndexType.Ascending),
-      name = Some("ninoIndex")
-    )
-  )
+  //  override def indexes: Seq[Index] = Seq(
+  //    Index(
+  //      key  = Seq("nino" → IndexType.Ascending),
+  //      name = Some("ninoIndex")
+  //    )
+  //  )
 
   def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
@@ -99,7 +96,8 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
   override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
 
-    find("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map { res ⇒
+    //    find("nino" → Json.obj("$regex" → JsString(getRegex(nino))))
+    collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
       timerContext.stop()
 
       val decryptedEmail = res.headOption
@@ -108,7 +106,7 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
       decryptedEmail.toEither().leftMap {
         t ⇒
-          log.warn("Could not decrypt email", t, nino)
+          logger.warn("Could not decrypt email", t, nino)
           s"Could not decrypt email: ${t.getMessage}"
       }
     }.recover {
@@ -121,25 +119,36 @@ class MongoEmailStore @Inject() (mongo:   ReactiveMongoComponent,
 
   override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
 
-    remove("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map[Either[String, Unit]]{ res ⇒
-      if (res.writeErrors.nonEmpty) {
-        Left(s"Could not delete email: ${res.writeErrors.mkString(";")}")
-      } else {
-        Right(())
-      }
-    }.recover{
+    //        remove("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map[Either[String, Unit]]{ res ⇒
+    //          if (res.writeErrors.nonEmpty) {
+    //            Left(s"Could not delete email: ${res.writeErrors.mkString(";")}")
+    //          } else {
+    //            Right(())
+    //          }
+    //        }.recover{
+    //          case e ⇒
+    //            Left(s"Could not delete email: ${e.getMessage}")
+    //        }
+
+    collection.findOneAndDelete(regex("nino", getRegex(nino))).toFuture().map[Either[String, Unit]]{ res ⇒ Right(()) }.recover{
       case e ⇒
         Left(s"Could not delete email: ${e.getMessage}")
     }
 
   }
 
-  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] =
-    collection.update(ordered = false).one(
-      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
-      BSONDocument("$set" -> BSONDocument("nino" -> nino, "email" -> encryptedEmail)),
-      upsert = true
-    ).map(_.ok)
+  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] = {
+    collection.findOneAndUpdate(
+      filter  = regex("nino", getRegex(nino)),
+      update  = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
+      options = FindOneAndUpdateOptions().upsert(true)
+    ).toFuture().map(_.email.isEmpty)
+    //    collection.update(ordered = false).one(
+    //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
+    //      BSONDocument("$set" -> BSONDocument("nino" -> nino, "email" -> encryptedEmail)),
+    //      upsert = true
+    //    ).map(_.ok)
+  }
 
 }
 

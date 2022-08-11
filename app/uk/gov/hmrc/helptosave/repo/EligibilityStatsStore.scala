@@ -17,18 +17,17 @@
 package uk.gov.hmrc.helptosave.repo
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Logger
+import com.mongodb.client.model.Indexes._
+import com.mongodb.client.model.{Accumulators, Aggregates, Projections}
+import org.mongodb.scala.model.{IndexModel, IndexOptions}
+import play.api.Logging
 import play.api.libs.json.{Format, Json}
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.commands.JSONAggregationFramework._
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,30 +39,41 @@ trait EligibilityStatsStore {
 }
 
 @Singleton
-class MongoEligibilityStatsStore @Inject() (mongo:   ReactiveMongoComponent,
+class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
                                             metrics: Metrics)(implicit ec: ExecutionContext)
-  extends ReactiveRepository[EnrolmentData, BSONObjectID](
+  extends PlayMongoRepository[EnrolmentData](
+    mongoComponent = mongo,
     collectionName = "enrolments",
-    mongo          = mongo.mongoConnector.db,
-    EnrolmentData.ninoFormat,
-    ReactiveMongoFormats.objectIdFormats) with EligibilityStatsStore {
+    domainFormat   = EnrolmentData.ninoFormat,
+    indexes        = Seq(IndexModel(ascending("eligibilityReason"), IndexOptions().name("eligibilityReasonIndex").unique(false)))
+  ) with EligibilityStatsStore with Logging {
 
-  val log: Logger = new Logger(logger)
+  //  val log: Logging = new Logger(logger)
 
-  override def indexes: Seq[Index] = Seq(
-    Index(
-      key  = Seq("eligibilityReason" → IndexType.Ascending),
-      name = Some("eligibilityReasonIndex")
-    )
-  )
+  //  override def indexes: Seq[Index] = Seq(
+  //    Index(
+  //      key  = Seq("eligibilityReason" → IndexType.Ascending),
+  //      name = Some("eligibilityReasonIndex")
+  //    )
+  //  )
 
   private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
-    collection.aggregateWith(){ a ⇒
-      a.Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"))("total" -> a.SumAll) →
-        List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total")))
-    }.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur :: acc)
-  }
+    collection.aggregate[List[EligibilityStats]](Seq(
+      Aggregates.group(("$eligibilityReason", "$source"), Accumulators.sum("total", "$total")),
+      Aggregates.project(Projections.fields(
+        Projections.computed("_id", 0),
+        Projections.computed("eligibilityReason", "$_id.eligibilityReason"),
+        Projections.computed("source", "$_id.source"),
+        Projections.computed("total", "$total"),
+      ))
+    )).toFuture().map(_.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur ::: acc))
 
+  }
+  //
+  //        collection.aggregateWith(){ a ⇒
+  //          a.Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"))("total" -> a.SumAll) →
+  //            List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total")))
+  //        }.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur :: acc)
   override def getEligibilityStats: Future[List[EligibilityStats]] = {
     val timerContext = metrics.eligibilityStatsTimer.time()
     doAggregate()
