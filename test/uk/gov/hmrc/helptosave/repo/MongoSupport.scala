@@ -25,7 +25,7 @@ import uk.gov.hmrc.mongo.{MongoComponent, MongoConnector}
 
 trait MongoSupport extends BeforeAndAfterEach with BeforeAndAfterAll { this: Suite ⇒
 
-  val reactiveMongoComponent: MongoComponent = new MongoComponent {
+  val mongoComponent: MongoComponent = new MongoComponent {
     override def client: MongoClient = MongoClient(s"mongodb://127.0.0.1:27018/mongodb")
 
     override def database: MongoDatabase = client.getDatabase("mongodb")
@@ -38,20 +38,20 @@ trait MongoSupport extends BeforeAndAfterEach with BeforeAndAfterAll { this: Sui
   def withBrokenMongo(f: MongoComponent ⇒ Unit): Unit =
     scala.util.control.Exception.ignoring(classOf[MongoSocketOpenException]) {
       try {
-        f(reactiveMongoComponent)
+        f(mongoComponent)
       } finally {
-        reactiveMongoComponent.client.close()
+        mongoComponent.client.close()
       }
     }
 
   abstract override def beforeEach(): Unit = {
     super.beforeEach()
-    reactiveMongoComponent.database.drop()
+    mongoComponent.database.drop()
   }
 
   abstract override def afterAll(): Unit = {
     super.afterAll()
-    reactiveMongoComponent.client.close()
+    mongoComponent.client.close()
   }
 
 }
