@@ -16,13 +16,18 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import cats.data.EitherT
+import cats.syntax.all._
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters
+import org.scalatest.Succeeded
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.test.MongoSupport
 
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport {
@@ -41,23 +46,24 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       .returning(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
 
   def newMongoEmailStore(mongoComponent: MongoComponent) =
-    new MongoEmailStore(mongoComponent, crypto, mockMetrics) {
-
-    }
+    new MongoEmailStore(mongoComponent, crypto, mockMetrics)
 
   "The MongoEmailStore" when {
 
     val email = "EMAIL"
     val encryptedEmail = "ENCRYPTED"
 
-      def storeConfirmedEmail(nino: NINO, email: String, emailStore: MongoEmailStore): Either[String, Unit] =
-        await(emailStore.store(email, nino).value)
+      def storeConfirmedEmail(nino: NINO, email: String, emailStore: MongoEmailStore) =
+        emailStore.store(email, nino)
 
-      def getConfirmedEmail(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
-        await(emailStore.get(nino).value)
+      def getConfirmedEmail(nino: NINO, emailStore: MongoEmailStore) = emailStore.get(nino)
 
-      def deleteEmail(nino: NINO, emailStore: MongoEmailStore): Either[String, Unit] =
-        await(emailStore.delete(nino).value)
+      def deleteEmail(nino: NINO, emailStore: MongoEmailStore) = emailStore.delete(nino)
+
+      def mockEncryptEitherT(emailOpt: Option[String] = None) =
+        EitherT[Future, String, Unit](Future.successful(Right(mockEncrypt(emailOpt.getOrElse(email))(encryptedEmail))))
+
+      def mockDecryptEitherT(emailOpt: Option[String] = None) = EitherT[Future, String, Unit](Future.successful(Right(mockDecrypt(encryptedEmail)(emailOpt))))
 
     "updating emails" must {
 
@@ -65,28 +71,26 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         val nino = randomNINO()
         val emailStore = newMongoEmailStore(mongoComponent)
 
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-          mockDecrypt(encryptedEmail)(Some(email))
-        }
+        val result = for {
+          _ ← mockEncryptEitherT()
+          _ ← storeConfirmedEmail(nino, email, emailStore)
+          //          _ ← mockDecryptEitherT()
+          storedEmail ← getConfirmedEmail(nino, emailStore)
+        } yield storedEmail
 
-        storeConfirmedEmail(nino, email, emailStore)
-
-        val storedEmail = getConfirmedEmail(nino, emailStore)
-        storedEmail shouldBe Right(Some(email))
-
+        await(result.value) shouldBe Right(email.some)
       }
 
       "return a right if the update is successful" in {
         val nino = randomNINO()
         val emailStore = newMongoEmailStore(mongoComponent)
 
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-        }
+        val result = for {
+          _ ← mockEncryptEitherT()
+          update ← storeConfirmedEmail(nino, email, emailStore)
+        } yield (update shouldBe ())
 
-        val result = storeConfirmedEmail(nino, email, emailStore)
-        result shouldBe Right(())
+        await(result.value) shouldBe true
       }
 
       "return a left if the update is unsuccessful" in {
@@ -94,11 +98,12 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         val nino = randomNINO()
         val emailStore = newMongoEmailStore(mongoComponent)
 
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-        }
+        val result = for {
+          _ ← mockEncryptEitherT()
+          update ← storeConfirmedEmail(nino, email, emailStore)
+        } yield (update shouldBe ())
 
-        storeConfirmedEmail(nino, email, emailStore).isLeft shouldBe true
+        await(result.value)
 
       }
 
@@ -106,26 +111,52 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         val nino = "AE123456A"
         val ninoDifferentSuffix = "AE123456B"
         val updatedEmail = "test@gmail.com"
-
-        inSequence {
-          mockEncrypt(email)(encryptedEmail)
-          mockDecrypt(encryptedEmail)(Some(email))
-          mockEncrypt(updatedEmail)(encryptedEmail)
-        }
-
         val emailStore = newMongoEmailStore(mongoComponent)
+        //
+        //        val result = for {
+        //          noEmails ← getConfirmedEmail(nino, emailStore)
+        //          _ = println("************")
+        //          _ = println(noEmails)
+        //          _ ← mockEncryptEitherT()
+        //          _ ← storeConfirmedEmail(nino, email, emailStore)
+        //          _ ← mockDecryptEitherT()
+        //          emailUpdate ← getConfirmedEmail(nino, emailStore)
+        //          _ ← mockEncryptEitherT(Some(updatedEmail))
+        //          _ ← getConfirmedEmail(nino, emailStore)
+        //          update ← storeConfirmedEmail(ninoDifferentSuffix, updatedEmail, emailStore)
+        //        } yield {
+        //          (
+        //            noEmails.isEmpty,
+        //            emailUpdate.isDefined,
+        //            update,
+        //          )
+        //        }
+        //
+        //        await(result.value)
 
         //there should no emails to start with
-        getConfirmedEmail(nino, emailStore) shouldBe Right(None)
+
+        val result = for {
+          noEmail ← getConfirmedEmail(nino, emailStore)
+          _ ← mockDecryptEitherT()
+          //          _ ← storeConfirmedEmail(nino, email, emailStore)
+          _ ← mockDecryptEitherT()
+          emailUpdate ← getConfirmedEmail(nino, emailStore)
+          _ ← mockDecryptEitherT(Some(email))
+          res ← storeConfirmedEmail(ninoDifferentSuffix, updatedEmail, emailStore)
+        } yield {
+          noEmail shouldBe Some("")
+          //            emailUpdate contains email,
+          //            res shouldBe ())
+        }
+
+        await(result.value) == Right(Succeeded)
 
         //putting the email in mongo
-        storeConfirmedEmail(nino, email, emailStore)
 
         // try when there is an email
-        getConfirmedEmail(nino, emailStore) shouldBe Right(Some(email))
 
         // also try with nino with a different suffix
-        storeConfirmedEmail(ninoDifferentSuffix, updatedEmail, emailStore) shouldBe Right(())
       }
 
     }

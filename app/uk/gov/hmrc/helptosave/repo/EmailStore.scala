@@ -74,19 +74,26 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
   def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
+      println("Starting Storing")
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
       doUpdate(crypto.encrypt(email), nino)
         .map[Either[String, Unit]] { result ⇒
           timerContext.stop()
+          println("Doing Update")
 
           if (!result) {
+            println("result was null")
             metrics.emailStoreUpdateErrorCounter.inc()
             Left("Could not update email mongo store")
-          } else { Right(()) }
+          } else {
+            println("result was right")
+            Right(())
+          }
         }
         .recover {
           case NonFatal(e) ⇒
+            println("result was right" + e)
             timerContext.stop()
             metrics.emailStoreUpdateErrorCounter.inc()
             Left(s"${e.getMessage}")
@@ -106,7 +113,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
       decryptedEmail.toEither().leftMap {
         t ⇒
-          logger.warn("Could not decrypt email", t, nino)
+          println("Could not decrypt email", t, nino)
           s"Could not decrypt email: ${t.getMessage}"
       }
     }.recover {
@@ -138,11 +145,15 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
   }
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] = {
+    println("Doing Update")
     collection.findOneAndUpdate(
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
       options = FindOneAndUpdateOptions().upsert(true)
-    ).toFuture().map(_.email.isEmpty)
+    ).toFuture().map{ r ⇒
+        println(r.toString)
+        r.email.isEmpty
+      }
     //    collection.update(ordered = false).one(
     //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
     //      BSONDocument("$set" -> BSONDocument("nino" -> nino, "email" -> encryptedEmail)),
