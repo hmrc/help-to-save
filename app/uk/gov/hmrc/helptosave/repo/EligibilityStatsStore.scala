@@ -19,6 +19,7 @@ package uk.gov.hmrc.helptosave.repo
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.Indexes._
 import com.mongodb.client.model.{Accumulators, Aggregates, Projections}
+import org.mongodb.scala.bson.{BsonDocument, BsonValue}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
 import play.api.libs.json.{Format, Json}
@@ -27,7 +28,8 @@ import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import org.mongodb.scala.bson.codecs._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -58,31 +60,38 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
   //  )
 
   private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
-    collection.aggregate[List[EligibilityStats]](Seq(
-      Aggregates.group(("$eligibilityReason", "$source"), Accumulators.sum("total", "$total")),
+    println("Doing aggregate")
+    import MongoEligibilityStatsStore.format
+
+    collection.aggregate[BsonValue](Seq(
+      Aggregates.group(BsonDocument("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"), Accumulators.sum("total", 1)),
       Aggregates.project(Projections.fields(
         Projections.computed("_id", 0),
         Projections.computed("eligibilityReason", "$_id.eligibilityReason"),
         Projections.computed("source", "$_id.source"),
         Projections.computed("total", "$total"),
       ))
-    )).toFuture().map(_.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur ::: acc))
+    )).toFuture()
+      .map(_.toList.map(Codecs.fromBson[EligibilityStats]))
 
   }
   //
-  //        collection.aggregateWith(){ a ⇒
+  //        collectection.aggregateWition.aggregateWith(){ a ⇒
   //          a.Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"))("total" -> a.SumAll) →
   //            List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total")))
   //        }.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur :: acc)
   override def getEligibilityStats: Future[List[EligibilityStats]] = {
+    println("Getting Elig stats")
     val timerContext = metrics.eligibilityStatsTimer.time()
     doAggregate()
       .map { response ⇒
+        println("Got  Elig stats")
         val time = timerContext.stop()
         logger.info(s"eligibility stats query took ${nanosToPrettyString(time)}")
         response
       }.recover {
         case e ⇒
+          println("We failed")
           val _ = timerContext.stop()
           logger.warn(s"error retrieving the eligibility stats from mongo, error = ${e.getMessage}")
           List.empty[EligibilityStats]

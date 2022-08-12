@@ -24,7 +24,7 @@ import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import org.mongodb.scala.model.Filters.regex
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
+import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, UpdateOptions, Updates}
 import play.api.Logging
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -80,7 +80,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
       doUpdate(crypto.encrypt(email), nino)
         .map[Either[String, Unit]] { result ⇒
           timerContext.stop()
-          println("Doing Update")
+          println("Inside update")
 
           if (!result) {
             println("result was null")
@@ -88,6 +88,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
             Left("Could not update email mongo store")
           } else {
             println("result was right")
+            println(email)
             Right(())
           }
         }
@@ -102,9 +103,12 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
   override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
+    println("Getting")
 
     //    find("nino" → Json.obj("$regex" → JsString(getRegex(nino))))
     collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
+      println("Found result")
+      println(res)
       timerContext.stop()
 
       val decryptedEmail = res.headOption
@@ -118,6 +122,8 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
       }
     }.recover {
       case e ⇒
+        println("failure")
+        println(e)
         timerContext.stop()
         metrics.emailStoreGetErrorCounter.inc()
         Left(s"Could not read from email store: ${e.getMessage}")
@@ -146,14 +152,14 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] = {
     println("Doing Update")
-    collection.findOneAndUpdate(
+    collection.updateOne(
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
-      options = FindOneAndUpdateOptions().upsert(true)
-    ).toFuture().map{ r ⇒
-        println(r.toString)
-        r.email.isEmpty
-      }
+      options = UpdateOptions().upsert(true)
+    ).toFuture().map(a ⇒ {
+        println()
+        a.wasAcknowledged()
+      })
     //    collection.update(ordered = false).one(
     //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
     //      BSONDocument("$set" -> BSONDocument("nino" -> nino, "email" -> encryptedEmail)),
