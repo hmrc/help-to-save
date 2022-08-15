@@ -32,7 +32,7 @@ import scala.language.postfixOps
 
 trait UnitSpec extends AnyWordSpecLike with Matchers {
 
-  implicit val defaultTimeout: FiniteDuration = 5 seconds
+  implicit val defaultTimeout: FiniteDuration = 50 seconds
 
   def await[A](future: Future[A])(implicit timeout: Duration): A =
     Await.result(future, timeout)
