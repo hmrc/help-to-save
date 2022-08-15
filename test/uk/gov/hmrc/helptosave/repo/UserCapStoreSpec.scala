@@ -19,13 +19,15 @@ package uk.gov.hmrc.helptosave.repo
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.{MongoSupport}
 
 import java.time.{LocalDate, ZoneId}
 
-class UserCapStoreSpec extends TestSupport with CleanMongoCollectionSupport {
-  override def beforeAll(): Unit = {
-    dropDatabase()
+class UserCapStoreSpec extends TestSupport with MongoSupport {
+
+  val repository: MongoUserCapStore = newUserCapStore(mongoComponent)
+  override def beforeEach(): Unit = {
+    await(repository.collection.drop().toFuture())
   }
   def newUserCapStore(mongoComponent: MongoComponent) = new MongoUserCapStore(mongoComponent)
 
@@ -36,14 +38,14 @@ class UserCapStoreSpec extends TestSupport with CleanMongoCollectionSupport {
     "getting the user-cap" should {
 
       "return the existing record successfully" in {
-        val store = newUserCapStore(mongoComponent)
+        val store = repository
 
         await(store.doUpdate(record))
         await(store.get()) shouldBe Some(record)
       }
 
       "returns None if no record exists" in {
-        val store = newUserCapStore(mongoComponent)
+        val store = repository
         await(store.get()) shouldBe None
       }
     }

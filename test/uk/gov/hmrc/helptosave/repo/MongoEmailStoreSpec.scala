@@ -17,20 +17,21 @@
 package uk.gov.hmrc.helptosave.repo
 
 import cats.syntax.all._
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.MongoSupport
 
 import scala.util.{Failure, Success, Try}
 
-class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCollectionSupport {
-  override def beforeAll(): Unit = {
-    dropDatabase()
-  }
+class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport with BeforeAndAfterEach {
 
-  val repository: MongoEmailStore = fakeApplication.injector.instanceOf[MongoEmailStore]
+  lazy val repository: MongoEmailStore = newMongoEmailStore(mongoComponent)
+  override def beforeEach(): Unit = {
+    await(repository.collection.drop().toFuture())
+  }
 
   val crypto: Crypto = mock[Crypto]
 
@@ -63,7 +64,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCol
 
       "store the email in the mongo database" in {
         val nino = randomNINO()
-        val emailStore = newMongoEmailStore(mongoComponent)
+        val emailStore = repository
 
         inSequence {
           mockEncrypt(email)(encryptedEmail)
@@ -83,7 +84,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCol
         val nino = "AE123456A"
         val ninoDifferentSuffix = "AE123456B"
         val updatedEmail = "test@gmail.com"
-        val emailStore = newMongoEmailStore(mongoComponent)
+        val emailStore = repository
 
         inSequence {
           mockEncrypt(email)(encryptedEmail)
@@ -114,7 +115,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCol
 
       "return a right if the get is successful" in {
         val nino = randomNINO()
-        val emailStore = newMongoEmailStore(mongoComponent)
+        val emailStore = repository
 
         inSequence {
           mockEncrypt(email)(encryptedEmail)
@@ -148,13 +149,13 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCol
           mockDecrypt(encryptedEmail)(Some(email))
         }
 
-        val emailStore = newMongoEmailStore(mongoComponent)
+        val emailStore = repository
 
         //there should no emails to start with
         get(nino, emailStore) shouldBe Right(None)
 
         //putting the email in mongo
-        storeConfirmedEmail(nino, email, emailStore)
+        await(storeConfirmedEmail(nino, email, emailStore).value)
 
         // try when there is an email
         get(nino, emailStore) shouldBe Right(Some(email))
@@ -169,7 +170,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCol
 
       "delete the email in the mongo database for a given nino" in {
         val nino = randomNINO()
-        val emailStore = newMongoEmailStore(mongoComponent)
+        val emailStore = repository
 
         mockEncrypt(email)(encryptedEmail)
 
@@ -185,7 +186,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCol
 
       "delete the email when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"
-        val emailStore = newMongoEmailStore(mongoComponent)
+        val emailStore = repository
 
         mockEncrypt(email)(encryptedEmail)
 

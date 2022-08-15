@@ -16,20 +16,22 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import org.scalatest.BeforeAndAfterEach
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.MongoSupport
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class MongoEnrolmentStoreSpec extends TestSupport with CleanMongoCollectionSupport {
-  override def beforeAll(): Unit = {
-    dropDatabase()
-  }
+class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
+
   val repository: MongoEnrolmentStore = fakeApplication.injector.instanceOf[MongoEnrolmentStore]
+  override def beforeEach(): Unit = {
+    await(repository.collection.drop().toFuture())
+  }
 
   val ninoDifferentSuffix = "AE123456B"
 

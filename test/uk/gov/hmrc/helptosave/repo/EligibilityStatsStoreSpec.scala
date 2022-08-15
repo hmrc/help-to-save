@@ -16,21 +16,22 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import org.scalatest.BeforeAndAfterEach
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.MongoSupport
 
-class EligibilityStatsStoreSpec extends TestSupport with CleanMongoCollectionSupport {
-
-  override def beforeAll(): Unit = {
-    dropDatabase()
-  }
+class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
 
   def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) = new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
   val repository = newEligibilityStatsMongoStore(mongoComponent)
+
+  override def beforeEach(): Unit = {
+    await(repository.collection.drop().toFuture())
+  }
 
   "The EligibilityStatsStore" when {
 
