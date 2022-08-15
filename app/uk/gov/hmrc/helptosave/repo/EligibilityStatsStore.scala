@@ -46,11 +46,10 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
     mongoComponent = mongo,
     collectionName = "enrolments",
     domainFormat   = EnrolmentData.ninoFormat,
-    indexes        = Seq(IndexModel(ascending("eligibilityReason"), IndexOptions().name("eligibilityReasonIndex").unique(false)))
+    indexes        = Seq(IndexModel(ascending("eligibilityReason"), IndexOptions().name("eligibilityReasonIndex")))
   ) with EligibilityStatsStore with Logging {
 
   private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
-    println("Doing aggregate")
     import MongoEligibilityStatsStore.format
 
     collection.aggregate[BsonValue](Seq(
@@ -67,17 +66,14 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
   }
 
   override def getEligibilityStats: Future[List[EligibilityStats]] = {
-    println("Getting Elig stats")
     val timerContext = metrics.eligibilityStatsTimer.time()
     doAggregate()
       .map { response ⇒
-        println("Got  Elig stats")
         val time = timerContext.stop()
         logger.info(s"eligibility stats query took ${nanosToPrettyString(time)}")
         response
       }.recover {
         case e ⇒
-          println("We failed")
           val _ = timerContext.stop()
           logger.warn(s"error retrieving the eligibility stats from mongo, error = ${e.getMessage}")
           List.empty[EligibilityStats]

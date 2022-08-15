@@ -57,34 +57,28 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
     mongoComponent = mongo,
     collectionName = "emails",
     domainFormat   = EmailData.emailDataFormat,
-    indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex").unique(false)))
+    indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex")))
   ) with EmailStore with Logging {
 
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
 
   def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
-      println("Starting Storing")
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
       doUpdate(crypto.encrypt(email), nino)
         .map[Either[String, Unit]] { result ⇒
           timerContext.stop()
-          println("Inside update")
 
           if (!result) {
-            println("result was null")
             metrics.emailStoreUpdateErrorCounter.inc()
             Left("Could not update email mongo store")
           } else {
-            println("result was right")
-            println(email)
             Right(())
           }
         }
         .recover {
           case NonFatal(e) ⇒
-            println("result was right" + e)
             timerContext.stop()
             metrics.emailStoreUpdateErrorCounter.inc()
             Left(s"${e.getMessage}")
@@ -93,11 +87,8 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
   override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
-    println("Getting")
 
     collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
-      println("Found result")
-      println(res)
       timerContext.stop()
 
       val decryptedEmail = res.headOption
@@ -106,13 +97,11 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
       decryptedEmail.toEither().leftMap {
         t ⇒
-          println("Could not decrypt email", t, nino)
+          logger.warn(s"Could not decrypt email: $t, $nino")
           s"Could not decrypt email: ${t.getMessage}"
       }
     }.recover {
       case e ⇒
-        println("failure")
-        println(e)
         timerContext.stop()
         metrics.emailStoreGetErrorCounter.inc()
         Left(s"Could not read from email store: ${e.getMessage}")
@@ -129,13 +118,11 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
   }
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] = {
-    println("Doing Update")
     collection.updateOne(
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
       options = UpdateOptions().upsert(true)
     ).toFuture().map(a ⇒ {
-        println()
         a.wasAcknowledged()
       })
 

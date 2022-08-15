@@ -91,7 +91,7 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
     mongoComponent = mongo,
     collectionName = "enrolments",
     domainFormat   = EnrolmentData.ninoFormat,
-    indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex").unique(false)))
+    indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex")))
   )
   with EnrolmentStore with Logging {
 
@@ -102,34 +102,23 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
                              source:            String,
                              itmpFlag:          Boolean,
                              accountNumber:     Option[String])(implicit ec: ExecutionContext): Future[Unit] = {
-    accountNumber match {
-      case Some(accountNumber) ⇒
-        collection.insertOne(
-          EnrolmentData(
-            nino              = nino,
-            itmpHtSFlag       = itmpFlag,
-            eligibilityReason = eligibilityReason,
-            source            = Some(source),
-            accountNumber     = Some(accountNumber))
-        ).toFuture().map(_ ⇒ ())
 
-      case None ⇒
-        collection.insertOne(
-          EnrolmentData(
-            nino              = nino,
-            itmpHtSFlag       = itmpFlag,
-            eligibilityReason = eligibilityReason,
-            source            = Some(source))
-        ).toFuture().map(_ ⇒ ())
+    collection.insertOne(
+      EnrolmentData(
+        nino              = nino,
+        itmpHtSFlag       = itmpFlag,
+        eligibilityReason = eligibilityReason,
+        source            = Some(source),
+        accountNumber     = accountNumber)
+    ).toFuture().map(_ ⇒ ())
 
-    }
   }
 
   private[repo] def doUpdateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] = {
     collection.findOneAndUpdate(
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.set("itmpHtSFlag", itmpFlag),
-      options = FindOneAndUpdateOptions().upsert(false).bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
+      options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
     ).toFutureOption()
 
   }
@@ -138,7 +127,7 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
     collection.findOneAndUpdate(
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.set("accountNumber", accountNumber),
-      options = FindOneAndUpdateOptions().upsert(false).bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
+      options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
     ).toFutureOption()
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =
