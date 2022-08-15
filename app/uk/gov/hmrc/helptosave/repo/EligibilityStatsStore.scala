@@ -29,7 +29,6 @@ import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
-import org.mongodb.scala.bson.codecs._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,15 +49,6 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
     indexes        = Seq(IndexModel(ascending("eligibilityReason"), IndexOptions().name("eligibilityReasonIndex").unique(false)))
   ) with EligibilityStatsStore with Logging {
 
-  //  val log: Logging = new Logger(logger)
-
-  //  override def indexes: Seq[Index] = Seq(
-  //    Index(
-  //      key  = Seq("eligibilityReason" → IndexType.Ascending),
-  //      name = Some("eligibilityReasonIndex")
-  //    )
-  //  )
-
   private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
     println("Doing aggregate")
     import MongoEligibilityStatsStore.format
@@ -75,11 +65,7 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
       .map(_.toList.map(Codecs.fromBson[EligibilityStats]))
 
   }
-  //
-  //        collectection.aggregateWition.aggregateWith(){ a ⇒
-  //          a.Group(Json.obj("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"))("total" -> a.SumAll) →
-  //            List(Project(Json.obj("_id" -> 0, "eligibilityReason" -> "$_id.eligibilityReason", "source" -> "$_id.source", "total" -> "$total")))
-  //        }.fold(Nil: List[EligibilityStats])((acc, cur) ⇒ cur :: acc)
+
   override def getEligibilityStats: Future[List[EligibilityStats]] = {
     println("Getting Elig stats")
     val timerContext = metrics.eligibilityStatsTimer.time()

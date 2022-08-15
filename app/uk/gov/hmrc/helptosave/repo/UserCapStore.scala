@@ -47,13 +47,6 @@ class MongoUserCapStore @Inject() (mongo: MongoComponent)(implicit ec: Execution
   )
   with UserCapStore {
 
-  //  override def indexes: Seq[Index] = Seq(
-  //    Index(
-  //      key  = Seq("usercap" → IndexType.Ascending),
-  //      name = Some("usercapIndex")
-  //    )
-  //  )
-
   private[repo] def doFind(): Future[Option[UserCap]] = collection.find().headOption() //collection.find(BSONDocument(), None).one[UserCap]
 
   override def get(): Future[Option[UserCap]] = doFind()
@@ -69,19 +62,6 @@ class MongoUserCapStore @Inject() (mongo: MongoComponent)(implicit ec: Execution
       options = FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
     ).toFutureOption()
 
-    //    collection.findAndUpdate(
-    //      BSONDocument(),
-    //      BSONDocument("$set" -> BSONDocument("date" -> dateFormat.format(userCap.date), "dailyCount" -> userCap.dailyCount, "totalCount" -> userCap.totalCount)),
-    //      fetchNewObject           = true,
-    //      upsert                   = true,
-    //      sort                     = None,
-    //      fields                   = None,
-    //      bypassDocumentValidation = false,
-    //      writeConcern             = WriteConcern.Default,
-    //      maxTime                  = None,
-    //      collation                = None,
-    //      arrayFilters             = Seq()
-    //    ).map(_.result[UserCap])
   }
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)

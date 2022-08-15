@@ -24,12 +24,11 @@ import cats.syntax.traverse._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import org.mongodb.scala.model.Filters.regex
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, UpdateOptions, Updates}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Updates}
 import play.api.Logging
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.helptosave.util.{Crypto, LogMessageTransformer, NINO}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -61,16 +60,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
     indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex").unique(false)))
   ) with EmailStore with Logging {
 
-  //  val log: Logger = new Logger(logger)
-
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
-
-  //  override def indexes: Seq[Index] = Seq(
-  //    Index(
-  //      key  = Seq("nino" → IndexType.Ascending),
-  //      name = Some("ninoIndex")
-  //    )
-  //  )
 
   def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit]({
@@ -105,7 +95,6 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
     val timerContext = metrics.emailStoreGetTimer.time()
     println("Getting")
 
-    //    find("nino" → Json.obj("$regex" → JsString(getRegex(nino))))
     collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
       println("Found result")
       println(res)
@@ -132,17 +121,6 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
   override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
 
-    //        remove("nino" → Json.obj("$regex" → JsString(getRegex(nino)))).map[Either[String, Unit]]{ res ⇒
-    //          if (res.writeErrors.nonEmpty) {
-    //            Left(s"Could not delete email: ${res.writeErrors.mkString(";")}")
-    //          } else {
-    //            Right(())
-    //          }
-    //        }.recover{
-    //          case e ⇒
-    //            Left(s"Could not delete email: ${e.getMessage}")
-    //        }
-
     collection.findOneAndDelete(regex("nino", getRegex(nino))).toFuture().map[Either[String, Unit]]{ res ⇒ Right(()) }.recover{
       case e ⇒
         Left(s"Could not delete email: ${e.getMessage}")
@@ -160,11 +138,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
         println()
         a.wasAcknowledged()
       })
-    //    collection.update(ordered = false).one(
-    //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
-    //      BSONDocument("$set" -> BSONDocument("nino" -> nino, "email" -> encryptedEmail)),
-    //      upsert = true
-    //    ).map(_.ok)
+
   }
 
 }

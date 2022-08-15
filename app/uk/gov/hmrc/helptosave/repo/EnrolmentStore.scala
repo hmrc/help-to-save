@@ -95,16 +95,7 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
   )
   with EnrolmentStore with Logging {
 
-  //  val log: Logger = new Logger(logger)
-
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
-
-  //  override def indexes: Seq[Index] = Seq(
-  //    Index(
-  //      key  = Seq("nino" → IndexType.Ascending),
-  //      name = Some("ninoIndex")
-  //    )
-  //  )
 
   private[repo] def doInsert(nino:              NINO,
                              eligibilityReason: Option[Int],
@@ -122,9 +113,6 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
             accountNumber     = Some(accountNumber))
         ).toFuture().map(_ ⇒ ())
 
-      //      case Some(accountNum) ⇒ collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
-      //        "eligibilityReason" -> eligibilityReason, "source" -> source, "accountNumber" -> accountNum))
-
       case None ⇒
         collection.insertOne(
           EnrolmentData(
@@ -134,8 +122,6 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
             source            = Some(source))
         ).toFuture().map(_ ⇒ ())
 
-      //        collection.insert(ordered = false).one(BSONDocument("nino" -> nino, "itmpHtSFlag" -> itmpFlag,
-      //        "eligibilityReason" -> eligibilityReason, "source" -> source))
     }
   }
 
@@ -146,19 +132,6 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       options = FindOneAndUpdateOptions().upsert(false).bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
     ).toFutureOption()
 
-    //    collection.findAndUpdate(
-    //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
-    //      BSONDocument("$set" -> BSONDocument("itmpHtSFlag" -> itmpFlag)),
-    //      fetchNewObject           = true,
-    //      upsert                   = false,
-    //      sort                     = None,
-    //      fields                   = None,
-    //      bypassDocumentValidation = false,
-    //      writeConcern             = WriteConcern.Default,
-    //      maxTime                  = None,
-    //      collation                = None,
-    //      arrayFilters             = Nil
-    //    ).map(_.result[EnrolmentData])
   }
 
   private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
@@ -168,26 +141,10 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       options = FindOneAndUpdateOptions().upsert(false).bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
     ).toFutureOption()
 
-  //    collection.findAndUpdate(
-  //      BSONDocument("nino" -> BSONDocument("$regex" -> getRegex(nino))),
-  //      BSONDocument("$set" -> BSONDocument("accountNumber" -> accountNumber)),
-  //      fetchNewObject           = true,
-  //      upsert                   = false,
-  //      sort                     = None,
-  //      fields                   = None,
-  //      bypassDocumentValidation = false,
-  //      writeConcern             = WriteConcern.Default,
-  //      maxTime                  = None,
-  //      collation                = None,
-  //      arrayFilters             = Nil
-  //    ).map(_.result[EnrolmentData])
-
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =
     EitherT[Future, String, EnrolmentStore.Status](
       {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
-
-        //        find("nino" → Json.obj("$regex" → JsString(getRegex(nino))))
 
         collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
           timerContext.stop()
@@ -269,12 +226,8 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-        //        find("nino" → Json.obj("$regex" → JsString(getRegex(nino))))
-
         collection.find(regex("nino", getRegex(nino))).toFuture().map[Either[String, AccountNumber]] { res ⇒
           timerContext.stop()
-
-          //Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
 
           Right(AccountNumber(res.headOption.flatMap(_.accountNumber)))
         }.recover {

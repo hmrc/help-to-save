@@ -20,13 +20,15 @@ import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.MongoSupport
+import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
-
+class MongoEnrolmentStoreSpec extends TestSupport with CleanMongoCollectionSupport {
+  override def beforeAll(): Unit = {
+    dropDatabase()
+  }
   val repository: MongoEnrolmentStore = fakeApplication.injector.instanceOf[MongoEnrolmentStore]
 
   val ninoDifferentSuffix = "AE123456B"
@@ -50,18 +52,6 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
         val create1 = create(nino, true, Some(7), "online", store, Some(accountNumber))
         create1 shouldBe Right(())
       }
-
-      //      "return an error" when {
-      //
-      //                "the future returned by mongo fails" in {
-      //                  withBrokenMongo { mongoComponent ⇒
-      //                    val nino = randomNINO()
-      //                    val store = newMongoEnrolmentStore(mongoComponent)
-      //                    val create1 = create(nino, true, Some(7), "online", store, Some(accountNumber))
-      //                    create1.isLeft shouldBe false
-      //                  }
-      //                }
-      //      }
     }
 
     "updating" must {
@@ -116,14 +106,6 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
         val store = repository
         get(nino, store) shouldBe Right(NotEnrolled)
       }
-
-      //      "return an error if there is an error while finding the entry" in {
-      //        val nino = randomNINO()
-      //        withBrokenMongo { reactiveMongoComponent ⇒
-      //          val store = newMongoEnrolmentStore(reactiveMongoComponent)
-      //          get(nino, store).isLeft shouldBe true
-      //        }
-      //      }
 
       "return an enrolled status when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"

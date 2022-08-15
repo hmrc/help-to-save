@@ -25,7 +25,12 @@ import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 
 class EligibilityStatsStoreSpec extends TestSupport with CleanMongoCollectionSupport {
 
+  override def beforeAll(): Unit = {
+    dropDatabase()
+  }
+
   def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) = new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
+  val repository = newEligibilityStatsMongoStore(mongoComponent)
 
   "The EligibilityStatsStore" when {
 
@@ -34,7 +39,6 @@ class EligibilityStatsStoreSpec extends TestSupport with CleanMongoCollectionSup
     "aggregating the eligibility stats" must {
 
       "return results as expected" in {
-        val repository = newEligibilityStatsMongoStore(mongoComponent)
 
         await(repository.collection.insertOne(EnrolmentData(nino              = randomNINO(), itmpHtSFlag = false, eligibilityReason = Some(7), source = Some("Digital"))).toFuture())
         await(repository.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
@@ -42,7 +46,6 @@ class EligibilityStatsStoreSpec extends TestSupport with CleanMongoCollectionSup
     }
 
     "handle error while reading from mongo" in {
-      val repository = newEligibilityStatsMongoStore(mongoComponent)
 
       await(repository.getEligibilityStats) shouldBe List.empty
     }
@@ -50,11 +53,7 @@ class EligibilityStatsStoreSpec extends TestSupport with CleanMongoCollectionSup
     "return aggregated results when there is more than one result" in {
       val document2 = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
       val document3 = Json.obj("eligibilityReason" -> 8, "source" -> "Digital", "total" -> 1).value
-      val repository = newEligibilityStatsMongoStore(mongoComponent)
 
-      //      await(store.collection.insert(ordered = false).one(document))
-      //      await(store.collection.insert(ordered = false).one(document2))
-      //      await(store.collection.insert(ordered = false).one(document3))
       await(repository.collection.insertOne(
         EnrolmentData(
           nino              = randomNINO(),
@@ -82,10 +81,10 @@ class EligibilityStatsStoreSpec extends TestSupport with CleanMongoCollectionSup
         )
       ).toFuture())
 
-      await(repository.getEligibilityStats) shouldBe List(
+      await(repository.getEligibilityStats).sortBy(_.eligibilityReason) shouldBe List(
         EligibilityStats(Some(7), Some("Digital"), 2),
         EligibilityStats(Some(8), Some("Digital"), 1)
-      )
+      ).sortBy(_.eligibilityReason)
     }
   }
 

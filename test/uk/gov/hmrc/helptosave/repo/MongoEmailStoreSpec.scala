@@ -16,21 +16,19 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import cats.data.EitherT
 import cats.syntax.all._
-import org.mongodb.scala.MongoCollection
-import org.mongodb.scala.model.Filters
-import org.scalatest.Succeeded
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, MongoSupport}
+import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 
-import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCollectionSupport {
+  override def beforeAll(): Unit = {
+    dropDatabase()
+  }
 
   val repository: MongoEmailStore = fakeApplication.injector.instanceOf[MongoEmailStore]
 
@@ -139,19 +137,6 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with CleanMongoCol
           get(nino, emailStore) shouldBe Right(None)
         }
       }
-
-      //      "return a left if the get is unsuccessful" in {
-      //
-      //        val nino = randomNINO()
-      //        val emailStore = newMongoEmailStore(mongoComponent)
-      //        await(emailStore.get(nino).map(e ⇒ {
-      //          throw new Throwable("Failure")
-      //          e
-      //        }).value).isLeft shouldBe true
-      //          .map(_ => throw new Exception("Failure"))
-      //        get(nino, emailStore).map(_ ⇒ ).isLeft shouldBe true
-
-      //      }
 
       "return the email when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"

@@ -16,17 +16,17 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 
 import java.time.{LocalDate, ZoneId}
-import scala.concurrent.Future
 
 class UserCapStoreSpec extends TestSupport with CleanMongoCollectionSupport {
-
+  override def beforeAll(): Unit = {
+    dropDatabase()
+  }
   def newUserCapStore(mongoComponent: MongoComponent) = new MongoUserCapStore(mongoComponent)
 
   "The UserCapStore" when {
