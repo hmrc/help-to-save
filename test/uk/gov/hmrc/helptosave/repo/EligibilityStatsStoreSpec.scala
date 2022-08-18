@@ -30,7 +30,8 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
   val repository = newEligibilityStatsMongoStore(mongoComponent)
 
   override def beforeEach(): Unit = {
-    await(repository.collection.drop().toFuture())
+    //    await(repository.collection.drop().toFuture())
+    dropDatabase()
   }
 
   "The EligibilityStatsStore" when {
@@ -54,24 +55,16 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
     "return aggregated results when there is more than one result" in {
       val document2 = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
       val document3 = Json.obj("eligibilityReason" -> 8, "source" -> "Digital", "total" -> 1).value
+      val enrolmentData = EnrolmentData(
+        nino              = randomNINO(),
+        itmpHtSFlag       = false,
+        eligibilityReason = Some(7),
+        source            = Some("Digital")
+      )
 
-      await(repository.collection.insertOne(
-        EnrolmentData(
-          nino              = randomNINO(),
-          itmpHtSFlag       = false,
-          eligibilityReason = Some(7),
-          source            = Some("Digital")
-        )
-      ).toFuture())
+      await(repository.collection.insertOne(enrolmentData).toFuture())
 
-      await(repository.collection.insertOne(
-        EnrolmentData(
-          nino              = randomNINO(),
-          itmpHtSFlag       = false,
-          eligibilityReason = Some(7),
-          source            = Some("Digital")
-        )
-      ).toFuture())
+      await(repository.collection.insertOne(enrolmentData).toFuture())
 
       await(repository.collection.insertOne(
         EnrolmentData(

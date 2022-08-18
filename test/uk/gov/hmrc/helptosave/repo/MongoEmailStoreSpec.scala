@@ -49,6 +49,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
     new MongoEmailStore(mongoComponent, crypto, mockMetrics)
 
   "The MongoEmailStore" when {
+    val emailStore = repository
 
     val email = "EMAIL"
     val encryptedEmail = "ENCRYPTED"
@@ -64,7 +65,6 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
       "store the email in the mongo database" in {
         val nino = randomNINO()
-        val emailStore = repository
 
         inSequence {
           mockEncrypt(email)(encryptedEmail)
@@ -84,7 +84,6 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         val nino = "AE123456A"
         val ninoDifferentSuffix = "AE123456B"
         val updatedEmail = "test@gmail.com"
-        val emailStore = repository
 
         inSequence {
           mockEncrypt(email)(encryptedEmail)
@@ -115,7 +114,6 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
       "return a right if the get is successful" in {
         val nino = randomNINO()
-        val emailStore = repository
 
         inSequence {
           mockEncrypt(email)(encryptedEmail)
@@ -149,8 +147,6 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
           mockDecrypt(encryptedEmail)(Some(email))
         }
 
-        val emailStore = repository
-
         //there should no emails to start with
         get(nino, emailStore) shouldBe Right(None)
 
@@ -170,7 +166,6 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
       "delete the email in the mongo database for a given nino" in {
         val nino = randomNINO()
-        val emailStore = repository
 
         mockEncrypt(email)(encryptedEmail)
 
@@ -186,7 +181,6 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
       "delete the email when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"
-        val emailStore = repository
 
         mockEncrypt(email)(encryptedEmail)
 
