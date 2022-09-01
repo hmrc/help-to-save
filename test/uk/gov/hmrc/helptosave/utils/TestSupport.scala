@@ -17,13 +17,12 @@
 package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
-
 import com.codahale.metrics.{Counter, Gauge, Timer}
 import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
 import com.typesafe.config.ConfigFactory
 import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
@@ -38,7 +37,7 @@ import uk.gov.hmrc.smartstub._
 
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll {
+trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with BeforeAndAfterEach {
 
   lazy val additionalConfig = Configuration()
 

@@ -17,12 +17,13 @@ lazy val plugins: Seq[Plugins] = Seq.empty
 
 val hmrc = "uk.gov.hmrc"
 val playVersion = "play-28"
+val mongoVersion = "0.68.0"
 
 val dependencies = Seq(
   ws,
   hmrc                %% s"bootstrap-backend-$playVersion"  % "5.12.0",
   hmrc                %% "domain"                           % s"6.2.0-$playVersion",
-  hmrc                %% "simple-reactivemongo"             % s"8.0.0-$playVersion",
+  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"               % mongoVersion,
   hmrc                %% "crypto"                           % "6.0.0",
   hmrc                %% "mongo-lock"                       % s"7.0.0-$playVersion",
   "org.typelevel"     %% "cats-core"                        % "2.2.0",
@@ -36,7 +37,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   hmrc                    %% "service-integration-test"       % s"1.1.0-$playVersion"   % scope,
   hmrc                    %% "domain"                         % s"6.2.0-$playVersion"   % scope,
   hmrc                    %% "stub-data-generator"            % "0.5.3"                 % scope,
-  hmrc                    %% "reactivemongo-test"             % s"5.0.0-$playVersion"   % scope,
+  "uk.gov.hmrc.mongo"     %% "hmrc-mongo-test-play-28"        % mongoVersion            % scope,
   "org.scalatest"         %% "scalatest"                      % "3.2.9"                 % scope,
   "org.scalatestplus"     %% "scalatestplus-scalacheck"       % "3.1.0.0-RC2"           % scope,
   "com.vladsch.flexmark"  %  "flexmark-all"                   % "0.35.10"               % scope,

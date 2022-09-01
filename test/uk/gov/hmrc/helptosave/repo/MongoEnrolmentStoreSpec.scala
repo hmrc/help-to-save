@@ -16,26 +16,33 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import play.modules.reactivemongo.ReactiveMongoComponent
+import org.scalatest.BeforeAndAfterEach
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.test.MongoSupport
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
+class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
+
+  val repository: MongoEnrolmentStore = fakeApplication.injector.instanceOf[MongoEnrolmentStore]
+  override def beforeEach(): Unit = {
+    await(repository.collection.drop().toFuture())
+  }
 
   val ninoDifferentSuffix = "AE123456B"
 
   val accountNumber = "1234567890"
 
-  def newMongoEnrolmentStore(reactiveMongoComponent: ReactiveMongoComponent) =
-    new MongoEnrolmentStore(reactiveMongoComponent, mockMetrics)
+  def newMongoEnrolmentStore(mongoComponent: MongoComponent) =
+    new MongoEnrolmentStore(mongoComponent, mockMetrics)
 
   def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String, store: MongoEnrolmentStore,
              accountNumber: Option[String]): Either[String, Unit] =
-    Await.result(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber).value, 5.second)
+    Await.result(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber).value, 15.second)
 
   "The MongoEnrolmentStore" when {
 
@@ -43,19 +50,9 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
       "create a new record in the db when inserted" in {
         val nino = randomNINO()
-        val store = newMongoEnrolmentStore(reactiveMongoComponent)
-        create(nino, true, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
-      }
-
-      "return an error" when {
-
-        "the future returned by mongo fails" in {
-          withBrokenMongo { reactiveMongoComponent ⇒
-            val nino = randomNINO()
-            val store = newMongoEnrolmentStore(reactiveMongoComponent)
-            create(nino, true, Some(7), "online", store, Some(accountNumber)).isLeft shouldBe true
-          }
-        }
+        val store = repository
+        val create1 = create(nino, true, Some(7), "online", store, Some(accountNumber))
+        create1 shouldBe Right(())
       }
     }
 
@@ -66,7 +63,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
       "update the mongodb collection" in {
         val nino = randomNINO()
-        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        val store = repository
         create(nino, false, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         update(nino, true, store) shouldBe Right(())
       }
@@ -74,18 +71,15 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
       "return an error" when {
 
         "the future returned by mongo fails" in {
-          withBrokenMongo { reactiveMongoComponent ⇒
-            val nino = randomNINO()
-            val store = newMongoEnrolmentStore(reactiveMongoComponent)
-            update(nino, false, store).isLeft shouldBe true
-          }
-
+          val nino = randomNINO()
+          val store = repository
+          update(nino, false, store).isLeft shouldBe true
         }
       }
 
       "update the enrolment when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"
-        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        val store = repository
         create(nino, false, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         update(ninoDifferentSuffix, true, store) shouldBe Right(())
       }
@@ -98,34 +92,26 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport {
 
       "attempt to find the entry in the collection based on the input nino" in {
         val nino = randomNINO()
-        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        val store = repository
         get(nino, store) shouldBe Right(NotEnrolled)
       }
 
       "return an enrolled status if an entry is found" in {
         val nino = randomNINO()
-        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        val store = repository
         create(nino, true, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
       "return a not enrolled status if the entry is not found" in {
         val nino = randomNINO()
-        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        val store = repository
         get(nino, store) shouldBe Right(NotEnrolled)
-      }
-
-      "return an error if there is an error while finding the entry" in {
-        val nino = randomNINO()
-        withBrokenMongo { reactiveMongoComponent ⇒
-          val store = newMongoEnrolmentStore(reactiveMongoComponent)
-          get(nino, store).isLeft shouldBe true
-        }
       }
 
       "return an enrolled status when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"
-        val store = newMongoEnrolmentStore(reactiveMongoComponent)
+        val store = repository
         create(nino, true, Some(7), "online", store, Some(accountNumber)) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
         get(ninoDifferentSuffix, store) shouldBe Right(Enrolled(true))

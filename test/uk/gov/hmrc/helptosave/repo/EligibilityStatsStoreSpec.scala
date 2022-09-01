@@ -16,14 +16,23 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import org.scalatest.BeforeAndAfterEach
 import play.api.libs.json.Json
-import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
+import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.test.MongoSupport
 
-class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
+class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
 
-  def newEligibilityStatsMongoStore(reactiveMongoComponent: ReactiveMongoComponent) = new MongoEligibilityStatsStore(reactiveMongoComponent, mockMetrics)
+  def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) = new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
+  val repository = newEligibilityStatsMongoStore(mongoComponent)
+
+  override def beforeEach(): Unit = {
+    //    await(repository.collection.drop().toFuture())
+    dropDatabase()
+  }
 
   "The EligibilityStatsStore" when {
 
@@ -32,32 +41,44 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport {
     "aggregating the eligibility stats" must {
 
       "return results as expected" in {
-        val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
-        await(store.collection.insert(ordered = false).one(document))
-        await(store.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
+        await(repository.collection.insertOne(EnrolmentData(nino              = randomNINO(), itmpHtSFlag = false, eligibilityReason = Some(7), source = Some("Digital"))).toFuture())
+        await(repository.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
       }
     }
 
     "handle error while reading from mongo" in {
-      val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
 
-      await(store.getEligibilityStats) shouldBe List.empty
+      await(repository.getEligibilityStats) shouldBe List.empty
     }
 
     "return aggregated results when there is more than one result" in {
       val document2 = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
       val document3 = Json.obj("eligibilityReason" -> 8, "source" -> "Digital", "total" -> 1).value
-      val store = newEligibilityStatsMongoStore(reactiveMongoComponent)
+      val enrolmentData = EnrolmentData(
+        nino              = randomNINO(),
+        itmpHtSFlag       = false,
+        eligibilityReason = Some(7),
+        source            = Some("Digital")
+      )
 
-      await(store.collection.insert(ordered = false).one(document))
-      await(store.collection.insert(ordered = false).one(document2))
-      await(store.collection.insert(ordered = false).one(document3))
+      await(repository.collection.insertOne(enrolmentData).toFuture())
 
-      await(store.getEligibilityStats) shouldBe List(
+      await(repository.collection.insertOne(enrolmentData).toFuture())
+
+      await(repository.collection.insertOne(
+        EnrolmentData(
+          nino              = randomNINO(),
+          itmpHtSFlag       = false,
+          eligibilityReason = Some(8),
+          source            = Some("Digital")
+        )
+      ).toFuture())
+
+      await(repository.getEligibilityStats).sortBy(_.eligibilityReason) shouldBe List(
         EligibilityStats(Some(7), Some("Digital"), 2),
         EligibilityStats(Some(8), Some("Digital"), 1)
-      )
+      ).sortBy(_.eligibilityReason)
     }
   }
 

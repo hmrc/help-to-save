@@ -16,19 +16,18 @@
 
 package uk.gov.hmrc.helptosave.repo
 
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.mongodb.client.model.ReturnDocument
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
+import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZoneId}
-import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json.{Format, Json}
-import play.modules.reactivemongo._
-import reactivemongo.api.WriteConcern
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.play.json.ImplicitBSONHandlers.BSONDocumentWrites
-import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoUserCapStore])
@@ -39,39 +38,30 @@ trait UserCapStore {
 }
 
 @Singleton
-class MongoUserCapStore @Inject() (mongo: ReactiveMongoComponent)(implicit ec: ExecutionContext)
-  extends ReactiveRepository[UserCap, BSONObjectID](
+class MongoUserCapStore @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
+  extends PlayMongoRepository[UserCap](
+    mongoComponent = mongo,
     collectionName = "usercap",
-    mongo          = mongo.mongoConnector.db,
-    UserCap.userCapFormat,
-    ReactiveMongoFormats.objectIdFormats)
+    domainFormat   = UserCap.userCapFormat,
+    indexes        = Seq(IndexModel(ascending("usercap"), IndexOptions().name("usercapIndex")))
+  )
   with UserCapStore {
 
-  override def indexes: Seq[Index] = Seq(
-    Index(
-      key  = Seq("usercap" → IndexType.Ascending),
-      name = Some("usercapIndex")
-    )
-  )
-
-  private[repo] def doFind(): Future[Option[UserCap]] = collection.find(BSONDocument(), None).one[UserCap]
+  private[repo] def doFind(): Future[Option[UserCap]] = collection.find().headOption() //collection.find(BSONDocument(), None).one[UserCap]
 
   override def get(): Future[Option[UserCap]] = doFind()
 
   private[repo] def doUpdate(userCap: UserCap): Future[Option[UserCap]] = {
-    collection.findAndUpdate(
-      BSONDocument(),
-      BSONDocument("$set" -> BSONDocument("date" -> dateFormat.format(userCap.date), "dailyCount" -> userCap.dailyCount, "totalCount" -> userCap.totalCount)),
-      fetchNewObject           = true,
-      upsert                   = true,
-      sort                     = None,
-      fields                   = None,
-      bypassDocumentValidation = false,
-      writeConcern             = WriteConcern.Default,
-      maxTime                  = None,
-      collation                = None,
-      arrayFilters             = Seq()
-    ).map(_.result[UserCap])
+    collection.findOneAndUpdate(
+      filter  = BsonDocument(),
+      update  = Updates.combine(
+        Updates.set("date", dateFormat.format(userCap.date)),
+        Updates.set("dailyCount", userCap.dailyCount),
+        Updates.set("totalCount", userCap.totalCount)
+      ),
+      options = FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
+    ).toFutureOption()
+
   }
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)
