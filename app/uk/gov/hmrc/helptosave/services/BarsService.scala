@@ -60,7 +60,7 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
           case Status.OK ⇒
             auditor.sendEvent(BARSCheck(barsRequest, response.json, request.uri), nino)
 
-            (response.json \ "accountNumberWithSortCodeIsValid").asOpt[String] →
+            (response.json \ "accountNumberIsWellFormatted").asOpt[String] →
               (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {
                 case (Some(accountNumberWithSortCodeIsValid), Some(sortCodeIsPresentOnEISCD)) ⇒
                   val sortCodeExists: Either[String, Boolean] =
