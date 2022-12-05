@@ -46,16 +46,16 @@ class BarsConnectorSpec extends TestSupport with HttpSupport {
 
         val response =
           """{
-            |  "accountNumberWithSortCodeIsValid": true,
+            |  "accountNumberIsWellFormatted": "yes",
             |  "nonStandardAccountDetailsRequiredForBacs": "no",
             |  "sortCodeIsPresentOnEISCD":"yes",
-            |  "supportsBACS":"yes",
-            |  "ddiVoucherFlag":"no",
-            |  "directDebitsDisallowed": "yes",
-            |  "directDebitInstructionsDisallowed": "yes"
+            |  "sortCodeBankName": "Lloyds",
+            |  "sortCodeSupportsDirectDebit": "yes",
+            |  "sortCodeSupportsDirectCredit": "yes",
+            |  "iban": "GB59 HBUK 1234 5678"
             |}""".stripMargin
 
-        mockPost("http://localhost:7002/v2/validateBankDetails", headers, body)(Some(HttpResponse(Status.OK, Json.parse(response), Map[String, Seq[String]]())))
+        mockPost("http://localhost:7002/validate/bank-details", headers, body)(Some(HttpResponse(Status.OK, Json.parse(response), Map[String, Seq[String]]())))
         val result = await(connector.validate(BankDetailsValidationRequest("AE123456C", "123456", "0201234"), trackingId))
 
         result.status shouldBe 200
