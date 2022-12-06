@@ -59,13 +59,13 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
         def newResponse(accountNumberWithSortCodeIsValid: String, sortCodeIsPresentOnEISCD: String): String =
           s"""{
-           |  "accountNumberWithSortCodeIsValid": "$accountNumberWithSortCodeIsValid",
+           |  "accountNumberIsWellFormatted": "$accountNumberWithSortCodeIsValid",
            |  "nonStandardAccountDetailsRequiredForBacs": "no",
            |  "sortCodeIsPresentOnEISCD":"$sortCodeIsPresentOnEISCD",
-           |  "supportsBACS":"yes",
-           |  "ddiVoucherFlag":"no",
-           |  "directDebitsDisallowed": "yes",
-           |  "directDebitInstructionsDisallowed": "yes"
+           |  "sortCodeBankName": "Lloyds",
+           |  "sortCodeSupportsDirectDebit": "yes",
+           |  "sortCodeSupportsDirectCredit": "yes",
+           |  "iban": "GB59 HBUK 1234 5678"
            |}""".stripMargin
 
       "handle the case when the bank details are valid and the sort code exists" in {
