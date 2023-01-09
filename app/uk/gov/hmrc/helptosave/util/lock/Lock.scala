@@ -18,12 +18,10 @@ package uk.gov.hmrc.helptosave.util.lock
 
 import akka.actor.{Actor, Cancellable, Props, Scheduler}
 import akka.pattern.pipe
-import org.joda.time
 import play.api.inject.ApplicationLifecycle
-import reactivemongo.api.DB
-import uk.gov.hmrc.helptosave.util.lock.LockProvider.ExclusiveTimePeriodLockProvider
+import uk.gov.hmrc.helptosave.util.lock.LockProvider.TimePeriodLockProvider
 import uk.gov.hmrc.helptosave.util._
-import uk.gov.hmrc.lock.{ExclusiveTimePeriodLock, LockMongoRepository, LockRepository}
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -112,24 +110,21 @@ object Lock {
    * These props uses the `ExclusiveTimePeriodLock` to implement the
    * `LockProvider` behaviour required by the `Lock` actor
    */
-  def props[State](mongoDb:        () ⇒ DB,
-                   lockID:         String,
-                   lockDuration:   FiniteDuration,
-                   scheduler:      Scheduler,
-                   initialState:   State,
-                   onLockAcquired: State ⇒ State,
-                   onLockReleased: State ⇒ State,
-                   lifecycle:      ApplicationLifecycle): Props = {
+  def props[State](mongoLockRepository: MongoLockRepository,
+                   lockID:              String,
+                   lockDuration:        FiniteDuration,
+                   scheduler:           Scheduler,
+                   initialState:        State,
+                   onLockAcquired:      State ⇒ State,
+                   onLockReleased:      State ⇒ State,
+                   lifecycle:           ApplicationLifecycle): Props = {
 
-    val lock: ExclusiveTimePeriodLock = new ExclusiveTimePeriodLock {
-      override val holdLockFor: time.Duration = org.joda.time.Duration.millis(lockDuration.toMillis)
+    val lockProvider: TimePeriodLockProvider = TimePeriodLockProvider(
+      repo        = mongoLockRepository,
+      lockId      = lockID,
+      holdLockFor = org.joda.time.Duration.millis(lockDuration.toMillis).getMillis.millis)
 
-      override val repo: LockRepository = LockMongoRepository(mongoDb)
-
-      override val lockId: String = lockID
-    }
-
-    Props(new Lock(ExclusiveTimePeriodLockProvider(lock), scheduler, initialState, onLockAcquired, onLockReleased, lifecycle.addStopHook))
+    Props(new Lock(lockProvider, scheduler, initialState, onLockAcquired, onLockReleased, lifecycle.addStopHook))
   }
 
   private sealed trait LockMessages

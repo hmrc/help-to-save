@@ -17,18 +17,17 @@
 package uk.gov.hmrc.helptosave.modules
 
 import java.time.Clock
-
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import configs.syntax._
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.helptosave.actors.{EligibilityStatsActor, EligibilityStatsParser, TimeCalculatorImpl}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.EligibilityStatsStore
 import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.helptosave.util.lock.Lock
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -45,7 +44,7 @@ class EligibilityStatsProviderImpl @Inject() (system:                 ActorSyste
                                               configuration:          Configuration,
                                               eligibilityStatsStore:  EligibilityStatsStore,
                                               eligibilityStatsParser: EligibilityStatsParser,
-                                              mongo:                  ReactiveMongoComponent,
+                                              mongoLockRepository:    MongoLockRepository,
                                               lifecycle:              ApplicationLifecycle,
                                               metrics:                Metrics) extends EligibilityStatsProvider with Logging {
 
@@ -79,7 +78,7 @@ class EligibilityStatsProviderImpl @Inject() (system:                 ActorSyste
   // multiple instances of the application in the same environment
   lazy val lockedEligibilityStats: ActorRef =
     system.actorOf(Lock.props[Option[ActorRef]](
-      mongo.mongoConnector.db,
+      mongoLockRepository,
       s"$name",
       lockDuration,
       system.scheduler,

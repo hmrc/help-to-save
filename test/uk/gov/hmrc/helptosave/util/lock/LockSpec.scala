@@ -33,7 +33,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
 
   val time: VirtualTime = new VirtualTime
 
-  trait TestableExclusiveTimePeriodLock extends LockProvider {
+  trait TimePeriodLock extends LockProvider {
 
     override val lockId: String = testLockID
 
@@ -41,7 +41,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
 
   }
 
-  val internalLock = mock[TestableExclusiveTimePeriodLock]
+  val internalLock = mock[TimePeriodLock]
 
   def sendToSelf[A](a: A): A = {
     self ! a
