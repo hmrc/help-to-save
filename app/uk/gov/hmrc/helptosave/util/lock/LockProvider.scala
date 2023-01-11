@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.helptosave.util.lock
 
-import uk.gov.hmrc.lock.ExclusiveTimePeriodLock
+import uk.gov.hmrc.mongo.lock.LockRepository
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,24 +39,33 @@ object LockProvider {
 
   /**
    * This lock provider ensures that some operation is only performed once across multiple
-   * instances of an application. It is backed by [[ExclusiveTimePeriodLock]] from the
-   * `mongo-lock` library
+   * instances of an application. It is backed by [[LockRepository]] from the
+   * `hmrc-mongo` library
    */
-  case class ExclusiveTimePeriodLockProvider(lock: ExclusiveTimePeriodLock) extends LockProvider {
+  case class TimePeriodLockProvider(repo: LockRepository, lockId: String, holdLockFor: FiniteDuration) extends LockProvider {
 
-    val lockId: String = lock.lockId
-
-    val serverId: String = lock.serverId
-
-    val holdLockFor: FiniteDuration = lock.holdLockFor.getMillis.millis
+    lazy private val ownerId = UUID.randomUUID().toString
 
     override def releaseLock(): Future[Unit] =
-      lock.repo.releaseLock(lockId, serverId)
+      repo.releaseLock(lockId, ownerId)
 
-    def tryToAcquireOrRenewLock[T](body: ⇒ Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
-      lock.tryToAcquireOrRenewLock(body)
+    override def tryToAcquireOrRenewLock[T](body: ⇒ Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+      (for {
+        refreshed ← repo.refreshExpiry(lockId, ownerId, holdLockFor)
+        acquired ← if (!refreshed) { repo.takeLock(lockId, ownerId, holdLockFor) }
+        else {
+          Future.successful(false)
+        }
+        result ← if (refreshed || acquired) {
+          body.map(Option.apply)
+        } else {
+          Future.successful(None)
+        }
+      } yield result
+      ).recoverWith {
+        case ex ⇒ repo.releaseLock(lockId, ownerId).flatMap(_ ⇒ Future.failed(ex))
+      }
   }
-
 }
 // $COVERAGE-ON$
 
