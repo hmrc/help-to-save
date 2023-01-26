@@ -82,13 +82,10 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
     EitherT({
-      println("%%%%%%%%%%%%%%%%%%%%%%%")
       val timerContext = metrics.itmpSetFlagTimer.time()
 
       dESConnector.setFlag(nino).map[Either[String, Unit]] { response ⇒
         val time = timerContext.stop()
-        println("$$$$$$$$$$UUUUUUUU")
-        println(response)
 
         val additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId)
 

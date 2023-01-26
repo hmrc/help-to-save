@@ -50,7 +50,6 @@ trait EnrolmentBehaviour {
                             createAccountRequest.source,
                             accountNumber)
     } else {
-      println("HERE!!!!!!!!!!!!!!!!!!!!!!!")
       for {
         _ ← enrolmentStore.insert(createAccountRequest.payload.nino,
                                   itmpFlag = false,

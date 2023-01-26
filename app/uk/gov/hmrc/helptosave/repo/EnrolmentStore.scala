@@ -149,21 +149,16 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       })
 
   override def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
-    println("$$$$$$$$$$$$$$$$$$$$$")
     EitherT({
       val timerContext = metrics.enrolmentStoreUpdateTimer.time()
 
       doUpdateItmpFlag(nino, itmpFlag).map[Either[String, Unit]] { result ⇒
         val time = timerContext.stop()
 
-        println("********************")
-        println(result)
-
         result.fold[Either[String, Unit]] {
           metrics.enrolmentStoreUpdateErrorCounter.inc()
           Left(s"For NINO [$nino]: Could not update enrolment store (round-trip time: ${nanosToPrettyString(time)})")
         } { _ ⇒
-          println("********************11111")
           Right(())
         }
       }.recover {
