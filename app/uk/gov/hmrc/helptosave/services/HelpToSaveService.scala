@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,10 +82,13 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
     EitherT({
+      println("%%%%%%%%%%%%%%%%%%%%%%%")
       val timerContext = metrics.itmpSetFlagTimer.time()
 
       dESConnector.setFlag(nino).map[Either[String, Unit]] { response ⇒
         val time = timerContext.stop()
+        println("$$$$$$$$$$UUUUUUUU")
+        println(response)
 
         val additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId)
 

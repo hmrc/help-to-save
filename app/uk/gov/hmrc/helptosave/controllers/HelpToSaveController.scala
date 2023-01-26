@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import akka.http.scaladsl.model.HttpResponse
+import cats.data.EitherT
 import cats.instances.future._
 import cats.instances.int._
 import cats.instances.string._
@@ -36,8 +38,8 @@ import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, toFuture}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore,
                                       emailStore:                 EmailStore,
@@ -134,25 +136,14 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     val nino = payload.nino
     proxyConnector.createAccount(payload).map { response ⇒
       if (response.status === CREATED || response.status === CONFLICT) {
-        val acNumber = (response.json \ "accountNumber").toOption.map { ac ⇒
-          ac.validate[String]
-        }
-
-        acNumber match {
-          case Some(JsSuccess(accountNumber, _)) ⇒ {
-            enrolUser(createAccountRequest, Some(accountNumber)).value.onComplete {
-              case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS and account number was persisted", nino, additionalParams)
-              case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
-              case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
-            }
-          }
+        Try {
+          (response.json \ "accountNumber").as[String]
+        } match {
+          case Success(accountNumber) ⇒
+            enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, Some(accountNumber))
           case _ ⇒
             logger.warn("No account number was found in create account NSI response")
-            enrolUser(createAccountRequest, None).value.onComplete {
-              case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", nino, additionalParams)
-              case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
-              case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
-            }
+            enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, None)
         }
       }
 
@@ -168,6 +159,18 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
       Option(response.body).fold[Result](Status(response.status))(body ⇒ Status(response.status)(body))
     }
   }
+
+  def enrolUserAndHandleResult(createAccountRequest: CreateAccountRequest,
+                               additionalParams:     (String, String),
+                               nino:                 String,
+                               optAccountNumber:     Option[String])(implicit hc: HeaderCarrier): Unit =
+    enrolUser(createAccountRequest, optAccountNumber).value.onComplete {
+      case Success(Right(_)) if optAccountNumber.isDefined ⇒
+        logger.info("User was successfully enrolled into HTS and account number was persisted", nino, additionalParams)
+      case Success(Right(_)) ⇒ logger.info("User was successfully enrolled into HTS", nino, additionalParams)
+      case Success(Left(e))  ⇒ logger.warn(s"User was not enrolled: $e", nino, additionalParams)
+      case Failure(e)        ⇒ logger.warn(s"User was not enrolled: ${e.getMessage}", nino, additionalParams)
+    }
 
   private val createAccountVersion = appConfig.createAccountVersion
 
