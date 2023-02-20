@@ -267,6 +267,24 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         Thread.sleep(1000L)
       }
 
+      "handle 409 response with no account number from proxy" in new TestApparatus {
+        inSequence {
+          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+          mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT, "", returnHeaders))
+          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", None)(Right(()))
+          inAnyOrder {
+            mockSetFlag("nino")(Right(()))
+            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+          }
+        }
+
+        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+
+        status(result)(10.seconds) shouldBe CONFLICT
+        // allow time for asynchronous calls to mocks to be made
+        Thread.sleep(1000L)
+      }
+
     }
 
     "update email" must {
