@@ -24,7 +24,6 @@ val dependencies = Seq(
   hmrc                %% s"bootstrap-backend-$playVersion"  % "5.12.0",
   hmrc                %% "domain"                           % s"6.2.0-$playVersion",
   "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"               % mongoVersion,
-  hmrc                %% "crypto"                           % "6.0.0",
   "org.typelevel"     %% "cats-core"                        % "2.2.0",
   "com.github.kxbmap" %% "configs"                          % "0.6.1",
   compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.5" cross CrossVersion.full),
