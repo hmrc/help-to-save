@@ -25,7 +25,6 @@ val dependencies = Seq(
   hmrc                %% s"bootstrap-backend-$playVersion"  % bootstrapBackendVersion,
   hmrc                %% "domain"                           % s"6.2.0-$playVersion",
   "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"               % mongoVersion,
-  hmrc                %% "crypto"                           % "6.0.0",
   "org.typelevel"     %% "cats-core"                        % "2.2.0",
   "com.github.kxbmap" %% "configs"                          % "0.6.1",
   compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.5" cross CrossVersion.full),
@@ -131,7 +130,7 @@ lazy val wartRemoverSettings = {
 lazy val catsSettings = scalacOptions ++= Seq("-Ypartial-unification","-deprecation", "-feature")
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory) ++ plugins: _*)
+  .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
   .settings(addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17"))
   .settings(majorVersion := 2)
   .settings(playSettings ++ scoverageSettings: _*)

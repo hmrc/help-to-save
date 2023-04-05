@@ -101,6 +101,17 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
         result shouldBe Right(BankDetailsValidationResult(true, false))
       }
 
+      "handle the case when the bank details are indeterminate" in {
+        val response = newResponse("indeterminate", "no")
+
+        inSequence {
+          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
+          mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
+        }
+        val result = await(service.validate(barsRequest))
+        result shouldBe Right(BankDetailsValidationResult(true, false))
+      }
+
       "handle the case when the bank details are valid but the sort code response cannot be parsed" in {
         val response = newResponse("yes", "blah")
 

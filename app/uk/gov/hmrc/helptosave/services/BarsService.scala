@@ -84,7 +84,7 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
                       false
                     } else if (accountNumberWithSortCodeIsValid === "indeterminate") {
                       logger.info("BARS response: bank details were marked as indeterminate", nino)
-                      false
+                      true
                     } else {
                       logger.warn("BARS response: Unexpected Return for valid vank details", nino)
                       false
