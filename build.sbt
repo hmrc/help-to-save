@@ -131,6 +131,10 @@ lazy val catsSettings = scalacOptions ++= Seq("-Ypartial-unification","-deprecat
 
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
+  .settings( //fix scaladoc generation in jenkins
+    Compile / scalacOptions -= "utf8",
+    scalacOptions += "-language:postfixOps"
+  )
   .settings(addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17"))
   .settings(majorVersion := 2)
   .settings(playSettings ++ scoverageSettings: _*)
