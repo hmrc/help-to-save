@@ -33,8 +33,8 @@ val dependencies = Seq(
 
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc                    %% s"bootstrap-test-$playVersion"   % bootstrapBackendVersion                % scope,
-  hmrc                    %% "service-integration-test"       % s"1.1.0-$playVersion"                  % scope,
-  hmrc                    %% "domain"                         % s"6.2.0-$playVersion"                  % scope,
+  hmrc                    %% "service-integration-test"       % s"1.3.0-$playVersion"                  % scope,
+  hmrc                    %% "domain"                         % s"8.1.0-$playVersion"                  % scope,
   hmrc                    %% "stub-data-generator"            % "0.5.3"                                % scope,
   "uk.gov.hmrc.mongo"     %% "hmrc-mongo-test-play-28"        % mongoVersion                           % scope,
   "org.scalatest"         %% "scalatest"                      % "3.2.9"                                % scope,
@@ -43,7 +43,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "com.typesafe.play"     %% "play-test"                      % PlayVersion.current                    % scope,
   "org.scalamock"         %% "scalamock-scalatest-support"    % "3.6.0"                                % scope,
   "com.miguno.akka"       %% "akka-mock-scheduler"            % "0.5.1"                                % scope,
-  "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.19"                               % scope
+  "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.20"                               % scope
 )
 
 lazy val scoverageSettings = {
