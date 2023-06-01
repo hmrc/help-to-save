@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import scala.collection.Map
 import scala.io.Source
 
 object CallingCodes {

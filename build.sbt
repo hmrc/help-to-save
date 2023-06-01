@@ -23,26 +23,24 @@ val bootstrapBackendVersion = "5.25.0"
 val dependencies = Seq(
   ws,
   hmrc                %% s"bootstrap-backend-$playVersion"  % bootstrapBackendVersion,
-  hmrc                %% "domain"                           % s"6.2.0-$playVersion",
+  hmrc                %% "domain"                           % s"8.3.0-$playVersion",
   "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"               % mongoVersion,
   "org.typelevel"     %% "cats-core"                        % "2.2.0",
   "com.github.kxbmap" %% "configs"                          % "0.6.1",
-  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.5" cross CrossVersion.full),
-  "com.github.ghik" % "silencer-lib" % "1.7.5" % Provided cross CrossVersion.full
+  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.12" cross CrossVersion.full),
+  "com.github.ghik" % "silencer-lib" % "1.7.12" % Provided cross CrossVersion.full
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc                    %% s"bootstrap-test-$playVersion"   % bootstrapBackendVersion                % scope,
   hmrc                    %% "service-integration-test"       % s"1.3.0-$playVersion"                  % scope,
   hmrc                    %% "domain"                         % s"8.1.0-$playVersion"                  % scope,
-  hmrc                    %% "stub-data-generator"            % "0.5.3"                                % scope,
   "uk.gov.hmrc.mongo"     %% "hmrc-mongo-test-play-28"        % mongoVersion                           % scope,
   "org.scalatest"         %% "scalatest"                      % "3.2.9"                                % scope,
   "org.scalatestplus"     %% "scalatestplus-scalacheck"       % "3.1.0.0-RC2"                          % scope,
   "com.vladsch.flexmark"  %  "flexmark-all"                   % "0.35.10"                              % scope,
   "com.typesafe.play"     %% "play-test"                      % PlayVersion.current                    % scope,
-  "org.scalamock"         %% "scalamock-scalatest-support"    % "3.6.0"                                % scope,
-  "com.miguno.akka"       %% "akka-mock-scheduler"            % "0.5.1"                                % scope,
+  "org.scalamock"         %% "scalamock"                      % "5.2.0"                                % scope,
   "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.20"                               % scope
 )
 
@@ -127,7 +125,7 @@ lazy val wartRemoverSettings = {
     (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
 }
 
-lazy val catsSettings = scalacOptions ++= Seq("-Ypartial-unification","-deprecation", "-feature")
+lazy val catsSettings = scalacOptions ++= Seq("-deprecation", "-feature")
 
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
@@ -135,11 +133,10 @@ lazy val microservice = Project(appName, file("."))
     Compile / scalacOptions -= "utf8")
   .settings( //Globally enable support for postfix operators
     scalacOptions += "-language:postfixOps")
-  .settings(addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17"))
   .settings(majorVersion := 2)
   .settings(playSettings ++ scoverageSettings: _*)
   .settings(scalaSettings: _*)
-  .settings(scalaVersion := "2.12.13")
+  .settings(scalaVersion := "2.13.8")
   .settings(publishingSettings: _*)
   .settings(defaultSettings(): _*)
   .settings(PlayKeys.playDefaultPort := 7001)
@@ -158,4 +155,4 @@ lazy val microservice = Project(appName, file("."))
     IntegrationTest / unmanagedSourceDirectories := Seq((IntegrationTest / baseDirectory).value / "it"),
     addTestReportOption(IntegrationTest, "int-test-reports"),
     IntegrationTest / parallelExecution  := false)
-  .settings(scalacOptions += "-P:silencer:pathFilters=routes")
+  .settings(scalacOptions += "-Wconf:src=routes/.*:s")
