@@ -17,8 +17,7 @@
 package uk.gov.hmrc.helptosave.util
 
 import akka.testkit.TestProbe
-import com.miguno.akka.testing.VirtualTime
-import uk.gov.hmrc.helptosave.actors.ActorTestSupport
+import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, VirtualTime}
 import uk.gov.hmrc.helptosave.util.WithExponentialBackoffRetry.ExponentialBackoffRetry
 
 import scala.concurrent.duration._
