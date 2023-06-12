@@ -22,7 +22,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.auth.core.AuthorisationException.fromString
 import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
 import uk.gov.hmrc.auth.core.retrieve._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino ⇒ v2Nino, authProviderId ⇒ v2AuthProviderId}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino => v2Nino, authProviderId => v2AuthProviderId}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 
 import scala.concurrent.Future
@@ -35,7 +35,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggAuthorisedWithNINO" must {
 
-        def callAuth = htsAuth.ggAuthorisedWithNino { _ ⇒ _ ⇒
+        def callAuth = htsAuth.ggAuthorisedWithNino { _ => _ =>
           Future.successful(Ok("authSuccess"))
         }
 
@@ -58,20 +58,20 @@ class HelpToSaveAuthSpec extends AuthSupport {
           def mockAuthWith(error: String): Unit = mockAuth(AuthWithCL200, v2Nino)(Left(fromString(error)))
 
         val exceptions = List(
-          "InsufficientConfidenceLevel" → Status.FORBIDDEN,
-          "InsufficientEnrolments" → Status.FORBIDDEN,
-          "UnsupportedAffinityGroup" → Status.FORBIDDEN,
-          "UnsupportedCredentialRole" → Status.FORBIDDEN,
-          "UnsupportedAuthProvider" → Status.FORBIDDEN,
-          "BearerTokenExpired" → Status.UNAUTHORIZED,
-          "MissingBearerToken" → Status.UNAUTHORIZED,
-          "InvalidBearerToken" → Status.UNAUTHORIZED,
-          "SessionRecordNotFound" → Status.UNAUTHORIZED,
-          "IncorrectCredentialStrength" → Status.FORBIDDEN,
-          "unknown-blah" → Status.INTERNAL_SERVER_ERROR)
+          "InsufficientConfidenceLevel" -> Status.FORBIDDEN,
+          "InsufficientEnrolments" -> Status.FORBIDDEN,
+          "UnsupportedAffinityGroup" -> Status.FORBIDDEN,
+          "UnsupportedCredentialRole" -> Status.FORBIDDEN,
+          "UnsupportedAuthProvider" -> Status.FORBIDDEN,
+          "BearerTokenExpired" -> Status.UNAUTHORIZED,
+          "MissingBearerToken" -> Status.UNAUTHORIZED,
+          "InvalidBearerToken" -> Status.UNAUTHORIZED,
+          "SessionRecordNotFound" -> Status.UNAUTHORIZED,
+          "IncorrectCredentialStrength" -> Status.FORBIDDEN,
+          "unknown-blah" -> Status.INTERNAL_SERVER_ERROR)
 
         exceptions.foreach {
-          case (error, expectedStatus) ⇒
+          case (error, expectedStatus) =>
             mockAuthWith(error)
             val result = callAuth(FakeRequest())
             status(result) shouldBe expectedStatus
@@ -81,7 +81,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggOrPrivilegedAuthorised" must {
 
-        def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { _ ⇒
+        def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { _ =>
           Future.successful(Ok("authSuccess"))
         }
 
@@ -96,7 +96,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggOrPrivilegedAuthorisedWithNINO" when {
 
-        def callAuth(nino: Option[String]) = htsAuth.ggOrPrivilegedAuthorisedWithNINO(nino) { _ ⇒ _ ⇒
+        def callAuth(nino: Option[String]) = htsAuth.ggOrPrivilegedAuthorisedWithNINO(nino) { _ => _ =>
           Future.successful(Ok("authSuccess"))
         }
 
@@ -169,7 +169,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
       "handling requests from other AuthProviders" must {
 
         "return a Forbidden" in {
-          List[LegacyCredentials](VerifyPid(""), OneTimeLogin).foreach{ cred ⇒
+          List[LegacyCredentials](VerifyPid(""), OneTimeLogin).foreach{ cred =>
             mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(cred))
             status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
           }

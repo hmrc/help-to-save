@@ -39,7 +39,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
   val returnHeaders = Map[String, Seq[String]]()
   def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: Option[HttpResponse]): CallHandler4[BankDetailsValidationRequest, UUID, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
     (mockBarsConnector.validate(_: BankDetailsValidationRequest, _: UUID)(_: HeaderCarrier, _: ExecutionContext)).expects(barsRequest, *, *, *)
-      .returning(response.fold[Future[HttpResponse]](Future.failed(new Exception("")))(r ⇒ Future.successful(r)))
+      .returning(response.fold[Future[HttpResponse]](Future.failed(new Exception("")))(r => Future.successful(r)))
 
   def mockAuditBarsEvent(expectedEvent: BARSCheck, nino: NINO)() =
     (mockAuditor.sendEvent(_: HTSEvent, _: NINO)(_: ExecutionContext))

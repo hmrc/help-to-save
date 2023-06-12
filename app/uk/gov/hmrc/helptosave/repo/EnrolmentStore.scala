@@ -70,13 +70,13 @@ object EnrolmentStore {
     implicit val enrolmentStatusFormat: Format[Status] = new Format[Status] {
 
       override def writes(o: Status): JsValue = o match {
-        case EnrolmentStore.Enrolled(itmpHtSFlag) ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = true, itmpHtSFlag = itmpHtSFlag))
-        case EnrolmentStore.NotEnrolled           ⇒ Json.toJson(EnrolmentStatusJSON(enrolled    = false, itmpHtSFlag = false))
+        case EnrolmentStore.Enrolled(itmpHtSFlag) => Json.toJson(EnrolmentStatusJSON(enrolled    = true, itmpHtSFlag = itmpHtSFlag))
+        case EnrolmentStore.NotEnrolled           => Json.toJson(EnrolmentStatusJSON(enrolled    = false, itmpHtSFlag = false))
       }
 
       override def reads(json: JsValue): JsResult[Status] = json.validate[EnrolmentStatusJSON].map {
-        case EnrolmentStatusJSON(true, flag) ⇒ Enrolled(flag)
-        case EnrolmentStatusJSON(false, _)   ⇒ NotEnrolled
+        case EnrolmentStatusJSON(true, flag) => Enrolled(flag)
+        case EnrolmentStatusJSON(false, _)   => NotEnrolled
       }
     }
 
@@ -110,7 +110,7 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
         eligibilityReason = eligibilityReason,
         source            = Some(source),
         accountNumber     = accountNumber)
-    ).toFuture().map(_ ⇒ ())
+    ).toFuture().map(_ => ())
 
   }
 
@@ -135,12 +135,12 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-        collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
+        collection.find(regex("nino", getRegex(nino))).toFuture().map { res =>
           timerContext.stop()
 
-          Right(res.headOption.fold[Status](NotEnrolled)(data ⇒ Enrolled(data.itmpHtSFlag)))
+          Right(res.headOption.fold[Status](NotEnrolled)(data => Enrolled(data.itmpHtSFlag)))
         }.recover {
-          case e ⇒
+          case e =>
             timerContext.stop()
             metrics.enrolmentStoreGetErrorCounter.inc()
 
@@ -152,17 +152,17 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
     EitherT({
       val timerContext = metrics.enrolmentStoreUpdateTimer.time()
 
-      doUpdateItmpFlag(nino, itmpFlag).map[Either[String, Unit]] { result ⇒
+      doUpdateItmpFlag(nino, itmpFlag).map[Either[String, Unit]] { result =>
         val time = timerContext.stop()
 
         result.fold[Either[String, Unit]] {
           metrics.enrolmentStoreUpdateErrorCounter.inc()
           Left(s"For NINO [$nino]: Could not update enrolment store (round-trip time: ${nanosToPrettyString(time)})")
-        } { _ ⇒
+        } { _ =>
           Right(())
         }
       }.recover {
-        case e ⇒
+        case e =>
           timerContext.stop()
           metrics.enrolmentStoreUpdateErrorCounter.inc()
 
@@ -176,17 +176,17 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
     EitherT({
       val timerContext = metrics.enrolmentStoreUpdateTimer.time()
 
-      persistAccountNumber(nino, accountNumber).map[Either[String, Unit]] { result ⇒
+      persistAccountNumber(nino, accountNumber).map[Either[String, Unit]] { result =>
         val time = timerContext.stop()
 
         result.fold[Either[String, Unit]] {
           metrics.enrolmentStoreUpdateErrorCounter.inc()
           Left(s"For NINO [$nino]: Could not update enrolment store with account number (round-trip time: ${nanosToPrettyString(time)})")
-        } { _ ⇒
+        } { _ =>
           Right(())
         }
       }.recover {
-        case e ⇒
+        case e =>
           timerContext.stop()
           metrics.enrolmentStoreUpdateErrorCounter.inc()
 
@@ -203,9 +203,9 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
                       accountNumber:     Option[String])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     EitherT(
       doInsert(nino, eligibilityReason, source, itmpFlag, accountNumber)
-        .map[Either[String, Unit]] { writeResult ⇒ Right(())
+        .map[Either[String, Unit]] { writeResult => Right(())
         }.recover {
-          case e ⇒
+          case e =>
             Left(e.getMessage)
         }
     )
@@ -215,12 +215,12 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-        collection.find(regex("nino", getRegex(nino))).toFuture().map[Either[String, AccountNumber]] { res ⇒
+        collection.find(regex("nino", getRegex(nino))).toFuture().map[Either[String, AccountNumber]] { res =>
           timerContext.stop()
 
           Right(AccountNumber(res.headOption.flatMap(_.accountNumber)))
         }.recover {
-          case e ⇒
+          case e =>
             timerContext.stop()
             metrics.enrolmentStoreGetErrorCounter.inc()
 

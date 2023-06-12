@@ -54,7 +54,7 @@ class AccountControllerSpec extends AuthSupport {
 
     val callHandler = correlationId.fold(
       call.expects(nino, systemId, *, path, *, *)
-    ){ id ⇒
+    ){ id =>
         call.expects(nino, systemId, id, path, *, *)
       }
 
@@ -68,7 +68,7 @@ class AccountControllerSpec extends AuthSupport {
       val systemId = "system"
 
       "handle success responses" in {
-        testWithGGAndPrivilegedAccess { mockAuth ⇒
+        testWithGGAndPrivilegedAccess { mockAuth =>
           inSequence {
             mockAuth()
             mockGetAccount(nino, systemId, None, path)(Right(Some(account)))
@@ -91,7 +91,7 @@ class AccountControllerSpec extends AuthSupport {
       }
 
       "return a 404 if an account does not exist for the NINO" in {
-        testWithGGAndPrivilegedAccess{ mockAuth ⇒
+        testWithGGAndPrivilegedAccess{ mockAuth =>
           inSequence {
             mockAuth()
             mockGetAccount(nino, systemId, None, path)(Right(None))
@@ -108,7 +108,7 @@ class AccountControllerSpec extends AuthSupport {
       }
 
       "handle errors returned by the connector" in {
-        testWithGGAndPrivilegedAccess { mockAuth ⇒
+        testWithGGAndPrivilegedAccess { mockAuth =>
           inSequence {
             mockAuth()
             mockGetAccount(nino, systemId, None, path)(Left("some error"))

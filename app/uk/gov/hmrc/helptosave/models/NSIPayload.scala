@@ -56,17 +56,17 @@ object NSIPayload {
 
   implicit val nsiPayloadWrites: Writes[NSIPayload] = Json.writes[NSIPayload]
 
-  def nsiPayloadReads(version: Option[String]): Reads[NSIPayload] = Reads[NSIPayload]{ jsValue ⇒
+  def nsiPayloadReads(version: Option[String]): Reads[NSIPayload] = Reads[NSIPayload]{ jsValue =>
     for {
-      forename ← (jsValue \ "forename").validate[String]
-      surname ← (jsValue \ "surname").validate[String]
-      dateOfBirth ← (jsValue \ "dateOfBirth").validate[LocalDate]
-      nino ← (jsValue \ "nino").validate[String]
-      contactDetails ← (jsValue \ "contactDetails").validate[ContactDetails]
-      registrationChannel ← (jsValue \ "registrationChannel").validate[String]
-      nbaDetails ← (jsValue \ "nbaDetails").validateOpt[BankDetails]
-      bankDetails ← (jsValue \ "bankDetails").validateOpt[BankDetails]
-      systemId ← (jsValue \ "systemId").validateOpt[String]
+      forename <- (jsValue \ "forename").validate[String]
+      surname <- (jsValue \ "surname").validate[String]
+      dateOfBirth <- (jsValue \ "dateOfBirth").validate[LocalDate]
+      nino <- (jsValue \ "nino").validate[String]
+      contactDetails <- (jsValue \ "contactDetails").validate[ContactDetails]
+      registrationChannel <- (jsValue \ "registrationChannel").validate[String]
+      nbaDetails <- (jsValue \ "nbaDetails").validateOpt[BankDetails]
+      bankDetails <- (jsValue \ "bankDetails").validateOpt[BankDetails]
+      systemId <- (jsValue \ "systemId").validateOpt[String]
     } yield NSIPayload(forename, surname, dateOfBirth, nino, contactDetails, registrationChannel, nbaDetails.orElse(bankDetails), version, systemId)
   }
 

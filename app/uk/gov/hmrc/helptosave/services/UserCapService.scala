@@ -52,13 +52,13 @@ class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
 
   require(dailyCap >= 0 && totalCap >= 0)
 
-  private val check: UserCap ⇒ UserCapResponse = {
+  private val check: UserCap => UserCapResponse = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
-      case (false, false) ⇒ _ ⇒
+      case (false, false) => _ =>
         //This is the normal code path post private-beta, eg: uncapped
         UserCapResponse()
 
-      case (true, true) ⇒ userCap ⇒
+      case (true, true) => userCap =>
         if (userCap.isTodaysRecord) {
           if (userCap.totalCount >= totalCap) {
             UserCapResponse(isTotalCapReached = true)
@@ -75,14 +75,14 @@ class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
           }
         }
 
-      case (true, false) ⇒ userCap ⇒
+      case (true, false) => userCap =>
         if (userCap.totalCount >= totalCap) {
           UserCapResponse(isTotalCapReached = true)
         } else {
           UserCapResponse()
         }
 
-      case (false, true) ⇒ userCap ⇒
+      case (false, true) => userCap =>
         if (userCap.isTodaysRecord && userCap.dailyCount >= dailyCap) {
           UserCapResponse(isDailyCapReached = true)
         } else {
@@ -101,36 +101,36 @@ class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
     } else {
       userCapStore.get().map(_.fold(UserCapResponse())(check))
         .recover {
-          case NonFatal(e) ⇒
+          case NonFatal(e) =>
             logger.warn("error checking account cap", e)
             UserCapResponse()
         }
     }
   }
 
-  private val calculateUserCap: Option[UserCap] ⇒ UserCap = {
+  private val calculateUserCap: Option[UserCap] => UserCap = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
-      case (false, false) ⇒ _ ⇒ UserCap(0, 0)
-      case (_, _) ⇒ {
-        case Some(uc) ⇒
+      case (false, false) => _ => UserCap(0, 0)
+      case (_, _) => {
+        case Some(uc) =>
           val c = if (uc.isPreviousRecord) 1 else uc.dailyCount + 1
           UserCap(c, uc.totalCount + 1)
-        case None ⇒ UserCap(1, 1)
+        case None => UserCap(1, 1)
       }
     }
   }
 
   override def update()(implicit ec: ExecutionContext): Future[Unit] =
     userCapStore.get().flatMap {
-      userCap ⇒
-        userCapStore.upsert(calculateUserCap(userCap)).map { updatedUserCap ⇒
-          val logMessage = "Updated user cap - " + updatedUserCap.fold("could not retrieve user cap data") { cap ⇒
+      userCap =>
+        userCapStore.upsert(calculateUserCap(userCap)).map { updatedUserCap =>
+          val logMessage = "Updated user cap - " + updatedUserCap.fold("could not retrieve user cap data") { cap =>
             s"counts are now (daily: ${cap.dailyCount}, total: ${cap.totalCount})"
           }
           logger.info(logMessage)
         }
     }.recover {
-      case e ⇒ logger.warn("error updating the account cap", e)
+      case e => logger.warn("error updating the account cap", e)
     }
 }
 

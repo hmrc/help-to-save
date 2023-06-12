@@ -90,14 +90,14 @@ object Account extends Logging {
     val openedYearMonthValidation: ValidOrErrorString[YearMonth] =
       sortedNsiTerms.headOption.fold[ValidOrErrorString[YearMonth]] {
         Invalid(NonEmptyList.of("Bonus terms list returned by NS&I was empty"))
-      } { firstNsiTerm ⇒
+      } { firstNsiTerm =>
         Valid(YearMonth.from(firstNsiTerm.startDate))
       }
 
     val blockingValidation: ValidOrErrorString[Blocking] = nsiAccountToBlockingValidation(nsiAccount)
 
     (paidInThisMonthValidation, accountClosedValidation, openedYearMonthValidation, blockingValidation).mapN{
-      case (paidInThisMonth, accountClosed, openedYearMonth, blocking) ⇒
+      case (paidInThisMonth, accountClosed, openedYearMonth, blocking) =>
         Account(
           openedYearMonth        = openedYearMonth,
           accountNumber          = nsiAccount.accountNumber,
@@ -133,14 +133,14 @@ object Account extends Logging {
 
     (checkIsValidCode(nsiAccount.accountBlockingCode), checkIsValidCode(nsiAccount.clientBlockingCode))
       .mapN{
-        case (accountBlockingCode, clientBlockingCode) ⇒
-          def isBlockedFromPredicate(predicate: String ⇒ Boolean): Boolean =
+        case (accountBlockingCode, clientBlockingCode) =>
+          def isBlockedFromPredicate(predicate: String => Boolean): Boolean =
               predicate(accountBlockingCode) || predicate(clientBlockingCode)
 
           Blocking(
-            payments    = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "11"),
-            withdrawals = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "12" && s =!= "15"),
-            bonuses     = isBlockedFromPredicate(s ⇒ s =!= "00" && s =!= "12")
+            payments    = isBlockedFromPredicate(s => s =!= "00" && s =!= "11"),
+            withdrawals = isBlockedFromPredicate(s => s =!= "00" && s =!= "12" && s =!= "15"),
+            bonuses     = isBlockedFromPredicate(s => s =!= "00" && s =!= "12")
           )
       }
   }

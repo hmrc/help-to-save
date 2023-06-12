@@ -54,9 +54,9 @@ class EligibilityStatsParserImpl extends EligibilityStatsParser with Logging {
 
     val groupedByEligibilityReasonThenSource: Table =
       groupedByEligibilityReason.map {
-        case (k, v) ⇒
+        case (k, v) =>
           k.map(_.toString).getOrElse("Unknown") -> {
-            v.groupBy(_.source).map(x ⇒ x._1.getOrElse("Unknown") → x._2.map(_.total).sum)
+            v.groupBy(_.source).map(x => x._1.getOrElse("Unknown") -> x._2.map(_.total).sum)
           }
       }
 
@@ -66,8 +66,8 @@ class EligibilityStatsParserImpl extends EligibilityStatsParser with Logging {
   private def addMissingSourceTotals(table: Table, allSources: Set[Source]) = {
     //add missing sources with total 0 for each reason
     table.foldLeft[Table](emptyTable) {
-      case (acc, curr) ⇒
-        val missing: List[(String, Int)] = allSources.toList.diff(curr._2.keys.toList).map(_ → 0)
+      case (acc, curr) =>
+        val missing: List[(String, Int)] = allSources.toList.diff(curr._2.keys.toList).map(_ -> 0)
         acc.updated(curr._1, curr._2 ++ missing)
     }
   }
@@ -85,13 +85,13 @@ class EligibilityStatsParserImpl extends EligibilityStatsParser with Logging {
     val tableHeader: String = s"$rowSeparator\n${rowFormat.format("Reason", "Channel", "Count")}$rowSeparator\n"
 
     val sortedTable: List[(EligibilityReason, List[(Source, Int)])] =
-      table.toList.sortBy(_._1).map{ case (k, v) ⇒ k → v.toList.sortBy(_._1) }
+      table.toList.sortBy(_._1).map{ case (k, v) => k -> v.toList.sortBy(_._1) }
 
     val report = sortedTable.foldLeft[String](tableHeader) {
-      case (acc, (reason, sources)) ⇒
-        val rows = sources.foldLeft[(String, Boolean)]("" → true) {
-          case ((acc1, displayReason), (source, count)) ⇒
-            acc1.concat(rowFormat.format(if (displayReason) { getStringFrom(reason) } else { "" }, source, count)) → false
+      case (acc, (reason, sources)) =>
+        val rows = sources.foldLeft[(String, Boolean)]("" -> true) {
+          case ((acc1, displayReason), (source, count)) =>
+            acc1.concat(rowFormat.format(if (displayReason) { getStringFrom(reason) } else { "" }, source, count)) -> false
         }._1
         acc
           .concat(rows)
@@ -100,10 +100,10 @@ class EligibilityStatsParserImpl extends EligibilityStatsParser with Logging {
     }
 
     //compute totals by source
-    val sourcesTotalsRows: String = allSourcesSorted.foldLeft("" → true){
-      case ((acc, displayReason), source) ⇒
+    val sourcesTotalsRows: String = allSourcesSorted.foldLeft("" -> true){
+      case ((acc, displayReason), source) =>
         val total = sortedTable.flatMap(_._2.filter(_._1 === source).map(_._2)).sum
-        acc.concat(rowFormat.format(if (displayReason) { "Total" } else { "" }, source, total)) → false
+        acc.concat(rowFormat.format(if (displayReason) { "Total" } else { "" }, source, total)) -> false
     }._1
 
     //add grand total

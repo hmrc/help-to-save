@@ -29,7 +29,7 @@ import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.{GetStats, GetStatsRe
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.EligibilityStatsStore
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
-import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
+import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsParser.Table
 
 import scala.annotation.tailrec
@@ -126,10 +126,10 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
         ): Unit = {
             @tailrec
             def loop(remaining: List[(String, Int)]): Unit = remaining match {
-              case Nil ⇒
+              case Nil =>
                 metricsListener.expectNoMessage()
 
-              case l ⇒
+              case l =>
                 val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
                 val entry @ (_, count) =
                   l.find(_._1 === registered.name).getOrElse(fail(s"Encountered unexpected gauge name: ${registered.name}"))
@@ -142,7 +142,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
       "handle stats returned from mongo" in new TestApparatus {
         val stats = List(EligibilityStats(Some(1), Some("some source"), 2))
-        val table = Map("1" → Map("some source" → 2))
+        val table = Map("1" -> Map("some source" -> 2))
 
         // trigger the process
         actor ? GetStats
@@ -167,8 +167,8 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
         // now check that gauges that have already been registered don't get registered again
         val newStats = EligibilityStats(Some(2), Some("new source"), 3) :: stats
         val newTable = Map(
-          "1" → Map("some source" → 2, "new source" → 0),
-          "2" → Map("some source" → 0, "new source" → 3)
+          "1" -> Map("some source" -> 2, "new source" -> 0),
+          "2" -> Map("some source" -> 0, "new source" -> 3)
         )
 
         // we won't expect "backend.create-account.1.some-source" because it has already been registered

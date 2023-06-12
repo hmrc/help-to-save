@@ -24,12 +24,12 @@ case class CreateAccountRequest(payload: NSIPayload, eligibilityReason: Option[I
 object CreateAccountRequest {
   implicit val createAccountRequestWrites: Writes[CreateAccountRequest] = Json.writes[CreateAccountRequest]
 
-  def createAccountRequestReads(version: Option[String]): Reads[CreateAccountRequest] = Reads[CreateAccountRequest]{ jsValue ⇒
+  def createAccountRequestReads(version: Option[String]): Reads[CreateAccountRequest] = Reads[CreateAccountRequest]{ jsValue =>
     for {
-      nsiPayload ← (jsValue \ "payload").validate[NSIPayload](NSIPayload.nsiPayloadReads(version))
-      reason ← (jsValue \ "eligibilityReason").validateOpt[Int]
-      source ← (jsValue \ "source").validate[String]
-      detailsManuallyEntered ← (jsValue \ "detailsManuallyEntered").validateOpt[Boolean]
+      nsiPayload <- (jsValue \ "payload").validate[NSIPayload](NSIPayload.nsiPayloadReads(version))
+      reason <- (jsValue \ "eligibilityReason").validateOpt[Int]
+      source <- (jsValue \ "source").validate[String]
+      detailsManuallyEntered <- (jsValue \ "detailsManuallyEntered").validateOpt[Boolean]
     } yield CreateAccountRequest(nsiPayload, reason, source, detailsManuallyEntered.getOrElse(false))
 
   }

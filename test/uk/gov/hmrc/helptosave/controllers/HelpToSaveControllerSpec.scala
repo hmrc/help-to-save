@@ -88,7 +88,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     def mockUserCapServiceUpdate(result: Either[String, Unit]) = {
       (userCapService.update()(_: ExecutionContext))
         .expects(*)
-        .returning(result.fold[Future[Unit]](e ⇒ Future.failed(new Exception(e)), _ ⇒ Future.successful(())))
+        .returning(result.fold[Future[Unit]](e => Future.failed(new Exception(e)), _ => Future.successful(())))
     }
 
     def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
@@ -175,7 +175,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val body = validCreateAccountRequestPayload().as[JsObject] ++ Json.obj("source" → "Stride-Manual")
+        val body = validCreateAccountRequestPayload().as[JsObject] ++ Json.obj("source" -> "Stride-Manual")
         val result = controller.createAccount()(FakeRequest().withJsonBody(body))
 
         status(result)(10.seconds) shouldBe CREATED

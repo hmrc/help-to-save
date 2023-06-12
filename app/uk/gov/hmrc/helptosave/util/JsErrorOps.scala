@@ -31,7 +31,7 @@ class JsErrorOps(val error: JsError) extends AnyVal {
    * Create a legible string describing the error suitable for debugging purposes
    */
   def prettyPrint(): String = error.errors.map {
-    case (jsPath, validationErrors) ⇒
+    case (jsPath, validationErrors) =>
       jsPath.toString + ": [" + validationErrors.map(_.message).mkString(",") + "]"
   }.mkString("; ")
 

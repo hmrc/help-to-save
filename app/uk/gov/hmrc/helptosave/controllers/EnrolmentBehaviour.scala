@@ -35,8 +35,8 @@ trait EnrolmentBehaviour {
   val helpToSaveService: HelpToSaveService
 
   def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = for {
-    _ ← helpToSaveService.setFlag(nino)
-    _ ← enrolmentStore.updateItmpFlag(nino, itmpFlag = true)
+    _ <- helpToSaveService.setFlag(nino)
+    _ <- enrolmentStore.updateItmpFlag(nino, itmpFlag = true)
   } yield ()
 
   def setAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
@@ -51,12 +51,12 @@ trait EnrolmentBehaviour {
                             accountNumber)
     } else {
       for {
-        _ ← enrolmentStore.insert(createAccountRequest.payload.nino,
+        _ <- enrolmentStore.insert(createAccountRequest.payload.nino,
                                   itmpFlag = false,
                                   createAccountRequest.eligibilityReason,
                                   createAccountRequest.source,
                                   accountNumber)
-        _ ← setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
+        _ <- setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
       } yield ()
     }
   }

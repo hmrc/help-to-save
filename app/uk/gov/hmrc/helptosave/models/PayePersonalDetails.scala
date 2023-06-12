@@ -61,10 +61,10 @@ object PayePersonalDetails {
     override def reads(json: JsValue): JsResult[PayePersonalDetails] = {
 
       for {
-        name ← readName(json)
-        dob ← readDob(json)
-        address ← readAddress(json)
-        phoneNumber ← readPhoneNumber(json)
+        name <- readName(json)
+        dob <- readDob(json)
+        address <- readAddress(json)
+        phoneNumber <- readPhoneNumber(json)
       } yield {
         PayePersonalDetails(name, dob, address, phoneNumber)
       }
@@ -79,10 +79,10 @@ object PayePersonalDetails {
     readSeq(json, "names", "1").orElse(readSeq(json, "names", "2"))
       .fold[JsResult[Name]](
         JsError("No Name found in the DES response")
-      ) { x ⇒
+      ) { x =>
           x.validate[Name].fold[JsResult[Name]](
-            errors ⇒ JsError(s"could not read Name from PayePersonalDetails response, errors: $errors"),
-            name ⇒ JsSuccess(name)
+            errors => JsError(s"could not read Name from PayePersonalDetails response, errors: $errors"),
+            name => JsSuccess(name)
           )
         }
   }
@@ -91,10 +91,10 @@ object PayePersonalDetails {
     read(json, "dateOfBirth")
       .fold[JsResult[LocalDate]](
         JsError("No DateOfBirth found in the DES response")
-      ) { x ⇒
+      ) { x =>
           x.validate[LocalDate].fold[JsResult[LocalDate]](
-            errors ⇒ JsError(s"could not read DateOfBirth from PayePersonalDetails response, errors: $errors"),
-            dob ⇒ JsSuccess(dob)
+            errors => JsError(s"could not read DateOfBirth from PayePersonalDetails response, errors: $errors"),
+            dob => JsSuccess(dob)
           )
         }
   }
@@ -103,15 +103,15 @@ object PayePersonalDetails {
     readSeq(json, "addresses", "2").orElse(readSeq(json, "addresses", "1")) //1–Residential Address, 2–Correspondence Address
       .fold[JsResult[Address]](
         JsError("No Address found in the DES response")
-      )(v ⇒
+      )(v =>
           for {
-            line1 ← lookup("line1", v).validate[String]
-            line2 ← lookup("line2", v).validate[String]
-            line3 ← lookup("line3", v).validateOpt[String]
-            line4 ← lookup("line4", v).validateOpt[String]
-            line5 ← lookup("line5", v).validateOpt[String]
-            postcode ← lookup("postcode", v).validate[String]
-            countryCode ← lookup("countryCode", v).validateOpt[Int]
+            line1 <- lookup("line1", v).validate[String]
+            line2 <- lookup("line2", v).validate[String]
+            line3 <- lookup("line3", v).validateOpt[String]
+            line4 <- lookup("line4", v).validateOpt[String]
+            line5 <- lookup("line5", v).validateOpt[String]
+            postcode <- lookup("postcode", v).validate[String]
+            countryCode <- lookup("countryCode", v).validateOpt[Int]
           } yield Address(line1, line2, line3, line4, line5, postcode, countryCode.flatMap(countryCodes.get).map(_.take(2)))
         )
   }
@@ -120,22 +120,22 @@ object PayePersonalDetails {
     readSeq(json, "phoneNumbers", "7").orElse(readSeq(json, "phoneNumbers", "1")) //7–Mobile Telephone Number, 1–Daytime Home Telephone Number
       .fold[JsResult[Option[String]]](
         JsSuccess(None)
-      )(v ⇒
+      )(v =>
           for {
-            callingCode ← lookup("callingCode", v).validateOpt[Int]
-            convertedAreaDiallingCode ← lookup("convertedAreaDiallingCode", v).validateOpt[String]
-            telephoneNumber ← lookup("telephoneNumber", v).validateOpt[String]
+            callingCode <- lookup("callingCode", v).validateOpt[Int]
+            convertedAreaDiallingCode <- lookup("convertedAreaDiallingCode", v).validateOpt[String]
+            telephoneNumber <- lookup("telephoneNumber", v).validateOpt[String]
           } yield {
             (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
-              case (Some(cc), Some(cadc), Some(t)) ⇒
+              case (Some(cc), Some(cadc), Some(t)) =>
                 Some(s"+$cc${cadc.stripPrefix("0")}$t")
-              case (None, Some(cadc), Some(t)) ⇒
+              case (None, Some(cadc), Some(t)) =>
                 Some(s"$cadc$t")
-              case (Some(cc), None, Some(t)) ⇒
+              case (Some(cc), None, Some(t)) =>
                 Some(s"+$cc${t.stripPrefix("0")}")
-              case (None, None, Some(t)) ⇒
+              case (None, None, Some(t)) =>
                 Some(t)
-              case _ ⇒
+              case _ =>
                 None
             }
           })

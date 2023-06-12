@@ -56,9 +56,9 @@ class LockSpec extends ActorTestSupport("LockSpec") {
       internalLock,
       time.scheduler,
       State(0),
-      s ⇒ sendToSelf(State(s.i + 1)),
-      s ⇒ sendToSelf(State(s.i - 1)),
-      { f ⇒ sendToSelf(StopHook(f)); () }
+      s => sendToSelf(State(s.i + 1)),
+      s => sendToSelf(State(s.i - 1)),
+      { f => sendToSelf(StopHook(f)); () }
     )
   ))
 
@@ -67,16 +67,16 @@ class LockSpec extends ActorTestSupport("LockSpec") {
   def mockTryToAcquireOrRenewLock(result: Either[String, Option[Unit]]): Unit =
     (internalLock.tryToAcquireOrRenewLock(_: Future[Unit])(_: ExecutionContext))
       .expects(*, *)
-      .returning(result.fold(e ⇒ Future.failed(new Exception(e)), Future.successful))
+      .returning(result.fold(e => Future.failed(new Exception(e)), Future.successful))
 
   def mockReleaseLock(result: Either[String, Unit]) =
-    (internalLock.releaseLock: () ⇒ Future[Unit])
+    (internalLock.releaseLock: () => Future[Unit])
       .expects()
-      .returning(result.fold(e ⇒ Future.failed(new Exception(e)), Future.successful))
+      .returning(result.fold(e => Future.failed(new Exception(e)), Future.successful))
 
   "The Lock" must {
 
-      def startNewLock(mockActions: ⇒ Unit): (ActorRef, VirtualTime, StopHook) = {
+      def startNewLock(mockActions: => Unit): (ActorRef, VirtualTime, StopHook) = {
         mockActions
 
         // start the actor
@@ -179,6 +179,6 @@ object LockSpec {
 
   case class State(i: Int)
 
-  case class StopHook(f: () ⇒ Future[Unit])
+  case class StopHook(f: () => Future[Unit])
 
 }

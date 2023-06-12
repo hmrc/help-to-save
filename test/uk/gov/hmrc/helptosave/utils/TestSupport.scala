@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.utils
 
 import java.time.LocalDate
 import com.codahale.metrics.{Counter, Gauge, Timer}
-import com.kenshoo.play.metrics.{Metrics ⇒ PlayMetrics}
+import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
 import com.typesafe.config.ConfigFactory
 import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory

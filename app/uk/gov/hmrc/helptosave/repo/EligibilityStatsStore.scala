@@ -68,12 +68,12 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
   override def getEligibilityStats: Future[List[EligibilityStats]] = {
     val timerContext = metrics.eligibilityStatsTimer.time()
     doAggregate()
-      .map { response ⇒
+      .map { response =>
         val time = timerContext.stop()
         logger.info(s"eligibility stats query took ${nanosToPrettyString(time)}")
         response
       }.recover {
-        case e ⇒
+        case e =>
           val _ = timerContext.stop()
           logger.warn(s"error retrieving the eligibility stats from mongo, error = ${e.getMessage}")
           List.empty[EligibilityStats]

@@ -27,9 +27,9 @@ object AccessType {
   case object GGAccess extends AccessType
 
   def fromLegacyCredentials(credentials: LegacyCredentials): Either[String, AccessType] = credentials match {
-    case GGCredId(_)   ⇒ Right(GGAccess)
-    case PAClientId(_) ⇒ Right(StrideAccess)
-    case other         ⇒ Left(s"Unsupported credential type: $other")
+    case GGCredId(_)   => Right(GGAccess)
+    case PAClientId(_) => Right(StrideAccess)
+    case other         => Left(s"Unsupported credential type: $other")
   }
 
 }

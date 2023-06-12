@@ -24,7 +24,7 @@ import play.api.libs.json.{JsSuccess, JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino ⇒ v2Nino}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino => v2Nino}
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.helptosave.connectors.HttpSupport
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
@@ -94,7 +94,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
       }
 
       "return a Left if any of the steps failed" in {
-          def test(mockActions: ⇒ Unit): Unit = {
+          def test(mockActions: => Unit): Unit = {
             mockActions
             status(setFlag()) shouldBe INTERNAL_SERVER_ERROR
           }
@@ -169,21 +169,21 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
 
       "return the enrolment status if the call was successful" in {
         val m: Map[EnrolmentStore.Status, String] = Map(
-          EnrolmentStore.Enrolled(true) →
+          EnrolmentStore.Enrolled(true) ->
             """
               |{
               |  "enrolled"    : true,
               |  "itmpHtSFlag" : true
               |}
             """.stripMargin,
-          EnrolmentStore.Enrolled(false) →
+          EnrolmentStore.Enrolled(false) ->
             """
               |{
               |  "enrolled"    : true,
               |  "itmpHtSFlag" : false
               |}
             """.stripMargin,
-          EnrolmentStore.NotEnrolled →
+          EnrolmentStore.NotEnrolled ->
             """
               |{
               |  "enrolled"    : false,
@@ -193,7 +193,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
         )
 
         m.foreach {
-          case (s, j) ⇒
+          case (s, j) =>
             mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
             mockAuth(v2Nino)(Right(mockedNinoRetrieval))
             mockEnrolmentStoreGet(nino)(Right(s))
@@ -220,7 +220,7 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
           EnrolmentStore.Enrolled(true),
           EnrolmentStore.Enrolled(false),
           EnrolmentStore.NotEnrolled
-        ).foreach { status ⇒
+        ).foreach { status =>
             inSequence {
               mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
               mockEnrolmentStoreGet(nino)(Right(status))

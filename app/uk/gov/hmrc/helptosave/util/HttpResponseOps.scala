@@ -32,33 +32,33 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
 
   def parseJson[A](implicit reads: Reads[A]): Either[String, A] =
     parseJsonImpl(
-      couldntReadJson  = (response, ex: Throwable) ⇒ s"Could not read http response as JSON (${ex.getMessage}). Response body was ${maskNino(response.body)}",
-      couldntParseJson = (response, e: JsError) ⇒ s"Could not parse http response JSON: ${e.prettyPrint()}. Response body was ${maskNino(response.body)}"
+      couldntReadJson  = (response, ex: Throwable) => s"Could not read http response as JSON (${ex.getMessage}). Response body was ${maskNino(response.body)}",
+      couldntParseJson = (response, e: JsError) => s"Could not parse http response JSON: ${e.prettyPrint()}. Response body was ${maskNino(response.body)}"
     )
 
   def parseJsonWithoutLoggingBody[A](implicit reads: Reads[A]): Either[String, A] =
     parseJsonImpl(
-      couldntReadJson  = (_, ex: Throwable) ⇒ s"Could not read http response as JSON (${ex.getMessage})",
-      couldntParseJson = (_, e: JsError) ⇒ s"Could not parse http response JSON: ${e.prettyPrint()}"
+      couldntReadJson  = (_, ex: Throwable) => s"Could not read http response as JSON (${ex.getMessage})",
+      couldntParseJson = (_, e: JsError) => s"Could not parse http response JSON: ${e.prettyPrint()}"
     )
 
   def desCorrelationId: String = response.header("CorrelationId").getOrElse("-")
 
   private def parseJsonImpl[A](
-      couldntReadJson:  (HttpResponse, Throwable) ⇒ String,
-      couldntParseJson: (HttpResponse, JsError) ⇒ String
+      couldntReadJson:  (HttpResponse, Throwable) => String,
+      couldntParseJson: (HttpResponse, JsError) => String
   )(implicit reads: Reads[A]): Either[String, A] =
     Try(response.json).fold(
-      ex ⇒
+      ex =>
         // response.json failed in this case - there was no JSON in the response
         Left(couldntReadJson(response, ex)),
-      jsValue ⇒
+      jsValue =>
         // use Option here to filter out null values
         Option(jsValue).fold[Either[String, A]](
           Left("No JSON found in body of http response")
         )(_.validate[A] match {
-            case JsSuccess(r, _) ⇒ Right(r)
-            case e @ JsError(_)  ⇒ Left(couldntParseJson(response, e))
+            case JsSuccess(r, _) => Right(r)
+            case e @ JsError(_)  => Left(couldntParseJson(response, e))
           })
     )
 }

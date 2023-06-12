@@ -35,7 +35,7 @@ trait StrideAuthSupport extends AuthSupport {
     fakeApplication.configuration.underlying
       .get[List[String]]("stride.base64-encoded-roles")
       .value
-      .map(s ⇒ new String(Base64.getDecoder.decode(s)))
+      .map(s => new String(Base64.getDecoder.decode(s)))
 
   def mockAuthorised[A](expectedPredicate: Predicate,
                         expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =

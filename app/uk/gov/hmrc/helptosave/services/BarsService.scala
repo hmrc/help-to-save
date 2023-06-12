@@ -54,15 +54,15 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
     val trackingId = UUID.randomUUID()
     val nino = barsRequest.nino
     barsConnector.validate(barsRequest, trackingId).map[Either[String, BankDetailsValidationResult]] {
-      response ⇒
+      response =>
         val _ = timerContext.stop()
         response.status match {
-          case Status.OK ⇒
+          case Status.OK =>
             auditor.sendEvent(BARSCheck(barsRequest, response.json, request.uri), nino)
 
-            (response.json \ "accountNumberIsWellFormatted").asOpt[String] →
+            (response.json \ "accountNumberIsWellFormatted").asOpt[String] ->
               (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {
-                case (Some(accountNumberWithSortCodeIsValid), Some(sortCodeIsPresentOnEISCD)) ⇒
+                case (Some(accountNumberWithSortCodeIsValid), Some(sortCodeIsPresentOnEISCD)) =>
                   val sortCodeExists: Either[String, Boolean] =
                     if (sortCodeIsPresentOnEISCD === "yes") {
                       Right(true)
@@ -91,19 +91,19 @@ class BarsServiceImpl @Inject() (barsConnector: BarsConnector,
                     }
 
                   sortCodeExists.map{ BankDetailsValidationResult(accountNumbersValid, _) }
-                case _ ⇒
+                case _ =>
                   logger.warn(s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}")
                   alerting.alert("error parsing the response json from bars check")
                   Left(s"error parsing the response json from bars check")
               }
-          case other: Int ⇒
+          case other: Int =>
             metrics.barsErrorCounter.inc()
             logger.warn(s"unexpected status from bars check, trackingId = $trackingId, status=$other, body = ${response.body}")
             alerting.alert("unexpected status from bars check")
             Left("unexpected status from bars check")
         }
     }.recover {
-      case e ⇒
+      case e =>
         metrics.barsErrorCounter.inc()
         logger.warn(s"unexpected error from bars check, trackingId = $trackingId, error=${e.getMessage}")
         alerting.alert("unexpected error from bars check")

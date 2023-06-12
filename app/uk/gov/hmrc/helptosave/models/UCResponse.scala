@@ -28,17 +28,17 @@ object UCResponse {
 
       (json \ "ucClaimant").validate[String]
         .fold(
-          errors ⇒ JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
-          a ⇒
+          errors => JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
+          a =>
             (json \ "withinThreshold").validateOpt[String]
               .fold(
-                errors ⇒ JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
-                b ⇒
+                errors => JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
+                b =>
                   (a, b) match {
-                    case ("Y", Some("Y")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(true)))
-                    case ("Y", Some("N")) ⇒ JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(false)))
-                    case ("N", None)      ⇒ JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = None))
-                    case _                ⇒ JsError(s"unable to parse UCResponse from proxy, json=$json")
+                    case ("Y", Some("Y")) => JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(true)))
+                    case ("Y", Some("N")) => JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(false)))
+                    case ("N", None)      => JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = None))
+                    case _                => JsError(s"unable to parse UCResponse from proxy, json=$json")
                   }
               )
         )
@@ -47,14 +47,14 @@ object UCResponse {
     override def writes(response: UCResponse): JsValue = {
 
       val (a, b) = response match {
-        case UCResponse(true, Some(true))  ⇒ ("Y", Some("Y"))
-        case UCResponse(true, Some(false)) ⇒ ("Y", Some("N"))
-        case _                             ⇒ ("N", None)
+        case UCResponse(true, Some(true))  => ("Y", Some("Y"))
+        case UCResponse(true, Some(false)) => ("Y", Some("N"))
+        case _                             => ("N", None)
       }
 
       val fields = {
         val f = List("ucClaimant" -> JsString(a))
-        b.fold(f)(value ⇒ ("withinThreshold" → JsString(value)) :: f)
+        b.fold(f)(value => ("withinThreshold" -> JsString(value)) :: f)
       }
 
       JsObject(fields)

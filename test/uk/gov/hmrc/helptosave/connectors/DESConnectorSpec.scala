@@ -38,16 +38,16 @@ class DESConnectorSpec extends TestSupport with MockPagerDuty with TestData with
 
     "return 200 status when call to DES successfully returns eligibility check response" in {
       List[(Option[UCResponse], Map[String, String])](
-        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(true))) →
-          Map("universalCreditClaimant" → "Y", "withinThreshold" -> "Y"),
-        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(false))) →
-          Map("universalCreditClaimant" → "Y", "withinThreshold" -> "N"),
-        Some(UCResponse(ucClaimant      = false, withinThreshold = None)) →
-          Map("universalCreditClaimant" → "N"),
-        None →
+        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(true))) ->
+          Map("universalCreditClaimant" -> "Y", "withinThreshold" -> "Y"),
+        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(false))) ->
+          Map("universalCreditClaimant" -> "Y", "withinThreshold" -> "N"),
+        Some(UCResponse(ucClaimant      = false, withinThreshold = None)) ->
+          Map("universalCreditClaimant" -> "N"),
+        None ->
           Map()
       ).foreach{
-          case (ucResponse, expectedQueryParameters) ⇒
+          case (ucResponse, expectedQueryParameters) =>
             withClue(s"For ucResponse: $ucResponse:"){
               mockGet(url(nino), expectedQueryParameters, appConfig.desHeaders)(Some(HttpResponse(200, Json.toJson(eligibilityCheckResultJson), returnHeaders)))
               val result = await(connector.isEligible(nino, ucResponse))

@@ -72,9 +72,9 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         }
 
         val result = for {
-          _ ← storeConfirmedEmail(nino, email, emailStore)
-          storedEmail ← getConfirmedEmail(nino, emailStore)
-          _ ← deleteEmail(nino, emailStore)
+          _ <- storeConfirmedEmail(nino, email, emailStore)
+          storedEmail <- getConfirmedEmail(nino, emailStore)
+          _ <- deleteEmail(nino, emailStore)
         } yield storedEmail
 
         await(result.value) shouldBe Right(email.some)

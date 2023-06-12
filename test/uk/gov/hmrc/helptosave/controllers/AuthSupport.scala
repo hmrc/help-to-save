@@ -37,16 +37,16 @@ trait AuthSupport extends TestSupport {
   def mockAuth[A](predicate: Predicate, retrieval: Retrieval[A])(result: Either[Exception, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
     (mockAuthConnector.authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
       .expects(predicate, retrieval, *, *)
-      .returning(result.fold(e ⇒ Future.failed[A](e), r ⇒ Future.successful(r)))
+      .returning(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
   def mockAuth[A](retrieval: Retrieval[A])(result: Either[Exception, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
     (mockAuthConnector.authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, retrieval, *, *)
-      .returning(result.fold(e ⇒ Future.failed[A](e), r ⇒ Future.successful(r)))
+      .returning(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
-  def testWithGGAndPrivilegedAccess(f: (() ⇒ Unit) ⇒ Unit): Unit = {
+  def testWithGGAndPrivilegedAccess(f: (() => Unit) => Unit): Unit = {
     withClue("For GG access: "){
-      f{ () ⇒
+      f{ () =>
         inSequence {
           mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(GGCredId("id")))
           mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(Some(nino)))
@@ -55,7 +55,7 @@ trait AuthSupport extends TestSupport {
     }
 
     withClue("For privileged access: "){
-      f{ () ⇒
+      f{ () =>
         mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(PAClientId("id")))
       }
     }

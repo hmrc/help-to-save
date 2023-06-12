@@ -31,7 +31,7 @@ class AccountController @Inject() (proxyConnector:       HelpToSaveProxyConnecto
   extends HelpToSaveAuth(authConnector, controllerComponents) with AccountQuery {
 
   def getAccount(nino: String, systemId: String, correlationId: Option[String]): Action[AnyContent] =
-    accountQuery(nino, systemId, correlationId) { implicit request ⇒ nsiParams ⇒
+    accountQuery(nino, systemId, correlationId) { implicit request => nsiParams =>
       proxyConnector.getAccount(nsiParams.nino, nsiParams.systemId, nsiParams.correlationId, request.uri)
     }
 }

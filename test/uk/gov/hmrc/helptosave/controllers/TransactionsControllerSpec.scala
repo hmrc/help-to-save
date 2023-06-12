@@ -61,7 +61,7 @@ class TransactionsControllerSpec extends AuthSupport {
 
     val callHandler = correlationId.fold(
       call.expects(nino, systemId, *, *, *)
-    ){ id ⇒
+    ){ id =>
         call.expects(nino, systemId, id, *, *)
       }
 
@@ -75,7 +75,7 @@ class TransactionsControllerSpec extends AuthSupport {
       val systemId = "system"
 
       "handle success responses" in {
-        testWithGGAndPrivilegedAccess{ mockAuth ⇒
+        testWithGGAndPrivilegedAccess{ mockAuth =>
           inSequence {
             mockAuth()
             mockGetTransactions(nino, systemId, None)(Right(Some(transactions)))
@@ -98,7 +98,7 @@ class TransactionsControllerSpec extends AuthSupport {
       }
 
       "return a 404 if an transactions does not exist for the NINO" in {
-        testWithGGAndPrivilegedAccess { mockAuth ⇒
+        testWithGGAndPrivilegedAccess { mockAuth =>
           inSequence {
             mockAuth()
             mockGetTransactions(nino, systemId, None)(Right(None))
@@ -115,7 +115,7 @@ class TransactionsControllerSpec extends AuthSupport {
       }
 
       "handle errors returned by the connector" in {
-        testWithGGAndPrivilegedAccess { mockAuth ⇒
+        testWithGGAndPrivilegedAccess { mockAuth =>
           inSequence {
             mockAuth()
             mockGetTransactions(nino, systemId, None)(Left("some error"))

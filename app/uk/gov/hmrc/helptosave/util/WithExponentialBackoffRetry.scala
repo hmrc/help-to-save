@@ -22,14 +22,14 @@ import uk.gov.hmrc.helptosave.util.WithExponentialBackoffRetry.ExponentialBackof
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-trait WithExponentialBackoffRetry { this: Actor ⇒
+trait WithExponentialBackoffRetry { this: Actor =>
 
   def exponentialBackoffRetry[RetryMessage, T](
       minBackoff:        FiniteDuration,
       maxBackoff:        FiniteDuration,
       exponentialFactor: Double,
       recipient:         ActorRef,
-      message:           T ⇒ RetryMessage,
+      message:           T => RetryMessage,
       scheduler:         Scheduler
   ): ExponentialBackoffRetry[RetryMessage, T] =
     ExponentialBackoffRetry(minBackoff, maxBackoff, exponentialFactor, recipient, message, scheduler)
@@ -43,7 +43,7 @@ object WithExponentialBackoffRetry {
       maxBackoff:        FiniteDuration,
       exponentialFactor: Double,
       recipient:         ActorRef,
-      message:           T ⇒ RetryMessage,
+      message:           T => RetryMessage,
       scheduler:         Scheduler
   ) {
     private val minMillis: Double = minBackoff.toMillis
@@ -108,7 +108,7 @@ object WithExponentialBackoffRetry {
         maxBackoff:                             FiniteDuration,
         numberOfRetriesUntilInitialWaitDoubles: Int,
         recipient:                              ActorRef,
-        message:                                T ⇒ RetryMessage,
+        message:                                T => RetryMessage,
         scheduler:                              Scheduler
     ): ExponentialBackoffRetry[RetryMessage, T] = {
       val minMillis = minBackoff.toMillis.toDouble

@@ -31,7 +31,7 @@ class TransactionsController @Inject() (proxyConnector:       HelpToSaveProxyCon
   extends HelpToSaveAuth(authConnector, controllerComponents) with AccountQuery {
 
   def getTransactions(nino: String, systemId: String, correlationId: Option[String]): Action[AnyContent] =
-    accountQuery(nino, systemId, correlationId) { implicit request ⇒ nsiParams ⇒
+    accountQuery(nino, systemId, correlationId) { implicit request => nsiParams =>
       proxyConnector.getTransactions(nsiParams.nino, nsiParams.systemId, nsiParams.correlationId)
     }
 }

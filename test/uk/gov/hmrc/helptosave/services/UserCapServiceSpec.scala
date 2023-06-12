@@ -53,11 +53,11 @@ class UserCapServiceSpec extends TestSupport {
     lazy val totalLimit = servicesConfig.getInt("microservice.user-cap.total.limit")
 
       def mockUserCapStoreGetOne(userCap: Option[UserCap]) =
-        (userCapStore.get: () ⇒ Future[Option[UserCap]]).expects()
+        (userCapStore.get: () => Future[Option[UserCap]]).expects()
           .returning(Future.successful(userCap))
 
       def mockUserCapStoreGetOneFailure() =
-        (userCapStore.get: () ⇒ Future[Option[UserCap]]).expects()
+        (userCapStore.get: () => Future[Option[UserCap]]).expects()
           .returning(Future.failed(new RuntimeException("oh no")))
 
       def mockUserCapStoreUpsert(userCap: UserCap) =

@@ -48,11 +48,11 @@ class EligibilityStatsActor(scheduler:              Scheduler,
   val statsTable: TrieMap[EligibilityReason, TrieMap[Source, Int]] = TrieMap.empty[EligibilityReason, TrieMap[Source, Int]]
 
   override def receive: Receive = {
-    case GetStats ⇒
+    case GetStats =>
       logger.info("Getting eligibility stats from mongo")
       eligibilityStatsStore.getEligibilityStats.map(GetStatsResponse) pipeTo self
 
-    case r: GetStatsResponse ⇒
+    case r: GetStatsResponse =>
       val table = eligibilityStatsParser.createTable(r.result)
       updateLocalStats(table)
       updateMetrics(table)
@@ -64,17 +64,17 @@ class EligibilityStatsActor(scheduler:              Scheduler,
       def replaceSpaces(s: String) = s.replaceAllLiterally(" ", "-")
 
     table.foreach{
-      case (reason, channels) ⇒
+      case (reason, channels) =>
         channels.foreach {
-          case (channel, _) ⇒
-            if (!registeredStats.contains(reason → channel)) {
+          case (channel, _) =>
+            if (!registeredStats.contains(reason -> channel)) {
               logger.info(s"Registering gauge for (reason, channel) = ($reason, $channel) ")
               metrics.registerAccountStatsGauge(
                 replaceSpaces(reason), replaceSpaces(channel),
-                () ⇒ statsTable.get(reason).flatMap(_.get(channel)).getOrElse(0)
+                () => statsTable.get(reason).flatMap(_.get(channel)).getOrElse(0)
               )
 
-              registeredStats += reason → channel
+              registeredStats += reason -> channel
             }
         }
     }
@@ -90,7 +90,7 @@ class EligibilityStatsActor(scheduler:              Scheduler,
   def updateLocalStats(table: Table): Unit = {
     statsTable.clear()
     table.foreach{
-      case (reason, stats) ⇒
+      case (reason, stats) =>
         statsTable.update(reason, TrieMap(stats.toList: _*))
     }
   }

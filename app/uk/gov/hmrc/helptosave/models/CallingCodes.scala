@@ -25,10 +25,10 @@ object CallingCodes {
     Source.fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt"))
       .getLines()
       .foldLeft(Map.empty[Int, String]) {
-        case (acc, curr) ⇒
+        case (acc, curr) =>
           curr.split("-").toList match {
-            case key :: value :: Nil ⇒ acc.updated(key.trim.toInt, value.trim)
-            case _                   ⇒ acc
+            case key :: value :: Nil => acc.updated(key.trim.toInt, value.trim)
+            case _                   => acc
           }
       }
   }

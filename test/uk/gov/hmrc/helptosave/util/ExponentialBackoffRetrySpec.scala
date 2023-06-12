@@ -35,8 +35,8 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
           previousTime:         FiniteDuration,
           list:                 List[FiniteDuration]
       ): List[FiniteDuration] = list match {
-        case Nil ⇒ list
-        case head :: tail ⇒
+        case Nil => list
+        case head :: tail =>
           (previousTime > previousPreviousTime) shouldBe true
           (head > previousTime) shouldBe true
           ((previousTime - previousPreviousTime) > (head - previousTime)) shouldBe true
@@ -44,8 +44,8 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
       }
 
     retryTimes match {
-      case Nil | _ :: Nil   ⇒ fail(s"unexpected number of elements in list: ${retryTimes.length}. Expected 2 or greater.")
-      case t1 :: t2 :: tail ⇒ loop(t1, t2, tail)
+      case Nil | _ :: Nil   => fail(s"unexpected number of elements in list: ${retryTimes.length}. Expected 2 or greater.")
+      case t1 :: t2 :: tail => loop(t1, t2, tail)
     }
   }
 
@@ -66,10 +66,10 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
         )
 
         val result: List[FiniteDuration] = (1 to 10).foldLeft(List.empty[FiniteDuration]){
-          case (acc, curr) ⇒
+          case (acc, curr) =>
             exponentialBackoffRetry.retry(curr.toString()).fold[List[FiniteDuration]](
               fail("Retry time was not defined")
-            ){ t ⇒
+            ){ t =>
                 time.advance(t)
                 probe.expectMsg(TestMessage(curr.toString()))
                 t :: acc
@@ -102,7 +102,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
           time.scheduler
         )
 
-        (1 to n).foreach{ i ⇒
+        (1 to n).foreach{ i =>
           exponentialBackoffRetry.retry("")
           // advance 1 day to ensure scheduled send actually completes
           time.advance(1.day)

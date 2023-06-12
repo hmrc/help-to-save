@@ -116,7 +116,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
       val threshold = 650.0
 
       val url = "http://localhost:7005/help-to-save-proxy/uc-claimant-check"
-      val queryParams = Map("nino" → nino, "transactionId" → txnId.toString, "threshold" → threshold.toString)
+      val queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)
 
       "handle success response from proxy" in {
 
@@ -174,7 +174,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
       val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
 
       val getAccountUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/account"
-      val queryParameters = Map("nino" → nino, "correlationId" → correlationId, "version" → version, "systemId" → systemId)
+      val queryParameters = Map("nino" -> nino, "correlationId" -> correlationId, "version" -> version, "systemId" -> systemId)
 
       val path = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
         def event(accountJson: JsValue = nsiAccountJson) = GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
@@ -281,10 +281,10 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       val getTransactionsUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/transactions"
       val queryParameters = Map(
-        "nino" -> nino, "correlationId" → correlationId, "version" → version, "systemId" → systemId
+        "nino" -> nino, "correlationId" -> correlationId, "version" -> version, "systemId" -> systemId
       )
 
-        def transactionMetricChanges[T](body: ⇒ T): (T, Long, Long) = {
+        def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
           val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
           val errorCountBefore = mockMetrics.getTransactionsErrorCounter.getCount
           val result = body
