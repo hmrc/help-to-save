@@ -63,13 +63,13 @@ class AccountSpec extends TestSupport {
         returnedAccount shouldBe Valid(account)
       }
 
-        def testBlockingCodes(codes: String*)(assertion: ValidatedNel[String, Account] ⇒ Unit) =
-          codes.foreach{ code ⇒
+        def testBlockingCodes(codes: String*)(assertion: ValidatedNel[String, Account] => Unit) =
+          codes.foreach{ code =>
             List(
               testNsiAccount.copy(accountBlockingCode = code),
               testNsiAccount.copy(clientBlockingCode = code),
               testNsiAccount.copy(accountBlockingCode = code, clientBlockingCode = code)
-            ).foreach{ nsiAccount ⇒
+            ).foreach{ nsiAccount =>
                 withClue(s"For NsiAccount: $nsiAccount") { assertion(Account(nsiAccount)) }
               }
           }
@@ -197,8 +197,8 @@ class AccountSpec extends TestSupport {
           )))
 
         returnedAccount.bimap(
-          errors ⇒ fail(s"returnedAccount should have been Valid but was Invalid with errors $errors"),
-          account ⇒ account.openedYearMonth shouldBe YearMonth.of(2018, 1)
+          errors => fail(s"returnedAccount should have been Valid but was Invalid with errors $errors"),
+          account => account.openedYearMonth shouldBe YearMonth.of(2018, 1)
         )
       }
 

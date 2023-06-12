@@ -91,13 +91,13 @@ case class AccountCreated(userInfo:               NSIPayload,
         userInfo.contactDetails.countryCode, userInfo.contactDetails.email,
         userInfo.contactDetails.phoneNumber, userInfo.nino, userInfo.contactDetails.communicationPreference,
         userInfo.registrationChannel, source
-      ) →
-        userInfo.nbaDetails.fold(ManuallyEnteredDetails()){ bank ⇒
+      ) ->
+        userInfo.nbaDetails.fold(ManuallyEnteredDetails()){ bank =>
           ManuallyEnteredDetails(bank.accountName, bank.accountNumber, bank.sortCode, bank.rollNumber)
         }
     } else {
       PrePopulatedUserData(userInfo.nino, userInfo.contactDetails.communicationPreference,
-                           userInfo.registrationChannel, source) →
+                           userInfo.registrationChannel, source) ->
         ManuallyEnteredDetails(
           userInfo.nbaDetails.map(_.accountName), userInfo.nbaDetails.map(_.accountNumber),
           userInfo.nbaDetails.map(_.sortCode), userInfo.nbaDetails.flatMap(_.rollNumber),

@@ -519,13 +519,13 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       "handle cases where a threshold request is received just after a scheduled retrieval " +
         "is triggered but before a response from DES to the scheduled retrieval is obtained and " +
         "DES responds to the scheduled retrieval request first" in {
-            def doTest(test: TestApparatus ⇒ Unit) = {
+            def doTest(test: TestApparatus => Unit) = {
               val testApparatus = new TestApparatus
               test(testApparatus)
             }
 
           // test when both calls to DES are successful
-          doTest{ test ⇒
+          doTest{ test =>
             advanceToUpdateWindow(test)
 
             // now trigger the end of the update window
@@ -557,7 +557,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // test when the DES response to the scheduled retrieval is successful but the one from the
           // requested retrieval is not
-          doTest { test ⇒
+          doTest { test =>
             advanceToUpdateWindow(test)
 
             // now trigger the end of the update window
@@ -588,7 +588,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // test when the DES response to the scheduled retrieval is unsuccessful but the one from the
           // requested retrieval is
-          doTest { test ⇒
+          doTest { test =>
             advanceToUpdateWindow(test)
 
             // now trigger the end of the update window
@@ -628,13 +628,13 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       "handle cases where a threshold request is received just after a scheduled retrieval " +
         "is triggered but before a response from DES to the scheduled retrieval is obtained and " +
         "DES responds to the scheduled retrieval request second" in {
-            def doTest(test: TestApparatus ⇒ Unit) = {
+            def doTest(test: TestApparatus => Unit) = {
               val testApparatus = new TestApparatus
               test(testApparatus)
             }
 
           // test when both calls to DES are successful
-          doTest{ test ⇒
+          doTest{ test =>
             advanceToUpdateWindow(test)
 
             // now trigger the end of the update window
@@ -665,7 +665,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // test when the DES response to the scheduled retrieval is successful but the one from the
           // requested retrieval is not
-          doTest { test ⇒
+          doTest { test =>
             advanceToUpdateWindow(test)
 
             // now trigger the end of the update window
@@ -696,7 +696,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
           // test when the DES response to the scheduled retrieval is unsuccessful but the one from the
           // requested retrieval is
-          doTest { test ⇒
+          doTest { test =>
             advanceToUpdateWindow(test)
 
             // now trigger the end of the update window

@@ -82,7 +82,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
 
     http.post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
       .recover {
-        case e ⇒
+        case e =>
           logger.warn(s"unexpected error from proxy during /create-de-account, message=${e.getMessage}",
             userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
 
@@ -95,7 +95,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
 
     http.put(s"$proxyURL/help-to-save-proxy/update-email", userInfo)
       .recover {
-        case e ⇒
+        case e =>
           logger.warn(s"unexpected error from proxy during /update-email, message=${e.getMessage}",
             userInfo.nino, "apiCorrelationId" -> getApiCorrelationId())
 
@@ -108,27 +108,27 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
     val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check"
 
     EitherT[Future, String, UCResponse](
-      http.get(url, queryParams = Map("nino" → nino, "transactionId" → txnId.toString, "threshold" → threshold.toString)).map {
-        response ⇒
+      http.get(url, queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)).map {
+        response =>
 
           val correlationId = "apiCorrelationId" -> getApiCorrelationId()
           logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
 
           response.status match {
-            case Status.OK ⇒
+            case Status.OK =>
               val result = response.parseJson[UCResponse]
               result.fold(
-                e ⇒ logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", nino, correlationId),
-                _ ⇒ logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
+                e => logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", nino, correlationId),
+                _ => logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
               )
               result
 
-            case other ⇒
+            case other =>
               logger.warn(s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other", nino, correlationId)
               Left(s"Received unexpected status($other) from UniversalCredit check")
           }
       }.recover {
-        case e ⇒
+        case e =>
           Left(s"Call to UniversalCredit check unsuccessful: ${e.getMessage}")
       }
     )
@@ -139,40 +139,40 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
     val url = s"$proxyURL/help-to-save-proxy/nsi-services/account"
     val timerContext = metrics.getAccountTimer.time()
     EitherT[Future, String, Option[Account]](
-      http.get(url, Map("nino" → nino, "correlationId" → correlationId, "version" → getAccountVersion, "systemId" → systemId))
+      http.get(url, Map("nino" -> nino, "correlationId" -> correlationId, "version" -> getAccountVersion, "systemId" -> systemId))
         .map[Either[String, Option[Account]]] {
-          response ⇒
+          response =>
             val _ = timerContext.stop()
             response.status match {
-              case Status.OK ⇒
+              case Status.OK =>
 
                 auditor.sendEvent(GetAccountResultEvent(GetAccountResult(nino, response.json), path), nino)
 
                 val result = for {
-                  nsiAccount ← response.parseJsonWithoutLoggingBody[NsiAccount].leftMap(NonEmptyList.one)
-                  account ← Account(nsiAccount).toEither
+                  nsiAccount <- response.parseJsonWithoutLoggingBody[NsiAccount].leftMap(NonEmptyList.one)
+                  account <- Account(nsiAccount).toEither
                 } yield account
 
                 result.bimap(
-                  { errors ⇒
+                  { errors =>
                     metrics.getAccountErrorCounter.inc()
                     pagerDutyAlerting.alert("Could not parse JSON in the getAccount response")
                     logger.debug(s"Response body that failed to parse: ${response.body}}")
                     s"Could not parse getNsiAccount response, received 200 (OK), error=[${errors.toList.mkString(",")}]"
                   },
-                  { account ⇒
-                    logger.info("Call to getNsiAccount successful", nino, "correlationId" → correlationId)
+                  { account =>
+                    logger.info("Call to getNsiAccount successful", nino, "correlationId" -> correlationId)
                     Some(account)
                   }
                 )
 
-              case other ⇒
+              case other =>
                 if (isAccountDoesntExistResponse(response)) {
-                  logger.info("Account didn't exist for getNsiAccount request", nino, "correlationId" → correlationId)
+                  logger.info("Account didn't exist for getNsiAccount request", nino, "correlationId" -> correlationId)
                   Right(None)
                 } else {
                   logger.warn(s"Call to getNsiAccount unsuccessful. Received unexpected status $other. Body was ${response.body}",
-                    nino, "correlationId" → correlationId)
+                    nino, "correlationId" -> correlationId)
                   metrics.getAccountErrorCounter.inc()
                   pagerDutyAlerting.alert("Received unexpected http status in response to getAccount")
 
@@ -181,7 +181,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
 
             }
         }.recover {
-          case NonFatal(e) ⇒
+          case NonFatal(e) =>
             val _ = timerContext.stop()
             metrics.getAccountErrorCounter.inc()
             pagerDutyAlerting.alert("Failed to make call to getAccount")
@@ -198,36 +198,36 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
     val url = s"$proxyURL/help-to-save-proxy/nsi-services/transactions"
     val timerContext = metrics.getTransactionsTimer.time()
     EitherT[Future, String, Option[Transactions]](
-      http.get(url, Map("nino" → nino, "correlationId" → correlationId, "version" → getAccountVersion, "systemId" → systemId)).map[Either[String, Option[Transactions]]] {
-        response ⇒
+      http.get(url, Map("nino" -> nino, "correlationId" -> correlationId, "version" -> getAccountVersion, "systemId" -> systemId)).map[Either[String, Option[Transactions]]] {
+        response =>
           val _ = timerContext.stop()
           response.status match {
-            case Status.OK ⇒
+            case Status.OK =>
               val result = for {
-                nsiTransactions ← response.parseJsonWithoutLoggingBody[NsiTransactions].leftMap(NonEmptyList.one)
-                transactions ← Transactions(nsiTransactions).toEither
+                nsiTransactions <- response.parseJsonWithoutLoggingBody[NsiTransactions].leftMap(NonEmptyList.one)
+                transactions <- Transactions(nsiTransactions).toEither
               } yield transactions
 
               result.bimap(
-                { errors ⇒
+                { errors =>
                   metrics.getTransactionsErrorCounter.inc()
                   pagerDutyAlerting.alert("Could not parse get transactions response")
                   logger.debug(s"Response body that failed to parse: ${response.body}}")
                   s"""Could not parse transactions response from NS&I, received 200 (OK), error=[${errors.toList.mkString(",")}]"""
                 },
-                { transactions: Transactions ⇒
-                  logger.info("Call to get transactions successful", nino, "correlationId" → correlationId)
+                { transactions: Transactions =>
+                  logger.info("Call to get transactions successful", nino, "correlationId" -> correlationId)
                   Some(transactions)
                 }
               )
 
-            case other ⇒
+            case other =>
               if (isAccountDoesntExistResponse(response)) {
-                logger.info("Account didn't exist for get transactions request", nino, "correlationId" → correlationId)
+                logger.info("Account didn't exist for get transactions request", nino, "correlationId" -> correlationId)
                 Right(None)
               } else {
                 logger.warn(s"Call to get transactions unsuccessful. Received unexpected status $other. Body was ${response.body}",
-                  nino, "correlationId" → correlationId)
+                  nino, "correlationId" -> correlationId)
                 metrics.getTransactionsErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to get transactions")
 
@@ -235,7 +235,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
               }
           }
       }.recover {
-        case NonFatal(e) ⇒
+        case NonFatal(e) =>
           val _ = timerContext.stop()
           metrics.getTransactionsErrorCounter.inc()
           logger.warn("Failed to make call to get transactions", e)

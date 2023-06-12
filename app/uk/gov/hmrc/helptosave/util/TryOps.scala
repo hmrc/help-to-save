@@ -24,9 +24,9 @@ object TryOps {
 
 class TryOps[A](val t: Try[A]) extends AnyVal {
 
-  def fold[B](f: Throwable ⇒ B, g: A ⇒ B): B = t match {
-    case Failure(e) ⇒ f(e)
-    case Success(s) ⇒ g(s)
+  def fold[B](f: Throwable => B, g: A => B): B = t match {
+    case Failure(e) => f(e)
+    case Success(s) => g(s)
   }
 
   def toEither(): Either[Throwable, A] = fold[Either[Throwable, A]](Left(_), Right(_))

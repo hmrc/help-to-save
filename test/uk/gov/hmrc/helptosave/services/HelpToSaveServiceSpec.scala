@@ -106,10 +106,10 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
-    result ← Gen.alphaStr
-    resultCode ← Gen.choose(1, 10)
-    reason ← Gen.alphaStr
-    reasonCode ← Gen.choose(1, 10)
+    result <- Gen.alphaStr
+    resultCode <- Gen.choose(1, 10)
+    reason <- Gen.alphaStr
+    reasonCode <- Gen.choose(1, 10)
   } yield EligibilityCheckResult(result, resultCode, reason, reasonCode))
 
   "HelpToSaveService" when {
@@ -149,7 +149,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
       "return with the eligibility check result unchanged from ITMP" in {
         val uCResponse = UCResponse(false, Some(false))
-        forAll { eligibilityCheckResponse: EligibilityCheckResult ⇒
+        forAll { eligibilityCheckResponse: EligibilityCheckResult =>
           whenever(eligibilityCheckResponse.resultCode =!= 4) {
             inSequence {
               mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -183,7 +183,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
       "pass the UC params to DES if they are provided" in {
         val uCResponse = UCResponse(true, Some(true))
-        forAll { eligibilityCheckResponse: EligibilityCheckResult ⇒
+        forAll { eligibilityCheckResponse: EligibilityCheckResult =>
           whenever(eligibilityCheckResponse.resultCode =!= 4) {
             inSequence {
               mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -198,7 +198,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
 
       "do not pass the UC withinThreshold param to DES if its not set" in {
         val uCResponse = UCResponse(true, None)
-        forAll { eligibilityCheckResponse: EligibilityCheckResult ⇒
+        forAll { eligibilityCheckResponse: EligibilityCheckResult =>
           whenever(eligibilityCheckResponse.resultCode =!= 4) {
             inSequence {
               mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -224,7 +224,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         }
 
         "the call comes back with an unexpected http status" in {
-          forAll { status: Int ⇒
+          forAll { status: Int =>
             whenever(status > 0 && status =!= 200 && status =!= 404) {
               inSequence {
                 mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -278,7 +278,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         val nino = "NINO"
 
         "the call to ITMP comes back with a status which isn't 200 or 403" in {
-          forAll { status: Int ⇒
+          forAll { status: Int =>
             whenever(status != 200 && status != 403) {
               inSequence {
                 mockSetFlag(nino)(HttpResponse(status, ""))
@@ -348,7 +348,7 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         }
 
         "the call comes back with an unexpected http status" in {
-          forAll { status: Int ⇒
+          forAll { status: Int =>
             whenever(status > 0 && status =!= 200 && status =!= 404) {
               inSequence {
                 mockPayeGet(nino)(Some(HttpResponse(status, "")))

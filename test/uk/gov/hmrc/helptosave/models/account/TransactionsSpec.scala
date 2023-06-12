@@ -120,7 +120,7 @@ class TransactionsSpec extends TestSupport {
           nsiCreditTransaction.copy(sequence       = "1", accountingDate = LocalDate.parse("2017-11-20"), amount = BigDecimal(1))
         ))
 
-        Transactions(nsiTransactions).bimap(errors ⇒ fail(errors.toList.mkString(", ")), { transactions ⇒
+        Transactions(nsiTransactions).bimap(errors => fail(errors.toList.mkString(", ")), { transactions =>
           transactions.transactions.map(_.amount) shouldBe List(
             BigDecimal(1),
             BigDecimal(2),

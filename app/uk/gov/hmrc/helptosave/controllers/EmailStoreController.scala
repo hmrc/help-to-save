@@ -41,17 +41,17 @@ class EmailStoreController @Inject() (emailStore:           EmailStore,
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
-  def store(email: String, maybeNINO: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNINO) { _ ⇒ nino ⇒
+  def store(email: String, maybeNINO: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNINO) { _ => nino =>
     Try(new String(base64Decoder.decode(email))).fold(
-      { error ⇒
+      { error =>
         logger.warn(s"Could not store email. Could not decode email: $error", nino)
         Future.successful(InternalServerError)
-      }, { decodedEmail ⇒
+      }, { decodedEmail =>
         emailStore.store(decodedEmail, nino).fold(
-          { e ⇒
+          { e =>
             logger.error(s"Could not store email: $e", nino)
             InternalServerError
-          }, { _ ⇒
+          }, { _ =>
             Ok
           }
         )
@@ -59,13 +59,13 @@ class EmailStoreController @Inject() (emailStore:           EmailStore,
     )
   }
 
-  def get(): Action[AnyContent] = ggAuthorisedWithNino { _ ⇒ implicit nino ⇒
+  def get(): Action[AnyContent] = ggAuthorisedWithNino { _ => implicit nino =>
     emailStore.get(nino).fold(
-      { e ⇒
+      { e =>
         logger.warn(e, nino)
         InternalServerError
       },
-      maybeEmail ⇒ Ok(Json.toJson(EmailGetResponse(maybeEmail)))
+      maybeEmail => Ok(Json.toJson(EmailGetResponse(maybeEmail)))
     )
   }
 

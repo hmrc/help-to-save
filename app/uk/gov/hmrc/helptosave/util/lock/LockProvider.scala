@@ -31,7 +31,7 @@ trait LockProvider {
 
   def releaseLock(): Future[Unit]
 
-  def tryToAcquireOrRenewLock[T](body: ⇒ Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
+  def tryToAcquireOrRenewLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
 
 }
 
@@ -49,21 +49,21 @@ object LockProvider {
     override def releaseLock(): Future[Unit] =
       repo.releaseLock(lockId, ownerId)
 
-    override def tryToAcquireOrRenewLock[T](body: ⇒ Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+    override def tryToAcquireOrRenewLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       (for {
-        refreshed ← repo.refreshExpiry(lockId, ownerId, holdLockFor)
-        acquired ← if (!refreshed) { repo.takeLock(lockId, ownerId, holdLockFor) }
+        refreshed <- repo.refreshExpiry(lockId, ownerId, holdLockFor)
+        acquired <- if (!refreshed) { repo.takeLock(lockId, ownerId, holdLockFor) }
         else {
           Future.successful(false)
         }
-        result ← if (refreshed || acquired) {
+        result <- if (refreshed || acquired) {
           body.map(Option.apply)
         } else {
           Future.successful(None)
         }
       } yield result
       ).recoverWith {
-        case ex ⇒ repo.releaseLock(lockId, ownerId).flatMap(_ ⇒ Future.failed(ex))
+        case ex => repo.releaseLock(lockId, ownerId).flatMap(_ => Future.failed(ex))
       }
   }
 }

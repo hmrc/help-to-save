@@ -35,8 +35,8 @@ class AppConfig @Inject() (val runModeConfiguration: Configuration,
   val appName: String = servicesConfig.getString("appName")
 
   val desHeaders: Map[String, String] = Map(
-    "Environment" → servicesConfig.getString("microservice.services.des.environment"),
-    "Authorization" → s"Bearer ${servicesConfig.getString("microservice.services.des.token")}"
+    "Environment" -> servicesConfig.getString("microservice.services.des.environment"),
+    "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.des.token")}"
   )
 
   val correlationIdHeaderName: String = servicesConfig.getString("microservice.correlationIdHeaderName")

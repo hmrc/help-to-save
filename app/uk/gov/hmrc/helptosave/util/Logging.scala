@@ -38,13 +38,13 @@ object Logging {
     def warn(message: String, nino: NINO, additionalParams: (String, String)*)(implicit transformer: LogMessageTransformer): Unit =
       logger.warn(transformer.transform(message, nino, additionalParams))
 
-    def warn(message: String, e: ⇒ Throwable, nino: NINO, additionalParams: (String, String)*)(implicit transformer: LogMessageTransformer): Unit =
+    def warn(message: String, e: => Throwable, nino: NINO, additionalParams: (String, String)*)(implicit transformer: LogMessageTransformer): Unit =
       logger.warn(transformer.transform(message, nino, additionalParams), e)
 
     def error(message: String, nino: NINO, additionalParams: (String, String)*)(implicit transformer: LogMessageTransformer): Unit =
       logger.error(transformer.transform(message, nino, additionalParams))
 
-    def error(message: String, e: ⇒ Throwable, nino: NINO, additionalParams: (String, String)*)(implicit transformer: LogMessageTransformer): Unit =
+    def error(message: String, e: => Throwable, nino: NINO, additionalParams: (String, String)*)(implicit transformer: LogMessageTransformer): Unit =
       logger.error(transformer.transform(message, nino, additionalParams), e)
 
   }
@@ -59,17 +59,17 @@ trait LogMessageTransformer {
 @Singleton
 class LogMessageTransformerImpl @Inject() (configuration: Configuration) extends LogMessageTransformer {
 
-  private val ninoPrefix: NINO ⇒ String =
+  private val ninoPrefix: NINO => String =
     if (configuration.underlying.getBoolean("nino-logging.enabled")) {
-      nino ⇒ s"For NINO [$nino], "
+      nino => s"For NINO [$nino], "
     } else {
-      _ ⇒ ""
+      _ => ""
     }
 
-  private val logAdditionalParams: Seq[(String, String)] ⇒ String = {
-    params ⇒
+  private val logAdditionalParams: Seq[(String, String)] => String = {
+    params =>
       params.toList.foldLeft("") {
-        (acc, tuple) ⇒ s"${acc}For ${tuple._1} [${tuple._2}], "
+        (acc, tuple) => s"${acc}For ${tuple._1} [${tuple._2}], "
       }
   }
 

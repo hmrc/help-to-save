@@ -56,15 +56,15 @@ class DESConnectorImpl @Inject() (http:           HttpClient,
 
   val body: JsValue = JsNull
 
-  val originatorIdHeader: (String, String) = "Originator-Id" → servicesConfig.getString("microservice.services.paye-personal-details.originatorId")
+  val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString("microservice.services.paye-personal-details.originatorId")
 
   def eligibilityCheckUrl(nino: String): String = s"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
 
   def eligibilityCheckQueryParameters(ucResponse: Option[UCResponse]): Map[String, String] =
     ucResponse match {
-      case Some(UCResponse(a, Some(b))) ⇒ Map("universalCreditClaimant" → a.show, "withinThreshold" -> b.show)
-      case Some(UCResponse(a, None))    ⇒ Map("universalCreditClaimant" -> a.show)
-      case _                            ⇒ Map()
+      case Some(UCResponse(a, Some(b))) => Map("universalCreditClaimant" -> a.show, "withinThreshold" -> b.show)
+      case Some(UCResponse(a, None))    => Map("universalCreditClaimant" -> a.show)
+      case _                            => Map()
     }
 
   def setFlagUrl(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"

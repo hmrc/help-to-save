@@ -41,11 +41,11 @@ class StrideAuthSpec extends TestSupport {
 
   override lazy val additionalConfig: Configuration = {
       def toConfigValue(rolesList: List[String]): List[String] =
-        rolesList.map(r ⇒ new String(Base64.getEncoder.encode(r.getBytes)))
+        rolesList.map(r => new String(Base64.getEncoder.encode(r.getBytes)))
 
     Configuration(
-      "stride.base64-encoded-roles" → toConfigValue(standardRoles),
-      "stride.base64-encoded-secure-roles" → toConfigValue(secureRoles)
+      "stride.base64-encoded-roles" -> toConfigValue(standardRoles),
+      "stride.base64-encoded-secure-roles" -> toConfigValue(secureRoles)
     )
   }
 
@@ -61,7 +61,7 @@ class StrideAuthSpec extends TestSupport {
 
     lazy val strideAuth = new StrideAuth(mockAuthConnector, testCC)
 
-    lazy val action = strideAuth.authorisedFromStride { _ ⇒ Future.successful(Ok) }
+    lazy val action = strideAuth.authorisedFromStride { _ => Future.successful(Ok) }
 
     "provide a authorised method" which {
 
@@ -82,7 +82,7 @@ class StrideAuthSpec extends TestSupport {
             Set("e", "f"),
             Set("e"),
             Set.empty
-          ).foreach { enrolments ⇒
+          ).foreach { enrolments =>
               withClue(s"For enrolments $enrolments: ") {
                 mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(enrolments.map(Enrolment(_)))))
                 status(action(FakeRequest())) shouldBe UNAUTHORIZED
@@ -96,7 +96,7 @@ class StrideAuthSpec extends TestSupport {
         List(
           standardRoles,
           secureRoles
-        ).foreach{ enrolments ⇒
+        ).foreach{ enrolments =>
           withClue(s"For enrolments $enrolments: ") {
             mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(Right(Enrolments(enrolments.map(Enrolment(_)).toSet)))
             status(action(FakeRequest())) shouldBe OK

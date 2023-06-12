@@ -67,7 +67,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
       doUpdate(crypto.encrypt(email), nino)
-        .map[Either[String, Unit]] { result ⇒
+        .map[Either[String, Unit]] { result =>
           timerContext.stop()
 
           if (!result) {
@@ -78,7 +78,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
           }
         }
         .recover {
-          case NonFatal(e) ⇒
+          case NonFatal(e) =>
             timerContext.stop()
             metrics.emailStoreUpdateErrorCounter.inc()
             Left(s"${e.getMessage}")
@@ -88,20 +88,20 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
   override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
     val timerContext = metrics.emailStoreGetTimer.time()
 
-    collection.find(regex("nino", getRegex(nino))).toFuture().map { res ⇒
+    collection.find(regex("nino", getRegex(nino))).toFuture().map { res =>
       timerContext.stop()
 
       val decryptedEmail = res.headOption
-        .map(data ⇒ crypto.decrypt(data.email))
+        .map(data => crypto.decrypt(data.email))
         .traverse[Try, String](identity)
 
       decryptedEmail.toEither().leftMap {
-        t ⇒
+        t =>
           logger.warn(s"Could not decrypt email: $t, $nino")
           s"Could not decrypt email: ${t.getMessage}"
       }
     }.recover {
-      case e ⇒
+      case e =>
         timerContext.stop()
         metrics.emailStoreGetErrorCounter.inc()
         Left(s"Could not read from email store: ${e.getMessage}")
@@ -110,8 +110,8 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
 
   override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
 
-    collection.findOneAndDelete(regex("nino", getRegex(nino))).toFuture().map[Either[String, Unit]]{ res ⇒ Right(()) }.recover{
-      case e ⇒
+    collection.findOneAndDelete(regex("nino", getRegex(nino))).toFuture().map[Either[String, Unit]]{ res => Right(()) }.recover{
+      case e =>
         Left(s"Could not delete email: ${e.getMessage}")
     }
 
@@ -122,7 +122,7 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
       options = UpdateOptions().upsert(true)
-    ).toFuture().map(a ⇒ {
+    ).toFuture().map(a => {
         a.wasAcknowledged()
       })
 

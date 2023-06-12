@@ -26,12 +26,12 @@ object JsLookupHelper {
    * @param fieldName the name of the property to look up
    */
   def lookup(fieldName: String, value: JsValue): JsLookupResult = JsDefined(value) match {
-    case JsDefined(obj @ JsObject(_)) ⇒
+    case JsDefined(obj @ JsObject(_)) =>
       obj.value.get(fieldName).map(JsDefined.apply)
         .getOrElse(JsUndefined(s"'$fieldName' is undefined on object: ${obj.keys.mkString(",")}"))
-    case JsDefined(o) ⇒
+    case JsDefined(o) =>
       JsUndefined("submitted json is not an object")
-    case undef ⇒ undef
+    case undef => undef
   }
 
   /**
@@ -40,11 +40,11 @@ object JsLookupHelper {
    * @param index Element index
    */
   def lookup(index: Int, value: JsValue): JsLookupResult = JsDefined(value) match {
-    case JsDefined(arr: JsArray) ⇒
+    case JsDefined(arr: JsArray) =>
       arr.value.lift(index).map(JsDefined.apply).getOrElse(JsUndefined(s"Array index out of bounds in $arr"))
-    case JsDefined(o) ⇒
+    case JsDefined(o) =>
       JsUndefined(s"$o is not an array")
-    case undef ⇒ undef
+    case undef => undef
   }
 
 }

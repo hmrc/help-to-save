@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.utils
 import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 
-trait MockPagerDuty { this: MockFactory ⇒
+trait MockPagerDuty { this: MockFactory =>
 
   val mockPagerDuty: PagerDutyAlerting = mock[PagerDutyAlerting]
 

@@ -26,11 +26,11 @@ object CountryCode {
   val countryCodes: Map[Int, String] = {
     val content = Source.fromInputStream(getClass.getResourceAsStream("/resources/country.json")).mkString
     Json.parse(content) match {
-      case JsObject(fields) ⇒
+      case JsObject(fields) =>
         fields
-          .map(x ⇒ (x._1.toInt, (x._2 \ "alpha_two_code").asOpt[String]))
-          .collect { case (id, Some(value)) ⇒ id -> value }
-      case _ ⇒ sys.error("no country codes were found, terminating the service")
+          .map(x => (x._1.toInt, (x._2 \ "alpha_two_code").asOpt[String]))
+          .collect { case (id, Some(value)) => id -> value }
+      case _ => sys.error("no country codes were found, terminating the service")
     }
   }
 }

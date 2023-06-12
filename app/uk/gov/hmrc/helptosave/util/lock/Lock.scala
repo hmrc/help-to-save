@@ -46,9 +46,9 @@ import scala.util.{Failure, Success}
 class Lock[State](lock:             LockProvider,
                   scheduler:        Scheduler,
                   initialState:     State,
-                  onLockAcquired:   State ⇒ State,
-                  onLockReleased:   State ⇒ State,
-                  registerStopHook: (() ⇒ Future[Unit]) ⇒ Unit
+                  onLockAcquired:   State => State,
+                  onLockReleased:   State => State,
+                  registerStopHook: (() => Future[Unit]) => Unit
 ) extends Actor with Logging {
 
   import Lock.LockMessages._
@@ -61,17 +61,17 @@ class Lock[State](lock:             LockProvider,
   var lockAcquired: Boolean = false
 
   override def receive: Receive = {
-    case AcquireLock ⇒
+    case AcquireLock =>
       val result = lock.tryToAcquireOrRenewLock[Unit](toFuture(()))
-        .map(result ⇒ AcquireLockResult(result.isDefined))
-        .recover{ case NonFatal(e) ⇒ AcquireLockFailure(e) }
+        .map(result => AcquireLockResult(result.isDefined))
+        .recover{ case NonFatal(e) => AcquireLockFailure(e) }
 
       result pipeTo self
 
-    case AcquireLockFailure(error) ⇒
+    case AcquireLockFailure(error) =>
       logger.warn(s"Could not acquire or renew lock: ${error.getMessage}. Leaving state as is")
 
-    case AcquireLockResult(acquired) ⇒
+    case AcquireLockResult(acquired) =>
       if (acquired) {
         logger.info(s"Lock successfully acquired (lockID: ${lock.lockId}")
         lockAcquired = true
@@ -88,13 +88,13 @@ class Lock[State](lock:             LockProvider,
     super.preStart()
 
     // release the lock when the application shuts down
-    registerStopHook{ () ⇒
+    registerStopHook{ () =>
       if (lockAcquired) {
         lock.releaseLock().onComplete {
-          case Success(_) ⇒
+          case Success(_) =>
             logger.info(s"Successfully released ${lock.lockId} lock")
             state = onLockReleased(state)
-          case Failure(e) ⇒ logger.warn(s"Could not release ${lock.lockId} lock: ${e.getMessage}")
+          case Failure(e) => logger.warn(s"Could not release ${lock.lockId} lock: ${e.getMessage}")
         }
       }
     }
@@ -115,8 +115,8 @@ object Lock {
                    lockDuration:        FiniteDuration,
                    scheduler:           Scheduler,
                    initialState:        State,
-                   onLockAcquired:      State ⇒ State,
-                   onLockReleased:      State ⇒ State,
+                   onLockAcquired:      State => State,
+                   onLockReleased:      State => State,
                    lifecycle:           ApplicationLifecycle): Props = {
 
     val lockProvider: TimePeriodLockProvider = TimePeriodLockProvider(

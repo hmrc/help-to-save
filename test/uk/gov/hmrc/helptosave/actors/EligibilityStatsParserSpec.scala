@@ -38,11 +38,11 @@ class EligibilityStatsParserSpec extends TestSupport {
     )
 
   val table = Map(
-    "3" → Map(
+    "3" -> Map(
       "BLAH BLAH" -> 0,
       "KCOM" -> 0,
       "Stride" -> 0,
-      "Stride-Manual" → 2,
+      "Stride-Manual" -> 2,
       "Digital" -> 0,
       "Unknown" -> 0
     ),
@@ -50,28 +50,28 @@ class EligibilityStatsParserSpec extends TestSupport {
       "BLAH BLAH" -> 1,
       "KCOM" -> 1,
       "Stride" -> 0,
-      "Stride-Manual" → 0,
+      "Stride-Manual" -> 0,
       "Digital" -> 0,
       "Unknown" -> 0),
     "Unknown" -> Map(
       "BLAH BLAH" -> 0,
       "KCOM" -> 0,
       "Stride" -> 0,
-      "Stride-Manual" → 0,
+      "Stride-Manual" -> 0,
       "Digital" -> 1,
       "Unknown" -> 1),
     "7" -> Map(
       "BLAH BLAH" -> 0,
       "KCOM" -> 0,
       "Stride" -> 2,
-      "Stride-Manual" → 0,
+      "Stride-Manual" -> 0,
       "Digital" -> 0,
       "Unknown" -> 0),
     "6" -> Map(
       "BLAH BLAH" -> 0,
       "KCOM" -> 1,
       "Stride" -> 1,
-      "Stride-Manual" → 0,
+      "Stride-Manual" -> 0,
       "Digital" -> 1,
       "Unknown" -> 1))
 

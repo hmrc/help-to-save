@@ -84,7 +84,7 @@ class EligibilityStatsProviderImpl @Inject() (system:                 ActorSyste
       system.scheduler,
       None,
       _.fold(Some(esActor()))(Some(_)),
-      _.flatMap { ref ⇒
+      _.flatMap { ref =>
         ref ! PoisonPill
         None
       },

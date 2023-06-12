@@ -36,8 +36,8 @@ object Operation {
   implicit val eqOperation: Eq[Operation] = Eq.fromUniversalEquals
   implicit val writes: Writes[Operation] = new Writes[Operation] {
     override def writes(o: Operation): JsValue = JsString(o match {
-      case Credit ⇒ "credit"
-      case Debit  ⇒ "debit"
+      case Credit => "credit"
+      case Debit  => "debit"
     })
   }
 }
@@ -64,11 +64,11 @@ private object ValidNsiTransaction {
       def sequenceValidation(nsiSequence: String): ValidOrErrorString[Int] =
         try Valid(nsiSequence.toInt)
         catch {
-          case _: NumberFormatException ⇒ Invalid(NonEmptyList.one(s"""Can't parse sequence value as an integer: "$nsiSequence""""))
+          case _: NumberFormatException => Invalid(NonEmptyList.one(s"""Can't parse sequence value as an integer: "$nsiSequence""""))
         }
 
     (operationValidation(nsiTransaction.operation), sequenceValidation(nsiTransaction.sequence)).mapN {
-      case (operation, sequence) ⇒
+      case (operation, sequence) =>
         ValidNsiTransaction(
           sequence,
           operation,
@@ -120,11 +120,11 @@ object Transactions {
   }
 
   private def sortLikeNsiWeb(transactions: Seq[ValidNsiTransaction]): Seq[ValidNsiTransaction] = {
-    transactions.sortWith { (t1, t2) ⇒ t1.sequence < t2.sequence }
+    transactions.sortWith { (t1, t2) => t1.sequence < t2.sequence }
   }
 
   private def runningBalance(transactions: Seq[ValidNsiTransaction]): Seq[Transaction] = {
-    transactions.foldLeft((Vector.empty[Transaction], 0: BigDecimal)){ (acc, vnt: ValidNsiTransaction) ⇒
+    transactions.foldLeft((Vector.empty[Transaction], 0: BigDecimal)){ (acc, vnt: ValidNsiTransaction) =>
       val (accTransactions, accBalance) = acc
 
       val newBalance = if (vnt.operation === Credit) {

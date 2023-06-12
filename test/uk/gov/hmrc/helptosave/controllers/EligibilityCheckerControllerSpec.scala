@@ -20,11 +20,11 @@ import cats.data.EitherT
 import cats.instances.future._
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
-import play.api.mvc.{Result ⇒ PlayResult}
+import play.api.mvc.{Result => PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino ⇒ v2Nino}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino => v2Nino}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.services.HelpToSaveService

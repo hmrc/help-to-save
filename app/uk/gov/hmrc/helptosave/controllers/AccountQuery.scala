@@ -33,21 +33,21 @@ import scala.concurrent.ExecutionContext
 case class NsiAccountQueryParams(nino: String, systemId: String, correlationId: String)
 
 trait AccountQuery extends Logging with Results {
-  this: HelpToSaveAuth ⇒
+  this: HelpToSaveAuth =>
 
   /**
    * Behaviour common to actions that query for Help to Save account data based on NINO
    */
   protected def accountQuery[A](nino:          String,
                                 systemId:      String,
-                                correlationId: Option[String])(query: Request[AnyContent] ⇒ NsiAccountQueryParams ⇒ util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A], ec: ExecutionContext): Action[AnyContent] =
+                                correlationId: Option[String])(query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A], ec: ExecutionContext): Action[AnyContent] =
     if (!isValid(nino)) {
       Action {
         logger.warn("NINO in request was not valid")
         BadRequest
       }
     } else {
-      ggOrPrivilegedAuthorisedWithNINO(Some(nino)) { implicit request ⇒ implicit authNino ⇒
+      ggOrPrivilegedAuthorisedWithNINO(Some(nino)) { implicit request => implicit authNino =>
         if (nino =!= authNino) {
           logger.warn("NINO in request did not match NINO found in auth")
           Forbidden
@@ -55,11 +55,11 @@ trait AccountQuery extends Logging with Results {
           val id = correlationId.getOrElse(UUID.randomUUID().toString)
           query(request)(NsiAccountQueryParams(nino, systemId, id))
             .fold(
-              { errorString ⇒
-                logger.warn(errorString, nino, "correlationId" → id)
+              { errorString =>
+                logger.warn(errorString, nino, "correlationId" -> id)
                 InternalServerError
               },
-              _.fold[Result](NotFound)(found ⇒ Ok(Json.toJson(found)))
+              _.fold[Result](NotFound)(found => Ok(Json.toJson(found)))
             )
         }
       }

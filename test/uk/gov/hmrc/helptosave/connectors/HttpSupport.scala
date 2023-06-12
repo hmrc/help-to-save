@@ -23,7 +23,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait HttpSupport { this: MockFactory with Matchers ⇒
+trait HttpSupport { this: MockFactory with Matchers =>
 
   val mockHttp: HttpClient = mock[HttpClient]
 
@@ -31,7 +31,7 @@ trait HttpSupport { this: MockFactory with Matchers ⇒
 
   def mockGet(url: String, queryParams: Map[String, String] = emptyMap, headers: Map[String, String] = emptyMap)(response: Option[HttpResponse]) =
     (mockHttp.GET(_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext))
-      .expects(where{ (u: String, q: Seq[(String, String)], h: Seq[(String, String)], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext) ⇒
+      .expects(where{ (u: String, q: Seq[(String, String)], h: Seq[(String, String)], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext) =>
         // use matchers here to get useful error messages when the following predicates
         // are not satisfied - otherwise it is difficult to tell in the logs what went wrong
         u shouldBe url
@@ -43,7 +43,7 @@ trait HttpSupport { this: MockFactory with Matchers ⇒
 
   def mockPut[A](url: String, body: A, headers: Map[String, String] = Map.empty[String, String])(result: Option[HttpResponse]): Unit =
     (mockHttp.PUT(_: String, _: A, _: Seq[(String, String)])(_: Writes[A], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext))
-      .expects(where{ (u: String, a: A, h: Seq[(String, String)], _: Writes[A], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext) ⇒
+      .expects(where{ (u: String, a: A, h: Seq[(String, String)], _: Writes[A], _: HttpReads[HttpResponse], _: HeaderCarrier, _: ExecutionContext) =>
         u shouldBe url
         a shouldBe body
         h shouldBe headers.toSeq

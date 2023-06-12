@@ -52,7 +52,7 @@ class NSIPayloadSpec extends AnyWordSpec with Matchers {
              |  "systemId" : "systemId"
              |}""".stripMargin
 
-        List[Option[String]](Some("version"), None).foreach{ version ⇒
+        List[Option[String]](Some("version"), None).foreach{ version =>
           withClue(s"For version $version"){
             val expectedResult = JsSuccess(NSIPayload(
               "forename",
