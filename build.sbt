@@ -84,7 +84,7 @@ lazy val scalariformSettings = {
     .setPreference(NewlineAtEndOfFile, true)
     .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, false)
     .setPreference(PreserveSpaceBeforeArguments, true)
-    .setPreference(RewriteArrowSymbols, true)
+    .setPreference(RewriteArrowSymbols, false)
     .setPreference(SpaceBeforeColon, false)
     .setPreference(SpaceBeforeContextColon, false)
     .setPreference(SpaceInsideBrackets, false)
