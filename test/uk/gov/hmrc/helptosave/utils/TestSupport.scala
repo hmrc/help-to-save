@@ -93,7 +93,7 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
 
   val startDate: LocalDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
   val endDate: LocalDate = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
-  
+
   def randomNINO(): String = hmrcGenerator.nextNino.value
 
   implicit lazy val transformer: LogMessageTransformer = new LogMessageTransformerImpl(configuration)

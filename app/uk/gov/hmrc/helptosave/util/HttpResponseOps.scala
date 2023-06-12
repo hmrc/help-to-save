@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import play.api.libs.json.{JsError, JsResult, Reads}
+import play.api.libs.json.{JsError, Reads}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.http.HttpResponse
 
@@ -49,18 +49,8 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
       couldntReadJson:  (HttpResponse, Throwable) => String,
       couldntParseJson: (HttpResponse, JsError) => String
   )(implicit reads: Reads[A]): Either[String, A] =
-    Try(response.json).fold(
-      ex =>
-        // response.json failed in this case - there was no JSON in the response
-        Left(couldntReadJson(response, ex)),
-      (jsValue => {
-        val jsResult: JsResult[A] = jsValue.validate[A]
-        val left = jsResult match {
-          case JsError(a) => Option(Left(couldntParseJson(response, JsError(a))))
-          case _          => None
-        }
-        //          TODO: Need to remove .get method - find a way to access correctly
-        left.getOrElse(Right(jsResult.get))
-      })
-    )
+    for {
+      jsValue <- Try(response.json).toEither.left.map(ex => couldntReadJson(response, ex))
+      result <- jsValue.validate[A].asEither.left.map(a => couldntParseJson(response, JsError(a)))
+    } yield result
 }
