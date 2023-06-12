@@ -14,21 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.models
+package uk.gov.hmrc.helptosave.actors
 
-import scala.io.Source
+import scala.concurrent.duration.FiniteDuration
 
-object CallingCodes {
+private case class Task(delay: FiniteDuration, id: Long, runnable: Runnable, interval: Option[FiniteDuration])
+  extends Ordered[Task] {
 
-  val callingCodes: Map[Int, String] = {
-    Source.fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt"))
-      .getLines()
-      .foldLeft(Map.empty[Int, String]) {
-        case (acc, curr) =>
-          curr.split("-").toList match {
-            case key :: value :: Nil => acc.updated(key.trim.toInt, value.trim)
-            case _                   => acc
-          }
-      }
-  }
+  def compare(t: Task): Int =
+    if (delay > t.delay) -1
+    else if (delay < t.delay) 1
+    else if (id > t.id) -1
+    else if (id < t.id) 1
+    else 0
+
 }

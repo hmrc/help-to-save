@@ -52,10 +52,10 @@ trait EnrolmentBehaviour {
     } else {
       for {
         _ <- enrolmentStore.insert(createAccountRequest.payload.nino,
-                                  itmpFlag = false,
-                                  createAccountRequest.eligibilityReason,
-                                  createAccountRequest.source,
-                                  accountNumber)
+                                   itmpFlag = false,
+                                   createAccountRequest.eligibilityReason,
+                                   createAccountRequest.source,
+                                   accountNumber)
         _ <- setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
       } yield ()
     }

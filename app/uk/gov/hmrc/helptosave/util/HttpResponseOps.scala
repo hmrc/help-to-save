@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import play.api.libs.json.{JsError, JsSuccess, Reads}
+import play.api.libs.json.{JsError, Reads}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.http.HttpResponse
+
 import scala.language.implicitConversions
 import scala.util.Try
 
@@ -48,17 +49,8 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
       couldntReadJson:  (HttpResponse, Throwable) => String,
       couldntParseJson: (HttpResponse, JsError) => String
   )(implicit reads: Reads[A]): Either[String, A] =
-    Try(response.json).fold(
-      ex =>
-        // response.json failed in this case - there was no JSON in the response
-        Left(couldntReadJson(response, ex)),
-      jsValue =>
-        // use Option here to filter out null values
-        Option(jsValue).fold[Either[String, A]](
-          Left("No JSON found in body of http response")
-        )(_.validate[A] match {
-            case JsSuccess(r, _) => Right(r)
-            case e @ JsError(_)  => Left(couldntParseJson(response, e))
-          })
-    )
+    for {
+      jsValue <- Try(response.json).toEither.left.map(ex => couldntReadJson(response, ex))
+      result <- jsValue.validate[A].asEither.left.map(a => couldntParseJson(response, JsError(a)))
+    } yield result
 }

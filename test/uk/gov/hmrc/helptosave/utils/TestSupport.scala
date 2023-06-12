@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import java.time.LocalDate
 import com.codahale.metrics.{Counter, Gauge, Timer}
 import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
 import com.typesafe.config.ConfigFactory
-import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -33,7 +31,8 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl, UnitSpec}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.smartstub._
+
+import java.time.LocalDate
 
 import scala.concurrent.ExecutionContext
 
@@ -94,9 +93,6 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
 
   val startDate: LocalDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
   val endDate: LocalDate = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
-  val dateGen: Gen[LocalDate] = Gen.date(startDate, endDate)
-
-  def randomDate(): LocalDate = dateGen.sample.getOrElse(sys.error("Could not generate date"))
 
   def randomNINO(): String = hmrcGenerator.nextNino.value
 

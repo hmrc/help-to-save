@@ -17,8 +17,7 @@
 package uk.gov.hmrc.helptosave.util.lock
 
 import akka.actor.{ActorRef, Props}
-import com.miguno.akka.testing.VirtualTime
-import uk.gov.hmrc.helptosave.actors.ActorTestSupport
+import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, VirtualTime}
 
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{ExecutionContext, Future}

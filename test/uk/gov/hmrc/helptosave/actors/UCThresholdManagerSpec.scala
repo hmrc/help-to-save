@@ -18,12 +18,10 @@ package uk.gov.hmrc.helptosave.actors
 
 import java.time._
 import java.time.format.DateTimeFormatter
-
 import akka.pattern.ask
 import akka.actor.{ActorRef, Cancellable}
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import com.miguno.akka.testing.{MockScheduler, VirtualTime}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestScheduler.JobScheduledOnce
