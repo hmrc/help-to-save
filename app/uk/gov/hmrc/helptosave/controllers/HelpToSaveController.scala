@@ -134,8 +134,9 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
                             additionalParams:     (String, String))(implicit hc: HeaderCarrier) = {
     val payload = createAccountRequest.payload
     val nino = payload.nino
-    proxyConnector.createAccount(payload).map { response =>
-      if (response.status === CREATED || response.status === CONFLICT) {
+    for {
+      response <- proxyConnector.createAccount(payload)
+      _ = if (response.status === CREATED || response.status === CONFLICT) {
         Try {
           (response.json \ "accountNumber").as[String]
         } match {
@@ -147,7 +148,7 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
         }
       }
 
-      if (response.status === CREATED) {
+      _ = if (response.status === CREATED) {
         auditor.sendEvent(AccountCreated(payload, createAccountRequest.source, createAccountRequest.detailsManuallyEntered), nino)
 
         userCapService.update().onComplete {
@@ -156,7 +157,9 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
         }
       }
 
-      Option(response.body).fold[Result](Status(response.status))(body => Status(response.status)(body))
+    } yield Option(response.body) match {
+      case None       => Status(response.status)
+      case Some(body) => Status(response.status)(body)
     }
   }
 

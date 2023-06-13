@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
+import cats.data.EitherT
+import cats.implicits.catsSyntaxApplicativeError
 
+import java.util.Base64
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.{Format, Json}
@@ -42,21 +44,14 @@ class EmailStoreController @Inject() (emailStore:           EmailStore,
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
   def store(email: String, maybeNINO: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNINO) { _ => nino =>
-    Try(new String(base64Decoder.decode(email))).fold(
-      { error =>
-        logger.warn(s"Could not store email. Could not decode email: $error", nino)
-        Future.successful(InternalServerError)
-      }, { decodedEmail =>
-        emailStore.store(decodedEmail, nino).fold(
-          { e =>
-            logger.error(s"Could not store email: $e", nino)
-            InternalServerError
-          }, { _ =>
-            Ok
-          }
-        )
-      }
-    )
+    (for {
+      decodedEmail <- EitherT.fromEither(Try(new String(base64Decoder.decode(email))).toEither.left.map(_.toString))
+      _ <- emailStore.store(decodedEmail, nino)
+    } yield Ok).valueOrF {
+      error =>
+        logger.warn(s"Could not store email: $error", nino)
+        InternalServerError
+    }
   }
 
   def get(): Action[AnyContent] = ggAuthorisedWithNino { _ => implicit nino =>

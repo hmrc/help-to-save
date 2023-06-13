@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.connectors
 
 import java.util.UUID
-
 import cats.data.{EitherT, NonEmptyList}
 import cats.instances.int._
 import cats.instances.string._
@@ -42,6 +41,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.chaining.scalaUtilChainingOps
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[HelpToSaveProxyConnectorImpl])
@@ -106,32 +106,26 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
 
   override def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[UCResponse] = {
     val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check"
-
-    EitherT[Future, String, UCResponse](
-      http.get(url, queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)).map {
-        response =>
-
-          val correlationId = "apiCorrelationId" -> getApiCorrelationId()
-          logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
-
-          response.status match {
-            case Status.OK =>
-              val result = response.parseJson[UCResponse]
-              result.fold(
-                e => logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", nino, correlationId),
-                _ => logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
-              )
-              result
-
-            case other =>
-              logger.warn(s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other", nino, correlationId)
-              Left(s"Received unexpected status($other) from UniversalCredit check")
-          }
-      }.recover {
-        case e =>
-          Left(s"Call to UniversalCredit check unsuccessful: ${e.getMessage}")
-      }
-    )
+    for {
+      response <- EitherT(
+        http.get(url, queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString))
+          .map(Right(_))
+          .recover { case e => Left(s"Call to UniversalCredit check unsuccessful: ${e.getMessage}") }
+      )
+      correlationId = "apiCorrelationId" -> getApiCorrelationId()
+      _ = logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
+      _ <- EitherT.fromEither[Future](response.status match {
+        case Status.OK => Right()
+        case other =>
+          logger.warn(s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other", nino, correlationId)
+          Left(s"Received unexpected status($other) from UniversalCredit check")
+      })
+      _ = logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
+      result <- EitherT.fromEither[Future](response.parseJson[UCResponse].tap {
+        case Left(e)  => logger.warn(s"Could not parse UniversalCredit response, received 200 (OK), error=$e", nino, correlationId)
+        case Right(_) => logger.info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
+      })
+    } yield result
   }
 
   override def getAccount(nino: String, systemId: String, correlationId: String, path: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Option[Account]] = {

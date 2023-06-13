@@ -27,6 +27,7 @@ import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.chaining.scalaUtilChainingOps
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[UserCapServiceImpl])
@@ -121,15 +122,14 @@ class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
   }
 
   override def update()(implicit ec: ExecutionContext): Future[Unit] =
-    userCapStore.get().flatMap {
-      userCap =>
-        userCapStore.upsert(calculateUserCap(userCap)).map { updatedUserCap =>
-          val logMessage = "Updated user cap - " + updatedUserCap.fold("could not retrieve user cap data") { cap =>
-            s"counts are now (daily: ${cap.dailyCount}, total: ${cap.totalCount})"
-          }
-          logger.info(logMessage)
-        }
-    }.recover {
+    (for {
+      userCap <- userCapStore.get()
+      updatedUserCap <- userCapStore.upsert(calculateUserCap(userCap))
+      _ = (updatedUserCap match {
+        case None      => "Updated user cap - could not retrieve user cap data"
+        case Some(cap) => s"Updated user cap - counts are now (daily: ${cap.dailyCount}, total: ${cap.totalCount})"
+      }).pipe(logger.info(_))
+    } yield ()).recover {
       case e => logger.warn("error updating the account cap", e)
     }
 }
