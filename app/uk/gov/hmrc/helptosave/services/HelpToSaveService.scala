@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.services
 
 import java.util.UUID
-
 import cats.data.EitherT
 import cats.syntax.eq._
 import cats.instances.int._
@@ -42,6 +41,7 @@ import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.toFuture
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.chaining.scalaUtilChainingOps
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[HelpToSaveServiceImpl])
@@ -127,8 +127,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
         response.status match {
           case Status.OK =>
-            val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
-            result match {
+            response.parseJsonWithoutLoggingBody[PayePersonalDetails].tap {
               case Left(e) =>
                 metrics.payePersonalDetailsErrorCounter.inc()
                 logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, additionalParams)
@@ -136,7 +135,6 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
               case Right(_) =>
                 logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
             }
-            result
 
           case other =>
             logger.warn(s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}", nino, additionalParams)

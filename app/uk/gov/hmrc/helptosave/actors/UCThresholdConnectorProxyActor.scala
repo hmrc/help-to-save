@@ -27,6 +27,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 
 import scala.concurrent.Future
+import scala.util.chaining.scalaUtilChainingOps
 
 class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerting: PagerDutyAlerting) extends Actor with Logging {
   import context.dispatcher
@@ -42,15 +43,14 @@ class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerti
 
       response.status match {
         case Status.OK =>
-          val result = response.parseJson[UCThreshold]
-          result match {
+          response.parseJson[UCThreshold].tap {
             case Left(e) =>
               logger.warn(s"Could not parse JSON response from threshold, received 200 (OK): $e, with additionalParams: $additionalParams")
               pagerDutyAlerting.alert("Could not parse JSON in UC threshold response")
             case Right(_) =>
               logger.debug(s"Call to threshold successful, received 200 (OK), with additionalParams: $additionalParams")
           }
-          result.map(_.thresholdAmount)
+          .map(_.thresholdAmount)
 
         case other =>
           logger.warn(s"Call to get threshold unsuccessful. Received unexpected status $other. " +
