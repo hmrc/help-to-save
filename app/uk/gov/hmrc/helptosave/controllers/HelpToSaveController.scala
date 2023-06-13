@@ -91,8 +91,11 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     implicit request =>
       request.body.asJson.map(_.validate[NSIPayload](NSIPayload.nsiPayloadReads(None))) match {
         case Some(JsSuccess(userInfo, _)) =>
-          proxyConnector.updateEmail(userInfo).map { response =>
-            Option(response.body).fold[Result](Status(response.status))(body => Status(response.status)(body))
+          for {
+            response <- proxyConnector.updateEmail(userInfo)
+          } yield Option(response.body) match {
+            case None       => Status(response.status)
+            case Some(body) => Status(response.status)(body)
           }
 
         case Some(error: JsError) =>

@@ -43,13 +43,13 @@ class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerti
       response.status match {
         case Status.OK =>
           val result = response.parseJson[UCThreshold]
-          result.fold({
-            e =>
+          result match {
+            case Left(e) =>
               logger.warn(s"Could not parse JSON response from threshold, received 200 (OK): $e, with additionalParams: $additionalParams")
               pagerDutyAlerting.alert("Could not parse JSON in UC threshold response")
-          }, _ =>
-            logger.debug(s"Call to threshold successful, received 200 (OK), with additionalParams: $additionalParams")
-          )
+            case Right(_) =>
+              logger.debug(s"Call to threshold successful, received 200 (OK), with additionalParams: $additionalParams")
+          }
           result.map(_.thresholdAmount)
 
         case other =>

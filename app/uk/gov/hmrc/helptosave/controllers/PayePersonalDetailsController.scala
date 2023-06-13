@@ -41,16 +41,13 @@ class PayePersonalDetailsController @Inject() (val helpToSaveService: HelpToSave
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
   def getPayePersonalDetails(nino: String): Action[AnyContent] = authorisedFromStride { implicit request =>
-    helpToSaveService.getPersonalDetails(nino)
-      .fold(
-        { error =>
-          logger.warn(s"Could not retrieve paye-personal-details from DES: $error", nino)
-          InternalServerError
-        }, {
-          r =>
-            Ok(Json.toJson(r))
-        }
-      )
+    (for {
+      r <- helpToSaveService.getPersonalDetails(nino)
+    } yield Ok(Json.toJson(r))).valueOrF{
+      error =>
+        logger.warn(s"Could not retrieve paye-personal-details from DES: $error", nino)
+        InternalServerError
+    }
   }
 
 }

@@ -128,14 +128,14 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
         response.status match {
           case Status.OK =>
             val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
-            result.fold({
-              e =>
+            result match {
+              case Left(e) =>
                 metrics.payePersonalDetailsErrorCounter.inc()
                 logger.warn(s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}", nino, additionalParams)
                 pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
-            }, _ =>
-              logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
-            )
+              case Right(_) =>
+                logger.debug(s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
+            }
             result
 
           case other =>
