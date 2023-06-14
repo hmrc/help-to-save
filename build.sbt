@@ -37,7 +37,6 @@ def testDependencies(scope: String = "test,it") = Seq(
   "uk.gov.hmrc.mongo"     %% "hmrc-mongo-test-play-28"        % mongoVersion                           % scope,
   "org.scalatest"         %% "scalatest"                      % "3.2.9"                                % scope,
   "org.scalatestplus"     %% "scalatestplus-scalacheck"       % "3.1.0.0-RC2"                          % scope,
-  "com.vladsch.flexmark"  %  "flexmark-all"                   % "0.35.10"                              % scope,
   "com.typesafe.play"     %% "play-test"                      % PlayVersion.current                    % scope,
   "org.scalamock"         %% "scalamock"                      % "5.2.0"                                % scope,
   "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.20"                               % scope
