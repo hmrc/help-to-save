@@ -174,15 +174,10 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
                 metrics.itmpEligibilityCheckErrorCounter.inc()
                 pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
                 Left(e)
-            }, res =>
-              if (res.resultCode === 4) {
-                metrics.itmpEligibilityCheckErrorCounter.inc()
-                pagerDutyAlerting.alert("Received result code 4 from DES eligibility check")
-                Left(s"Received result code 4 from DES eligibility check interface. Result was '${res.result}'. Reason was '${res.reason}'")
-              } else {
-                logger.debug(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
-                Right(res)
-              }
+            }, res => {
+              logger.debug(s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}", nino, additionalParams)
+              Right(res)
+            }
             )
 
           case other =>

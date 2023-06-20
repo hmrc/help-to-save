@@ -150,15 +150,13 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       "return with the eligibility check result unchanged from ITMP" in {
         val uCResponse = UCResponse(false, Some(false))
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
-          whenever(eligibilityCheckResponse.resultCode =!= 4) {
-            inSequence {
-              mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
-              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-            }
-
-            getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          inSequence {
+            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
+            mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
           }
+
+          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
         }
       }
 
@@ -184,30 +182,26 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
       "pass the UC params to DES if they are provided" in {
         val uCResponse = UCResponse(true, Some(true))
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
-          whenever(eligibilityCheckResponse.resultCode =!= 4) {
-            inSequence {
-              mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
-              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-            }
-
-            getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          inSequence {
+            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
+            mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
           }
+
+          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
         }
       }
 
       "do not pass the UC withinThreshold param to DES if its not set" in {
         val uCResponse = UCResponse(true, None)
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
-          whenever(eligibilityCheckResponse.resultCode =!= 4) {
-            inSequence {
-              mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
-              mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-            }
-
-            getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          inSequence {
+            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
+            mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
           }
+
+          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
         }
       }
 
@@ -249,16 +243,6 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
           getEligibility(Some(threshold)) shouldBe
             Left("Could not parse http response JSON: : [error.expected.jsobject]. Response body was " +
               "\"{\\\"invalid\\\": \\\"foo\\\"}\"")
-        }
-
-        "DES returns result code 4" in {
-          inSequence {
-            mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-            mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(200, Json.parse(jsonCheckResponseReasonCode4), returnHeaders))
-            mockPagerDutyAlert("Received result code 4 from DES eligibility check")
-          }
-
-          getEligibility(Some(threshold)).isLeft shouldBe true
         }
 
       }
