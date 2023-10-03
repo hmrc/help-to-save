@@ -32,7 +32,6 @@ val dependencies = Seq(
 
 def testDependencies(scope: String = "test,it") = Seq(
   hmrc                    %% s"bootstrap-test-$playVersion"   % bootstrapBackendVersion                % scope,
-  hmrc                    %% "service-integration-test"       % s"1.3.0-$playVersion"                  % scope,
   hmrc                    %% "domain"                         % s"8.1.0-$playVersion"                  % scope,
   "uk.gov.hmrc.mongo"     %% "hmrc-mongo-test-play-28"        % mongoVersion                           % scope,
   "org.scalatest"         %% "scalatest"                      % "3.2.9"                                % scope,
