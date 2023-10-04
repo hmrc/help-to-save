@@ -112,7 +112,6 @@ class HelpToSaveProxyConnectorImpl @Inject() (http:              HttpClient,
         response =>
 
           val correlationId = "apiCorrelationId" -> getApiCorrelationId()
-          logger.info(s"response body from UniversalCredit check is: ${response.body}", nino, correlationId)
 
           response.status match {
             case Status.OK =>

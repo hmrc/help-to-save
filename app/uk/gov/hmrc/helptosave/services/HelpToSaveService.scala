@@ -165,7 +165,6 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
 
         val additionalParams = "DesCorrelationId" -> response.desCorrelationId
 
-        logger.info(s"eligibility response from DES is: ${maskNino(response.body)}", nino, additionalParams)
 
         response.status match {
           case Status.OK =>

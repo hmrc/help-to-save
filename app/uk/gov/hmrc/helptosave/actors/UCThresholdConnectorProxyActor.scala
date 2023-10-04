@@ -38,7 +38,6 @@ class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerti
 
       val additionalParams = "DesCorrelationId" -> response.desCorrelationId
 
-      logger.info(s"threshold response from DES is: ${response.body}")
 
       response.status match {
         case Status.OK =>
@@ -54,7 +53,7 @@ class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerti
 
         case other =>
           logger.warn(s"Call to get threshold unsuccessful. Received unexpected status $other. " +
-            s"Body was: ${response.body}, with additionalParams: $additionalParams")
+            s"AdditionalParams: $additionalParams")
           pagerDutyAlerting.alert("Received unexpected http status in response to get UC threshold from DES")
           Left(s"Received unexpected status $other")
       }
