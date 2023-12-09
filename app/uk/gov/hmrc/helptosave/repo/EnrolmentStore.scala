@@ -19,12 +19,14 @@ package uk.gov.hmrc.helptosave.repo
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.ReturnDocument
-import org.mongodb.scala.model.Filters.regex
+import org.bson.types.ObjectId
+import org.mongodb.scala.model.Filters.{and, empty, exists, in, or, regex}
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
+import org.mongodb.scala.model.{BulkWriteOptions, Filters, FindOneAndUpdateOptions, IndexModel, IndexOptions, UpdateOneModel, UpdateOptions, Updates}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.metrics.Metrics
+import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.helptosave.models.account.AccountNumber
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
@@ -34,6 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoEnrolmentStore])
@@ -43,11 +46,13 @@ trait EnrolmentStore {
 
   def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
 
+  def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean = false): EitherT[Future, String, Unit]
+
   def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
   def updateWithAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
-  def insert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String, accountNumber: Option[String])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
+  def insert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int], source: String, accountNumber: Option[String], deleteFlag: Option[Boolean])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
   def getAccountNumber(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, AccountNumber]
 
@@ -79,14 +84,12 @@ object EnrolmentStore {
         case EnrolmentStatusJSON(false, _)   => NotEnrolled
       }
     }
-
   }
-
 }
 
 @Singleton
-class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
-                                     metrics: Metrics)(implicit ec: ExecutionContext)
+class MongoEnrolmentStore @Inject() (val mongo: MongoComponent,
+                                     metrics:   Metrics)(implicit ec: ExecutionContext)
   extends PlayMongoRepository[EnrolmentData](
     mongoComponent = mongo,
     collectionName = "enrolments",
@@ -101,7 +104,8 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
                              eligibilityReason: Option[Int],
                              source:            String,
                              itmpFlag:          Boolean,
-                             accountNumber:     Option[String])(implicit ec: ExecutionContext): Future[Unit] = {
+                             accountNumber:     Option[String],
+                             deleteFlag:        Option[Boolean])(implicit ec: ExecutionContext): Future[Unit] = {
 
     collection.insertOne(
       EnrolmentData(
@@ -109,7 +113,8 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
         itmpHtSFlag       = itmpFlag,
         eligibilityReason = eligibilityReason,
         source            = Some(source),
-        accountNumber     = accountNumber)
+        accountNumber     = accountNumber,
+        deleteFlag        = deleteFlag)
     ).toFuture().map(_ => ())
 
   }
@@ -121,6 +126,33 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
     ).toFutureOption()
 
+  }
+
+  private[repo] def doUpdateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean = false)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = {
+
+    val updateModels: Seq[UpdateOneModel[Nothing]] = ninosDeletionConfig.map(config => {
+      val filter = if (!revertSoftDelete) regex("nino", getRegex(config.nino)) else {
+        and(
+          regex("nino", getRegex(config.nino)),
+          config.docID.fold(empty())(id => Filters.eq("_id", id)),
+          Filters.eq("deleteFlag", true)
+        )
+      }
+
+      UpdateOneModel(
+        filter        = filter,
+        update        = Updates.combine(Updates.set("deleteFlag", !revertSoftDelete), Updates.set("deleteDate", LocalDateTime.now())),
+        updateOptions = UpdateOptions().bypassDocumentValidation(false)
+      )
+    })
+
+    EitherT[Future, String, Unit]({
+      collection.bulkWrite(updateModels, BulkWriteOptions().ordered(false)).toFuture().map { _ =>
+        Right(())
+      }.recover {
+        case e => Left(s"Failed to mark NINOs, ${ninosDeletionConfig.map(_.nino)}, as soft-delete : ${e.getMessage}")
+      }
+    })
   }
 
   private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
@@ -135,17 +167,26 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
       {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-        collection.find(regex("nino", getRegex(nino))).toFuture().map { res =>
-          timerContext.stop()
+        collection.find(
+          and(
+            regex("nino", getRegex(nino)),
+            or(
+              exists("deleteFlag", exists = false),
+              Filters.eq("deleteFlag", false)
+            )
+          )
+        ).toFuture().map { res =>
 
-          Right(res.headOption.fold[Status](NotEnrolled)(data => Enrolled(data.itmpHtSFlag)))
-        }.recover {
-          case e =>
             timerContext.stop()
-            metrics.enrolmentStoreGetErrorCounter.inc()
 
-            Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
-        }
+            Right(res.headOption.fold[Status](NotEnrolled)(data => Enrolled(data.itmpHtSFlag)))
+          }.recover {
+            case e =>
+              timerContext.stop()
+              metrics.enrolmentStoreGetErrorCounter.inc()
+
+              Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
+          }
       })
 
   override def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
@@ -168,8 +209,34 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
 
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
       }
-    }
-    )
+    })
+  }
+
+  override def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean): EitherT[Future, String, Unit] = {
+    EitherT[Future, String, Unit]({
+      val timerContext = metrics.enrolmentStoreGetTimer.time()
+
+      val ninos = ninosDeletionConfig.map(_.nino)
+
+      collection.find(in("nino", ninos: _*)).map(_.nino).toFuture().map(
+        availableNINOs => {
+          ninos.diff(availableNINOs.distinct)
+        }
+      ).map { result =>
+          if (result.nonEmpty) {
+            metrics.enrolmentStoreDeleteErrorCounter(revertSoftDelete).inc()
+            Left(s"Following requested NINOs not found in system : ${ninosDeletionConfig.map(_.nino)}")
+          } else {
+            Right(())
+          }
+        }.recover {
+          case e =>
+            timerContext.stop()
+            metrics.enrolmentStoreDeleteErrorCounter(revertSoftDelete).inc()
+
+            Left(s"Search for NINOs failed: ${e.getMessage}")
+        }
+    }).map(_ => doUpdateDeleteFlag(ninosDeletionConfig, revertSoftDelete))
   }
 
   override def updateWithAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
@@ -192,17 +259,17 @@ class MongoEnrolmentStore @Inject() (mongo:   MongoComponent,
 
           Left(s"Failed to write to enrolments store: ${e.getMessage}")
       }
-    }
-    )
+    })
   }
 
   override def insert(nino:              NINO,
                       itmpFlag:          Boolean,
                       eligibilityReason: Option[Int],
                       source:            String,
-                      accountNumber:     Option[String])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
+                      accountNumber:     Option[String],
+                      deleteFlag:        Option[Boolean])(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     EitherT(
-      doInsert(nino, eligibilityReason, source, itmpFlag, accountNumber)
+      doInsert(nino, eligibilityReason, source, itmpFlag, accountNumber, deleteFlag)
         .map[Either[String, Unit]] { writeResult => Right(())
         }.recover {
           case e =>
@@ -233,9 +300,10 @@ object MongoEnrolmentStore {
 
   private[repo] case class EnrolmentData(nino:              String,
                                          itmpHtSFlag:       Boolean,
-                                         eligibilityReason: Option[Int]    = None,
-                                         source:            Option[String] = None,
-                                         accountNumber:     Option[String] = None)
+                                         eligibilityReason: Option[Int]     = None,
+                                         source:            Option[String]  = None,
+                                         accountNumber:     Option[String]  = None,
+                                         deleteFlag:        Option[Boolean] = None)
 
   private[repo] object EnrolmentData {
     implicit val ninoFormat: Format[EnrolmentData] = Json.format[EnrolmentData]

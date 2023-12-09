@@ -18,11 +18,16 @@ package uk.gov.hmrc.helptosave.config
 
 import configs.syntax._
 import com.google.inject.Singleton
+import com.typesafe.config.ConfigRenderOptions
+
 import javax.inject.Inject
 import play.api.Mode
+import play.api.libs.json.Json
 import play.api.{Configuration, Environment}
+import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.FiniteDuration
 
 @Singleton
@@ -47,4 +52,9 @@ class AppConfig @Inject() (val runModeConfiguration: Configuration,
 
   val barsUrl: String = servicesConfig.baseUrl("bank-account-reputation")
 
+  val ninoDeletionConfig: String => Seq[NINODeletionConfig] = (configSuffix: String) => {
+    runModeConfiguration.underlying.getObjectList(s"enrolment.$configSuffix").asScala.flatMap(config => {
+      Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
+    }).toSeq
+  }
 }

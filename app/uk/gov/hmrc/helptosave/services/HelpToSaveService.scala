@@ -16,31 +16,27 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import java.util.UUID
-
+import akka.pattern.ask
 import cats.data.EitherT
-import cats.syntax.eq._
-import cats.instances.int._
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import uk.gov.hmrc.helptosave.audit.HTSAuditor
-import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
-import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
-import uk.gov.hmrc.helptosave.util.Logging._
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
-import uk.gov.hmrc.http.HeaderCarrier
 import play.api.http.Status
-import akka.pattern.ask
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetThresholdValueResponse}
+import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
+import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-import uk.gov.hmrc.helptosave.util.toFuture
+import uk.gov.hmrc.helptosave.util.Logging._
+import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino, toFuture}
+import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -164,7 +160,6 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
         val time = timerContext.stop()
 
         val additionalParams = "DesCorrelationId" -> response.desCorrelationId
-
 
         response.status match {
           case Status.OK =>
