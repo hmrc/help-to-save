@@ -33,7 +33,7 @@ class ApplicationStart @Inject() (appConfig: AppConfig, enrolmentStore: Enrolmen
   val ninosToDelete: Seq[NINODeletionConfig] = appConfig.ninoDeletionConfig("delete-ninos")
   if (ninosToDelete.nonEmpty) {
     enrolmentStore.updateDeleteFlag(ninosToDelete).value.onComplete {
-      case Success(Right(_))       => logger.info(s"Successfully deleted list of NINOs : $ninosToDelete")
+      case Success(Right(xs))      => logger.info(s"Successfully deleted list of NINOs : $xs")
       case Success(Left(errorMsg)) => logger.error(errorMsg)
       case Failure(ex)             => logger.error(s"Failed to delete configured list of NINOs: $ninosToDelete", ex)
     }
@@ -42,7 +42,7 @@ class ApplicationStart @Inject() (appConfig: AppConfig, enrolmentStore: Enrolmen
   val ninosToUndoDeletion: Seq[NINODeletionConfig] = appConfig.ninoDeletionConfig("undo-delete-ninos")
   if (ninosToUndoDeletion.nonEmpty) {
     enrolmentStore.updateDeleteFlag(ninosToUndoDeletion, revertSoftDelete = true).value.onComplete {
-      case Success(Right(_))       => logger.info(s"Successfully undid deletion of NINOs, $ninosToUndoDeletion")
+      case Success(Right(xs))     => logger.info(s"Successfully undid deletion of NINOs, $xs")
       case Success(Left(errorMsg)) => logger.error(errorMsg)
       case Failure(ex)             => logger.error(s"Failed to undo deletion of of NINOs: $ninosToUndoDeletion", ex)
     }
