@@ -38,6 +38,7 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.chaining.scalaUtilChainingOps
 
 @ImplementedBy(classOf[MongoEnrolmentStore])
 trait EnrolmentStore {
@@ -46,7 +47,7 @@ trait EnrolmentStore {
 
   def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
 
-  def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean = false): EitherT[Future, String, Unit]
+  def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean = false): EitherT[Future, String, Seq[NINODeletionConfig]]
 
   def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
@@ -212,31 +213,27 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent,
     })
   }
 
-  override def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean): EitherT[Future, String, Unit] = {
-    EitherT[Future, String, Unit]({
-      val timerContext = metrics.enrolmentStoreGetTimer.time()
+  override def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean): EitherT[Future, String, Seq[NINODeletionConfig]] = {
+    val timerContext = metrics.enrolmentStoreGetTimer.time()
 
-      val ninos = ninosDeletionConfig.map(_.nino)
+    val ninos = ninosDeletionConfig.map(_.nino)
 
-      collection.find(in("nino", ninos: _*)).map(_.nino).toFuture().map(
-        availableNINOs => {
-          ninos.diff(availableNINOs.distinct)
-        }
-      ).map { result =>
-          if (result.nonEmpty) {
-            metrics.enrolmentStoreDeleteErrorCounter(revertSoftDelete).inc()
-            Left(s"Following requested NINOs not found in system : ${ninosDeletionConfig.map(_.nino)}")
-          } else {
-            Right(())
-          }
-        }.recover {
-          case e =>
-            timerContext.stop()
-            metrics.enrolmentStoreDeleteErrorCounter(revertSoftDelete).inc()
-
-            Left(s"Search for NINOs failed: ${e.getMessage}")
-        }
-    }).map(_ => doUpdateDeleteFlag(ninosDeletionConfig, revertSoftDelete))
+    collection.find(in("nino", ninos: _*)).map(_.nino).toFuture()
+      .map(availableNINOs => ninos.diff(availableNINOs.distinct) match {
+        case Seq() => Right(())
+        case _ =>
+          metrics.enrolmentStoreDeleteErrorCounter(revertSoftDelete).inc()
+          Left(s"Following requested NINOs not found in system : ${ninosDeletionConfig.map(_.nino)}")
+      })
+      .recover {
+        case e =>
+          timerContext.stop()
+          metrics.enrolmentStoreDeleteErrorCounter(revertSoftDelete).inc()
+          Left(s"Search for NINOs failed: ${e.getMessage}")
+      }
+      .pipe(EitherT(_))
+      .flatMap(_ => doUpdateDeleteFlag(ninosDeletionConfig, revertSoftDelete))
+      .map(_ => ninosDeletionConfig)
   }
 
   override def updateWithAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
