@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.repo
 
 import org.bson.types.ObjectId
+import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters
 import org.scalatest.BeforeAndAfterEach
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
@@ -55,6 +56,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
   def updateDeleteFlag(ninos: Seq[NINODeletionConfig], revertSoftDelete: Boolean, store: MongoEnrolmentStore) = {
     Await.result(store.updateDeleteFlag(ninos, revertSoftDelete).value, duration)
+      .map(_.map(enrolment => NINODeletionConfig(enrolment.nino, enrolment._id)))
   }
 
   "The MongoEnrolmentStore" when {
@@ -138,7 +140,9 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), false, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
+        val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
+
+        updateDeleteFlag(ninosToDelete, false, store) shouldBe Right(ninosToDelete)
         get(nino, store) shouldBe Right(NotEnrolled)
       }
 
@@ -154,7 +158,9 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(())
         get(nino, store) shouldBe Right(NotEnrolled)
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
+        val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
+
+        updateDeleteFlag(ninosToDelete, true, store) shouldBe Right(ninosToDelete)
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
@@ -164,7 +170,9 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), Some(false)) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
+        val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
+
+        updateDeleteFlag(ninosToDelete, true, store) shouldBe Right(ninosToDelete)
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
@@ -174,7 +182,9 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
+        val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
+
+        updateDeleteFlag(ninosToDelete, true, store) shouldBe Right(ninosToDelete)
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
@@ -185,29 +195,35 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(3), "online", store, Some(accountNumber), Some(true)) shouldBe Right(())
         get(nino, store) shouldBe Right(NotEnrolled)
 
-        val collection = CollectionFactory.collection(store.mongo.database, "enrolments", Json.format[EnrolmentDocId])
-        val docIds = await(collection.find(Filters.eq("nino", nino)).map(_._id).toFuture())(duration)
-        val docIdToRevertDeletion = docIds.head
+        val (collection: MongoCollection[EnrolmentDocId], docIdToRevertDeletion) = findDocumentId(nino, store)
 
-        val ninos = Seq(NINODeletionConfig(nino, Some(docIdToRevertDeletion)))
-        updateDeleteFlag(ninos, revertSoftDelete = true, store) shouldBe Right(ninos)
+        val toRevert = docIdToRevertDeletion.head
+
+        val ninosToDelete = Seq(NINODeletionConfig(nino, Some(toRevert)))
+        updateDeleteFlag(ninosToDelete, revertSoftDelete = true, store) shouldBe Right(ninosToDelete)
 
         // only above executed doc id should be marked as eligible and other one still with soft-delete
         val updatedDocs = await(collection.find(Filters.eq("nino", nino)).toFuture())(duration)
-        val (reverted, deleted) = updatedDocs.partition(_._id == docIdToRevertDeletion)
+        val (reverted, deleted) = updatedDocs.partition(_._id == toRevert)
 
-        reverted.head.deleteFlag shouldBe false
-        deleted.head.deleteFlag shouldBe true
+        reverted.head.deleteFlag shouldBe Some(false)
+        deleted.head.deleteFlag shouldBe Some(true)
         get(nino, store) shouldBe Right(Enrolled(true))
       }
     }
   }
 
-  case class EnrolmentDocId(_id: ObjectId, nino: NINO, deleteFlag: Boolean)
+  private def findDocumentId(nino: NINO, store: MongoEnrolmentStore) = {
+    val collection = CollectionFactory.collection(store.mongo.database, "enrolments", Json.format[EnrolmentDocId])
+    val docIds = await(collection.find(Filters.eq("nino", nino)).map(_._id).toFuture())(duration)
+    (collection, docIds)
+  }
+
+  case class EnrolmentDocId(_id: ObjectId, nino: NINO, deleteFlag: Option[Boolean])
 
   object EnrolmentDocId {
     implicit val format: Format[EnrolmentDocId] = {
-      ((__ \ "_id").format[ObjectId] and (__ \ "nino").format[String] and (__ \ "deleteFlag").format[Boolean]) (
+      ((__ \ "_id").format[ObjectId] and (__ \ "nino").format[String] and (__ \ "deleteFlag").formatNullable[Boolean]) (
         EnrolmentDocId.apply, doc => (doc._id, doc.nino, doc.deleteFlag)
       )
     }
