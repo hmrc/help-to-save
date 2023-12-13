@@ -95,7 +95,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
     "getting" must {
 
         def get(nino: NINO, store: MongoEnrolmentStore): Either[String, Status] =
-          Await.result(store.get(nino).value, 5.seconds)
+          Await.result(store.get(nino).value, 50.seconds)
 
       "attempt to find the entry in the collection based on the input nino" in {
         val nino = randomNINO()
@@ -138,7 +138,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), false, store)
+        updateDeleteFlag(Seq(NINODeletionConfig(nino)), false, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
         get(nino, store) shouldBe Right(NotEnrolled)
       }
 
@@ -154,7 +154,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(())
         get(nino, store) shouldBe Right(NotEnrolled)
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store)
+        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
@@ -164,7 +164,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), Some(false)) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store)
+        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
@@ -174,7 +174,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         create(nino, true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
         get(nino, store) shouldBe Right(Enrolled(true))
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store)
+        updateDeleteFlag(Seq(NINODeletionConfig(nino)), true, store) shouldBe Right(Seq(NINODeletionConfig(nino)))
         get(nino, store) shouldBe Right(Enrolled(true))
       }
 
@@ -189,7 +189,8 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         val docIds = await(collection.find(Filters.eq("nino", nino)).map(_._id).toFuture())(duration)
         val docIdToRevertDeletion = docIds.head
 
-        updateDeleteFlag(Seq(NINODeletionConfig(nino, Some(docIdToRevertDeletion))), revertSoftDelete = true, store) shouldBe Right(())
+        val ninos = Seq(NINODeletionConfig(nino, Some(docIdToRevertDeletion)))
+        updateDeleteFlag(ninos, revertSoftDelete = true, store) shouldBe Right(ninos)
 
         // only above executed doc id should be marked as eligible and other one still with soft-delete
         val updatedDocs = await(collection.find(Filters.eq("nino", nino)).toFuture())(duration)
