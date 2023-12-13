@@ -56,7 +56,6 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
   def updateDeleteFlag(ninos: Seq[NINODeletionConfig], revertSoftDelete: Boolean, store: MongoEnrolmentStore) = {
     Await.result(store.updateDeleteFlag(ninos, revertSoftDelete).value, duration)
-      .map(_.map(enrolment => NINODeletionConfig(enrolment.nino, enrolment._id)))
   }
 
   "The MongoEnrolmentStore" when {

@@ -47,7 +47,7 @@ trait EnrolmentStore {
 
   def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
 
-  def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean = false): EitherT[Future, String, Seq[EnrolmentData]]
+  def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean = false): EitherT[Future, String, Seq[NINODeletionConfig]]
 
   def updateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
@@ -213,7 +213,7 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent,
     })
   }
 
-  override def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean): EitherT[Future, String, Seq[EnrolmentData]] = {
+  override def updateDeleteFlag(ninosDeletionConfig: Seq[NINODeletionConfig], revertSoftDelete: Boolean): EitherT[Future, String, Seq[NINODeletionConfig]] = {
     val timerContext = metrics.enrolmentStoreGetTimer.time()
 
     val filter = or(
@@ -244,6 +244,7 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent,
       }
       .pipe(EitherT(_))
       .flatMap(doUpdateDeleteFlag(_, revertSoftDelete))
+      .map(_.map(enrolment => NINODeletionConfig(enrolment.nino, enrolment._id)))
   }
 
   override def updateWithAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] = {
