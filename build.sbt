@@ -126,6 +126,7 @@ lazy val catsSettings = scalacOptions ++= Seq("-deprecation", "-feature")
 
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
+  .disablePlugins(JUnitXmlReportPlugin)
   .settings( //fix scaladoc generation in jenkins
     Compile / scalacOptions -= "utf8")
   .settings( //Globally enable support for postfix operators
