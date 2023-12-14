@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import akka.http.scaladsl.model.HttpResponse
-import cats.data.EitherT
 import cats.instances.future._
 import cats.instances.int._
 import cats.instances.string._
@@ -29,8 +27,8 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
-import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.{EmailStore, EnrolmentStore}
 import uk.gov.hmrc.helptosave.services.{BarsService, HelpToSaveService, UserCapService}
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
@@ -38,7 +36,7 @@ import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, toFuture}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore,

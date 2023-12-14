@@ -128,7 +128,7 @@ Running and Testing
 Running
 -------
 
-Run `sbt run` on the terminal to start the service. The service runs on port 7004 by default.
+Run `sbt run` on the terminal to start the service. The service runs on port 7001 by default.
 
 Unit tests
 ----------
@@ -153,8 +153,36 @@ Endpoints
 | /paye-personal-details       | GET  | Gets user information for HTS |
 | /validate-bank-details       | POST | Checks that bank details are valid |
 
+Managing Deletions
+==================
+Service currently doesn't have a handler to manage deletions on back of account deletions in downstream systems, THALER.
+This causes problems when the user tries to create another account but is marked as not eligible due to account being still
+active in HTS system.
+
+Till a better solution is in place to manage these deletions automatically, service currently supports this via soft deletions.
+This is driven by config, where a list of user NINOs are configured for either deletion or undoing of any previous deletions.
+
+These config entries are read during application startup and processed accordingly. Processing is done by marking the enrolments
+as soft-delete using a `deleteFlag` field on document. This approach is ideal than prefixing NINOs, as it's not ideal to mutate 
+keys for soft deletions, and should instead rely on fields specifically set aside for this. For audit purposes, we also log the
+date on which has been taken under a field called `deleteDate`.
+
+Application configuration allows following keys and corresponding values for managing deletions
+
+- Deletions
+  ```json
+  [{"nino": "AE123456A"}, {"nino": "BE783456A"}]
+  ```
+  
+- Undo deletions
+  ```json
+  [{"nino": "AE123456A", "docID": "65745f62533fa40f2b31f763"}, {"nino": "BE783456A", "docID": "65745f62533fa40f2b31f764"}]
+  ```
+  
+Approach to rely on doc id puts a dependency on knowing which of the enrolments we want to undo deletion for and make it active.
+This step of relying on access to live data is anyway needed with other alternate approaches (like prefixing NINOs), as prefix
+doesn't have context on the enrolment.
+
 License 
 =======
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")
-
-

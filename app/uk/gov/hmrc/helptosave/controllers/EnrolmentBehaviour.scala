@@ -48,14 +48,16 @@ trait EnrolmentBehaviour {
                             itmpFlag = true,
                             createAccountRequest.eligibilityReason,
                             createAccountRequest.source,
-                            accountNumber)
+                            accountNumber,
+                            None)
     } else {
       for {
         _ <- enrolmentStore.insert(createAccountRequest.payload.nino,
                                    itmpFlag = false,
                                    createAccountRequest.eligibilityReason,
                                    createAccountRequest.source,
-                                   accountNumber)
+                                   accountNumber,
+                                   None)
         _ <- setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
       } yield ()
     }
