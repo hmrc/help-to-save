@@ -176,7 +176,7 @@ Application configuration allows following keys and corresponding values for man
   
 - Undo deletions
   ```json
-  [{"nino": "AE123456A", "docId": "65745f62533fa40f2b31f763"}, {"nino": "BE783456A", "docId": "65745f62533fa40f2b31f764"}]
+  [{"nino": "AE123456A", "docID": "65745f62533fa40f2b31f763"}, {"nino": "BE783456A", "docID": "65745f62533fa40f2b31f764"}]
   ```
   
 Approach to rely on doc id puts a dependency on knowing which of the enrolments we want to undo deletion for and make it active.
