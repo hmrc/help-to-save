@@ -16,8 +16,8 @@ lazy val plugins: Seq[Plugins] = Seq.empty
 
 val hmrc = "uk.gov.hmrc"
 val playVersion = "play-28"
-val mongoVersion = "0.68.0"
-val bootstrapBackendVersion = "5.25.0"
+val mongoVersion = "0.73.0"
+val bootstrapBackendVersion = "7.23.0"
 
 val dependencies = Seq(
   ws,
@@ -38,7 +38,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "org.scalatestplus"     %% "scalatestplus-scalacheck"       % "3.1.0.0-RC2"                          % scope,
   "com.typesafe.play"     %% "play-test"                      % PlayVersion.current                    % scope,
   "org.scalamock"         %% "scalamock"                      % "5.2.0"                                % scope,
-  "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.20"                               % scope
+  "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.21"                               % scope
 )
 
 lazy val scoverageSettings = {
