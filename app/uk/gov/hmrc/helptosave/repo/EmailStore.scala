@@ -52,7 +52,7 @@ trait EmailStore {
 @Singleton
 class MongoEmailStore @Inject() (mongo:   MongoComponent,
                                  crypto:  Crypto,
-                                 metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
+                                 metrics: Metrics)(implicit ec: ExecutionContext)
   extends PlayMongoRepository[EmailData](
     mongoComponent = mongo,
     collectionName = "emails",
