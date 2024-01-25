@@ -92,8 +92,10 @@ class EligibilityStatsActor(scheduler:              Scheduler,
     }
   }
 
-  def outputReport(table: Table): Unit =
-    logger.info(s"report is ${eligibilityStatsParser.prettyFormatTable(table)}")
+  def outputReport(table: Table): Unit = {
+    val formattedTable = eligibilityStatsParser.prettyFormatTable(table)
+    logger.info(s"report is $formattedTable")
+  }
 
   override def preStart(): Unit = {
     super.preStart()
