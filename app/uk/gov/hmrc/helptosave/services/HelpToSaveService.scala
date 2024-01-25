@@ -83,7 +83,7 @@ class HelpToSaveServiceImpl @Inject() (helpToSaveProxyConnector: HelpToSaveProxy
       dESConnector.setFlag(nino).map[Either[String, Unit]] { response =>
         val time = timerContext.stop()
 
-        val additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId)
+        val additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId())
 
         response.status match {
           case OK =>

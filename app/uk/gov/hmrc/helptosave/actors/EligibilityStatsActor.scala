@@ -60,23 +60,20 @@ class EligibilityStatsActor(scheduler:              Scheduler,
 
   }
 
-  def updateMetrics(table: Table): Unit = {
-      def replaceSpaces(s: String) = s.replaceAllLiterally(" ", "-")
+  private def updateMetrics(table: Table): Unit = {
+      def replaceSpaces(s: String) = s.replaceAll(" ", "-")
 
-    table.foreach{
-      case (reason, channels) =>
-        channels.foreach {
-          case (channel, _) =>
-            if (!registeredStats.contains(reason -> channel)) {
-              logger.info(s"Registering gauge for (reason, channel) = ($reason, $channel) ")
-              metrics.registerAccountStatsGauge(
-                replaceSpaces(reason), replaceSpaces(channel),
-                () => statsTable.get(reason).flatMap(_.get(channel)).getOrElse(0)
-              )
-
-              registeredStats += reason -> channel
-            }
+    for ((reason, channels) <- table) {
+      for ((channel, _) <- channels) {
+        if (!registeredStats.contains(reason -> channel)) {
+          logger.info(s"Registering gauge for (reason, channel) = ($reason, $channel) ")
+          metrics.registerAccountStatsGauge(
+            replaceSpaces(reason), replaceSpaces(channel),
+            () => statsTable.get(reason).flatMap(_.get(channel)).getOrElse(0)
+          )
+          registeredStats += reason -> channel
         }
+      }
     }
   }
 
@@ -84,7 +81,7 @@ class EligibilityStatsActor(scheduler:              Scheduler,
     val initialDelay = config.get[FiniteDuration]("eligibility-stats.initial-delay").value
     val frequency = config.get[FiniteDuration]("eligibility-stats.frequency").value
     logger.info(s"Scheduling eligibility-stats job in ${Time.nanosToPrettyString(initialDelay.toNanos)}")
-    scheduler.schedule(initialDelay, frequency, self, GetStats)
+    scheduler.scheduleAtFixedRate(initialDelay, frequency, self, GetStats)
   }
 
   def updateLocalStats(table: Table): Unit = {

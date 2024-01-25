@@ -120,13 +120,12 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent,
 
   }
 
-  private[repo] def doUpdateItmpFlag(nino: NINO, itmpFlag: Boolean)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] = {
+  private[repo] def doUpdateItmpFlag(nino: NINO, itmpFlag: Boolean): Future[Option[EnrolmentData]] = {
     collection.findOneAndUpdate(
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.set("itmpHtSFlag", itmpFlag),
       options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
     ).toFutureOption()
-
   }
 
   private[repo] def doUpdateDeleteFlag(enrolmentsToDelete: Seq[EnrolmentData], revertSoftDelete: Boolean = false)(implicit ec: ExecutionContext): EitherT[Future, String, Seq[EnrolmentData]] = {
@@ -156,7 +155,7 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent,
     }).map(_ => enrolmentsToDelete)
   }
 
-  private[repo] def persistAccountNumber(nino: NINO, accountNumber: String)(implicit ec: ExecutionContext): Future[Option[EnrolmentData]] =
+  private[repo] def persistAccountNumber(nino: NINO, accountNumber: String): Future[Option[EnrolmentData]] =
     collection.findOneAndUpdate(
       filter  = regex("nino", getRegex(nino)),
       update  = Updates.set("accountNumber", accountNumber),

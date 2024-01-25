@@ -33,13 +33,12 @@ private case class MockCancellable(scheduler: MockScheduler, task: Task) extends
    */
   override def cancel(): Boolean = {
     this synchronized {
-      canceled match {
-        case true ⇒ false
-        case false ⇒ {
-          canceled = true
-          scheduler.cancelTask(task)
-          true
-        }
+      if (canceled) {
+        false
+      } else {
+        canceled = true
+        scheduler.cancelTask(task)
+        true
       }
     }
   }

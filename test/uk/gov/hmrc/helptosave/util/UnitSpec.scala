@@ -28,7 +28,6 @@ import play.api.libs.json.{JsValue, Json}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, FiniteDuration, _}
 import scala.concurrent.{Await, Future}
-import scala.language.postfixOps
 
 trait UnitSpec extends AnyWordSpecLike with Matchers {
 
