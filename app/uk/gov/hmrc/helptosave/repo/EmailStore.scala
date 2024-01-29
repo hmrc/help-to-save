@@ -30,7 +30,7 @@ import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.TryOps._
-import uk.gov.hmrc.helptosave.util.{Crypto, LogMessageTransformer, NINO}
+import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
