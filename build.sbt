@@ -9,20 +9,6 @@ import wartremover.WartRemover.autoImport.{wartremoverErrors, wartremoverExclude
 
 val appName = "help-to-save"
 
-lazy val scoverageSettings = {
-  import scoverage.ScoverageKeys
-  Seq(
-    ScoverageKeys.coverageExcludedPackages :=
-      """<empty>;.*\.config\..*;
-        |.*\.(BuildInfo|EligibilityStatsProviderImpl|HttpClient.*|JsErrorOps|Reverse.*|Routes.*)"""
-        .stripMargin,
-    ScoverageKeys.coverageMinimumStmtTotal := 90,
-    ScoverageKeys.coverageFailOnMinimum := true,
-    ScoverageKeys.coverageHighlighting := true,
-    Test / parallelExecution := false
-  )
-}
-
 lazy val scalariformSettings = {
   import com.typesafe.sbt.SbtScalariform.ScalariformKeys
   import scalariform.formatter.preferences._
@@ -101,7 +87,7 @@ lazy val microservice = Project(appName, file("."))
   .settings( //Globally enable support for postfix operators
     scalacOptions += "-language:postfixOps")
   .settings(majorVersion := 2)
-  .settings(scoverageSettings: _*)
+  .settings(CodeCoverageSettings.settings: _*)
   .settings(scalaSettings: _*)
   .settings(scalaVersion := "2.13.8")
   .settings(defaultSettings(): _*)
