@@ -10,14 +10,10 @@ import wartremover.WartRemover.autoImport.{wartremoverErrors, wartremoverExclude
 
 val appName = "help-to-save"
 
-lazy val appDependencies: Seq[ModuleID] = dependencies ++ testDependencies()
-lazy val playSettings: Seq[Setting[_]] = Seq.empty
-lazy val plugins: Seq[Plugins] = Seq.empty
-
 val hmrc = "uk.gov.hmrc"
 val playVersion = "play-28"
-val mongoVersion = "0.68.0"
-val bootstrapBackendVersion = "5.25.0"
+val mongoVersion = "0.73.0"
+val bootstrapBackendVersion = "7.23.0"
 
 val dependencies = Seq(
   ws,
@@ -26,8 +22,6 @@ val dependencies = Seq(
   "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"               % mongoVersion,
   "org.typelevel"     %% "cats-core"                        % "2.2.0",
   "com.github.kxbmap" %% "configs"                          % "0.6.1",
-  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.12" cross CrossVersion.full),
-  "com.github.ghik" % "silencer-lib" % "1.7.12" % Provided cross CrossVersion.full
 )
 
 def testDependencies(scope: String = "test,it") = Seq(
@@ -38,7 +32,7 @@ def testDependencies(scope: String = "test,it") = Seq(
   "org.scalatestplus"     %% "scalatestplus-scalacheck"       % "3.1.0.0-RC2"                          % scope,
   "com.typesafe.play"     %% "play-test"                      % PlayVersion.current                    % scope,
   "org.scalamock"         %% "scalamock"                      % "5.2.0"                                % scope,
-  "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.20"                               % scope
+  "com.typesafe.akka"     %% "akka-testkit"                   % "2.6.21"                               % scope
 )
 
 lazy val scoverageSettings = {
@@ -102,13 +96,13 @@ lazy val wartRemoverSettings = {
     Wart.ToString,
     Wart.Var)
 
-  Seq(wartremoverErrors in(Compile, compile) ++= Warts.allBut(excludedWarts: _*),
+  Seq(Compile / compile / wartremoverErrors ++= Warts.allBut(excludedWarts: _*),
     // disable some wart remover checks in tests - (Any, Null, PublicInference) seems to struggle with
     // scalamock, (Equals) seems to struggle with stub generator AutoGen and (NonUnitStatements) is
     // imcompatible with a lot of WordSpec
-    wartremoverErrors in(Test, compile) --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference),
-    wartremoverExcluded in(Compile, compile) ++=
-      routes.in(Compile).value ++
+    Test / compile / wartremoverErrors --= Seq(Wart.Any, Wart.Equals, Wart.Null, Wart.NonUnitStatements, Wart.PublicInference),
+    Compile / compile / wartremoverExcluded ++=
+      (Compile / routes).value ++
         (baseDirectory.value ** "*.sc").get ++
         Seq(sourceManaged.value / "main" / "sbt-buildinfo" / "BuildInfo.scala") ++
         (baseDirectory.value ** "UCThresholdManager.scala").get ++
@@ -118,21 +112,22 @@ lazy val wartRemoverSettings = {
         (baseDirectory.value ** "Lock.scala").get ++
         (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
   )
-  wartremoverExcluded in(Test, compile) ++=
+  Test / compile / wartremoverExcluded ++=
     (baseDirectory.value / "app" / "uk" / "gov" / "hmrc" / "helptosave" / "config").get
 }
 
 lazy val catsSettings = scalacOptions ++= Seq("-deprecation", "-feature")
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin) ++ plugins: _*)
+  .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
+  .settings(onLoadMessage := "")
   .settings( //fix scaladoc generation in jenkins
     Compile / scalacOptions -= "utf8")
   .settings( //Globally enable support for postfix operators
     scalacOptions += "-language:postfixOps")
   .settings(majorVersion := 2)
-  .settings(playSettings ++ scoverageSettings: _*)
+  .settings(scoverageSettings: _*)
   .settings(scalaSettings: _*)
   .settings(scalaVersion := "2.13.8")
   .settings(defaultSettings(): _*)
@@ -142,7 +137,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(catsSettings)
   .settings(scalacOptions += "-Xcheckinit")
   .settings(
-    libraryDependencies ++= appDependencies,
+    libraryDependencies ++= (dependencies ++ testDependencies()),
     retrieveManaged := false
   )
   .configs(IntegrationTest)

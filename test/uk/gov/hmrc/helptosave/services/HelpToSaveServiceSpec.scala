@@ -128,15 +128,6 @@ class HelpToSaveServiceSpec extends ActorTestSupport("HelpToSaveServiceSpec") wi
         |}
       """.stripMargin
 
-    val jsonCheckResponseReasonCode4 =
-      """{
-        |"result" : "eligible",
-        |"resultCode" : 4,
-        |"reason" : "tax credits",
-        |"reasonCode" : 4
-        |}
-      """.stripMargin
-
     "handling eligibility calls" must {
       val nino = randomNINO()
 

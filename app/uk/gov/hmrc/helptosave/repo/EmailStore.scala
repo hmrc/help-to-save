@@ -30,7 +30,7 @@ import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.TryOps._
-import uk.gov.hmrc.helptosave.util.{Crypto, LogMessageTransformer, NINO}
+import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -52,7 +52,7 @@ trait EmailStore {
 @Singleton
 class MongoEmailStore @Inject() (mongo:   MongoComponent,
                                  crypto:  Crypto,
-                                 metrics: Metrics)(implicit ec: ExecutionContext, transformer: LogMessageTransformer)
+                                 metrics: Metrics)(implicit ec: ExecutionContext)
   extends PlayMongoRepository[EmailData](
     mongoComponent = mongo,
     collectionName = "emails",

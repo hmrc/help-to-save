@@ -46,8 +46,8 @@ object WithExponentialBackoffRetry {
       message:           T => RetryMessage,
       scheduler:         Scheduler
   ) {
-    private val minMillis: Double = minBackoff.toMillis
-    private val maxMillis: Double = maxBackoff.toMillis
+    private val minMillis: Double = minBackoff.toMillis.toDouble
+    private val maxMillis: Double = maxBackoff.toMillis.toDouble
 
     private var numberOfRetries: Int = 0
     private var retryJob: Option[Cancellable] = None

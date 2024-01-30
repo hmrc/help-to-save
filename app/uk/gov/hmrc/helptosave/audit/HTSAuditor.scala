@@ -33,6 +33,7 @@ class HTSAuditor @Inject() (val auditConnector: AuditConnector)(implicit transfo
     checkEventResult.failed.foreach {
       case NonFatal(e) =>
         logger.warn(s"Unable to post audit event of type ${event.value.auditType} to audit connector - ${e.getMessage}", e, nino)
+      case other => throw other
     }
   }
 }

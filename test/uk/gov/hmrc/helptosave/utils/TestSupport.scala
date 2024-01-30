@@ -60,12 +60,12 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
 
   lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     Play.start(fakeApplication)
     super.beforeAll()
   }
 
-  override def afterAll() {
+  override def afterAll(): Unit = {
     Play.stop(fakeApplication)
     super.afterAll()
   }

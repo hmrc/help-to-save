@@ -51,8 +51,8 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
         val head = tasks.dequeue()
         head.runnable.run()
         head.interval match {
-          case Some(interval) ⇒ tasks += new Task(head.delay + interval, head.id, head.runnable, head.interval)
-          case None           ⇒
+          case Some(interval) => tasks += new Task(head.delay + interval, head.id, head.runnable, head.interval)
+          case None           =>
         }
       }
     }
@@ -75,7 +75,7 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
 
   def cancelTask(task: Task): Unit = {
     time.lock synchronized {
-      tasks = tasks.filterNot { x ⇒ x.id == task.id }
+      tasks = tasks.filterNot { x => x.id == task.id }
     }
   }
 

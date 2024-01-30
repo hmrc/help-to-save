@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.repo
 
 import org.scalatest.BeforeAndAfterEach
-import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.utils.TestSupport
@@ -36,8 +35,6 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
 
   "The EligibilityStatsStore" when {
 
-    val document = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
-
     "aggregating the eligibility stats" must {
 
       "return results as expected" in {
@@ -53,8 +50,6 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
     }
 
     "return aggregated results when there is more than one result" in {
-      val document2 = Json.obj("eligibilityReason" -> 7, "source" -> "Digital", "total" -> 1).value
-      val document3 = Json.obj("eligibilityReason" -> 8, "source" -> "Digital", "total" -> 1).value
       val enrolmentData = EnrolmentData(
         nino              = randomNINO(),
         itmpHtSFlag       = false,

@@ -116,7 +116,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
   }
 
-  def replaceSpaces(s: String): String = s.replaceAllLiterally(" ", "-")
+  def replaceSpaces(s: String): String = s.replaceAll(" ", "-")
 
   "EligibilityStatsActor" when {
     "retrieving the stats from mongo store" must {
