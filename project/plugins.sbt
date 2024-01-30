@@ -11,3 +11,5 @@ addSbtPlugin("org.scoverage"      %% "sbt-scoverage"          % "1.9.3")
 addSbtPlugin("org.scalastyle"     %% "scalastyle-sbt-plugin"  % "1.0.0")
 addSbtPlugin("org.scalariform"    %  "sbt-scalariform"        % "1.8.3")
 addSbtPlugin("org.wartremover"    %  "sbt-wartremover"        % "3.0.7")
+
+ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
