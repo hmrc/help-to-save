@@ -33,6 +33,7 @@ import uk.gov.hmrc.helptosave.util.TryOps._
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -40,13 +41,11 @@ import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[MongoEmailStore])
 trait EmailStore {
-
   def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
 
   def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]]
 
   def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit]
-
 }
 
 @Singleton
@@ -85,67 +84,68 @@ class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: 
 
   override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] =
     EitherT[Future, String, Option[String]]({
-      val timerContext = metrics.emailStoreGetTimer.time()
+      preservingMdc {
+        val timerContext = metrics.emailStoreGetTimer.time()
 
-      collection
-        .find(regex("nino", getRegex(nino)))
-        .toFuture()
-        .map { res =>
-          timerContext.stop()
-
-          val decryptedEmail = res.headOption
-            .map(data => crypto.decrypt(data.email))
-            .traverse[Try, String](identity)
-
-          decryptedEmail.toEither().leftMap { t =>
-            logger.warn(s"Could not decrypt email: $t, $nino")
-            s"Could not decrypt email: ${t.getMessage}"
-          }
-        }
-        .recover {
-          case e =>
+        collection
+          .find(regex("nino", getRegex(nino)))
+          .toFuture()
+          .map { res =>
             timerContext.stop()
-            metrics.emailStoreGetErrorCounter.inc()
-            Left(s"Could not read from email store: ${e.getMessage}")
-        }
+
+            val decryptedEmail = res.headOption
+              .map(data => crypto.decrypt(data.email))
+              .traverse[Try, String](identity)
+
+            decryptedEmail.toEither().leftMap { t =>
+              logger.warn(s"Could not decrypt email: $t, $nino")
+              s"Could not decrypt email: ${t.getMessage}"
+            }
+          }
+          .recover {
+            case e =>
+              timerContext.stop()
+              metrics.emailStoreGetErrorCounter.inc()
+              Left(s"Could not read from email store: ${e.getMessage}")
+          }
+      }
     })
 
   override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit] {
-
-      collection
-        .findOneAndDelete(regex("nino", getRegex(nino)))
-        .toFuture()
-        .map[Either[String, Unit]] { res =>
-          Right(())
-        }
-        .recover {
-          case e =>
-            Left(s"Could not delete email: ${e.getMessage}")
-        }
-
+      preservingMdc {
+        collection
+          .findOneAndDelete(regex("nino", getRegex(nino)))
+          .toFuture()
+          .map[Either[String, Unit]] { _ =>
+            Right(())
+          }
+          .recover {
+            case e =>
+              Left(s"Could not delete email: ${e.getMessage}")
+          }
+      }
     }
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] =
-    collection
-      .updateOne(
-        filter = regex("nino", getRegex(nino)),
-        update = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
-        options = UpdateOptions().upsert(true)
-      )
-      .toFuture()
-      .map(a => {
-        a.wasAcknowledged()
-      })
-
+    preservingMdc {
+      collection
+        .updateOne(
+          filter = regex("nino", getRegex(nino)),
+          update = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
+          options = UpdateOptions().upsert(true)
+        )
+        .toFuture()
+        .map(a => {
+          a.wasAcknowledged()
+        })
+    }
 }
 
 object MongoEmailStore {
-
   private[repo] case class EmailData(nino: String, email: String)
 
   private[repo] object EmailData {
     implicit val emailDataFormat: Format[EmailData] = Json.format[EmailData]
   }
-
 }

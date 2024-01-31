@@ -25,6 +25,7 @@ import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZoneId}
@@ -45,31 +46,33 @@ class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionC
       domainFormat = UserCap.userCapFormat,
       indexes = Seq(IndexModel(ascending("usercap"), IndexOptions().name("usercapIndex")))
     ) with UserCapStore {
-
   private[repo] def doFind(): Future[Option[UserCap]] =
-    collection.find().headOption() //collection.find(BSONDocument(), None).one[UserCap]
+    preservingMdc {
+      collection.find().headOption()
+    }
 
   override def get(): Future[Option[UserCap]] = doFind()
 
   private[repo] def doUpdate(userCap: UserCap): Future[Option[UserCap]] =
-    collection
-      .findOneAndUpdate(
-        filter = BsonDocument(),
-        update = Updates.combine(
-          Updates.set("date", dateFormat.format(userCap.date)),
-          Updates.set("dailyCount", userCap.dailyCount),
-          Updates.set("totalCount", userCap.totalCount)
-        ),
-        options =
-          FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
-      )
-      .toFutureOption()
+    preservingMdc {
+      collection
+        .findOneAndUpdate(
+          filter = BsonDocument(),
+          update = Updates.combine(
+            Updates.set("date", dateFormat.format(userCap.date)),
+            Updates.set("dailyCount", userCap.dailyCount),
+            Updates.set("totalCount", userCap.totalCount)
+          ),
+          options =
+            FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
+        )
+        .toFutureOption()
+    }
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)
 }
 
 object UserCapStore {
-
   val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
   private val utcZone: ZoneId = ZoneId.of("Z")
@@ -82,11 +85,9 @@ object UserCapStore {
   }
 
   object UserCap {
-
     def apply(dailyCount: Int, totalCount: Int): UserCap =
       new UserCap(LocalDate.now(utcZone), dailyCount, totalCount)
 
     implicit val userCapFormat: Format[UserCap] = Json.format[UserCap]
   }
-
 }
