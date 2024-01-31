@@ -17,7 +17,7 @@ object AppDependencies {
     "com.github.kxbmap" %% "configs" % "0.6.1",
   )
 
-  def test(scope: String = "test,it"): Seq[ModuleID] = Seq(
+  def test(scope: String = "test, it"): Seq[ModuleID] = Seq(
     hmrc %% s"bootstrap-test-$playVersion" % bootstrapBackendVersion % scope,
     hmrc %% "domain" % s"8.1.0-$playVersion" % scope,
     "uk.gov.hmrc.mongo" %% "hmrc-mongo-test-play-28" % mongoVersion % scope,

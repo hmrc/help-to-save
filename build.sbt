@@ -17,13 +17,36 @@ lazy val microservice = Project(appName, file("."))
   .settings(
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test()
   )
+  // Disable default sbt Test options (might change with new versions of bootstrap)
+  .settings(Test / testOptions -= Tests
+    .Argument("-o", "-u", "target/test-reports", "-h", "target/test-reports/html-report"))
+  // Suppress successful events in Scalatest in standard output (-o)
+  // Options described here: https://www.scalatest.org/user_guide/using_scalatest_with_sbt
+  .settings(
+    Test / testOptions += Tests.Argument(
+      TestFrameworks.ScalaTest,
+      "-oNCHPQR",
+      "-u",
+      "target/test-reports",
+      "-h",
+      "target/test-reports/html-report"))
   .configs(IntegrationTest)
   .settings(inConfig(IntegrationTest)(Defaults.itSettings) *)
   .settings(
     IntegrationTest / Keys.fork := false,
-    IntegrationTest / unmanagedSourceDirectories := Seq((IntegrationTest / baseDirectory).value / "it"),
+    IntegrationTest / unmanagedSourceDirectories := (IntegrationTest / baseDirectory)(base => Seq(base / "it")).value,
     addTestReportOption(IntegrationTest, "int-test-reports"),
-    IntegrationTest / parallelExecution := false
+    IntegrationTest / parallelExecution := false,
+    // Disable default sbt Test options (might change with new versions of bootstrap)
+    IntegrationTest / testOptions -= Tests
+      .Argument("-o", "-u", "target/int-test-reports", "-h", "target/int-test-reports/html-report"),
+    IntegrationTest / testOptions += Tests.Argument(
+      TestFrameworks.ScalaTest,
+      "-oNCHPQR",
+      "-u",
+      "target/int-test-reports",
+      "-h",
+      "target/int-test-reports/html-report")
   )
   .settings(scalacOptions += "-Wconf:src=routes/.*:s")
 
