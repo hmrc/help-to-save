@@ -12,8 +12,7 @@ object AppDependencies {
     hmrc                %% s"bootstrap-backend-$playVersion" % bootstrapBackendVersion,
     hmrc                %% "domain"                          % s"8.3.0-$playVersion",
     s"$hmrc.mongo"      %% s"hmrc-mongo-$playVersion"        % mongoVersion,
-    "org.typelevel"     %% "cats-core"                       % "2.2.0",
-    "com.github.kxbmap" %% "configs"                         % "0.6.1",
+    "org.typelevel"     %% "cats-core"                       % "2.2.0"
   )
 
   def test(scope: String = "test, it"): Seq[ModuleID] = Seq(

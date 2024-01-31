@@ -22,6 +22,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
+import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestScheduler.JobScheduledOnce
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestTimeCalculator._
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.{TestScheduler, TestTimeCalculator}
@@ -56,18 +57,19 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       override val scheduler = new TestScheduler(schedulerListener.ref, this)
     }
 
-    val config = ConfigFactory.parseString(
-      s"""
-         |uc-threshold {
-         |  ask-timeout = 1 minute
-         |  min-backoff = 1 second
-         |  max-backoff = 5 seconds
-         |  number-of-retries-until-initial-wait-doubles = 5
-         |  update-time = "${updateWindowStartTime.format(DateTimeFormatter.ISO_LOCAL_TIME)}"
-         |  update-time-delay = ${updateDelay.toSeconds} seconds
-         |}
+    val config = Configuration(
+      ConfigFactory.parseString(
+        s"""
+           |uc-threshold {
+           |  ask-timeout = 1 minute
+           |  min-backoff = 1 second
+           |  max-backoff = 5 seconds
+           |  number-of-retries-until-initial-wait-doubles = 5
+           |  update-time = "${updateWindowStartTime.format(DateTimeFormatter.ISO_LOCAL_TIME)}"
+           |  update-time-delay = ${updateDelay.toSeconds} seconds
+           |}
       """.stripMargin
-    )
+      ))
 
     val actor = system.actorOf(
       UCThresholdManager.props(

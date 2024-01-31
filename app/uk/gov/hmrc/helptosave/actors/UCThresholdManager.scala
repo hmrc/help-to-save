@@ -21,14 +21,12 @@ import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import cats.instances.double._
 import cats.syntax.eq._
-import com.typesafe.config.Config
-import configs.syntax._
+import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxyActor.{GetThresholdValue => GetDESThresholdValue, GetThresholdValueResponse => GetDESThresholdValueResponse}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager._
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting, Time, WithExponentialBackoffRetry}
 
 import java.time.LocalTime
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class UCThresholdManager(
@@ -36,24 +34,23 @@ class UCThresholdManager(
   pagerDutyAlerting: PagerDutyAlerting,
   scheduler: Scheduler,
   timeCalculator: TimeCalculator,
-  config: Config)
+  config: Configuration)
     extends Actor with WithExponentialBackoffRetry with Logging {
-
   import context.dispatcher
 
-  val thresholdConfig = config.get[Config]("uc-threshold").value
+  private val thresholdConfig = config.get[Configuration]("uc-threshold")
 
-  implicit val timeout: Timeout = Timeout(thresholdConfig.get[FiniteDuration]("ask-timeout").value)
+  implicit val timeout: Timeout = Timeout(thresholdConfig.get[FiniteDuration]("ask-timeout"))
 
-  val minBackoff: FiniteDuration = thresholdConfig.get[FiniteDuration]("min-backoff").value
-  val maxBackoff: FiniteDuration = thresholdConfig.get[FiniteDuration]("max-backoff").value
-  val numberOfRetriesUntilWaitDoubles: Int =
-    thresholdConfig.get[Int]("number-of-retries-until-initial-wait-doubles").value
-  val updateWindowStartTime: LocalTime = LocalTime.parse(thresholdConfig.get[String]("update-time").value)
-  val updateTimeDelay: FiniteDuration = thresholdConfig.get[FiniteDuration]("update-time-delay").value
+  val minBackoff: FiniteDuration = thresholdConfig.get[FiniteDuration]("min-backoff")
+  val maxBackoff: FiniteDuration = thresholdConfig.get[FiniteDuration]("max-backoff")
+  private val numberOfRetriesUntilWaitDoubles =
+    thresholdConfig.get[Int]("number-of-retries-until-initial-wait-doubles")
+  val updateWindowStartTime: LocalTime = LocalTime.parse(thresholdConfig.get[String]("update-time"))
+  private val updateTimeDelay = thresholdConfig.get[FiniteDuration]("update-time-delay")
   val updateWindowEndTime: LocalTime = updateWindowStartTime.plusSeconds(updateTimeDelay.toSeconds)
 
-  val getDESRetries =
+  private val getDESRetries =
     exponentialBackoffRetry(
       minBackoff,
       maxBackoff,
@@ -64,28 +61,27 @@ class UCThresholdManager(
       scheduler
     )
 
-  var updateThresholdValueJob: Option[Cancellable] = None
+  private var updateThresholdValueJob: Option[Cancellable] = None
 
-  def getValueFromDES(requester: Option[ActorRef]): Future[UCThresholdManager.GetDESThresholdValueResponse] =
+  private def getValueFromDES(requester: Option[ActorRef]) =
     (thresholdConnectorProxyActor ? GetDESThresholdValue)
       .mapTo[GetDESThresholdValueResponse]
       .map(r => UCThresholdManager.GetDESThresholdValueResponse(requester, r.result))
 
-  def scheduleStartOfUpdateWindow(): Cancellable = {
+  private def scheduleStartOfUpdateWindow: Cancellable = {
     val timeUntilNextUpdateWindow = timeCalculator.timeUntil(updateWindowStartTime)
     logger.info(s"Scheduling start of update window in ${Time.nanosToPrettyString(timeUntilNextUpdateWindow.toNanos)}")
     scheduler.scheduleOnce(timeUntilNextUpdateWindow, self, UpdateWindow)
   }
 
-  def scheduleEndOfUpdateWindow(): Cancellable = {
+  private def scheduleEndOfUpdateWindow: Cancellable = {
     logger.info(s"Scheduling end of update window in ${Time.nanosToPrettyString(updateTimeDelay.toNanos)}")
     scheduler.scheduleOnce(updateTimeDelay, self, UpdateWindow)
   }
 
   override def receive: Receive = notReady(updateWindowMessageReceived = false)
 
-  def notReady(updateWindowMessageReceived: Boolean): Receive = {
-
+  private def notReady(updateWindowMessageReceived: Boolean): Receive = {
     case GetDESThresholdValue =>
       logger.info("[notReady] Trying to get UC threshold value from DES")
       getValueFromDES(None) pipeTo self
@@ -103,8 +99,7 @@ class UCThresholdManager(
       context become notReady(updateWindowMessageReceived = true)
   }
 
-  def ready(thresholdValue: Double): Receive = {
-
+  private def ready(thresholdValue: Double): Receive = {
     case GetDESThresholdValue =>
       logger.warn("[ready] Received unexpected message: GetDESThresholdValue")
 
@@ -116,11 +111,11 @@ class UCThresholdManager(
 
     case UpdateWindow =>
       logger.info("[ready] Time to start updating threshold value - proceeding to updating state")
-      updateThresholdValueJob = Some(scheduleEndOfUpdateWindow())
+      updateThresholdValueJob = Some(scheduleEndOfUpdateWindow)
       context become inUpdateWindow(endOfWindowTriggered = false)
   }
 
-  def inUpdateWindow(endOfWindowTriggered: Boolean): Receive = {
+  private def inUpdateWindow(endOfWindowTriggered: Boolean): Receive = {
     case GetDESThresholdValue =>
       logger.info("[inUpdateWindow] Trying to get UC threshold value from DES")
       getValueFromDES(None) pipeTo self
@@ -138,16 +133,16 @@ class UCThresholdManager(
       context become inUpdateWindow(endOfWindowTriggered = true)
   }
 
-  def handleDESThresholdValueFromNotReady(
+  private def handleDESThresholdValueFromNotReady(
     result: UCThresholdManager.GetDESThresholdValueResponse, // scalastyle:ignore method.length
     updateWindowMessageReceived: Boolean): Unit = {
     def changeStateFromNotReady(thresholdValue: Double): Unit =
       if (updateWindowMessageReceived) {
         if (timeCalculator.isNowInBetween(updateWindowStartTime, updateWindowEndTime)) {
-          updateThresholdValueJob = Some(scheduleEndOfUpdateWindow())
+          updateThresholdValueJob = Some(scheduleEndOfUpdateWindow)
           context become inUpdateWindow(endOfWindowTriggered = false)
         } else {
-          updateThresholdValueJob = Some(scheduleStartOfUpdateWindow())
+          updateThresholdValueJob = Some(scheduleStartOfUpdateWindow)
           context become ready(thresholdValue)
         }
       } else {
@@ -190,10 +185,9 @@ class UCThresholdManager(
           }
         )
     }
-
   }
 
-  def handleDESThresholdValueFromReady(
+  private def handleDESThresholdValueFromReady(
     result: UCThresholdManager.GetDESThresholdValueResponse,
     currentThresholdValue: Double): Unit = {
     val value =
@@ -219,12 +213,12 @@ class UCThresholdManager(
     }
   }
 
-  def handleDESThresholdValueInUpdateWindow(
+  private def handleDESThresholdValueInUpdateWindow(
     result: UCThresholdManager.GetDESThresholdValueResponse,
     endOfWindowTriggered: Boolean): Unit = {
     def endUpdateWindow(thresholdValue: Double): Unit = {
       getDESRetries.cancelAndReset()
-      updateThresholdValueJob = Some(scheduleStartOfUpdateWindow())
+      updateThresholdValueJob = Some(scheduleStartOfUpdateWindow)
       context become ready(thresholdValue)
     }
 
@@ -277,7 +271,7 @@ class UCThresholdManager(
 
   override def preStart(): Unit = {
     super.preStart()
-    updateThresholdValueJob = Some(scheduleStartOfUpdateWindow())
+    updateThresholdValueJob = Some(scheduleStartOfUpdateWindow)
     self ! GetDESThresholdValue
   }
 
@@ -286,12 +280,10 @@ class UCThresholdManager(
     updateThresholdValueJob.foreach(_.cancel())
     getDESRetries.cancelAndReset()
   }
-
 }
 
 object UCThresholdManager {
-
-  case class GetDESThresholdValueResponse(requester: Option[ActorRef], response: Either[String, Double])
+  private case class GetDESThresholdValueResponse(requester: Option[ActorRef], response: Either[String, Double])
 
   /** Message used to trigger the start of an update window and to end the update window */
   private case object UpdateWindow
@@ -305,6 +297,6 @@ object UCThresholdManager {
     pagerDutyAlerting: PagerDutyAlerting,
     scheduler: Scheduler,
     timeCalculator: TimeCalculator,
-    config: Config): Props =
+    config: Configuration): Props =
     Props(new UCThresholdManager(thresholdConnectorProxy, pagerDutyAlerting, scheduler, timeCalculator, config))
 }

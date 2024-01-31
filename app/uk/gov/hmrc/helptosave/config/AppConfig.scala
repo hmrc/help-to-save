@@ -18,7 +18,6 @@ package uk.gov.hmrc.helptosave.config
 
 import com.google.inject.Singleton
 import com.typesafe.config.ConfigRenderOptions
-import configs.syntax._
 import play.api.libs.json.Json
 import play.api.{Configuration, Environment, Mode}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
@@ -31,9 +30,8 @@ import scala.jdk.CollectionConverters._
 @Singleton
 class AppConfig @Inject()(
   val runModeConfiguration: Configuration,
-  val environment: Environment,
+  environment: Environment,
   servicesConfig: ServicesConfig) {
-
   protected def mode: Mode = environment.mode
 
   val appName: String = servicesConfig.getString("appName")
@@ -46,7 +44,7 @@ class AppConfig @Inject()(
   val correlationIdHeaderName: String = servicesConfig.getString("microservice.correlationIdHeaderName")
 
   val thresholdAskTimeout: FiniteDuration =
-    runModeConfiguration.underlying.get[FiniteDuration]("uc-threshold.ask-timeout").value
+    runModeConfiguration.get[FiniteDuration]("uc-threshold.ask-timeout")
 
   val createAccountVersion: String = servicesConfig.getString("nsi.create-account.version")
 

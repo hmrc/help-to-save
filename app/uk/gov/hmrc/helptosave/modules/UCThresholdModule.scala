@@ -26,10 +26,8 @@ import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 import java.time.{Clock, ZoneId}
 
 class UCThresholdModule extends AbstractModule {
-
-  override def configure() =
+  override def configure(): Unit =
     bind(classOf[ThresholdManagerProvider]).to(classOf[UCThresholdOrchestrator]).asEagerSingleton()
-
 }
 
 trait ThresholdManagerProvider {
@@ -43,7 +41,6 @@ class UCThresholdOrchestrator @Inject()(
   configuration: Configuration,
   desConnector: DESConnector)
     extends ThresholdManagerProvider with Logging {
-
   private lazy val connectorProxy: ActorRef =
     system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
 
@@ -60,8 +57,7 @@ class UCThresholdOrchestrator @Inject()(
         pagerDutyAlerting,
         system.scheduler,
         timeCalculator,
-        configuration.underlying
+        configuration
       ))
   }
-
 }

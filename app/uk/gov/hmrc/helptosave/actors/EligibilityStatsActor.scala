@@ -18,8 +18,7 @@ package uk.gov.hmrc.helptosave.actors
 
 import akka.actor.{Actor, Cancellable, Props, Scheduler}
 import akka.pattern.pipe
-import com.typesafe.config.Config
-import configs.syntax._
+import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.{GetStats, GetStatsResponse}
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsParser.{EligibilityReason, Source, Table}
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -32,22 +31,20 @@ import scala.concurrent.duration.FiniteDuration
 
 class EligibilityStatsActor(
   scheduler: Scheduler,
-  config: Config,
-  timeCalculator: TimeCalculator,
+  config: Configuration,
   eligibilityStatsStore: EligibilityStatsStore,
   eligibilityStatsParser: EligibilityStatsParser,
   metrics: Metrics)
     extends Actor with Logging {
-
   import context.dispatcher
 
-  var eligibilityStatsJob: Option[Cancellable] = None
+  private var eligibilityStatsJob: Option[Cancellable] = None
 
-  var registeredStats: Set[(EligibilityReason, Source)] = Set.empty[(EligibilityReason, Source)]
+  private var registeredStats = Set.empty[(EligibilityReason, Source)]
 
   // use a thread safe map as the gauges we register with require access to this
   // table as well as this actor
-  val statsTable: TrieMap[EligibilityReason, TrieMap[Source, Int]] =
+  private val statsTable =
     TrieMap.empty[EligibilityReason, TrieMap[Source, Int]]
 
   override def receive: Receive = {
@@ -60,7 +57,6 @@ class EligibilityStatsActor(
       updateLocalStats(table)
       updateMetrics(table)
       outputReport(table)
-
   }
 
   private def updateMetrics(table: Table): Unit = {
@@ -81,14 +77,14 @@ class EligibilityStatsActor(
     }
   }
 
-  def scheduleStats(): Cancellable = {
-    val initialDelay = config.get[FiniteDuration]("eligibility-stats.initial-delay").value
-    val frequency = config.get[FiniteDuration]("eligibility-stats.frequency").value
+  private def scheduleStats(): Cancellable = {
+    val initialDelay = config.get[FiniteDuration]("eligibility-stats.initial-delay")
+    val frequency = config.get[FiniteDuration]("eligibility-stats.frequency")
     logger.info(s"Scheduling eligibility-stats job in ${Time.nanosToPrettyString(initialDelay.toNanos)}")
     scheduler.scheduleAtFixedRate(initialDelay, frequency, self, GetStats)
   }
 
-  def updateLocalStats(table: Table): Unit = {
+  private def updateLocalStats(table: Table): Unit = {
     statsTable.clear()
     table.foreach {
       case (reason, stats) =>
@@ -96,7 +92,7 @@ class EligibilityStatsActor(
     }
   }
 
-  def outputReport(table: Table): Unit = {
+  private def outputReport(table: Table): Unit = {
     val formattedTable = eligibilityStatsParser.prettyFormatTable(table)
     logger.info(s"report is $formattedTable")
   }
@@ -113,25 +109,15 @@ class EligibilityStatsActor(
 }
 
 object EligibilityStatsActor {
-
   case object GetStats
 
   case class GetStatsResponse(result: List[EligibilityStats])
 
   def props(
     scheduler: Scheduler,
-    config: Config,
-    timeCalculator: TimeCalculator,
+    config: Configuration,
     eligibilityStatsStore: EligibilityStatsStore,
     eligibilityStatsParser: EligibilityStatsParser,
     metrics: Metrics): Props =
-    Props(
-      new EligibilityStatsActor(
-        scheduler,
-        config,
-        timeCalculator,
-        eligibilityStatsStore,
-        eligibilityStatsParser,
-        metrics))
-
+    Props(new EligibilityStatsActor(scheduler, config, eligibilityStatsStore, eligibilityStatsParser, metrics))
 }

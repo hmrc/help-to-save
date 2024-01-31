@@ -18,21 +18,19 @@ package uk.gov.hmrc.helptosave.modules
 
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import com.google.inject.{AbstractModule, Inject, Singleton}
-import configs.syntax._
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.helptosave.actors.{EligibilityStatsActor, EligibilityStatsParser, TimeCalculatorImpl}
+import uk.gov.hmrc.helptosave.actors.{EligibilityStatsActor, EligibilityStatsParser}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.EligibilityStatsStore
 import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.helptosave.util.lock.Lock
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
-import java.time.Clock
 import scala.concurrent.duration.FiniteDuration
 
 class EligibilityStatsModule extends AbstractModule {
-  override def configure() =
+  override def configure(): Unit =
     bind(classOf[EligibilityStatsProvider]).to(classOf[EligibilityStatsProviderImpl]).asEagerSingleton()
 }
 
@@ -50,13 +48,10 @@ class EligibilityStatsProviderImpl @Inject()(
   lifecycle: ApplicationLifecycle,
   metrics: Metrics)
     extends EligibilityStatsProvider with Logging {
-
   private val name = "eligibility-stats"
   private val enabled: Boolean = configuration.underlying.getBoolean(s"$name.enabled")
 
-  private val lockDuration: FiniteDuration = configuration.underlying.get[FiniteDuration](s"$name.lock-duration").value
-
-  private val timeCalculator = new TimeCalculatorImpl(Clock.systemUTC())
+  private val lockDuration: FiniteDuration = configuration.get[FiniteDuration](s"$name.lock-duration")
 
   def esActor(): ActorRef =
     if (enabled) {
@@ -64,8 +59,7 @@ class EligibilityStatsProviderImpl @Inject()(
       system.actorOf(
         EligibilityStatsActor.props(
           system.scheduler,
-          configuration.underlying,
-          timeCalculator,
+          configuration,
           eligibilityStatsStore,
           eligibilityStatsParser,
           metrics
@@ -79,7 +73,7 @@ class EligibilityStatsProviderImpl @Inject()(
 
   // make sure we only have one instance of the eligibility stats running across
   // multiple instances of the application in the same environment
-  lazy val lockedEligibilityStats: ActorRef =
+  private lazy val lockedEligibilityStats =
     system.actorOf(
       Lock.props[Option[ActorRef]](
         mongoLockRepository,

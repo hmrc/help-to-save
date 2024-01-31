@@ -24,6 +24,7 @@ import com.codahale.metrics.{Counter, Gauge, Timer}
 import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
+import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.{GetStats, GetStatsResponse}
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsParser.Table
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -51,21 +52,21 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
     val timeCalculator = new TimeCalculatorImpl(Clock.systemUTC())
 
-    val config = ConfigFactory.parseString(
-      """
-        |eligibility-stats {
-        |    enabled = true
-        |    initial-delay  = 5 minutes
-        |    frequency = 1 hour
-        |}
+    val config = Configuration(
+      ConfigFactory.parseString(
+        """
+          |eligibility-stats {
+          |    enabled = true
+          |    initial-delay  = 5 minutes
+          |    frequency = 1 hour
+          |}
     """.stripMargin
-    )
+      ))
 
     val actor = system.actorOf(
       EligibilityStatsActor.props(
         system.scheduler,
         config,
-        timeCalculator,
         new TestEligibilityStatsStore(eligibilityStatsStoreListener.ref),
         new TestEligibilityStatsParser(eligibilityStatsParserListener.ref),
         new MockMetrics(metricsListener.ref)

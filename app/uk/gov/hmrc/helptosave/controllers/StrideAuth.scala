@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import configs.syntax._
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._
@@ -31,16 +30,14 @@ import scala.concurrent.{ExecutionContext, Future}
 class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)(
   implicit val appConfig: AppConfig)
     extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
-
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private val (standardRoles, secureRoles): (List[String], List[String]) = {
+  private val (standardRoles, secureRoles): (Seq[String], Seq[String]) = {
     val decoder = Base64.getDecoder
 
-    def getRoles(key: String): List[String] =
-      appConfig.runModeConfiguration.underlying
-        .get[List[String]](key)
-        .value
+    def getRoles(key: String): Seq[String] =
+      appConfig.runModeConfiguration
+        .get[Seq[String]](key)
         .map(s => new String(decoder.decode(s)))
 
     getRoles("stride.base64-encoded-roles") -> getRoles("stride.base64-encoded-secure-roles")
