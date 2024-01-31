@@ -73,7 +73,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
       .returning(result.fold(e => Future.failed(new Exception(e)), Future.successful))
 
   def mockReleaseLock(result: Either[String, Unit]) =
-    (internalLock.releaseLock: () => Future[Unit])
+    (internalLock.releaseLock _)
       .expects()
       .returning(result.fold(e => Future.failed(new Exception(e)), Future.successful))
 

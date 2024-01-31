@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.actors
 
 import scala.concurrent.duration.FiniteDuration
 
-private case class Task(delay: FiniteDuration, id: Long, runnable: Runnable, interval: Option[FiniteDuration])
+case class Task(delay: FiniteDuration, id: Long, runnable: Runnable, interval: Option[FiniteDuration])
     extends Ordered[Task] {
 
   def compare(t: Task): Int =
@@ -27,5 +27,4 @@ private case class Task(delay: FiniteDuration, id: Long, runnable: Runnable, int
     else if (id > t.id) -1
     else if (id < t.id) 1
     else 0
-
 }
