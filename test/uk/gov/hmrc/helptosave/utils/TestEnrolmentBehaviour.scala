@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import java.time.{LocalDate, YearMonth}
-
 import cats.data.EitherT
 import cats.instances.future._
 import play.api.libs.json.Json
@@ -30,6 +28,7 @@ import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.{LocalDate, YearMonth}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait TestEnrolmentBehaviour extends TestSupport {

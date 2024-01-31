@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.util.UUID
-
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HttpResponse
+
+import java.util.UUID
 
 class BarsConnectorSpec extends TestSupport with HttpSupport {
 

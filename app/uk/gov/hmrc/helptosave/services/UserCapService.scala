@@ -19,13 +19,13 @@ package uk.gov.hmrc.helptosave.services
 import cats.instances.int._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject}
-import javax.inject.Singleton
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 

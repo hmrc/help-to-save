@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.util.UUID
-
 import cats.data.{EitherT, NonEmptyList}
 import cats.instances.int._
 import cats.instances.string._
@@ -27,20 +25,20 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import play.api.libs.json.{Format, Json}
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
+import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.http.HttpClient
+import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount, NsiTransactions, Transactions}
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount, NsiTransactions, Transactions}
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting, Result}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
-import HttpClient.HttpClientOps
-import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 

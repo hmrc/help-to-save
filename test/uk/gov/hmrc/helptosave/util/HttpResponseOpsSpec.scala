@@ -19,11 +19,8 @@ package uk.gov.hmrc.helptosave.util
 import play.api.libs.json.{Format, JsValue, Json}
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{TestData, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.helptosave.utils.TestData
-
-import scala.util.Right
 
 class HttpResponseOpsSpec extends TestSupport with TestData {
 

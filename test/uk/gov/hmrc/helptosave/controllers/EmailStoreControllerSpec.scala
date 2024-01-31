@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
 import cats.data.EitherT
 import cats.instances.future._
 import play.api.libs.json.Json
@@ -31,6 +29,7 @@ import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
 
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 class EmailStoreControllerSpec extends AuthSupport {

@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.util.UUID
-
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.config.AppConfig
@@ -26,6 +24,7 @@ import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[BarsConnectorImpl])

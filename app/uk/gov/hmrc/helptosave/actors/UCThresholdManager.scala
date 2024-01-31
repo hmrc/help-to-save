@@ -16,21 +16,20 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import java.time.LocalTime
+import akka.actor.{Actor, ActorRef, Cancellable, Props, Scheduler}
+import akka.pattern.{ask, pipe}
+import akka.util.Timeout
 import cats.instances.double._
 import cats.syntax.eq._
-import configs.syntax._
-import akka.actor.{Actor, ActorRef, Cancellable, Props, Scheduler}
-import uk.gov.hmrc.helptosave.actors.UCThresholdManager._
-import akka.pattern.pipe
-import akka.pattern.ask
-import akka.util.Timeout
 import com.typesafe.config.Config
+import configs.syntax._
+import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxyActor.{GetThresholdValue => GetDESThresholdValue, GetThresholdValueResponse => GetDESThresholdValueResponse}
+import uk.gov.hmrc.helptosave.actors.UCThresholdManager._
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting, Time, WithExponentialBackoffRetry}
 
-import scala.concurrent.duration._
+import java.time.LocalTime
 import scala.concurrent.Future
-import UCThresholdConnectorProxyActor.{GetThresholdValue => GetDESThresholdValue, GetThresholdValueResponse => GetDESThresholdValueResponse}
+import scala.concurrent.duration._
 
 class UCThresholdManager(
   thresholdConnectorProxyActor: ActorRef,

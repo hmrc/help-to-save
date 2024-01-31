@@ -28,8 +28,8 @@ import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
-import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats.Implicits.objectIdFormat
+import uk.gov.hmrc.mongo.test.MongoSupport
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

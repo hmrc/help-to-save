@@ -1,6 +1,6 @@
 import helpers.IntegrationSpecBase
-import helpers.WiremockHelper._
 import helpers.TestData._
+import helpers.WiremockHelper._
 import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.http.Status._
 import play.api.libs.json.Json

@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.pattern.pipe
 import akka.actor.{Actor, Props}
+import akka.pattern.pipe
 import play.api.http.Status
 import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxyActor.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.models.UCThreshold
+import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 
 import scala.concurrent.Future
 

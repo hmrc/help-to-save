@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.LocalDate
-
 import play.api.libs.json.{Json, Reads}
+
+import java.time.LocalDate
 
 case class NsiCurrentInvestmentMonth(
   investmentRemaining: BigDecimal,

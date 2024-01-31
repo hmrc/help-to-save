@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.Json
@@ -28,6 +26,7 @@ import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.helptosave.util.Logging._
 
+import java.util.Base64
 import scala.concurrent.ExecutionContext
 
 class PayePersonalDetailsController @Inject()(

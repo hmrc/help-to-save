@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
 import configs.syntax._
 import org.scalamock.handlers.CallHandler4
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
@@ -27,6 +25,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.auth.core.{AuthProviders, Enrolment, Enrolments}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 trait StrideAuthSupport extends AuthSupport {

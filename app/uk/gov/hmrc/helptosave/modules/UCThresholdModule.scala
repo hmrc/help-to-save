@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import java.time.{Clock, ZoneId}
-
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.{TimeCalculatorImpl, UCThresholdConnectorProxyActor, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
+
+import java.time.{Clock, ZoneId}
 
 class UCThresholdModule extends AbstractModule {
 

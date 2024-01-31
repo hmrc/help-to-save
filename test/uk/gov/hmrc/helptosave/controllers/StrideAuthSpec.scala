@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
 import play.api.Configuration
-import play.api.mvc.Results._
 import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.Results._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
@@ -32,6 +30,7 @@ import uk.gov.hmrc.helptosave.controllers.StrideAuthSpec.NotLoggedInException
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 class StrideAuthSpec extends TestSupport {

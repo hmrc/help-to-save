@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.concurrent.TimeUnit
-
 import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
@@ -37,6 +35,7 @@ import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import java.util.Base64
-
 import com.typesafe.config.ConfigFactory
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
+import java.util.Base64
 import scala.util.{Random, Success}
 
 class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {

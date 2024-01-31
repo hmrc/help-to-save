@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import java.time.LocalDate
-
 import uk.gov.hmrc.helptosave.models._
+
+import java.time.LocalDate
 
 trait TestData {
 

@@ -17,8 +17,9 @@
 package uk.gov.hmrc.helptosave
 
 import cats.data.EitherT
-import scala.language.implicitConversions
+
 import scala.concurrent.Future
+import scala.language.implicitConversions
 import scala.util.matching.Regex
 
 package object util {

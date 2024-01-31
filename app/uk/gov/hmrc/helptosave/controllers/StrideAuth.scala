@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
 import configs.syntax._
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
@@ -27,6 +25,7 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)(

@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.pattern.ask
 import akka.actor.{ActorIdentity, ActorRef, ActorSystem, Identify}
+import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import uk.gov.hmrc.helptosave.utils.TestSupport

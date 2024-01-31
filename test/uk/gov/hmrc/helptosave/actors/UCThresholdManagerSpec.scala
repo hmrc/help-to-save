@@ -16,19 +16,19 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import java.time._
-import java.time.format.DateTimeFormatter
-import akka.pattern.ask
 import akka.actor.{ActorRef, Cancellable}
+import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestScheduler.JobScheduledOnce
-import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.{TestScheduler, TestTimeCalculator}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestTimeCalculator._
+import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.{TestScheduler, TestTimeCalculator}
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 
+import java.time._
+import java.time.format.DateTimeFormatter
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 

@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.time.LocalDate
-import java.util.UUID
-
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalamock.function.MockFunction5
@@ -32,6 +29,8 @@ import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProvider
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.LocalDate
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 class TransactionsControllerSpec extends AuthSupport {

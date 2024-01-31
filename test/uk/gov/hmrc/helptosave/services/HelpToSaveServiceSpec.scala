@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import cats.data.EitherT
@@ -41,6 +39,7 @@ import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 

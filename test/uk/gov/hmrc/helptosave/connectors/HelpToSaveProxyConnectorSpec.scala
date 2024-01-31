@@ -16,19 +16,18 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.time.LocalDate
-import java.util.UUID
-
 import org.scalatest.EitherValues
 import play.api.libs.json.{JsValue, Json}
 import play.mvc.Http.Status._
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
-import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.HttpResponse
 
+import java.time.LocalDate
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 

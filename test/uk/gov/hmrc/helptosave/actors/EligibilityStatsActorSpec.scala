@@ -16,22 +16,21 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import java.time.Clock
-
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.codahale.metrics.{Counter, Gauge, Timer}
+import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.{GetStats, GetStatsResponse}
+import uk.gov.hmrc.helptosave.actors.EligibilityStatsParser.Table
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.EligibilityStatsStore
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
-import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
-import uk.gov.hmrc.helptosave.actors.EligibilityStatsParser.Table
 
+import java.time.Clock
 import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.concurrent.duration._

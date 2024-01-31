@@ -33,7 +33,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.LocalDate
-
 import scala.concurrent.ExecutionContext
 
 trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with BeforeAndAfterEach {

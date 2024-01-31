@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import java.time._
-
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
+import java.time._
 import scala.concurrent.duration._
 
 // scalastyle:off magic.number

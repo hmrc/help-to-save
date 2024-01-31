@@ -16,19 +16,17 @@
 
 package uk.gov.hmrc.helptosave.config
 
-import configs.syntax._
 import com.google.inject.Singleton
 import com.typesafe.config.ConfigRenderOptions
-
-import javax.inject.Inject
-import play.api.Mode
+import configs.syntax._
 import play.api.libs.json.Json
-import play.api.{Configuration, Environment}
+import play.api.{Configuration, Environment, Mode}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import scala.jdk.CollectionConverters._
+import javax.inject.Inject
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.CollectionConverters._
 
 @Singleton
 class AppConfig @Inject()(

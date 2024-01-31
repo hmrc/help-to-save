@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.{LocalDate, YearMonth}
-
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.instances.string._
@@ -25,6 +23,8 @@ import cats.syntax.apply._
 import cats.syntax.eq._
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.util.Logging
+
+import java.time.{LocalDate, YearMonth}
 
 case class BonusTerm(
   bonusEstimate: BigDecimal,

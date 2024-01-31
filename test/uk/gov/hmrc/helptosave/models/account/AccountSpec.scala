@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.{LocalDate, YearMonth}
-
-import cats.data.{NonEmptyList, ValidatedNel}
 import cats.data.Validated.{Invalid, Valid}
+import cats.data.{NonEmptyList, ValidatedNel}
 import uk.gov.hmrc.helptosave.utils.TestSupport
+
+import java.time.{LocalDate, YearMonth}
 
 // scalastyle:off magic.number
 class AccountSpec extends TestSupport {

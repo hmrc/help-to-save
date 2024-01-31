@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
 import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
+
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 case class NSIPayload(
   forename: String,

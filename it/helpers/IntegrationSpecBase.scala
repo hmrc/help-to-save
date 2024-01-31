@@ -17,7 +17,6 @@
 package helpers
 
 import akka.http.scaladsl.model.HttpResponse
-import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import helpers.WiremockHelper.stubPost
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
@@ -30,7 +29,7 @@ import play.api.http.Status
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import play.api.{Application, Environment, Mode}
-import uk.gov.hmrc.helptosave.repo.{EnrolmentStore, MongoEnrolmentStore, MongoUserCapStore}
+import uk.gov.hmrc.helptosave.repo.{MongoEnrolmentStore, MongoUserCapStore}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 
 import scala.concurrent.duration.Duration

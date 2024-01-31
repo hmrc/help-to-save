@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import java.time.LocalDate
-
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ManuallyEnteredDetails, PrePopulatedUserData}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.audit.EventKeys._
+
+import java.time.LocalDate
 
 class HtsEventSpec extends TestSupport {
 

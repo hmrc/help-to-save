@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import java.time.LocalDate
-
 import com.typesafe.config.ConfigFactory
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.models.UserCapResponse
@@ -26,6 +24,7 @@ import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.time.LocalDate
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 

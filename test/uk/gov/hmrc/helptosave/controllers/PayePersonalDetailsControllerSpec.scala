@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.UUID
-
 import cats.data.EitherT
 import cats.instances.future._
 import play.api.libs.json.Json
@@ -31,6 +29,7 @@ import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestData
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout with TestData {

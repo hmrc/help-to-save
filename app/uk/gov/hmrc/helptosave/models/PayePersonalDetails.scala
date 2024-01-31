@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
 import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
-import uk.gov.hmrc.helptosave.util.JsLookupHelper._
 import uk.gov.hmrc.helptosave.models.CallingCodes.callingCodes
 import uk.gov.hmrc.helptosave.models.CountryCode.countryCodes
+import uk.gov.hmrc.helptosave.util.JsLookupHelper._
+
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 case class PayePersonalDetails(name: Name, dateOfBirth: LocalDate, address: Address, phoneNumber: Option[String])
 

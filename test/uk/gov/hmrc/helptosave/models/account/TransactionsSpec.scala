@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.LocalDate
-
 import cats.data.NonEmptyList
 import cats.data.Validated.{Invalid, Valid}
 import uk.gov.hmrc.helptosave.utils.TestSupport
+
+import java.time.LocalDate
 
 class TransactionsSpec extends TestSupport {
 

@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import java.time.LocalDate
-
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails._
 import uk.gov.hmrc.helptosave.utils.{TestData, TestSupport}
+
+import java.time.LocalDate
 
 class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:off magic.number
 

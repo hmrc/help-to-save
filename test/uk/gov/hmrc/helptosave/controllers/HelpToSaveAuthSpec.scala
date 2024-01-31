@@ -22,7 +22,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.auth.core.AuthorisationException.fromString
 import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
 import uk.gov.hmrc.auth.core.retrieve._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino => v2Nino, authProviderId => v2AuthProviderId}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId => v2AuthProviderId, nino => v2Nino}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 
 import scala.concurrent.Future

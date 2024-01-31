@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import java.util.UUID
-
 import org.scalamock.handlers.CallHandler4
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Request
@@ -29,6 +27,7 @@ import uk.gov.hmrc.helptosave.util.{NINO, UnitSpec}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {

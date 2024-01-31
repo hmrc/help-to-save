@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import java.time.Clock
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import configs.syntax._
@@ -29,6 +28,7 @@ import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.helptosave.util.lock.Lock
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
+import java.time.Clock
 import scala.concurrent.duration.FiniteDuration
 
 class EligibilityStatsModule extends AbstractModule {

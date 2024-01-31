@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import cats.syntax.eq._
 import cats.instances.long._
+import cats.syntax.eq._
+
 import scala.annotation.tailrec
 
 object Time {

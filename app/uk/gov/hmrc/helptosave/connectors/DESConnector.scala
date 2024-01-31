@@ -21,10 +21,10 @@ import cats.syntax.show._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue, Writes}
 import uk.gov.hmrc.helptosave.config.AppConfig
+import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.models.UCResponse
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
-import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}

@@ -20,9 +20,9 @@ import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.ReturnDocument
 import org.bson.types.ObjectId
-import org.mongodb.scala.model.Filters.{and, empty, exists, or, regex}
+import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.{BulkWriteOptions, Filters, FindOneAndUpdateOptions, IndexModel, IndexOptions, UpdateOneModel, UpdateOptions, Updates}
+import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -35,6 +35,7 @@ import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -341,7 +342,6 @@ class MongoEnrolmentStore @Inject()(val mongo: MongoComponent, metrics: Metrics)
 }
 
 object MongoEnrolmentStore {
-
   private[repo] case class EnrolmentData(
     nino: String,
     itmpHtSFlag: Boolean,
@@ -352,9 +352,7 @@ object MongoEnrolmentStore {
     _id: Option[ObjectId] = None)
 
   private[repo] object EnrolmentData {
-    import uk.gov.hmrc.mongo.play.json.formats.MongoFormats.Implicits.objectIdFormat
-
+    implicit val objectIdFormat: Format[ObjectId] = MongoFormats.Implicits.objectIdFormat
     implicit val ninoFormat: Format[EnrolmentData] = Json.format[EnrolmentData]
   }
-
 }

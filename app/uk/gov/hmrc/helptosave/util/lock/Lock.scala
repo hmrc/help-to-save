@@ -19,8 +19,8 @@ package uk.gov.hmrc.helptosave.util.lock
 import akka.actor.{Actor, Cancellable, Props, Scheduler}
 import akka.pattern.pipe
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.helptosave.util.lock.LockProvider.TimePeriodLockProvider
 import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.helptosave.util.lock.LockProvider.TimePeriodLockProvider
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.concurrent.Future

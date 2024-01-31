@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.LocalDate
-
 import cats.Eq
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, ValidatedNel}
@@ -27,6 +25,8 @@ import cats.syntax.apply._
 import cats.syntax.eq._
 import cats.syntax.traverse._
 import play.api.libs.json.{JsString, JsValue, Json, Writes}
+
+import java.time.LocalDate
 
 sealed trait Operation
 case object Credit extends Operation

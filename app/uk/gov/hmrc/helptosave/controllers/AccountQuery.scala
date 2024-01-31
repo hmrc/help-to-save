@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.UUID
-
 import cats.instances.future._
 import cats.instances.string._
 import cats.syntax.eq._
@@ -28,6 +26,7 @@ import uk.gov.hmrc.helptosave.util
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 
 case class NsiAccountQueryParams(nino: String, systemId: String, correlationId: String)
