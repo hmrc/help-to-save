@@ -29,27 +29,28 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 /**
- * This is an `Actor` which handles changing of state when a lock is acquired or a lock
- * is released. On start-up the `Lock` will try to acquire a lock using the given `LockProvider`.
- * If successful `onLockAcquired` is called on the `initialState`. Otherwise `onLockReleased` is
- * called on the `initialState`. The state is updated at this point.  When the lock duration defined
- * in the `LockProvider` has passed this `Actor` will try to acquire/renew a lock again. If successful
- * `onLockAcquired` is called on the current state. Otherwise `onLockReleased` is called on the
- * current state. This continues until the `Actor` dies.
- *
- * The actor will register a release of the lock using the `registerStopHook` function. For Play applications
- * the appropriate function is the `addStopHook` from the injectable `ApplicationLifecycle`. If this release
- * is successful `onLockReleased` is called.
- *
- * N.B.: If the process of trying to acquire/renew a lock fails for any reason the state is not changed.
- */
-class Lock[State](lock:             LockProvider,
-                  scheduler:        Scheduler,
-                  initialState:     State,
-                  onLockAcquired:   State => State,
-                  onLockReleased:   State => State,
-                  registerStopHook: (() => Future[Unit]) => Unit
-) extends Actor with Logging {
+  * This is an `Actor` which handles changing of state when a lock is acquired or a lock
+  * is released. On start-up the `Lock` will try to acquire a lock using the given `LockProvider`.
+  * If successful `onLockAcquired` is called on the `initialState`. Otherwise `onLockReleased` is
+  * called on the `initialState`. The state is updated at this point.  When the lock duration defined
+  * in the `LockProvider` has passed this `Actor` will try to acquire/renew a lock again. If successful
+  * `onLockAcquired` is called on the current state. Otherwise `onLockReleased` is called on the
+  * current state. This continues until the `Actor` dies.
+  *
+  * The actor will register a release of the lock using the `registerStopHook` function. For Play applications
+  * the appropriate function is the `addStopHook` from the injectable `ApplicationLifecycle`. If this release
+  * is successful `onLockReleased` is called.
+  *
+  * N.B.: If the process of trying to acquire/renew a lock fails for any reason the state is not changed.
+  */
+class Lock[State](
+  lock: LockProvider,
+  scheduler: Scheduler,
+  initialState: State,
+  onLockAcquired: State => State,
+  onLockReleased: State => State,
+  registerStopHook: (() => Future[Unit]) => Unit)
+    extends Actor with Logging {
 
   import Lock.LockMessages._
   import context.dispatcher
@@ -62,9 +63,10 @@ class Lock[State](lock:             LockProvider,
 
   override def receive: Receive = {
     case AcquireLock =>
-      val result = lock.tryToAcquireOrRenewLock[Unit](toFuture(()))
+      val result = lock
+        .tryToAcquireOrRenewLock[Unit](toFuture(()))
         .map(result => AcquireLockResult(result.isDefined))
-        .recover{ case NonFatal(e) => AcquireLockFailure(e) }
+        .recover { case NonFatal(e) => AcquireLockFailure(e) }
 
       result pipeTo self
 
@@ -88,7 +90,7 @@ class Lock[State](lock:             LockProvider,
     super.preStart()
 
     // release the lock when the application shuts down
-    registerStopHook{ () =>
+    registerStopHook { () =>
       if (lockAcquired) {
         lock.releaseLock().onComplete {
           case Success(_) =>
@@ -107,21 +109,22 @@ class Lock[State](lock:             LockProvider,
 object Lock {
 
   /**
-   * These props uses the `ExclusiveTimePeriodLock` to implement the
-   * `LockProvider` behaviour required by the `Lock` actor
-   */
-  def props[State](mongoLockRepository: MongoLockRepository,
-                   lockID:              String,
-                   lockDuration:        FiniteDuration,
-                   scheduler:           Scheduler,
-                   initialState:        State,
-                   onLockAcquired:      State => State,
-                   onLockReleased:      State => State,
-                   lifecycle:           ApplicationLifecycle): Props = {
+    * These props uses the `ExclusiveTimePeriodLock` to implement the
+    * `LockProvider` behaviour required by the `Lock` actor
+    */
+  def props[State](
+    mongoLockRepository: MongoLockRepository,
+    lockID: String,
+    lockDuration: FiniteDuration,
+    scheduler: Scheduler,
+    initialState: State,
+    onLockAcquired: State => State,
+    onLockReleased: State => State,
+    lifecycle: ApplicationLifecycle): Props = {
 
     val lockProvider: TimePeriodLockProvider = TimePeriodLockProvider(
-      repo        = mongoLockRepository,
-      lockId      = lockID,
+      repo = mongoLockRepository,
+      lockId = lockID,
       holdLockFor = org.joda.time.Duration.millis(lockDuration.toMillis).getMillis.millis)
 
     Props(new Lock(lockProvider, scheduler, initialState, onLockAcquired, onLockReleased, lifecycle.addStopHook))
@@ -137,4 +140,3 @@ object Lock {
   }
 
 }
-

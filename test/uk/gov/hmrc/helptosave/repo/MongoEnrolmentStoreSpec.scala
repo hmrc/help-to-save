@@ -37,9 +37,8 @@ import scala.concurrent.duration._
 class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
 
   val repository: MongoEnrolmentStore = fakeApplication.injector.instanceOf[MongoEnrolmentStore]
-  override def beforeEach(): Unit = {
+  override def beforeEach(): Unit =
     await(repository.collection.drop().toFuture())
-  }
 
   val ninoDifferentSuffix = "AE123456B"
 
@@ -50,13 +49,20 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
   private val duration: FiniteDuration = 15.seconds
 
-  def create(nino: NINO, itmpNeedsUpdate: Boolean, eligibilityReason: Option[Int], channel: String, store: MongoEnrolmentStore,
-             accountNumber: Option[String], deleteFlag: Option[Boolean]): Either[String, Unit] =
-    Await.result(store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber, deleteFlag).value, duration)
+  def create(
+    nino: NINO,
+    itmpNeedsUpdate: Boolean,
+    eligibilityReason: Option[Int],
+    channel: String,
+    store: MongoEnrolmentStore,
+    accountNumber: Option[String],
+    deleteFlag: Option[Boolean]): Either[String, Unit] =
+    Await.result(
+      store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber, deleteFlag).value,
+      duration)
 
-  def updateDeleteFlag(ninos: Seq[NINODeletionConfig], revertSoftDelete: Boolean, store: MongoEnrolmentStore) = {
+  def updateDeleteFlag(ninos: Seq[NINODeletionConfig], revertSoftDelete: Boolean, store: MongoEnrolmentStore) =
     Await.result(store.updateDeleteFlag(ninos, revertSoftDelete).value, duration)
-  }
 
   "The MongoEnrolmentStore" when {
     "creating" must {
@@ -66,12 +72,13 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
       }
     }
 
-      def get(nino: NINO, store: MongoEnrolmentStore): Either[String, Status] = Await.result(store.get(nino).value, duration)
+    def get(nino: NINO, store: MongoEnrolmentStore): Either[String, Status] =
+      Await.result(store.get(nino).value, duration)
 
     "updating" must {
 
-        def update(nino: NINO, itmpNeedsUpdate: Boolean, store: MongoEnrolmentStore): Either[String, Unit] =
-          Await.result(store.updateItmpFlag(nino, itmpNeedsUpdate).value, 5.seconds)
+      def update(nino: NINO, itmpNeedsUpdate: Boolean, store: MongoEnrolmentStore): Either[String, Unit] =
+        Await.result(store.updateItmpFlag(nino, itmpNeedsUpdate).value, 5.seconds)
 
       "update the mongodb collection" in {
         val nino = randomNINO()
@@ -95,8 +102,8 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
     "getting" must {
 
-        def get(nino: NINO, store: MongoEnrolmentStore): Either[String, Status] =
-          Await.result(store.get(nino).value, 50.seconds)
+      def get(nino: NINO, store: MongoEnrolmentStore): Either[String, Status] =
+        Await.result(store.get(nino).value, 50.seconds)
 
       "attempt to find the entry in the collection based on the input nino" in {
         val nino = randomNINO()
@@ -222,8 +229,9 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
   object EnrolmentDocId {
     implicit val format: Format[EnrolmentDocId] = {
-      ((__ \ "_id").format[ObjectId] and (__ \ "nino").format[String] and (__ \ "deleteFlag").formatNullable[Boolean]) (
-        EnrolmentDocId.apply, doc => (doc._id, doc.nino, doc.deleteFlag)
+      ((__ \ "_id").format[ObjectId] and (__ \ "nino").format[String] and (__ \ "deleteFlag").formatNullable[Boolean])(
+        EnrolmentDocId.apply,
+        doc => (doc._id, doc.nino, doc.deleteFlag)
       )
     }
   }

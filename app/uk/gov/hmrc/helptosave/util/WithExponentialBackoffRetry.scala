@@ -25,12 +25,12 @@ import scala.concurrent.duration._
 trait WithExponentialBackoffRetry { this: Actor =>
 
   def exponentialBackoffRetry[RetryMessage, T](
-      minBackoff:        FiniteDuration,
-      maxBackoff:        FiniteDuration,
-      exponentialFactor: Double,
-      recipient:         ActorRef,
-      message:           T => RetryMessage,
-      scheduler:         Scheduler
+    minBackoff: FiniteDuration,
+    maxBackoff: FiniteDuration,
+    exponentialFactor: Double,
+    recipient: ActorRef,
+    message: T => RetryMessage,
+    scheduler: Scheduler
   ): ExponentialBackoffRetry[RetryMessage, T] =
     ExponentialBackoffRetry(minBackoff, maxBackoff, exponentialFactor, recipient, message, scheduler)
 
@@ -39,12 +39,12 @@ trait WithExponentialBackoffRetry { this: Actor =>
 object WithExponentialBackoffRetry {
 
   private[util] case class ExponentialBackoffRetry[RetryMessage, T](
-      minBackoff:        FiniteDuration,
-      maxBackoff:        FiniteDuration,
-      exponentialFactor: Double,
-      recipient:         ActorRef,
-      message:           T => RetryMessage,
-      scheduler:         Scheduler
+    minBackoff: FiniteDuration,
+    maxBackoff: FiniteDuration,
+    exponentialFactor: Double,
+    recipient: ActorRef,
+    message: T => RetryMessage,
+    scheduler: Scheduler
   ) {
     private val minMillis: Double = minBackoff.toMillis.toDouble
     private val maxMillis: Double = maxBackoff.toMillis.toDouble
@@ -53,27 +53,27 @@ object WithExponentialBackoffRetry {
     private var retryJob: Option[Cancellable] = None
 
     /**
-     * Calculate the next retry time based on an exponential backoff strategy. The initial retry time is
-     * [[minBackoff]]. The retry times exponentially increase to the value of [[maxBackoff]]. The rate at which the
-     * [[maxBackoff]] value is reached is determined by [[exponentialFactor]].
-     *
-     * Let `m` be [[minBackoff]], and `M` be [[maxBackoff]] and `c` be [[exponentialFactor]]. Then the next retry time
-     * is given by:
-     * {{{
-     *   t(n) = (m-M)e^(-cn) + M
-     * }}}
-     * where `n = 0,1,2,3,...`
-     *
-     */
+      * Calculate the next retry time based on an exponential backoff strategy. The initial retry time is
+      * [[minBackoff]]. The retry times exponentially increase to the value of [[maxBackoff]]. The rate at which the
+      * [[maxBackoff]] value is reached is determined by [[exponentialFactor]].
+      *
+      * Let `m` be [[minBackoff]], and `M` be [[maxBackoff]] and `c` be [[exponentialFactor]]. Then the next retry time
+      * is given by:
+      * {{{
+      *   t(n) = (m-M)e^(-cn) + M
+      * }}}
+      * where `n = 0,1,2,3,...`
+      *
+      */
     private def nextSendTime(): FiniteDuration = {
       val millis = (minMillis - maxMillis) * math.exp(-exponentialFactor * numberOfRetries.toDouble) + maxMillis
       millis.millis.min(maxBackoff)
     }
 
-    def retry(b: T)(implicit ec: ExecutionContext): Option[FiniteDuration] = {
+    def retry(b: T)(implicit ec: ExecutionContext): Option[FiniteDuration] =
       if (!isActive) {
         val nextTime = nextSendTime()
-        retryJob = Some(scheduler.scheduleOnce(nextTime){
+        retryJob = Some(scheduler.scheduleOnce(nextTime) {
           recipient ! message(b)
           retryJob = None
         })
@@ -83,7 +83,6 @@ object WithExponentialBackoffRetry {
       } else {
         None
       }
-    }
 
     def cancelAndReset(): Unit = {
       retryJob.foreach(_.cancel())
@@ -99,17 +98,17 @@ object WithExponentialBackoffRetry {
   private[util] object ExponentialBackoffRetry {
 
     /**
-     * Creates an [[ExponentialBackoffRetry]] where the constant term `exponentialFactor` is calculated from
-     * `numberOfRetriesUntilInitialWaitDoubles` in such a way that the retry time after `numberOfRetriesUntilInitialWaitDoubles`
-     * retries is double the inital value
-     */
+      * Creates an [[ExponentialBackoffRetry]] where the constant term `exponentialFactor` is calculated from
+      * `numberOfRetriesUntilInitialWaitDoubles` in such a way that the retry time after `numberOfRetriesUntilInitialWaitDoubles`
+      * retries is double the inital value
+      */
     def apply[RetryMessage, T](
-        minBackoff:                             FiniteDuration,
-        maxBackoff:                             FiniteDuration,
-        numberOfRetriesUntilInitialWaitDoubles: Int,
-        recipient:                              ActorRef,
-        message:                                T => RetryMessage,
-        scheduler:                              Scheduler
+      minBackoff: FiniteDuration,
+      maxBackoff: FiniteDuration,
+      numberOfRetriesUntilInitialWaitDoubles: Int,
+      recipient: ActorRef,
+      message: T => RetryMessage,
+      scheduler: Scheduler
     ): ExponentialBackoffRetry[RetryMessage, T] = {
       val minMillis = minBackoff.toMillis.toDouble
       val maxMillis = maxBackoff.toMillis.toDouble
@@ -130,4 +129,3 @@ object WithExponentialBackoffRetry {
   }
 
 }
-

@@ -35,9 +35,9 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggAuthorisedWithNINO" must {
 
-        def callAuth = htsAuth.ggAuthorisedWithNino { _ => _ =>
-          Future.successful(Ok("authSuccess"))
-        }
+      def callAuth = htsAuth.ggAuthorisedWithNino { _ => _ =>
+        Future.successful(Ok("authSuccess"))
+      }
 
       "return after successful authentication" in {
 
@@ -55,20 +55,21 @@ class HelpToSaveAuthSpec extends AuthSupport {
       }
 
       "handle various auth related exceptions and throw an error" in {
-          def mockAuthWith(error: String): Unit = mockAuth(AuthWithCL200, v2Nino)(Left(fromString(error)))
+        def mockAuthWith(error: String): Unit = mockAuth(AuthWithCL200, v2Nino)(Left(fromString(error)))
 
         val exceptions = List(
           "InsufficientConfidenceLevel" -> Status.FORBIDDEN,
-          "InsufficientEnrolments" -> Status.FORBIDDEN,
-          "UnsupportedAffinityGroup" -> Status.FORBIDDEN,
-          "UnsupportedCredentialRole" -> Status.FORBIDDEN,
-          "UnsupportedAuthProvider" -> Status.FORBIDDEN,
-          "BearerTokenExpired" -> Status.UNAUTHORIZED,
-          "MissingBearerToken" -> Status.UNAUTHORIZED,
-          "InvalidBearerToken" -> Status.UNAUTHORIZED,
-          "SessionRecordNotFound" -> Status.UNAUTHORIZED,
+          "InsufficientEnrolments"      -> Status.FORBIDDEN,
+          "UnsupportedAffinityGroup"    -> Status.FORBIDDEN,
+          "UnsupportedCredentialRole"   -> Status.FORBIDDEN,
+          "UnsupportedAuthProvider"     -> Status.FORBIDDEN,
+          "BearerTokenExpired"          -> Status.UNAUTHORIZED,
+          "MissingBearerToken"          -> Status.UNAUTHORIZED,
+          "InvalidBearerToken"          -> Status.UNAUTHORIZED,
+          "SessionRecordNotFound"       -> Status.UNAUTHORIZED,
           "IncorrectCredentialStrength" -> Status.FORBIDDEN,
-          "unknown-blah" -> Status.INTERNAL_SERVER_ERROR)
+          "unknown-blah"                -> Status.INTERNAL_SERVER_ERROR
+        )
 
         exceptions.foreach {
           case (error, expectedStatus) =>
@@ -81,9 +82,9 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggOrPrivilegedAuthorised" must {
 
-        def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { _ =>
-          Future.successful(Ok("authSuccess"))
-        }
+      def callAuthNoRetrievals = htsAuth.ggOrPrivilegedAuthorised { _ =>
+        Future.successful(Ok("authSuccess"))
+      }
 
       "return after successful auth" in {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
@@ -96,9 +97,9 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
     "handling ggOrPrivilegedAuthorisedWithNINO" when {
 
-        def callAuth(nino: Option[String]) = htsAuth.ggOrPrivilegedAuthorisedWithNINO(nino) { _ => _ =>
-          Future.successful(Ok("authSuccess"))
-        }
+      def callAuth(nino: Option[String]) = htsAuth.ggOrPrivilegedAuthorisedWithNINO(nino) { _ => _ =>
+        Future.successful(Ok("authSuccess"))
+      }
 
       "handling GG requests" when {
 
@@ -169,7 +170,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
       "handling requests from other AuthProviders" must {
 
         "return a Forbidden" in {
-          List[LegacyCredentials](VerifyPid(""), OneTimeLogin).foreach{ cred =>
+          List[LegacyCredentials](VerifyPid(""), OneTimeLogin).foreach { cred =>
             mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(cred))
             status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
           }

@@ -12,6 +12,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(majorVersion := 2)
   .settings(CodeCoverageSettings.settings *)
   .settings(scalaVersion := "2.13.8")
+  .settings(scalafmtOnCompile := true)
   .settings(PlayKeys.playDefaultPort := 7001)
   .settings(
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test()
@@ -19,10 +20,11 @@ lazy val microservice = Project(appName, file("."))
   .configs(IntegrationTest)
   .settings(inConfig(IntegrationTest)(Defaults.itSettings) *)
   .settings(
-    IntegrationTest / Keys.fork  := false,
+    IntegrationTest / Keys.fork := false,
     IntegrationTest / unmanagedSourceDirectories := Seq((IntegrationTest / baseDirectory).value / "it"),
     addTestReportOption(IntegrationTest, "int-test-reports"),
-    IntegrationTest / parallelExecution  := false)
+    IntegrationTest / parallelExecution := false
+  )
   .settings(scalacOptions += "-Wconf:src=routes/.*:s")
 
 libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always

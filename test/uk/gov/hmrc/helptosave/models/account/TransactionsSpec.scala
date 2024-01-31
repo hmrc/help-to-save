@@ -25,13 +25,13 @@ import uk.gov.hmrc.helptosave.utils.TestSupport
 class TransactionsSpec extends TestSupport {
 
   private val nsiCreditTransaction = NsiTransaction(
-    sequence             = "1",
-    amount               = BigDecimal("1.23"),
-    operation            = "C",
-    description          = "description",
+    sequence = "1",
+    amount = BigDecimal("1.23"),
+    operation = "C",
+    description = "description",
     transactionReference = "reference",
-    transactionDate      = LocalDate.parse("1900-01-01"),
-    accountingDate       = LocalDate.parse("1900-01-02")
+    transactionDate = LocalDate.parse("1900-01-01"),
+    accountingDate = LocalDate.parse("1900-01-02")
   )
   private val validNsiCreditTransaction = ValidNsiTransaction(
     1,
@@ -71,18 +71,21 @@ class TransactionsSpec extends TestSupport {
       }
 
       "return an Invalid for an unknown operation" in {
-        ValidNsiTransaction(nsiInvalidOperationTransaction) shouldBe Invalid(NonEmptyList.one(
-          """Unknown value for operation: "X""""
-        ))
+        ValidNsiTransaction(nsiInvalidOperationTransaction) shouldBe Invalid(
+          NonEmptyList.one(
+            """Unknown value for operation: "X""""
+          ))
       }
 
       "return an Invalid for a sequence that cannot be parsed as an integer" in {
-        ValidNsiTransaction(nsiCreditTransaction.copy(sequence = "one")) shouldBe Invalid(NonEmptyList.one(
-          """Can't parse sequence value as an integer: "one""""
-        ))
-        ValidNsiTransaction(nsiCreditTransaction.copy(sequence = "1.1")) shouldBe Invalid(NonEmptyList.one(
-          """Can't parse sequence value as an integer: "1.1""""
-        ))
+        ValidNsiTransaction(nsiCreditTransaction.copy(sequence = "one")) shouldBe Invalid(
+          NonEmptyList.one(
+            """Can't parse sequence value as an integer: "one""""
+          ))
+        ValidNsiTransaction(nsiCreditTransaction.copy(sequence = "1.1")) shouldBe Invalid(
+          NonEmptyList.one(
+            """Can't parse sequence value as an integer: "1.1""""
+          ))
       }
     }
   }
@@ -90,12 +93,17 @@ class TransactionsSpec extends TestSupport {
   "Transactions object" when { // scalastyle:off magic.number
     "creating a new Transactions from a NsiTransactions" must {
       "return transactions details when input transactions are all valid" in {
-        val nsiTransactions = NsiTransactions(Seq(nsiCreditTransaction, nsiCreditTransaction.copy(sequence = "2"), nsiDebitTransaction.copy(sequence = "3")))
-        val expectedTransactions = Transactions(Seq(
-          creditTransaction.copy(balanceAfter = BigDecimal("1.23")),
-          creditTransaction.copy(balanceAfter = BigDecimal("2.46")),
-          debitTransaction.copy(balanceAfter = BigDecimal("1.23"))
-        ))
+        val nsiTransactions = NsiTransactions(
+          Seq(
+            nsiCreditTransaction,
+            nsiCreditTransaction.copy(sequence = "2"),
+            nsiDebitTransaction.copy(sequence = "3")))
+        val expectedTransactions = Transactions(
+          Seq(
+            creditTransaction.copy(balanceAfter = BigDecimal("1.23")),
+            creditTransaction.copy(balanceAfter = BigDecimal("2.46")),
+            debitTransaction.copy(balanceAfter = BigDecimal("1.23"))
+          ))
         Transactions(nsiTransactions) shouldBe Valid(expectedTransactions)
       }
 
@@ -107,36 +115,47 @@ class TransactionsSpec extends TestSupport {
 
       "handle a 1-element transaction list" in {
         val nsiTransactions = NsiTransactions(Seq(nsiDebitTransaction))
-        val expectedTransactions = Transactions(Seq(debitTransaction.copy(balanceAfter = 0 - validNsiDebitTransaction.amount)))
+        val expectedTransactions =
+          Transactions(Seq(debitTransaction.copy(balanceAfter = 0 - validNsiDebitTransaction.amount)))
         Transactions(nsiTransactions) shouldBe Valid(expectedTransactions)
       }
 
       "sort transactions by sequence number" in {
-        val nsiTransactions = NsiTransactions(Seq(
-          nsiCreditTransaction.copy(sequence       = "5", accountingDate = LocalDate.parse("2018-04-10"), amount = BigDecimal(5)),
-          nsiCreditTransaction.copy(sequence       = "3", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(3)),
-          nsiCreditTransaction.copy(sequence       = "4", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(4)),
-          nsiDebitTransaction.copy(sequence       = "2", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(2)),
-          nsiCreditTransaction.copy(sequence       = "1", accountingDate = LocalDate.parse("2017-11-20"), amount = BigDecimal(1))
-        ))
+        val nsiTransactions = NsiTransactions(
+          Seq(
+            nsiCreditTransaction
+              .copy(sequence = "5", accountingDate = LocalDate.parse("2018-04-10"), amount = BigDecimal(5)),
+            nsiCreditTransaction
+              .copy(sequence = "3", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(3)),
+            nsiCreditTransaction
+              .copy(sequence = "4", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(4)),
+            nsiDebitTransaction
+              .copy(sequence = "2", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(2)),
+            nsiCreditTransaction
+              .copy(sequence = "1", accountingDate = LocalDate.parse("2017-11-20"), amount = BigDecimal(1))
+          ))
 
-        Transactions(nsiTransactions).bimap(errors => fail(errors.toList.mkString(", ")), { transactions =>
-          transactions.transactions.map(_.amount) shouldBe List(
-            BigDecimal(1),
-            BigDecimal(2),
-            BigDecimal(3),
-            BigDecimal(4),
-            BigDecimal(5)
-          )
-        })
+        Transactions(nsiTransactions).bimap(
+          errors => fail(errors.toList.mkString(", ")), { transactions =>
+            transactions.transactions.map(_.amount) shouldBe List(
+              BigDecimal(1),
+              BigDecimal(2),
+              BigDecimal(3),
+              BigDecimal(4),
+              BigDecimal(5)
+            )
+          }
+        )
       }
 
       "return an Invalid when any input transactions are invalid" in {
-        val nsiTransactions = NsiTransactions(Seq(nsiCreditTransaction, nsiInvalidOperationTransaction, nsiInvalidOperationTransaction2))
-        Transactions(nsiTransactions) shouldBe Invalid(NonEmptyList.of(
-          """Unknown value for operation: "X"""",
-          """Unknown value for operation: """""
-        ))
+        val nsiTransactions =
+          NsiTransactions(Seq(nsiCreditTransaction, nsiInvalidOperationTransaction, nsiInvalidOperationTransaction2))
+        Transactions(nsiTransactions) shouldBe Invalid(
+          NonEmptyList.of(
+            """Unknown value for operation: "X"""",
+            """Unknown value for operation: """""
+          ))
       }
     }
   }

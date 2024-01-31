@@ -30,12 +30,14 @@ import uk.gov.hmrc.helptosave.util.{Logging, Time}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 
-class EligibilityStatsActor(scheduler:              Scheduler,
-                            config:                 Config,
-                            timeCalculator:         TimeCalculator,
-                            eligibilityStatsStore:  EligibilityStatsStore,
-                            eligibilityStatsParser: EligibilityStatsParser,
-                            metrics:                Metrics) extends Actor with Logging {
+class EligibilityStatsActor(
+  scheduler: Scheduler,
+  config: Config,
+  timeCalculator: TimeCalculator,
+  eligibilityStatsStore: EligibilityStatsStore,
+  eligibilityStatsParser: EligibilityStatsParser,
+  metrics: Metrics)
+    extends Actor with Logging {
 
   import context.dispatcher
 
@@ -45,7 +47,8 @@ class EligibilityStatsActor(scheduler:              Scheduler,
 
   // use a thread safe map as the gauges we register with require access to this
   // table as well as this actor
-  val statsTable: TrieMap[EligibilityReason, TrieMap[Source, Int]] = TrieMap.empty[EligibilityReason, TrieMap[Source, Int]]
+  val statsTable: TrieMap[EligibilityReason, TrieMap[Source, Int]] =
+    TrieMap.empty[EligibilityReason, TrieMap[Source, Int]]
 
   override def receive: Receive = {
     case GetStats =>
@@ -61,14 +64,15 @@ class EligibilityStatsActor(scheduler:              Scheduler,
   }
 
   private def updateMetrics(table: Table): Unit = {
-      def replaceSpaces(s: String) = s.replaceAll(" ", "-")
+    def replaceSpaces(s: String) = s.replaceAll(" ", "-")
 
     for ((reason, channels) <- table) {
       for ((channel, _) <- channels) {
         if (!registeredStats.contains(reason -> channel)) {
           logger.info(s"Registering gauge for (reason, channel) = ($reason, $channel) ")
           metrics.registerAccountStatsGauge(
-            replaceSpaces(reason), replaceSpaces(channel),
+            replaceSpaces(reason),
+            replaceSpaces(channel),
             () => statsTable.get(reason).flatMap(_.get(channel)).getOrElse(0)
           )
           registeredStats += reason -> channel
@@ -86,7 +90,7 @@ class EligibilityStatsActor(scheduler:              Scheduler,
 
   def updateLocalStats(table: Table): Unit = {
     statsTable.clear()
-    table.foreach{
+    table.foreach {
       case (reason, stats) =>
         statsTable.update(reason, TrieMap(stats.toList: _*))
     }
@@ -114,12 +118,20 @@ object EligibilityStatsActor {
 
   case class GetStatsResponse(result: List[EligibilityStats])
 
-  def props(scheduler:              Scheduler,
-            config:                 Config,
-            timeCalculator:         TimeCalculator,
-            eligibilityStatsStore:  EligibilityStatsStore,
-            eligibilityStatsParser: EligibilityStatsParser,
-            metrics:                Metrics): Props =
-    Props(new EligibilityStatsActor(scheduler, config, timeCalculator, eligibilityStatsStore, eligibilityStatsParser, metrics))
+  def props(
+    scheduler: Scheduler,
+    config: Config,
+    timeCalculator: TimeCalculator,
+    eligibilityStatsStore: EligibilityStatsStore,
+    eligibilityStatsParser: EligibilityStatsParser,
+    metrics: Metrics): Props =
+    Props(
+      new EligibilityStatsActor(
+        scheduler,
+        config,
+        timeCalculator,
+        eligibilityStatsStore,
+        eligibilityStatsParser,
+        metrics))
 
 }

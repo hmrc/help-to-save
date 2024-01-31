@@ -39,41 +39,24 @@ class EligibilityStatsParserSpec extends TestSupport {
 
   val table = Map(
     "3" -> Map(
-      "BLAH BLAH" -> 0,
-      "KCOM" -> 0,
-      "Stride" -> 0,
+      "BLAH BLAH"     -> 0,
+      "KCOM"          -> 0,
+      "Stride"        -> 0,
       "Stride-Manual" -> 2,
-      "Digital" -> 0,
-      "Unknown" -> 0
+      "Digital"       -> 0,
+      "Unknown"       -> 0
     ),
-    "8" -> Map(
-      "BLAH BLAH" -> 1,
-      "KCOM" -> 1,
-      "Stride" -> 0,
-      "Stride-Manual" -> 0,
-      "Digital" -> 0,
-      "Unknown" -> 0),
+    "8" -> Map("BLAH BLAH" -> 1, "KCOM" -> 1, "Stride" -> 0, "Stride-Manual" -> 0, "Digital" -> 0, "Unknown" -> 0),
     "Unknown" -> Map(
-      "BLAH BLAH" -> 0,
-      "KCOM" -> 0,
-      "Stride" -> 0,
+      "BLAH BLAH"     -> 0,
+      "KCOM"          -> 0,
+      "Stride"        -> 0,
       "Stride-Manual" -> 0,
-      "Digital" -> 1,
-      "Unknown" -> 1),
-    "7" -> Map(
-      "BLAH BLAH" -> 0,
-      "KCOM" -> 0,
-      "Stride" -> 2,
-      "Stride-Manual" -> 0,
-      "Digital" -> 0,
-      "Unknown" -> 0),
-    "6" -> Map(
-      "BLAH BLAH" -> 0,
-      "KCOM" -> 1,
-      "Stride" -> 1,
-      "Stride-Manual" -> 0,
-      "Digital" -> 1,
-      "Unknown" -> 1))
+      "Digital"       -> 1,
+      "Unknown"       -> 1),
+    "7" -> Map("BLAH BLAH" -> 0, "KCOM" -> 0, "Stride" -> 2, "Stride-Manual" -> 0, "Digital" -> 0, "Unknown" -> 0),
+    "6" -> Map("BLAH BLAH" -> 0, "KCOM" -> 1, "Stride" -> 1, "Stride-Manual" -> 0, "Digital" -> 1, "Unknown" -> 1)
+  )
 
   "The EligibilityParserHandler" when {
 
@@ -82,56 +65,56 @@ class EligibilityStatsParserSpec extends TestSupport {
       "handle stats returned from the scheduler" in {
         val message =
           """|+--------+--------------+----------+
-            ||  Reason|       Channel|     Count|
-            |+--------+--------------+----------+
-            ||       3|     BLAH BLAH|         0|
-            ||        |       Digital|         0|
-            ||        |          KCOM|         0|
-            ||        |        Stride|         0|
-            ||        | Stride-Manual|         2|
-            ||        |       Unknown|         0|
-            ||        |         Total|         2|
-            ||        |              |          |
-            ||      UC|     BLAH BLAH|         0|
-            ||        |       Digital|         1|
-            ||        |          KCOM|         1|
-            ||        |        Stride|         1|
-            ||        | Stride-Manual|         0|
-            ||        |       Unknown|         1|
-            ||        |         Total|         4|
-            ||        |              |          |
-            ||     WTC|     BLAH BLAH|         0|
-            ||        |       Digital|         0|
-            ||        |          KCOM|         0|
-            ||        |        Stride|         2|
-            ||        | Stride-Manual|         0|
-            ||        |       Unknown|         0|
-            ||        |         Total|         2|
-            ||        |              |          |
-            ||  UC&WTC|     BLAH BLAH|         1|
-            ||        |       Digital|         0|
-            ||        |          KCOM|         1|
-            ||        |        Stride|         0|
-            ||        | Stride-Manual|         0|
-            ||        |       Unknown|         0|
-            ||        |         Total|         2|
-            ||        |              |          |
-            || Unknown|     BLAH BLAH|         0|
-            ||        |       Digital|         1|
-            ||        |          KCOM|         0|
-            ||        |        Stride|         0|
-            ||        | Stride-Manual|         0|
-            ||        |       Unknown|         1|
-            ||        |         Total|         2|
-            ||        |              |          |
-            ||   Total|     BLAH BLAH|         1|
-            ||        |       Digital|         2|
-            ||        |          KCOM|         2|
-            ||        |        Stride|         3|
-            ||        | Stride-Manual|         2|
-            ||        |       Unknown|         2|
-            ||        |         Total|        12|
-            |+--------+--------------+----------+""".stripMargin
+             ||  Reason|       Channel|     Count|
+             |+--------+--------------+----------+
+             ||       3|     BLAH BLAH|         0|
+             ||        |       Digital|         0|
+             ||        |          KCOM|         0|
+             ||        |        Stride|         0|
+             ||        | Stride-Manual|         2|
+             ||        |       Unknown|         0|
+             ||        |         Total|         2|
+             ||        |              |          |
+             ||      UC|     BLAH BLAH|         0|
+             ||        |       Digital|         1|
+             ||        |          KCOM|         1|
+             ||        |        Stride|         1|
+             ||        | Stride-Manual|         0|
+             ||        |       Unknown|         1|
+             ||        |         Total|         4|
+             ||        |              |          |
+             ||     WTC|     BLAH BLAH|         0|
+             ||        |       Digital|         0|
+             ||        |          KCOM|         0|
+             ||        |        Stride|         2|
+             ||        | Stride-Manual|         0|
+             ||        |       Unknown|         0|
+             ||        |         Total|         2|
+             ||        |              |          |
+             ||  UC&WTC|     BLAH BLAH|         1|
+             ||        |       Digital|         0|
+             ||        |          KCOM|         1|
+             ||        |        Stride|         0|
+             ||        | Stride-Manual|         0|
+             ||        |       Unknown|         0|
+             ||        |         Total|         2|
+             ||        |              |          |
+             || Unknown|     BLAH BLAH|         0|
+             ||        |       Digital|         1|
+             ||        |          KCOM|         0|
+             ||        |        Stride|         0|
+             ||        | Stride-Manual|         0|
+             ||        |       Unknown|         1|
+             ||        |         Total|         2|
+             ||        |              |          |
+             ||   Total|     BLAH BLAH|         1|
+             ||        |       Digital|         2|
+             ||        |          KCOM|         2|
+             ||        |        Stride|         3|
+             ||        | Stride-Manual|         2|
+             ||        |       Unknown|         2|
+             ||        |         Total|        12|
+             |+--------+--------------+----------+""".stripMargin
 
         parser.createTable(stats) shouldBe table
         parser.prettyFormatTable(table) shouldBe message

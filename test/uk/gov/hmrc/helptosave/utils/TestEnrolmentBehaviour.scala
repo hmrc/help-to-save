@@ -41,28 +41,38 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val proxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
   def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.updateItmpFlag(_: NINO, _: Boolean)(_: HeaderCarrier))
+    (enrolmentStore
+      .updateItmpFlag(_: NINO, _: Boolean)(_: HeaderCarrier))
       .expects(nino, itmpFlag, *)
       .returning(EitherT.fromEither[Future](result))
 
-  def mockEnrolmentStoreInsert(nino: NINO, itmpFlag: Boolean, eligibilityReason: Option[Int],
-                               source: String, accountNumber: Option[String], deleteFlag: Option[Boolean] = None)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.insert(_: NINO, _: Boolean, _: Option[Int], _: String, _: Option[String], _: Option[Boolean])(_: HeaderCarrier))
+  def mockEnrolmentStoreInsert(
+    nino: NINO,
+    itmpFlag: Boolean,
+    eligibilityReason: Option[Int],
+    source: String,
+    accountNumber: Option[String],
+    deleteFlag: Option[Boolean] = None)(result: Either[String, Unit]): Unit =
+    (enrolmentStore
+      .insert(_: NINO, _: Boolean, _: Option[Int], _: String, _: Option[String], _: Option[Boolean])(_: HeaderCarrier))
       .expects(nino, itmpFlag, eligibilityReason, source, accountNumber, deleteFlag, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
-    (enrolmentStore.get(_: NINO)(_: HeaderCarrier))
+    (enrolmentStore
+      .get(_: NINO)(_: HeaderCarrier))
       .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGetAccountNumber(nino: NINO)(result: Either[String, AccountNumber]): Unit =
-    (enrolmentStore.getAccountNumber(_: NINO)(_: HeaderCarrier))
+    (enrolmentStore
+      .getAccountNumber(_: NINO)(_: HeaderCarrier))
       .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockSetFlag(nino: NINO)(result: Either[String, Unit]): Unit =
-    (helpToSaveService.setFlag(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+    (helpToSaveService
+      .setFlag(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
       .returning(EitherT.fromEither[Future](result))
 
@@ -90,7 +100,10 @@ trait TestEnrolmentBehaviour extends TestSupport {
             "systemId" : "MDTP REGISTRATION"
       }""".stripMargin
 
-  def createAccountJson(dobValue: String, detailsManuallyEntered: Boolean, communicationPreference: String = "02"): String =
+  def createAccountJson(
+    dobValue: String,
+    detailsManuallyEntered: Boolean,
+    communicationPreference: String = "02"): String =
     s"""{
            "payload":${payloadJson(dobValue, communicationPreference)},
            "eligibilityReason":7,
@@ -100,21 +113,25 @@ trait TestEnrolmentBehaviour extends TestSupport {
 
   val validUserInfoPayload = Json.parse(payloadJson("20200101"))
 
-  def validCreateAccountRequestPayload(detailsManuallyEntered:  Boolean = false,
-                                       communicationPreference: String  = "02") =
+  def validCreateAccountRequestPayload(
+    detailsManuallyEntered: Boolean = false,
+    communicationPreference: String = "02") =
     Json.parse(createAccountJson("20200101", detailsManuallyEntered, communicationPreference))
 
   val validCreateAccountRequest = validCreateAccountRequestPayload()
-    .validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion)))
+    .validate[CreateAccountRequest](
+      CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion)))
     .getOrElse(sys.error("Could not parse CreateAccountRequest"))
 
-  val validUpdateAccountRequest = validCreateAccountRequest.copy(payload = validCreateAccountRequest.payload.copy(systemId = None, version = None))
+  val validUpdateAccountRequest =
+    validCreateAccountRequest.copy(payload = validCreateAccountRequest.payload.copy(systemId = None, version = None))
 
   val validNSIUserInfo = validCreateAccountRequest.payload
 
   val account = Account(
     YearMonth.of(2018, 1),
-    "AC01", false,
+    "AC01",
+    false,
     Blocking(false, false, false),
     200.34,
     34.50,
@@ -125,9 +142,22 @@ trait TestEnrolmentBehaviour extends TestSupport {
     "Testsurname",
     Some("test@example.com"),
     List(
-      BonusTerm(bonusEstimate          = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
-      BonusTerm(bonusEstimate          = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
+      BonusTerm(
+        bonusEstimate = 123.45,
+        bonusPaid = 123.45,
+        startDate = LocalDate.parse("2018-01-01"),
+        endDate = LocalDate.parse("2019-12-31"),
+        bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")
+      ),
+      BonusTerm(
+        bonusEstimate = 67.00,
+        bonusPaid = 0.00,
+        startDate = LocalDate.parse("2020-01-01"),
+        endDate = LocalDate.parse("2021-12-31"),
+        bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01")
+      )
     ),
     None,
-    None)
+    None
+  )
 }

@@ -18,12 +18,12 @@ package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json.{Format, Json}
 
-case class UserCapResponse(isDailyCapReached:  Boolean = false,
-                           isTotalCapReached:  Boolean = false,
-                           isDailyCapDisabled: Boolean = false,
-                           isTotalCapDisabled: Boolean = false)
+case class UserCapResponse(
+  isDailyCapReached: Boolean = false,
+  isTotalCapReached: Boolean = false,
+  isDailyCapDisabled: Boolean = false,
+  isTotalCapDisabled: Boolean = false)
 
 object UserCapResponse {
   implicit val format: Format[UserCapResponse] = Json.format[UserCapResponse]
 }
-

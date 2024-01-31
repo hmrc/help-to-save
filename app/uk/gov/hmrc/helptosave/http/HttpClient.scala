@@ -32,22 +32,24 @@ object HttpClient {
   private val rawHttpReads = new RawHttpReads
 
   implicit class HttpClientOps(val http: HttpClient) extends AnyVal {
-    def get(url:         String,
-            queryParams: Map[String, String] = Map.empty[String, String],
-            headers:     Map[String, String] = Map.empty[String, String]
-    )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    def get(
+      url: String,
+      queryParams: Map[String, String] = Map.empty[String, String],
+      headers: Map[String, String] = Map.empty[String, String])(
+      implicit hc: HeaderCarrier,
+      ec: ExecutionContext): Future[HttpResponse] =
       http.GET(url, queryParams.toSeq, headers.toSeq)(rawHttpReads, hc, ec)
 
-    def post[A](url:     String,
-                body:    A,
-                headers: Map[String, String] = Map.empty[String, String]
-    )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    def post[A](url: String, body: A, headers: Map[String, String] = Map.empty[String, String])(
+      implicit w: Writes[A],
+      hc: HeaderCarrier,
+      ec: ExecutionContext): Future[HttpResponse] =
       http.POST(url, body, headers.toSeq)(w, rawHttpReads, hc, ec)
 
-    def put[A](url:     String,
-               body:    A,
-               headers: Map[String, String] = Map.empty[String, String]
-    )(implicit w: Writes[A], hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+    def put[A](url: String, body: A, headers: Map[String, String] = Map.empty[String, String])(
+      implicit w: Writes[A],
+      hc: HeaderCarrier,
+      ec: ExecutionContext): Future[HttpResponse] =
       http.PUT(url, body, headers.toSeq)(w, rawHttpReads, hc, ec)
   }
 

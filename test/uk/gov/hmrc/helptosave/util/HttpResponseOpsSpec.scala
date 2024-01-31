@@ -65,7 +65,8 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
       val data = payeDetailsNoPostCode("AE123456C")
 
       HttpResponse(200, Json.parse(data), returnHeaders).parseJsonWithoutLoggingBody[PayePersonalDetails] shouldBe
-        Left("Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
+        Left(
+          "Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
     }
   }
 }

@@ -26,8 +26,9 @@ case class NINODeletionConfig(nino: NINO, docID: Option[ObjectId] = None)
 
 object NINODeletionConfig {
   implicit val format: Format[NINODeletionConfig] = {
-    ((__ \ "nino").format[String] and (__ \ "docID").formatNullable[ObjectId]) (
-      NINODeletionConfig.apply, deletionConfig => (deletionConfig.nino, deletionConfig.docID)
+    ((__ \ "nino").format[String] and (__ \ "docID").formatNullable[ObjectId])(
+      NINODeletionConfig.apply,
+      deletionConfig => (deletionConfig.nino, deletionConfig.docID)
     )
   }
 }

@@ -19,7 +19,7 @@ package uk.gov.hmrc.helptosave.actors
 import scala.concurrent.duration.FiniteDuration
 
 private case class Task(delay: FiniteDuration, id: Long, runnable: Runnable, interval: Option[FiniteDuration])
-  extends Ordered[Task] {
+    extends Ordered[Task] {
 
   def compare(t: Task): Int =
     if (delay > t.delay) -1

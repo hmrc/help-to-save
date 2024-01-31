@@ -37,13 +37,15 @@ trait StrideAuthSupport extends AuthSupport {
       .value
       .map(s => new String(Base64.getDecoder.decode(s)))
 
-  def mockAuthorised[A](expectedPredicate: Predicate,
-                        expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
-    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
+  def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
+    result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
+    (mockAuthConnector
+      .authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
       .expects(expectedPredicate, expectedRetrieval, *, *)
       .returning(result.fold(Future.failed, Future.successful))
 
-  def mockSuccessfulAuthorisation(): CallHandler4[Predicate, Retrieval[Enrolments], HeaderCarrier, ExecutionContext, Future[Enrolments]] =
+  def mockSuccessfulAuthorisation()
+    : CallHandler4[Predicate, Retrieval[Enrolments], HeaderCarrier, ExecutionContext, Future[Enrolments]] =
     mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(
       Right(Enrolments(roles.map(Enrolment(_)).toSet)))
 }

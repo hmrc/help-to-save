@@ -51,4 +51,3 @@ class TimeCalculatorImpl(clock: Clock) extends TimeCalculator {
   }
 
 }
-

@@ -24,14 +24,16 @@ import uk.gov.hmrc.helptosave.utils.MockPagerDuty
 
 import scala.concurrent.ExecutionContext
 
-class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") with MockPagerDuty {
+class UCThresholdConnectorProxyActorSpec
+    extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") with MockPagerDuty {
   val returnHeaders = Map[String, Seq[String]]()
   val connector = mock[DESConnector]
 
   val actor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, mockPagerDuty))
 
   def mockConnectorGetValue(response: HttpResponse) =
-    (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+    (connector
+      .getThreshold()(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *)
       .returning(toFuture(response))
 
@@ -51,7 +53,8 @@ class UCThresholdConnectorProxyActorSpec extends ActorTestSupport("UCThresholdCo
 
         mockConnectorGetValue(HttpResponse(500, Json.toJson("error occurred"), returnHeaders))
 
-        (mockPagerDuty.alert(_: String))
+        (mockPagerDuty
+          .alert(_: String))
           .expects("Received unexpected http status in response to get UC threshold from DES")
           .returning(())
 

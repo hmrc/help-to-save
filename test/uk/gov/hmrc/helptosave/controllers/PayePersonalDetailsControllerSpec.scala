@@ -46,7 +46,8 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
     def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =
-      (helpToSaveService.getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
+      (helpToSaveService
+        .getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, *, *)
         .returning(EitherT.fromEither[Future](result))
 
@@ -81,7 +82,8 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
       "return with a status 500 and empty json if the pay details is NOT_FOUND in DES" in new TestApparatus {
         inSequence {
           mockSuccessfulAuthorisation()
-          mockPayeDetailsConnector(nino)(Left("Could not parse JSON response from paye-personal-details, received 200 (OK)"))
+          mockPayeDetailsConnector(nino)(
+            Left("Could not parse JSON response from paye-personal-details, received 200 (OK)"))
         }
 
         val result = doPayeDetailsRequest(controller)

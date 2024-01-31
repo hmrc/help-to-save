@@ -21,7 +21,8 @@ import scala.io.Source
 object CallingCodes {
 
   val callingCodes: Map[Int, String] = {
-    Source.fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt"))
+    Source
+      .fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt"))
       .getLines()
       .foldLeft(Map.empty[Int, String]) {
         case (acc, curr) =>

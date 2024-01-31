@@ -30,25 +30,26 @@ import uk.gov.hmrc.helptosave.util.Logging._
 
 import scala.concurrent.ExecutionContext
 
-class PayePersonalDetailsController @Inject() (val helpToSaveService: HelpToSaveService,
-                                               authConnector:         AuthConnector,
-                                               controllerComponents:  ControllerComponents)(implicit transformer: LogMessageTransformer,
-                                                                                            override val appConfig: AppConfig,
-                                                                                            ec:                     ExecutionContext)
-
-  extends StrideAuth(authConnector, controllerComponents) with EligibilityBase {
+class PayePersonalDetailsController @Inject()(
+  val helpToSaveService: HelpToSaveService,
+  authConnector: AuthConnector,
+  controllerComponents: ControllerComponents)(
+  implicit transformer: LogMessageTransformer,
+  override val appConfig: AppConfig,
+  ec: ExecutionContext)
+    extends StrideAuth(authConnector, controllerComponents) with EligibilityBase {
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
   def getPayePersonalDetails(nino: String): Action[AnyContent] = authorisedFromStride { implicit request =>
-    helpToSaveService.getPersonalDetails(nino)
+    helpToSaveService
+      .getPersonalDetails(nino)
       .fold(
         { error =>
           logger.warn(s"Could not retrieve paye-personal-details from DES: $error", nino)
           InternalServerError
-        }, {
-          r =>
-            Ok(Json.toJson(r))
+        }, { r =>
+          Ok(Json.toJson(r))
         }
       )
   }

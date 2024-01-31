@@ -29,19 +29,20 @@ import scala.util.{Failure, Success, Try}
 class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport with BeforeAndAfterEach {
 
   lazy val repository: MongoEmailStore = newMongoEmailStore(mongoComponent)
-  override def beforeEach(): Unit = {
+  override def beforeEach(): Unit =
     await(repository.collection.drop().toFuture())
-  }
 
   val crypto: Crypto = mock[Crypto]
 
   def mockEncrypt(input: String)(output: String): Unit =
-    (crypto.encrypt(_: String))
+    (crypto
+      .encrypt(_: String))
       .expects(input)
       .returning(output)
 
   def mockDecrypt(input: String)(output: Option[String]): Unit =
-    (crypto.decrypt(_: String))
+    (crypto
+      .decrypt(_: String))
       .expects(input)
       .returning(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
 
@@ -54,12 +55,12 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
     val email = "EMAIL"
     val encryptedEmail = "ENCRYPTED"
 
-      def storeConfirmedEmail(nino: NINO, email: String, emailStore: MongoEmailStore) =
-        emailStore.store(email, nino)
+    def storeConfirmedEmail(nino: NINO, email: String, emailStore: MongoEmailStore) =
+      emailStore.store(email, nino)
 
-      def getConfirmedEmail(nino: NINO, emailStore: MongoEmailStore) = emailStore.get(nino)
+    def getConfirmedEmail(nino: NINO, emailStore: MongoEmailStore) = emailStore.get(nino)
 
-      def deleteEmail(nino: NINO, emailStore: MongoEmailStore) = emailStore.delete(nino)
+    def deleteEmail(nino: NINO, emailStore: MongoEmailStore) = emailStore.delete(nino)
 
     "updating emails" must {
 
@@ -72,9 +73,9 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         }
 
         val result = for {
-          _ <- storeConfirmedEmail(nino, email, emailStore)
+          _           <- storeConfirmedEmail(nino, email, emailStore)
           storedEmail <- getConfirmedEmail(nino, emailStore)
-          _ <- deleteEmail(nino, emailStore)
+          _           <- deleteEmail(nino, emailStore)
         } yield storedEmail
 
         await(result.value) shouldBe Right(email.some)
@@ -109,8 +110,8 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
     "getting email" must {
 
-        def get(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
-          await(emailStore.get(nino).value)
+      def get(nino: NINO, emailStore: MongoEmailStore): Either[String, Option[String]] =
+        await(emailStore.get(nino).value)
 
       "return a right if the get is successful" in {
         val nino = randomNINO()

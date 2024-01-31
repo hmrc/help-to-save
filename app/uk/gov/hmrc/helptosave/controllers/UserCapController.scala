@@ -24,10 +24,11 @@ import uk.gov.hmrc.helptosave.services.UserCapService
 
 import scala.concurrent.ExecutionContext
 
-class UserCapController @Inject() (userCapService:       UserCapService,
-                                   authConnector:        AuthConnector,
-                                   controllerComponents: ControllerComponents)(implicit ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector, controllerComponents) {
+class UserCapController @Inject()(
+  userCapService: UserCapService,
+  authConnector: AuthConnector,
+  controllerComponents: ControllerComponents)(implicit ec: ExecutionContext)
+    extends HelpToSaveAuth(authConnector, controllerComponents) {
 
   def isAccountCreateAllowed: Action[AnyContent] = ggAuthorisedWithNino { _ => _ =>
     userCapService.isAccountCreateAllowed().map(userCapResponse => Ok(Json.toJson(userCapResponse)))

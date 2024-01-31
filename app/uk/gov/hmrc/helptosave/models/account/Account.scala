@@ -26,11 +26,12 @@ import cats.syntax.eq._
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.util.Logging
 
-case class BonusTerm(bonusEstimate:          BigDecimal,
-                     bonusPaid:              BigDecimal,
-                     startDate:              LocalDate,
-                     endDate:                LocalDate,
-                     bonusPaidOnOrAfterDate: LocalDate)
+case class BonusTerm(
+  bonusEstimate: BigDecimal,
+  bonusPaid: BigDecimal,
+  startDate: LocalDate,
+  endDate: LocalDate,
+  bonusPaidOnOrAfterDate: LocalDate)
 
 object BonusTerm {
   implicit val writes: Format[BonusTerm] = Json.format[BonusTerm]
@@ -42,25 +43,26 @@ object Blocking {
   implicit val writes: Format[Blocking] = Json.format[Blocking]
 }
 
-case class Account(openedYearMonth:        YearMonth,
-                   accountNumber:          String,
-                   isClosed:               Boolean,
-                   blocked:                Blocking,
-                   balance:                BigDecimal,
-                   paidInThisMonth:        BigDecimal,
-                   canPayInThisMonth:      BigDecimal,
-                   maximumPaidInThisMonth: BigDecimal,
-                   thisMonthEndDate:       LocalDate,
-                   accountHolderForename:  String,
-                   accountHolderSurname:   String,
-                   accountHolderEmail:     Option[String],
-                   bonusTerms:             Seq[BonusTerm],
-                   closureDate:            Option[LocalDate]  = None,
-                   closingBalance:         Option[BigDecimal] = None,
-                   nbaAccountNumber:       Option[String]     = None,
-                   nbaPayee:               Option[String]     = None,
-                   nbaRollNumber:          Option[String]     = None,
-                   nbaSortCode:            Option[String]     = None)
+case class Account(
+  openedYearMonth: YearMonth,
+  accountNumber: String,
+  isClosed: Boolean,
+  blocked: Blocking,
+  balance: BigDecimal,
+  paidInThisMonth: BigDecimal,
+  canPayInThisMonth: BigDecimal,
+  maximumPaidInThisMonth: BigDecimal,
+  thisMonthEndDate: LocalDate,
+  accountHolderForename: String,
+  accountHolderSurname: String,
+  accountHolderEmail: Option[String],
+  bonusTerms: Seq[BonusTerm],
+  closureDate: Option[LocalDate] = None,
+  closingBalance: Option[BigDecimal] = None,
+  nbaAccountNumber: Option[String] = None,
+  nbaPayee: Option[String] = None,
+  nbaRollNumber: Option[String] = None,
+  nbaSortCode: Option[String] = None)
 
 object Account extends Logging {
 
@@ -70,10 +72,11 @@ object Account extends Logging {
       if (paidInThisMonth >= 0) {
         Valid(paidInThisMonth)
       } else {
-        Invalid(NonEmptyList.one(s"investmentRemaining = ${nsiAccount.currentInvestmentMonth.investmentRemaining} and " +
-          s"investmentLimit = ${nsiAccount.currentInvestmentMonth.investmentLimit} " +
-          "values returned by NS&I don't make sense because they imply a negative amount paid in this month"
-        ))
+        Invalid(
+          NonEmptyList.one(
+            s"investmentRemaining = ${nsiAccount.currentInvestmentMonth.investmentRemaining} and " +
+              s"investmentLimit = ${nsiAccount.currentInvestmentMonth.investmentLimit} " +
+              "values returned by NS&I don't make sense because they imply a negative amount paid in this month"))
       }
     }
 
@@ -96,28 +99,28 @@ object Account extends Logging {
 
     val blockingValidation: ValidOrErrorString[Blocking] = nsiAccountToBlockingValidation(nsiAccount)
 
-    (paidInThisMonthValidation, accountClosedValidation, openedYearMonthValidation, blockingValidation).mapN{
+    (paidInThisMonthValidation, accountClosedValidation, openedYearMonthValidation, blockingValidation).mapN {
       case (paidInThisMonth, accountClosed, openedYearMonth, blocking) =>
         Account(
-          openedYearMonth        = openedYearMonth,
-          accountNumber          = nsiAccount.accountNumber,
-          isClosed               = accountClosed,
-          blocked                = blocking,
-          balance                = nsiAccount.accountBalance,
-          paidInThisMonth        = paidInThisMonth,
-          canPayInThisMonth      = nsiAccount.currentInvestmentMonth.investmentRemaining,
+          openedYearMonth = openedYearMonth,
+          accountNumber = nsiAccount.accountNumber,
+          isClosed = accountClosed,
+          blocked = blocking,
+          balance = nsiAccount.accountBalance,
+          paidInThisMonth = paidInThisMonth,
+          canPayInThisMonth = nsiAccount.currentInvestmentMonth.investmentRemaining,
           maximumPaidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit,
-          thisMonthEndDate       = nsiAccount.currentInvestmentMonth.endDate,
-          accountHolderForename  = nsiAccount.clientForename,
-          accountHolderSurname   = nsiAccount.clientSurname,
-          accountHolderEmail     = nsiAccount.emailAddress,
-          bonusTerms             = sortedNsiTerms.map(nsiBonusTermToBonusTerm),
-          closureDate            = nsiAccount.accountClosureDate,
-          closingBalance         = nsiAccount.accountClosingBalance,
-          nbaAccountNumber       = nsiAccount.nbaAccountNumber,
-          nbaPayee               = nsiAccount.nbaPayee,
-          nbaRollNumber          = nsiAccount.nbaRollNumber,
-          nbaSortCode            = nsiAccount.nbaSortCode
+          thisMonthEndDate = nsiAccount.currentInvestmentMonth.endDate,
+          accountHolderForename = nsiAccount.clientForename,
+          accountHolderSurname = nsiAccount.clientSurname,
+          accountHolderEmail = nsiAccount.emailAddress,
+          bonusTerms = sortedNsiTerms.map(nsiBonusTermToBonusTerm),
+          closureDate = nsiAccount.accountClosureDate,
+          closingBalance = nsiAccount.accountClosingBalance,
+          nbaAccountNumber = nsiAccount.nbaAccountNumber,
+          nbaPayee = nsiAccount.nbaPayee,
+          nbaRollNumber = nsiAccount.nbaRollNumber,
+          nbaSortCode = nsiAccount.nbaSortCode
         )
 
     }
@@ -128,28 +131,30 @@ object Account extends Logging {
   private val expectedBlockingCodes: Set[String] = Set("00", "11", "12", "13", "15", "30", "64")
 
   private def nsiAccountToBlockingValidation(nsiAccount: NsiAccount): ValidatedNel[String, Blocking] = {
-      def checkIsValidCode(code: String): ValidOrErrorString[String] =
-        if (expectedBlockingCodes.contains(code)) { Valid(code) } else { Invalid(NonEmptyList.one(s"Received unexpected blocking code: $code")) }
+    def checkIsValidCode(code: String): ValidOrErrorString[String] =
+      if (expectedBlockingCodes.contains(code)) { Valid(code) } else {
+        Invalid(NonEmptyList.one(s"Received unexpected blocking code: $code"))
+      }
 
     (checkIsValidCode(nsiAccount.accountBlockingCode), checkIsValidCode(nsiAccount.clientBlockingCode))
-      .mapN{
+      .mapN {
         case (accountBlockingCode, clientBlockingCode) =>
           def isBlockedFromPredicate(predicate: String => Boolean): Boolean =
-              predicate(accountBlockingCode) || predicate(clientBlockingCode)
+            predicate(accountBlockingCode) || predicate(clientBlockingCode)
 
           Blocking(
-            payments    = isBlockedFromPredicate(s => s =!= "00" && s =!= "11"),
+            payments = isBlockedFromPredicate(s => s =!= "00" && s =!= "11"),
             withdrawals = isBlockedFromPredicate(s => s =!= "00" && s =!= "12" && s =!= "15"),
-            bonuses     = isBlockedFromPredicate(s => s =!= "00" && s =!= "12")
+            bonuses = isBlockedFromPredicate(s => s =!= "00" && s =!= "12")
           )
       }
   }
 
   private def nsiBonusTermToBonusTerm(nsiBonusTerm: NsiBonusTerm): BonusTerm = BonusTerm(
-    bonusEstimate          = nsiBonusTerm.bonusEstimate,
-    bonusPaid              = nsiBonusTerm.bonusPaid,
-    startDate              = nsiBonusTerm.startDate,
-    endDate                = nsiBonusTerm.endDate,
+    bonusEstimate = nsiBonusTerm.bonusEstimate,
+    bonusPaid = nsiBonusTerm.bonusPaid,
+    startDate = nsiBonusTerm.startDate,
+    endDate = nsiBonusTerm.endDate,
     bonusPaidOnOrAfterDate = nsiBonusTerm.endDate.plusDays(1)
   )
 
@@ -159,4 +164,3 @@ object Account extends Logging {
 
   implicit val writes: Writes[Account] = Json.writes[Account]
 }
-

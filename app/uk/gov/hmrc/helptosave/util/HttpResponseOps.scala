@@ -33,24 +33,26 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
 
   def parseJson[A](implicit reads: Reads[A]): Either[String, A] =
     parseJsonImpl(
-      couldntReadJson  = (response, ex: Throwable) => s"Could not read http response as JSON (${ex.getMessage}). Response body was ${maskNino(response.body)}",
-      couldntParseJson = (response, e: JsError) => s"Could not parse http response JSON: ${e.prettyPrint()}. Response body was ${maskNino(response.body)}"
+      couldntReadJson = (response, ex: Throwable) =>
+        s"Could not read http response as JSON (${ex.getMessage}). Response body was ${maskNino(response.body)}",
+      couldntParseJson = (response, e: JsError) =>
+        s"Could not parse http response JSON: ${e.prettyPrint()}. Response body was ${maskNino(response.body)}"
     )
 
   def parseJsonWithoutLoggingBody[A](implicit reads: Reads[A]): Either[String, A] =
     parseJsonImpl(
-      couldntReadJson  = (_, ex: Throwable) => s"Could not read http response as JSON (${ex.getMessage})",
+      couldntReadJson = (_, ex: Throwable) => s"Could not read http response as JSON (${ex.getMessage})",
       couldntParseJson = (_, e: JsError) => s"Could not parse http response JSON: ${e.prettyPrint()}"
     )
 
   def desCorrelationId: String = response.header("CorrelationId").getOrElse("-")
 
   private def parseJsonImpl[A](
-      couldntReadJson:  (HttpResponse, Throwable) => String,
-      couldntParseJson: (HttpResponse, JsError) => String
+    couldntReadJson: (HttpResponse, Throwable) => String,
+    couldntParseJson: (HttpResponse, JsError) => String
   )(implicit reads: Reads[A]): Either[String, A] =
     for {
       jsValue <- Try(response.json).toEither.left.map(ex => couldntReadJson(response, ex))
-      result <- jsValue.validate[A].asEither.left.map(a => couldntParseJson(response, JsError(a)))
+      result  <- jsValue.validate[A].asEither.left.map(a => couldntParseJson(response, JsError(a)))
     } yield result
 }

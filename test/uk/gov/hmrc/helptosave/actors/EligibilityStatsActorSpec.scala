@@ -54,21 +54,23 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
     val config = ConfigFactory.parseString(
       """
-         |eligibility-stats {
-         |    enabled = true
-         |    initial-delay  = 5 minutes
-         |    frequency = 1 hour
-         |}
+        |eligibility-stats {
+        |    enabled = true
+        |    initial-delay  = 5 minutes
+        |    frequency = 1 hour
+        |}
     """.stripMargin
     )
 
-    val actor = system.actorOf(EligibilityStatsActor.props(
-      system.scheduler,
-      config,
-      timeCalculator,
-      new TestEligibilityStatsStore(eligibilityStatsStoreListener.ref),
-      new TestEligibilityStatsParser(eligibilityStatsParserListener.ref),
-      new MockMetrics(metricsListener.ref)))
+    val actor = system.actorOf(
+      EligibilityStatsActor.props(
+        system.scheduler,
+        config,
+        timeCalculator,
+        new TestEligibilityStatsStore(eligibilityStatsStoreListener.ref),
+        new TestEligibilityStatsParser(eligibilityStatsParserListener.ref),
+        new MockMetrics(metricsListener.ref)
+      ))
   }
 
   object TestApparatus {
@@ -90,9 +92,8 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
     }
 
     class TestEligibilityStatsStore(reportTo: ActorRef) extends EligibilityStatsStore {
-      def getEligibilityStats: Future[List[EligibilityStats]] = {
+      def getEligibilityStats: Future[List[EligibilityStats]] =
         (reportTo ? GetStats).mapTo[GetStatsResponse].map(_.result)
-      }
     }
 
     class TestEligibilityStatsParser(reportTo: ActorRef) extends EligibilityStatsParserImpl {
@@ -121,24 +122,22 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
   "EligibilityStatsActor" when {
     "retrieving the stats from mongo store" must {
 
-        def checkRegisteredGauges(metricsListener: TestProbe,
-                                  expectedGauges:  List[(String, Int)]
-        ): Unit = {
-            @tailrec
-            def loop(remaining: List[(String, Int)]): Unit = remaining match {
-              case Nil =>
-                metricsListener.expectNoMessage()
+      def checkRegisteredGauges(metricsListener: TestProbe, expectedGauges: List[(String, Int)]): Unit = {
+        @tailrec
+        def loop(remaining: List[(String, Int)]): Unit = remaining match {
+          case Nil =>
+            metricsListener.expectNoMessage()
 
-              case l =>
-                val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
-                val entry @ (_, count) =
-                  l.find(_._1 === registered.name).getOrElse(fail(s"Encountered unexpected gauge name: ${registered.name}"))
-                registered.gauge.getValue shouldBe count
-                loop(l.filterNot(_ === entry))
-            }
-
-          loop(expectedGauges)
+          case l =>
+            val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
+            val entry @ (_, count) =
+              l.find(_._1 === registered.name).getOrElse(fail(s"Encountered unexpected gauge name: ${registered.name}"))
+            registered.gauge.getValue shouldBe count
+            loop(l.filterNot(_ === entry))
         }
+
+        loop(expectedGauges)
+      }
 
       "handle stats returned from mongo" in new TestApparatus {
         val stats = List(EligibilityStats(Some(1), Some("some source"), 2))
@@ -192,4 +191,3 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
     }
   }
 }
-

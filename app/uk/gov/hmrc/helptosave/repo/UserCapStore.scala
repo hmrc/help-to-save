@@ -38,31 +38,32 @@ trait UserCapStore {
 }
 
 @Singleton
-class MongoUserCapStore @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
-  extends PlayMongoRepository[UserCap](
-    mongoComponent = mongo,
-    collectionName = "usercap",
-    domainFormat   = UserCap.userCapFormat,
-    indexes        = Seq(IndexModel(ascending("usercap"), IndexOptions().name("usercapIndex")))
-  )
-  with UserCapStore {
+class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[UserCap](
+      mongoComponent = mongo,
+      collectionName = "usercap",
+      domainFormat = UserCap.userCapFormat,
+      indexes = Seq(IndexModel(ascending("usercap"), IndexOptions().name("usercapIndex")))
+    ) with UserCapStore {
 
-  private[repo] def doFind(): Future[Option[UserCap]] = collection.find().headOption() //collection.find(BSONDocument(), None).one[UserCap]
+  private[repo] def doFind(): Future[Option[UserCap]] =
+    collection.find().headOption() //collection.find(BSONDocument(), None).one[UserCap]
 
   override def get(): Future[Option[UserCap]] = doFind()
 
-  private[repo] def doUpdate(userCap: UserCap): Future[Option[UserCap]] = {
-    collection.findOneAndUpdate(
-      filter  = BsonDocument(),
-      update  = Updates.combine(
-        Updates.set("date", dateFormat.format(userCap.date)),
-        Updates.set("dailyCount", userCap.dailyCount),
-        Updates.set("totalCount", userCap.totalCount)
-      ),
-      options = FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
-    ).toFutureOption()
-
-  }
+  private[repo] def doUpdate(userCap: UserCap): Future[Option[UserCap]] =
+    collection
+      .findOneAndUpdate(
+        filter = BsonDocument(),
+        update = Updates.combine(
+          Updates.set("date", dateFormat.format(userCap.date)),
+          Updates.set("dailyCount", userCap.dailyCount),
+          Updates.set("totalCount", userCap.totalCount)
+        ),
+        options =
+          FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
+      )
+      .toFutureOption()
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)
 }

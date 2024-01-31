@@ -21,13 +21,13 @@ import java.time.LocalDate
 import play.api.libs.json.{Json, Reads}
 
 case class NsiTransaction(
-    sequence:             String,
-    operation:            String,
-    amount:               BigDecimal,
-    transactionDate:      LocalDate,
-    accountingDate:       LocalDate,
-    description:          String,
-    transactionReference: String
+  sequence: String,
+  operation: String,
+  amount: BigDecimal,
+  transactionDate: LocalDate,
+  accountingDate: LocalDate,
+  description: String,
+  transactionReference: String
 )
 
 object NsiTransaction {

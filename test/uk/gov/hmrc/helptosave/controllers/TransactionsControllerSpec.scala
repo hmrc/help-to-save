@@ -40,30 +40,39 @@ class TransactionsControllerSpec extends AuthSupport {
 
   val controller = new TransactionsController(mockProxyConnector, mockAuthConnector, testCC)
 
-  val transactions = Transactions(Seq(
-    Transaction(
-      operation            = Credit,
-      amount               = BigDecimal("1.23"),
-      transactionDate      = LocalDate.parse("2018-06-08"),
-      accountingDate       = LocalDate.parse("2018-06-08"),
-      description          = "Debit card online deposit",
-      transactionReference = "A1A11AA1A00A0034",
-      balanceAfter         = BigDecimal("1.23"))
-  ))
+  val transactions = Transactions(
+    Seq(
+      Transaction(
+        operation = Credit,
+        amount = BigDecimal("1.23"),
+        transactionDate = LocalDate.parse("2018-06-08"),
+        accountingDate = LocalDate.parse("2018-06-08"),
+        description = "Debit card online deposit",
+        transactionReference = "A1A11AA1A00A0034",
+        balanceAfter = BigDecimal("1.23")
+      )
+    ))
 
   val queryString = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
 
   val fakeRequest = FakeRequest("GET", s"/nsi-account?$queryString")
 
-  def mockGetTransactions(nino: String, systemId: String, correlationId: Option[String])(response: Either[String, Option[Transactions]]): Unit = {
-    val call: MockFunction5[String, String, String, HeaderCarrier, ExecutionContext, EitherT[Future, String, Option[Transactions]]] =
+  def mockGetTransactions(nino: String, systemId: String, correlationId: Option[String])(
+    response: Either[String, Option[Transactions]]): Unit = {
+    val call: MockFunction5[
+      String,
+      String,
+      String,
+      HeaderCarrier,
+      ExecutionContext,
+      EitherT[Future, String, Option[Transactions]]] =
       mockProxyConnector.getTransactions(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext)
 
     val callHandler = correlationId.fold(
       call.expects(nino, systemId, *, *, *)
-    ){ id =>
-        call.expects(nino, systemId, id, *, *)
-      }
+    ) { id =>
+      call.expects(nino, systemId, id, *, *)
+    }
 
     callHandler.returning(EitherT.fromEither(response))
   }
@@ -75,7 +84,7 @@ class TransactionsControllerSpec extends AuthSupport {
       val systemId = "system"
 
       "handle success responses" in {
-        testWithGGAndPrivilegedAccess{ mockAuth =>
+        testWithGGAndPrivilegedAccess { mockAuth =>
           inSequence {
             mockAuth()
             mockGetTransactions(nino, systemId, None)(Right(Some(transactions)))

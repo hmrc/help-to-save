@@ -24,28 +24,30 @@ import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 
-case class NSIPayload(forename:            String,
-                      surname:             String,
-                      dateOfBirth:         LocalDate,
-                      nino:                String,
-                      contactDetails:      ContactDetails,
-                      registrationChannel: String,
-                      nbaDetails:          Option[BankDetails],
-                      version:             Option[String],
-                      systemId:            Option[String])
+case class NSIPayload(
+  forename: String,
+  surname: String,
+  dateOfBirth: LocalDate,
+  nino: String,
+  contactDetails: ContactDetails,
+  registrationChannel: String,
+  nbaDetails: Option[BankDetails],
+  version: Option[String],
+  systemId: Option[String])
 
 object NSIPayload {
 
-  case class ContactDetails(address1:                String,
-                            address2:                String,
-                            address3:                Option[String],
-                            address4:                Option[String],
-                            address5:                Option[String],
-                            postcode:                String,
-                            countryCode:             Option[String],
-                            phoneNumber:             Option[String] = None,
-                            email:                   Option[String] = None,
-                            communicationPreference: String)
+  case class ContactDetails(
+    address1: String,
+    address2: String,
+    address3: Option[String],
+    address4: Option[String],
+    address5: Option[String],
+    postcode: String,
+    countryCode: Option[String],
+    phoneNumber: Option[String] = None,
+    email: Option[String] = None,
+    communicationPreference: String)
 
   implicit val dateFormat: Format[LocalDate] = {
     val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
@@ -56,18 +58,28 @@ object NSIPayload {
 
   implicit val nsiPayloadWrites: Writes[NSIPayload] = Json.writes[NSIPayload]
 
-  def nsiPayloadReads(version: Option[String]): Reads[NSIPayload] = Reads[NSIPayload]{ jsValue =>
+  def nsiPayloadReads(version: Option[String]): Reads[NSIPayload] = Reads[NSIPayload] { jsValue =>
     for {
-      forename <- (jsValue \ "forename").validate[String]
-      surname <- (jsValue \ "surname").validate[String]
-      dateOfBirth <- (jsValue \ "dateOfBirth").validate[LocalDate]
-      nino <- (jsValue \ "nino").validate[String]
-      contactDetails <- (jsValue \ "contactDetails").validate[ContactDetails]
+      forename            <- (jsValue \ "forename").validate[String]
+      surname             <- (jsValue \ "surname").validate[String]
+      dateOfBirth         <- (jsValue \ "dateOfBirth").validate[LocalDate]
+      nino                <- (jsValue \ "nino").validate[String]
+      contactDetails      <- (jsValue \ "contactDetails").validate[ContactDetails]
       registrationChannel <- (jsValue \ "registrationChannel").validate[String]
-      nbaDetails <- (jsValue \ "nbaDetails").validateOpt[BankDetails]
-      bankDetails <- (jsValue \ "bankDetails").validateOpt[BankDetails]
-      systemId <- (jsValue \ "systemId").validateOpt[String]
-    } yield NSIPayload(forename, surname, dateOfBirth, nino, contactDetails, registrationChannel, nbaDetails.orElse(bankDetails), version, systemId)
+      nbaDetails          <- (jsValue \ "nbaDetails").validateOpt[BankDetails]
+      bankDetails         <- (jsValue \ "bankDetails").validateOpt[BankDetails]
+      systemId            <- (jsValue \ "systemId").validateOpt[String]
+    } yield
+      NSIPayload(
+        forename,
+        surname,
+        dateOfBirth,
+        nino,
+        contactDetails,
+        registrationChannel,
+        nbaDetails.orElse(bankDetails),
+        version,
+        systemId)
   }
 
 }

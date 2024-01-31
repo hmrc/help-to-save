@@ -34,32 +34,37 @@ trait EnrolmentBehaviour {
 
   val helpToSaveService: HelpToSaveService
 
-  def setITMPFlagAndUpdateMongo(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = for {
-    _ <- helpToSaveService.setFlag(nino)
-    _ <- enrolmentStore.updateItmpFlag(nino, itmpFlag = true)
-  } yield ()
+  def setITMPFlagAndUpdateMongo(
+    nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] =
+    for {
+      _ <- helpToSaveService.setFlag(nino)
+      _ <- enrolmentStore.updateItmpFlag(nino, itmpFlag = true)
+    } yield ()
 
   def setAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     enrolmentStore.updateWithAccountNumber(nino, accountNumber)
 
-  def enrolUser(createAccountRequest: CreateAccountRequest, accountNumber: Option[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] = {
+  def enrolUser(createAccountRequest: CreateAccountRequest, accountNumber: Option[String])(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): EitherT[Future, String, Unit] =
     if (createAccountRequest.source === "Stride-Manual") { //HTS-1403: set the itmpFlag to true in mongo straightaway without actually calling ITMP
-      enrolmentStore.insert(createAccountRequest.payload.nino,
-                            itmpFlag = true,
-                            createAccountRequest.eligibilityReason,
-                            createAccountRequest.source,
-                            accountNumber,
-                            None)
+      enrolmentStore.insert(
+        createAccountRequest.payload.nino,
+        itmpFlag = true,
+        createAccountRequest.eligibilityReason,
+        createAccountRequest.source,
+        accountNumber,
+        None)
     } else {
       for {
-        _ <- enrolmentStore.insert(createAccountRequest.payload.nino,
-                                   itmpFlag = false,
-                                   createAccountRequest.eligibilityReason,
-                                   createAccountRequest.source,
-                                   accountNumber,
-                                   None)
+        _ <- enrolmentStore.insert(
+              createAccountRequest.payload.nino,
+              itmpFlag = false,
+              createAccountRequest.eligibilityReason,
+              createAccountRequest.source,
+              accountNumber,
+              None)
         _ <- setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
       } yield ()
     }
-  }
 }

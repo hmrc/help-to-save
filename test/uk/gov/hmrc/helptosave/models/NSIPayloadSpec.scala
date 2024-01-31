@@ -30,8 +30,8 @@ class NSIPayloadSpec extends AnyWordSpec with Matchers {
     "have a reads instance" which {
 
       "correctly sets the version" in {
-          def json(bankDetailsFieldName: String): String =
-            s"""
+        def json(bankDetailsFieldName: String): String =
+          s"""
              |{
              |  "forename" : "forename",
              |  "surname" : "surname",
@@ -52,19 +52,20 @@ class NSIPayloadSpec extends AnyWordSpec with Matchers {
              |  "systemId" : "systemId"
              |}""".stripMargin
 
-        List[Option[String]](Some("version"), None).foreach{ version =>
-          withClue(s"For version $version"){
-            val expectedResult = JsSuccess(NSIPayload(
-              "forename",
-              "surname",
-              LocalDate.of(1970, 1, 1),
-              "nino",
-              ContactDetails("address1", "address2", None, None, None, "postcode", None, None, None, "preference"),
-              "channel",
-              Some(BankDetails("123456", "12345678", None, "accountName")),
-              version,
-              Some("systemId")
-            ))
+        List[Option[String]](Some("version"), None).foreach { version =>
+          withClue(s"For version $version") {
+            val expectedResult = JsSuccess(
+              NSIPayload(
+                "forename",
+                "surname",
+                LocalDate.of(1970, 1, 1),
+                "nino",
+                ContactDetails("address1", "address2", None, None, None, "postcode", None, None, None, "preference"),
+                "channel",
+                Some(BankDetails("123456", "12345678", None, "accountName")),
+                version,
+                Some("systemId")
+              ))
 
             NSIPayload.nsiPayloadReads(version).reads(Json.parse(json("nbaDetails"))) shouldBe expectedResult
             NSIPayload.nsiPayloadReads(version).reads(Json.parse(json("bankDetails"))) shouldBe expectedResult

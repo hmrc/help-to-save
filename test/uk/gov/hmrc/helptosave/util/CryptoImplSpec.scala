@@ -36,9 +36,8 @@ class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
       new String(Base64.getEncoder.encode(bytes))
     }
 
-    val encrypter = new CryptoImpl(Configuration(ConfigFactory.parseString(
-      s"""
-        | crypto.encryption-key = "$key"
+    val encrypter = new CryptoImpl(Configuration(ConfigFactory.parseString(s"""
+                                                                              | crypto.encryption-key = "$key"
       """.stripMargin)))
 
     "correctly encrypt and decrypt the data given" in {
@@ -68,8 +67,8 @@ class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
     }
 
     "return an error when there are errors decrypting" in {
-      forAll{ s: String =>
-        whenever(s.nonEmpty){
+      forAll { s: String =>
+        whenever(s.nonEmpty) {
           encrypter.decrypt(s).isFailure shouldBe true
         }
       }

@@ -40,23 +40,21 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
 
   lazy val additionalConfig = Configuration()
 
-  def buildFakeApplication(extraConfig: Configuration): Application = {
+  def buildFakeApplication(extraConfig: Configuration): Application =
     new GuiceApplicationBuilder()
-      .configure(Configuration(
-        ConfigFactory.parseString(
-          """
-              | metrics.jvm = false
-              | metrics.enabled = true
-              | mongo-async-driver.akka.loglevel = ERROR
-              | uc-threshold.ask-timeout = 10 seconds
-              | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule",
-              | "play.modules.reactivemongo.ReactiveMongoHmrcModule",
-              |  "play.api.mvc.CookiesModule" ]
+      .configure(
+        Configuration(
+          ConfigFactory.parseString("""
+                                      | metrics.jvm = false
+                                      | metrics.enabled = true
+                                      | mongo-async-driver.akka.loglevel = ERROR
+                                      | uc-threshold.ask-timeout = 10 seconds
+                                      | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule",
+                                      | "play.modules.reactivemongo.ReactiveMongoHmrcModule",
+                                      |  "play.api.mvc.CookiesModule" ]
             """.stripMargin)
-      ).withFallback(extraConfig)
-      )
+        ).withFallback(extraConfig))
       .build()
-  }
 
   lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
 
@@ -100,39 +98,37 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
 
   implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
 
-  val nsiAccountJson = Json.parse(
-    """
-      |{
-      |  "accountNumber": "AC01",
-      |  "accountBalance": "200.34",
-      |  "accountClosedFlag": "",
-      |  "accountBlockingCode": "00",
-      |  "clientBlockingCode": "00",
-      |  "currentInvestmentMonth": {
-      |    "investmentRemaining": "15.50",
-      |    "investmentLimit": "50.00",
-      |    "endDate": "2018-02-28"
-      |  },
-      |  "clientForename":"Testforename",
-      |  "clientSurname":"Testsurname",
-      |  "emailAddress":"test@example.com",
-      |  "terms": [
-      |     {
-      |       "termNumber":2,
-      |       "startDate":"2020-01-01",
-      |       "endDate":"2021-12-31",
-      |       "bonusEstimate":"67.00",
-      |       "bonusPaid":"0.00"
-      |    },
-      |    {
-      |       "termNumber":1,
-      |       "startDate":"2018-01-01",
-      |       "endDate":"2019-12-31",
-      |       "bonusEstimate":"123.45",
-      |       "bonusPaid":"123.45"
-      |    }
-      |  ]
-      |}
+  val nsiAccountJson = Json.parse("""
+                                    |{
+                                    |  "accountNumber": "AC01",
+                                    |  "accountBalance": "200.34",
+                                    |  "accountClosedFlag": "",
+                                    |  "accountBlockingCode": "00",
+                                    |  "clientBlockingCode": "00",
+                                    |  "currentInvestmentMonth": {
+                                    |    "investmentRemaining": "15.50",
+                                    |    "investmentLimit": "50.00",
+                                    |    "endDate": "2018-02-28"
+                                    |  },
+                                    |  "clientForename":"Testforename",
+                                    |  "clientSurname":"Testsurname",
+                                    |  "emailAddress":"test@example.com",
+                                    |  "terms": [
+                                    |     {
+                                    |       "termNumber":2,
+                                    |       "startDate":"2020-01-01",
+                                    |       "endDate":"2021-12-31",
+                                    |       "bonusEstimate":"67.00",
+                                    |       "bonusPaid":"0.00"
+                                    |    },
+                                    |    {
+                                    |       "termNumber":1,
+                                    |       "startDate":"2018-01-01",
+                                    |       "endDate":"2019-12-31",
+                                    |       "bonusEstimate":"123.45",
+                                    |       "bonusPaid":"123.45"
+                                    |    }
+                                    |  ]
+                                    |}
     """.stripMargin).as[JsObject]
 }
-

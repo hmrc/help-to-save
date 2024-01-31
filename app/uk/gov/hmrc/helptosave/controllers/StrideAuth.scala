@@ -29,16 +29,17 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class StrideAuth(htsAuthConnector:     AuthConnector,
-                 controllerComponents: ControllerComponents)(implicit val appConfig: AppConfig)
-  extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
+class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)(
+  implicit val appConfig: AppConfig)
+    extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
 
   override def authConnector: AuthConnector = htsAuthConnector
 
   private val (standardRoles, secureRoles): (List[String], List[String]) = {
     val decoder = Base64.getDecoder
 
-      def getRoles(key: String): List[String] = appConfig.runModeConfiguration.underlying
+    def getRoles(key: String): List[String] =
+      appConfig.runModeConfiguration.underlying
         .get[List[String]](key)
         .value
         .map(s => new String(decoder.decode(s)))
@@ -51,20 +52,22 @@ class StrideAuth(htsAuthConnector:     AuthConnector,
     standardRoles.exists(enrolmentKeys.contains) || secureRoles.exists(enrolmentKeys.contains)
   }
 
-  def authorisedFromStride(action: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
+  def authorisedFromStride(action: Request[AnyContent] => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      authorised(AuthProviders(PrivilegedApplication)).retrieve(allEnrolments) {
-        enrolments =>
+      authorised(AuthProviders(PrivilegedApplication))
+        .retrieve(allEnrolments) { enrolments =>
           if (roleMatch(enrolments)) {
             action(request)
           } else {
             Unauthorized("Insufficient roles")
           }
-      }.recover {
-        case _: NoActiveSession =>
-          logger.warn("user is not logged in via stride, probably a hack?")
-          Unauthorized
-      }
+        }
+        .recover {
+          case _: NoActiveSession =>
+            logger.warn("user is not logged in via stride, probably a hack?")
+            Unauthorized
+        }
     }
 
 }

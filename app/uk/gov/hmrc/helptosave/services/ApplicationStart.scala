@@ -29,10 +29,12 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 @Singleton
-class ApplicationStart @Inject() (appConfig:        AppConfig,
-                                  enrolmentStore:   EnrolmentStore,
-                                  executionContext: ExecutionContext,
-                                  audit:            HTSAuditor) extends Logging {
+class ApplicationStart @Inject()(
+  appConfig: AppConfig,
+  enrolmentStore: EnrolmentStore,
+  executionContext: ExecutionContext,
+  audit: HTSAuditor)
+    extends Logging {
 
   implicit val ec: ExecutionContext = executionContext
 
@@ -59,14 +61,19 @@ class ApplicationStart @Inject() (appConfig:        AppConfig,
   }
 
   private def publishAuditEventForNINOs(auditType: String, managedConfigs: Seq[NINODeletionConfig]) = {
-    val ninos = managedConfigs.map(enrolment => Json.obj(
-      "nino" -> enrolment.nino,
-      "docId" -> enrolment.docID.map(_.toHexString)
-    )).toList
-    audit.auditConnector.sendExtendedEvent(ExtendedDataEvent(
-      appConfig.appName,
-      auditType,
-      detail = Json.toJson(ninos)
-    ))
+    val ninos = managedConfigs
+      .map(
+        enrolment =>
+          Json.obj(
+            "nino"  -> enrolment.nino,
+            "docId" -> enrolment.docID.map(_.toHexString)
+        ))
+      .toList
+    audit.auditConnector.sendExtendedEvent(
+      ExtendedDataEvent(
+        appConfig.appName,
+        auditType,
+        detail = Json.toJson(ninos)
+      ))
   }
 }

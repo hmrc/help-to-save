@@ -39,69 +39,74 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore,
-                                      emailStore:                 EmailStore,
-                                      proxyConnector:             HelpToSaveProxyConnector,
-                                      userCapService:             UserCapService,
-                                      val helpToSaveService:      HelpToSaveService,
-                                      override val authConnector: AuthConnector,
-                                      auditor:                    HTSAuditor,
-                                      barsService:                BarsService,
-                                      controllerComponents:       ControllerComponents)(
-    implicit
-    transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector, controllerComponents) with EligibilityBase with EnrolmentBehaviour {
+class HelpToSaveController @Inject()(
+  val enrolmentStore: EnrolmentStore,
+  emailStore: EmailStore,
+  proxyConnector: HelpToSaveProxyConnector,
+  userCapService: UserCapService,
+  val helpToSaveService: HelpToSaveService,
+  override val authConnector: AuthConnector,
+  auditor: HTSAuditor,
+  barsService: BarsService,
+  controllerComponents: ControllerComponents)(
+  implicit
+  transformer: LogMessageTransformer,
+  appConfig: AppConfig,
+  ec: ExecutionContext)
+    extends HelpToSaveAuth(authConnector, controllerComponents) with EligibilityBase with EnrolmentBehaviour {
 
-  def createAccount(): Action[AnyContent] = ggOrPrivilegedAuthorised {
-    implicit request =>
-      val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
+  def createAccount(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request =>
+    val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
 
-      request.body.asJson.map(_.validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(createAccountVersion)))) match {
-        case Some(JsSuccess(createAccountRequest, _)) =>
-          val payload = createAccountRequest.payload
-          val nino = payload.nino
+    request.body.asJson.map(_.validate[CreateAccountRequest](
+      CreateAccountRequest.createAccountRequestReads(Some(createAccountVersion)))) match {
+      case Some(JsSuccess(createAccountRequest, _)) =>
+        val payload = createAccountRequest.payload
+        val nino = payload.nino
 
-          //delete any existing emails of DE users from mongo
-          if (payload.contactDetails.communicationPreference === "00") {
-            emailStore.delete(nino).fold(
+        //delete any existing emails of DE users from mongo
+        if (payload.contactDetails.communicationPreference === "00") {
+          emailStore
+            .delete(nino)
+            .fold(
               error => {
                 logger.warn(s"couldn't delete email for DE user due to: $error", nino)
                 toFuture(InternalServerError)
               },
               _ => createAccount(createAccountRequest, additionalParams)
-            ).flatMap(identity)
-          } else {
-            createAccount(createAccountRequest, additionalParams)
-          }
+            )
+            .flatMap(identity)
+        } else {
+          createAccount(createAccountRequest, additionalParams)
+        }
 
-        case Some(error: JsError) =>
-          val errorString = error.prettyPrint()
-          logger.warn(s"Could not parse NSIUserInfo JSON in request body: $errorString")
-          BadRequest(ErrorResponse("Could not parse NSIUserInfo JSON in request", errorString).toJson())
+      case Some(error: JsError) =>
+        val errorString = error.prettyPrint()
+        logger.warn(s"Could not parse NSIUserInfo JSON in request body: $errorString")
+        BadRequest(ErrorResponse("Could not parse NSIUserInfo JSON in request", errorString).toJson())
 
-        case None =>
-          logger.warn("No JSON body found in request")
-          BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
-      }
+      case None =>
+        logger.warn("No JSON body found in request")
+        BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
+    }
   }
 
-  def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised {
-    implicit request =>
-      request.body.asJson.map(_.validate[NSIPayload](NSIPayload.nsiPayloadReads(None))) match {
-        case Some(JsSuccess(userInfo, _)) =>
-          proxyConnector.updateEmail(userInfo).map { response =>
-            Option(response.body).fold[Result](Status(response.status))(body => Status(response.status)(body))
-          }
+  def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request =>
+    request.body.asJson.map(_.validate[NSIPayload](NSIPayload.nsiPayloadReads(None))) match {
+      case Some(JsSuccess(userInfo, _)) =>
+        proxyConnector.updateEmail(userInfo).map { response =>
+          Option(response.body).fold[Result](Status(response.status))(body => Status(response.status)(body))
+        }
 
-        case Some(error: JsError) =>
-          val errorString = error.prettyPrint()
-          logger.warn(s"Could not parse NSIUserInfo JSON in request body: $errorString")
-          BadRequest(ErrorResponse("Could not parse NSIUserInfo JSON in request", errorString).toJson())
+      case Some(error: JsError) =>
+        val errorString = error.prettyPrint()
+        logger.warn(s"Could not parse NSIUserInfo JSON in request body: $errorString")
+        BadRequest(ErrorResponse("Could not parse NSIUserInfo JSON in request", errorString).toJson())
 
-        case None =>
-          logger.warn("No JSON body found in request")
-          BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
-      }
+      case None =>
+        logger.warn("No JSON body found in request")
+        BadRequest(ErrorResponse("No JSON found in request body", "").toJson())
+    }
   }
 
   def doBarsCheck(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request =>
@@ -128,8 +133,8 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     }
   }
 
-  private def createAccount(createAccountRequest: CreateAccountRequest,
-                            additionalParams:     (String, String))(implicit hc: HeaderCarrier) = {
+  private def createAccount(createAccountRequest: CreateAccountRequest, additionalParams: (String, String))(
+    implicit hc: HeaderCarrier) = {
     val payload = createAccountRequest.payload
     val nino = payload.nino
     proxyConnector.createAccount(payload).map { response =>
@@ -146,11 +151,16 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
       }
 
       if (response.status === CREATED) {
-        auditor.sendEvent(AccountCreated(payload, createAccountRequest.source, createAccountRequest.detailsManuallyEntered), nino)
+        auditor.sendEvent(
+          AccountCreated(payload, createAccountRequest.source, createAccountRequest.detailsManuallyEntered),
+          nino)
 
         userCapService.update().onComplete {
-          case Success(_) => logger.debug("Successfully updated user cap counts after account creation", nino, additionalParams)
-          case Failure(e) => logger.warn(s"Could not update user cap counts after account creation: ${e.getMessage}", nino, additionalParams)
+          case Success(_) =>
+            logger.debug("Successfully updated user cap counts after account creation", nino, additionalParams)
+          case Failure(e) =>
+            logger
+              .warn(s"Could not update user cap counts after account creation: ${e.getMessage}", nino, additionalParams)
         }
       }
 
@@ -158,10 +168,11 @@ class HelpToSaveController @Inject() (val enrolmentStore:         EnrolmentStore
     }
   }
 
-  def enrolUserAndHandleResult(createAccountRequest: CreateAccountRequest,
-                               additionalParams:     (String, String),
-                               nino:                 String,
-                               optAccountNumber:     Option[String])(implicit hc: HeaderCarrier): Unit =
+  def enrolUserAndHandleResult(
+    createAccountRequest: CreateAccountRequest,
+    additionalParams: (String, String),
+    nino: String,
+    optAccountNumber: Option[String])(implicit hc: HeaderCarrier): Unit =
     enrolUser(createAccountRequest, optAccountNumber).value.onComplete {
       case Success(Right(_)) if optAccountNumber.isDefined =>
         logger.info("User was successfully enrolled into HTS and account number was persisted", nino, additionalParams)

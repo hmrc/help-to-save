@@ -30,7 +30,8 @@ class TimeCalculatorImplTest extends AnyWordSpec with Matchers {
     // create a clock fixed a 1am
     val clock =
       Clock.fixed(
-        LocalTime.parse("01:00")
+        LocalTime
+          .parse("01:00")
           .atDate(LocalDate.ofEpochDay(0L))
           .toInstant(ZoneOffset.UTC),
         ZoneId.of("Z")

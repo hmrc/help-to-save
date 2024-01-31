@@ -44,7 +44,8 @@ class UserCapControllerSpec extends AuthSupport {
 
     "checking if account creation is allowed " should {
       "return successful result" in {
-        (userCapService.isAccountCreateAllowed()(_: ExecutionContext))
+        (userCapService
+          .isAccountCreateAllowed()(_: ExecutionContext))
           .expects(*)
           .returning(toFuture(UserCapResponse()))
 
@@ -52,7 +53,8 @@ class UserCapControllerSpec extends AuthSupport {
         val result = controller.isAccountCreateAllowed()(FakeRequest())
 
         status(result) shouldBe OK
-        contentAsJson(result) shouldBe Json.parse("""{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}""")
+        contentAsJson(result) shouldBe Json.parse(
+          """{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}""")
       }
     }
   }

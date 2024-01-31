@@ -71,33 +71,39 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     val accountNumber = Some("AC01")
 
     def mockSendAuditEvent(event: HTSEvent, nino: String) =
-      (mockAuditor.sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
+      (mockAuditor
+        .sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
         .expects(event, nino, *)
         .returning(())
 
     def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse) =
-      (proxyConnector.createAccount(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
+      (proxyConnector
+        .createAccount(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
     def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse) =
-      (proxyConnector.updateEmail(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
+      (proxyConnector
+        .updateEmail(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
-    def mockUserCapServiceUpdate(result: Either[String, Unit]) = {
-      (userCapService.update()(_: ExecutionContext))
+    def mockUserCapServiceUpdate(result: Either[String, Unit]) =
+      (userCapService
+        .update()(_: ExecutionContext))
         .expects(*)
         .returning(result.fold[Future[Unit]](e => Future.failed(new Exception(e)), _ => Future.successful(())))
-    }
 
     def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
-      (emailStore.delete(_: NINO)(_: ExecutionContext))
+      (emailStore
+        .delete(_: NINO)(_: ExecutionContext))
         .expects(nino, *)
         .returning(EitherT.fromEither[Future](result))
 
-    def mockBarsService(barsRequest: BankDetailsValidationRequest)(result: Either[String, BankDetailsValidationResult]): Unit =
-      (barsService.validate(_: BankDetailsValidationRequest)(_: HeaderCarrier, _: ExecutionContext, _: Request[_]))
+    def mockBarsService(barsRequest: BankDetailsValidationRequest)(
+      result: Either[String, BankDetailsValidationResult]): Unit =
+      (barsService
+        .validate(_: BankDetailsValidationRequest)(_: HeaderCarrier, _: ExecutionContext, _: Request[_]))
         .expects(barsRequest, *, *, *)
         .returning(Future.successful(result))
   }
@@ -203,7 +209,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       }
 
       "delete any existing emails of DE users before creating the account" in new TestApparatus {
-        val payloadDE = validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
+        val payloadDE =
+          validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockEmailDelete("nino")(Right(()))
@@ -216,7 +223,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
+        val result =
+          controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -228,7 +236,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockEmailDelete("nino")(Left("mongo error"))
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
+        val result =
+          controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
 
         status(result)(10.seconds) shouldBe INTERNAL_SERVER_ERROR
 
@@ -246,7 +255,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         val result = controller.createAccount()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
-        contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
+        contentAsJson(result)
+          .toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
       }
 
       "handle 409 response from proxy" in new TestApparatus {
@@ -292,7 +302,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         mockUpdateEmail(validUpdateAccountRequest.payload)(HttpResponse(OK, ""))
 
-        val result = controller.updateEmail()(FakeRequest().withJsonBody(validUserInfoPayload.as[JsObject] - "version" - "systemId"))
+        val result = controller.updateEmail()(
+          FakeRequest().withJsonBody(validUserInfoPayload.as[JsObject] - "version" - "systemId"))
 
         status(result)(10.seconds) shouldBe OK
       }
@@ -309,7 +320,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         val result = controller.updateEmail()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
-        contentAsJson(result).toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
+        contentAsJson(result)
+          .toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
       }
     }
 
@@ -331,7 +343,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "handle invalid json from the request" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson("""{"invalid":"barsRequest"}""")))
+        val result =
+          controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson("""{"invalid":"barsRequest"}""")))
         status(result) shouldBe 400
       }
 

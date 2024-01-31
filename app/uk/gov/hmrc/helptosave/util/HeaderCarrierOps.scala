@@ -24,5 +24,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 object HeaderCarrierOps {
 
   def getApiCorrelationId()(implicit hc: HeaderCarrier, appConfig: AppConfig): String =
-    hc.headers(Seq(appConfig.correlationIdHeaderName)).find(p => p._1 === appConfig.correlationIdHeaderName).map(_._2).getOrElse("-")
+    hc.headers(Seq(appConfig.correlationIdHeaderName))
+      .find(p => p._1 === appConfig.correlationIdHeaderName)
+      .map(_._2)
+      .getOrElse("-")
 }

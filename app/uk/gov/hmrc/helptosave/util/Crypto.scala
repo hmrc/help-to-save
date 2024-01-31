@@ -31,7 +31,7 @@ trait Crypto {
 }
 
 @Singleton
-class CryptoImpl @Inject() (configuration: Configuration) extends AesGCMCrypto with Crypto {
+class CryptoImpl @Inject()(configuration: Configuration) extends AesGCMCrypto with Crypto {
 
   val encryptionKey: String = configuration.underlying.getString("crypto.encryption-key")
 
@@ -40,4 +40,3 @@ class CryptoImpl @Inject() (configuration: Configuration) extends AesGCMCrypto w
   def decrypt(s: String): Try[String] = Try(decrypt(Crypted(s)).value)
 
 }
-

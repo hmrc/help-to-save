@@ -26,13 +26,17 @@ import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 @Singleton
-class HTSAuditor @Inject() (val auditConnector: AuditConnector)(implicit transformer: LogMessageTransformer) extends Logging {
+class HTSAuditor @Inject()(val auditConnector: AuditConnector)(implicit transformer: LogMessageTransformer)
+    extends Logging {
 
   def sendEvent(event: HTSEvent, nino: NINO)(implicit ec: ExecutionContext): Unit = {
     val checkEventResult = auditConnector.sendExtendedEvent(event.value)
     checkEventResult.failed.foreach {
       case NonFatal(e) =>
-        logger.warn(s"Unable to post audit event of type ${event.value.auditType} to audit connector - ${e.getMessage}", e, nino)
+        logger.warn(
+          s"Unable to post audit event of type ${event.value.auditType} to audit connector - ${e.getMessage}",
+          e,
+          nino)
       case other => throw other
     }
   }

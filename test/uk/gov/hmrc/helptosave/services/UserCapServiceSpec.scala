@@ -37,8 +37,8 @@ class UserCapServiceSpec extends TestSupport {
   def result[T](awaitable: Future[T]): T = Await.result(awaitable, 5.seconds)
 
   def newUserCapService(config: String) = {
-    val servicesConfig: ServicesConfig = buildFakeApplication(Configuration(
-      ConfigFactory.parseString(config))).injector.instanceOf[ServicesConfig]
+    val servicesConfig: ServicesConfig = buildFakeApplication(Configuration(ConfigFactory.parseString(config))).injector
+      .instanceOf[ServicesConfig]
     new UserCapServiceImpl(userCapStore, servicesConfig)
   }
 
@@ -52,37 +52,41 @@ class UserCapServiceSpec extends TestSupport {
 
     lazy val totalLimit = servicesConfig.getInt("microservice.user-cap.total.limit")
 
-      def mockUserCapStoreGetOne(userCap: Option[UserCap]) =
-        (userCapStore.get: () => Future[Option[UserCap]]).expects()
-          .returning(Future.successful(userCap))
+    def mockUserCapStoreGetOne(userCap: Option[UserCap]) =
+      (userCapStore.get: () => Future[Option[UserCap]])
+        .expects()
+        .returning(Future.successful(userCap))
 
-      def mockUserCapStoreGetOneFailure() =
-        (userCapStore.get: () => Future[Option[UserCap]]).expects()
-          .returning(Future.failed(new RuntimeException("oh no")))
+    def mockUserCapStoreGetOneFailure() =
+      (userCapStore.get: () => Future[Option[UserCap]])
+        .expects()
+        .returning(Future.failed(new RuntimeException("oh no")))
 
-      def mockUserCapStoreUpsert(userCap: UserCap) =
-        (userCapStore.upsert(_: UserCap)).expects(userCap)
-          .returning(Future.successful(Some(userCap)))
+    def mockUserCapStoreUpsert(userCap: UserCap) =
+      (userCapStore
+        .upsert(_: UserCap))
+        .expects(userCap)
+        .returning(Future.successful(Some(userCap)))
 
     "checking if account create is allowed" must {
 
       "return response with isDailyCapDisabled = true and isTotalCapDisabled = true if both caps are set to 0" in {
 
-        val userCapService = newUserCapService(
-          """
-            | microservice.user-cap.daily.limit = 0
-            | microservice.user-cap.total.limit = 0
+        val userCapService = newUserCapService("""
+                                                 | microservice.user-cap.daily.limit = 0
+                                                 | microservice.user-cap.total.limit = 0
           """.stripMargin)
 
-        result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isDailyCapDisabled = true, isTotalCapDisabled = true)
+        result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(
+          isDailyCapDisabled = true,
+          isTotalCapDisabled = true)
 
       }
 
       "show daily cap has been reached page if daily-cap is set to 0 but total-cap is not 0" in {
 
-        val userCapService = newUserCapService(
-          """
-            | microservice.user-cap.daily.limit = 0
+        val userCapService = newUserCapService("""
+                                                 | microservice.user-cap.daily.limit = 0
           """.stripMargin)
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isDailyCapDisabled = true)
@@ -91,9 +95,8 @@ class UserCapServiceSpec extends TestSupport {
 
       "show total cap has been reached page if total-cap is set to 0 but daily-cap is not 0" in {
 
-        val userCapService = newUserCapService(
-          """
-            | microservice.user-cap.total.limit = 0
+        val userCapService = newUserCapService("""
+                                                 | microservice.user-cap.total.limit = 0
           """.stripMargin)
 
         result(userCapService.isAccountCreateAllowed()) shouldBe UserCapResponse(isTotalCapDisabled = true)
@@ -162,9 +165,8 @@ class UserCapServiceSpec extends TestSupport {
 
     "checking if account create is allowed when dailyCap is disabled and totalCap is enabled" must {
 
-      val userCapService = newUserCapService(
-        """
-          | microservice.user-cap.daily.enabled = false
+      val userCapService = newUserCapService("""
+                                               | microservice.user-cap.daily.enabled = false
         """.stripMargin)
 
       "allow account creation as long as totalCap is not reached" in {
@@ -185,9 +187,8 @@ class UserCapServiceSpec extends TestSupport {
 
     "checking if account create is allowed when dailyCap is enabled and totalCap is disabled" must {
 
-      val userCapService = newUserCapService(
-        """
-          | microservice.user-cap.total.enabled = false
+      val userCapService = newUserCapService("""
+                                               | microservice.user-cap.total.enabled = false
         """.stripMargin)
 
       "allow account creation as long as dailyCap is not reached with no record today " in {
@@ -214,10 +215,9 @@ class UserCapServiceSpec extends TestSupport {
 
     "checking if account create is allowed when both dailyCap and totalCap are disabled" must {
 
-      val userCapService = newUserCapService(
-        """
-          | microservice.user-cap.daily.enabled = false
-          | microservice.user-cap.total.enabled = false
+      val userCapService = newUserCapService("""
+                                               | microservice.user-cap.daily.enabled = false
+                                               | microservice.user-cap.total.enabled = false
         """.stripMargin)
 
       "always allow account creation" in {
@@ -261,10 +261,9 @@ class UserCapServiceSpec extends TestSupport {
 
       "both dailyCap and totalCap are disabled" must {
 
-        val userCapService = newUserCapService(
-          """
-            | microservice.user-cap.daily.enabled = false
-            | microservice.user-cap.total.enabled = false
+        val userCapService = newUserCapService("""
+                                                 | microservice.user-cap.daily.enabled = false
+                                                 | microservice.user-cap.total.enabled = false
           """.stripMargin)
 
         // true true

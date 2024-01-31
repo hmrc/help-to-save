@@ -27,7 +27,8 @@ import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
 class UCThresholdModule extends AbstractModule {
 
-  override def configure() = bind(classOf[ThresholdManagerProvider]).to(classOf[UCThresholdOrchestrator]).asEagerSingleton()
+  override def configure() =
+    bind(classOf[ThresholdManagerProvider]).to(classOf[UCThresholdOrchestrator]).asEagerSingleton()
 
 }
 
@@ -36,12 +37,15 @@ trait ThresholdManagerProvider {
 }
 
 @Singleton
-class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
-                                         pagerDutyAlerting: PagerDutyAlerting,
-                                         configuration:     Configuration,
-                                         desConnector:      DESConnector) extends ThresholdManagerProvider with Logging {
+class UCThresholdOrchestrator @Inject()(
+  system: ActorSystem,
+  pagerDutyAlerting: PagerDutyAlerting,
+  configuration: Configuration,
+  desConnector: DESConnector)
+    extends ThresholdManagerProvider with Logging {
 
-  private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
+  private lazy val connectorProxy: ActorRef =
+    system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
 
   private val timeCalculator = {
     val clock = Clock.system(ZoneId.of(configuration.underlying.getString("uc-threshold.update-timezone")))
@@ -50,13 +54,14 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
 
   val thresholdManager: ActorRef = {
     logger.info("Starting UCThresholdManager")
-    system.actorOf(UCThresholdManager.props(
-      connectorProxy,
-      pagerDutyAlerting,
-      system.scheduler,
-      timeCalculator,
-      configuration.underlying
-    ))
+    system.actorOf(
+      UCThresholdManager.props(
+        connectorProxy,
+        pagerDutyAlerting,
+        system.scheduler,
+        timeCalculator,
+        configuration.underlying
+      ))
   }
 
 }

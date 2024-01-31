@@ -31,30 +31,36 @@ import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.FiniteDuration
 
 @Singleton
-class AppConfig @Inject() (val runModeConfiguration: Configuration,
-                           val environment:          Environment,
-                           servicesConfig:           ServicesConfig) {
+class AppConfig @Inject()(
+  val runModeConfiguration: Configuration,
+  val environment: Environment,
+  servicesConfig: ServicesConfig) {
 
   protected def mode: Mode = environment.mode
 
   val appName: String = servicesConfig.getString("appName")
 
   val desHeaders: Map[String, String] = Map(
-    "Environment" -> servicesConfig.getString("microservice.services.des.environment"),
+    "Environment"   -> servicesConfig.getString("microservice.services.des.environment"),
     "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.des.token")}"
   )
 
   val correlationIdHeaderName: String = servicesConfig.getString("microservice.correlationIdHeaderName")
 
-  val thresholdAskTimeout: FiniteDuration = runModeConfiguration.underlying.get[FiniteDuration]("uc-threshold.ask-timeout").value
+  val thresholdAskTimeout: FiniteDuration =
+    runModeConfiguration.underlying.get[FiniteDuration]("uc-threshold.ask-timeout").value
 
   val createAccountVersion: String = servicesConfig.getString("nsi.create-account.version")
 
   val barsUrl: String = servicesConfig.baseUrl("bank-account-reputation")
 
   val ninoDeletionConfig: String => Seq[NINODeletionConfig] = (configSuffix: String) => {
-    runModeConfiguration.underlying.getObjectList(s"enrolment.$configSuffix").asScala.flatMap(config => {
-      Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
-    }).toSeq
+    runModeConfiguration.underlying
+      .getObjectList(s"enrolment.$configSuffix")
+      .asScala
+      .flatMap(config => {
+        Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
+      })
+      .toSeq
   }
 }

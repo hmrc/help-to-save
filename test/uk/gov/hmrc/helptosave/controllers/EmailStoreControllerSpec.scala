@@ -38,12 +38,14 @@ class EmailStoreControllerSpec extends AuthSupport {
   val emailStore: EmailStore = mock[EmailStore]
 
   def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
-    (emailStore.store(_: String, _: NINO)(_: ExecutionContext))
+    (emailStore
+      .store(_: String, _: NINO)(_: ExecutionContext))
       .expects(email, nino, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit =
-    (emailStore.get(_: NINO)(_: ExecutionContext))
+    (emailStore
+      .get(_: NINO)(_: ExecutionContext))
       .expects(nino, *)
       .returning(EitherT.fromEither[Future](result))
 
@@ -53,8 +55,8 @@ class EmailStoreControllerSpec extends AuthSupport {
     val email = "email"
     val encodedEmail = new String(Base64.getEncoder.encode(email.getBytes()))
 
-      def store(email: String, nino: Option[String]): Future[Result] =
-        controller.store(email, nino)(FakeRequest())
+    def store(email: String, nino: Option[String]): Future[Result] =
+      controller.store(email, nino)(FakeRequest())
 
     "handling requests to store emails" must {
 
@@ -101,7 +103,7 @@ class EmailStoreControllerSpec extends AuthSupport {
 
       val email = "email"
 
-        def get(): Future[Result] = controller.get()(FakeRequest())
+      def get(): Future[Result] = controller.get()(FakeRequest())
 
       "get the email from the email store" in {
         mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))

@@ -50,15 +50,13 @@ trait EmailStore {
 }
 
 @Singleton
-class MongoEmailStore @Inject() (mongo:   MongoComponent,
-                                 crypto:  Crypto,
-                                 metrics: Metrics)(implicit ec: ExecutionContext)
-  extends PlayMongoRepository[EmailData](
-    mongoComponent = mongo,
-    collectionName = "emails",
-    domainFormat   = EmailData.emailDataFormat,
-    indexes        = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex")))
-  ) with EmailStore with Logging {
+class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: Metrics)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[EmailData](
+      mongoComponent = mongo,
+      collectionName = "emails",
+      domainFormat = EmailData.emailDataFormat,
+      indexes = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex")))
+    ) with EmailStore with Logging {
 
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
 
@@ -85,48 +83,60 @@ class MongoEmailStore @Inject() (mongo:   MongoComponent,
         }
     })
 
-  override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] = EitherT[Future, String, Option[String]]({
-    val timerContext = metrics.emailStoreGetTimer.time()
+  override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] =
+    EitherT[Future, String, Option[String]]({
+      val timerContext = metrics.emailStoreGetTimer.time()
 
-    collection.find(regex("nino", getRegex(nino))).toFuture().map { res =>
-      timerContext.stop()
+      collection
+        .find(regex("nino", getRegex(nino)))
+        .toFuture()
+        .map { res =>
+          timerContext.stop()
 
-      val decryptedEmail = res.headOption
-        .map(data => crypto.decrypt(data.email))
-        .traverse[Try, String](identity)
+          val decryptedEmail = res.headOption
+            .map(data => crypto.decrypt(data.email))
+            .traverse[Try, String](identity)
 
-      decryptedEmail.toEither().leftMap {
-        t =>
-          logger.warn(s"Could not decrypt email: $t, $nino")
-          s"Could not decrypt email: ${t.getMessage}"
-      }
-    }.recover {
-      case e =>
-        timerContext.stop()
-        metrics.emailStoreGetErrorCounter.inc()
-        Left(s"Could not read from email store: ${e.getMessage}")
+          decryptedEmail.toEither().leftMap { t =>
+            logger.warn(s"Could not decrypt email: $t, $nino")
+            s"Could not decrypt email: ${t.getMessage}"
+          }
+        }
+        .recover {
+          case e =>
+            timerContext.stop()
+            metrics.emailStoreGetErrorCounter.inc()
+            Left(s"Could not read from email store: ${e.getMessage}")
+        }
+    })
+
+  override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
+    EitherT[Future, String, Unit] {
+
+      collection
+        .findOneAndDelete(regex("nino", getRegex(nino)))
+        .toFuture()
+        .map[Either[String, Unit]] { res =>
+          Right(())
+        }
+        .recover {
+          case e =>
+            Left(s"Could not delete email: ${e.getMessage}")
+        }
+
     }
-  })
 
-  override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] = EitherT[Future, String, Unit]{
-
-    collection.findOneAndDelete(regex("nino", getRegex(nino))).toFuture().map[Either[String, Unit]]{ res => Right(()) }.recover{
-      case e =>
-        Left(s"Could not delete email: ${e.getMessage}")
-    }
-
-  }
-
-  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] = {
-    collection.updateOne(
-      filter  = regex("nino", getRegex(nino)),
-      update  = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
-      options = UpdateOptions().upsert(true)
-    ).toFuture().map(a => {
+  private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] =
+    collection
+      .updateOne(
+        filter = regex("nino", getRegex(nino)),
+        update = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
+        options = UpdateOptions().upsert(true)
+      )
+      .toFuture()
+      .map(a => {
         a.wasAcknowledged()
       })
-
-  }
 
 }
 

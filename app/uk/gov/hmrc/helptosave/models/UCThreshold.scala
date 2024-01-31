@@ -19,8 +19,8 @@ package uk.gov.hmrc.helptosave.models
 import play.api.libs.json.{Format, Json}
 
 /**
- * Response from ITMP threshold
- */
+  * Response from ITMP threshold
+  */
 case class UCThreshold(thresholdAmount: Double)
 
 object UCThreshold {
