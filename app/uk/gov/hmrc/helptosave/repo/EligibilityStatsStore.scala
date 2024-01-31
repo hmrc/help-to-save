@@ -58,7 +58,7 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
         Projections.computed("_id", 0),
         Projections.computed("eligibilityReason", "$_id.eligibilityReason"),
         Projections.computed("source", "$_id.source"),
-        Projections.computed("total", "$total"),
+        Projections.computed("total", "$total")
       ))
     )).toFuture()
       .map(_.toList.map(Codecs.fromBson[EligibilityStats]))

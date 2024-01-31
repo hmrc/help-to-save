@@ -66,7 +66,7 @@ class ApplicationStart @Inject() (appConfig:        AppConfig,
     audit.auditConnector.sendExtendedEvent(ExtendedDataEvent(
       appConfig.appName,
       auditType,
-      detail = Json.toJson(ninos),
+      detail = Json.toJson(ninos)
     ))
   }
 }

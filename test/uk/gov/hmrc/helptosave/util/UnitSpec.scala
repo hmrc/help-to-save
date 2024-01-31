@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.util
 
 import java.nio.charset.Charset
-
 import akka.stream.Materializer
 import akka.util.ByteString
 import org.scalatest.matchers.should.Matchers
@@ -28,6 +27,7 @@ import play.api.libs.json.{JsValue, Json}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, FiniteDuration, _}
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 trait UnitSpec extends AnyWordSpecLike with Matchers {
 
