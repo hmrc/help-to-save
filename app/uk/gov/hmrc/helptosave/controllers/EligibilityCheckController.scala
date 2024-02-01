@@ -25,15 +25,19 @@ import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 
 import scala.concurrent.ExecutionContext
 
-class EligibilityCheckController @Inject() (val helpToSaveService: HelpToSaveService,
-                                            authConnector:         AuthConnector,
-                                            controllerComponents:  ControllerComponents)(
-    implicit
-    transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector, controllerComponents) with EligibilityBase {
+class EligibilityCheckController @Inject()(
+  val helpToSaveService: HelpToSaveService,
+  authConnector: AuthConnector,
+  controllerComponents: ControllerComponents)(
+  implicit
+  transformer: LogMessageTransformer,
+  appConfig: AppConfig,
+  ec: ExecutionContext)
+    extends HelpToSaveAuth(authConnector, controllerComponents) with EligibilityBase {
 
-  def eligibilityCheck(maybeNino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNino) { implicit request => implicit nino =>
-    checkEligibility(nino, routes.EligibilityCheckController.eligibilityCheck(maybeNino).url)
+  def eligibilityCheck(maybeNino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNino) {
+    implicit request => implicit nino =>
+      checkEligibility(nino, routes.EligibilityCheckController.eligibilityCheck(maybeNino).url)
   }
 
 }

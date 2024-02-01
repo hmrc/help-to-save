@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
-import configs.syntax._
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._
@@ -27,20 +24,20 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.util.{Logging, toFuture}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class StrideAuth(htsAuthConnector:     AuthConnector,
-                 controllerComponents: ControllerComponents)(implicit val appConfig: AppConfig)
-  extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
-
+class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)(
+  implicit val appConfig: AppConfig)
+    extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private val (standardRoles, secureRoles): (List[String], List[String]) = {
+  private val (standardRoles, secureRoles): (Seq[String], Seq[String]) = {
     val decoder = Base64.getDecoder
 
-      def getRoles(key: String): List[String] = appConfig.runModeConfiguration.underlying
-        .get[List[String]](key)
-        .value
+    def getRoles(key: String): Seq[String] =
+      appConfig.runModeConfiguration
+        .get[Seq[String]](key)
         .map(s => new String(decoder.decode(s)))
 
     getRoles("stride.base64-encoded-roles") -> getRoles("stride.base64-encoded-secure-roles")
@@ -51,20 +48,22 @@ class StrideAuth(htsAuthConnector:     AuthConnector,
     standardRoles.exists(enrolmentKeys.contains) || secureRoles.exists(enrolmentKeys.contains)
   }
 
-  def authorisedFromStride(action: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
+  def authorisedFromStride(action: Request[AnyContent] => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      authorised(AuthProviders(PrivilegedApplication)).retrieve(allEnrolments) {
-        enrolments =>
+      authorised(AuthProviders(PrivilegedApplication))
+        .retrieve(allEnrolments) { enrolments =>
           if (roleMatch(enrolments)) {
             action(request)
           } else {
             Unauthorized("Insufficient roles")
           }
-      }.recover {
-        case _: NoActiveSession =>
-          logger.warn("user is not logged in via stride, probably a hack?")
-          Unauthorized
-      }
+        }
+        .recover {
+          case _: NoActiveSession =>
+            logger.warn("user is not logged in via stride, probably a hack?")
+            Unauthorized
+        }
     }
 
 }

@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.time.{LocalDate, YearMonth}
-import java.util.UUID
-
 import cats.data.EitherT
 import cats.instances.future._
 import org.scalamock.function.MockFunction6
@@ -32,6 +29,8 @@ import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProvider
 import uk.gov.hmrc.helptosave.models.account.{Account, Blocking}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.{LocalDate, YearMonth}
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 class AccountControllerSpec extends AuthSupport {
@@ -40,7 +39,23 @@ class AccountControllerSpec extends AuthSupport {
 
   val controller = new AccountController(mockProxyConnector, mockAuthConnector, testCC)
 
-  val account = Account(YearMonth.of(1900, 1), "AC01", false, Blocking(false, false, false), 123.45, 0, 0, 0, LocalDate.parse("1900-01-01"), "Test", "Saver", Some("testsaver@example.com"), List(), None, None)
+  val account = Account(
+    YearMonth.of(1900, 1),
+    "AC01",
+    false,
+    Blocking(false, false, false),
+    123.45,
+    0,
+    0,
+    0,
+    LocalDate.parse("1900-01-01"),
+    "Test",
+    "Saver",
+    Some("testsaver@example.com"),
+    List(),
+    None,
+    None
+  )
 
   val queryString = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
 
@@ -48,15 +63,23 @@ class AccountControllerSpec extends AuthSupport {
 
   val fakeRequest = FakeRequest("GET", path)
 
-  def mockGetAccount(nino: String, systemId: String, correlationId: Option[String], path: String)(response: Either[String, Option[Account]]) = {
-    val call: MockFunction6[String, String, String, String, HeaderCarrier, ExecutionContext, EitherT[Future, String, Option[Account]]] =
+  def mockGetAccount(nino: String, systemId: String, correlationId: Option[String], path: String)(
+    response: Either[String, Option[Account]]) = {
+    val call: MockFunction6[
+      String,
+      String,
+      String,
+      String,
+      HeaderCarrier,
+      ExecutionContext,
+      EitherT[Future, String, Option[Account]]] =
       mockProxyConnector.getAccount(_: String, _: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext)
 
     val callHandler = correlationId.fold(
       call.expects(nino, systemId, *, path, *, *)
-    ){ id =>
-        call.expects(nino, systemId, id, path, *, *)
-      }
+    ) { id =>
+      call.expects(nino, systemId, id, path, *, *)
+    }
 
     callHandler.returning(EitherT.fromEither(response))
   }
@@ -91,7 +114,7 @@ class AccountControllerSpec extends AuthSupport {
       }
 
       "return a 404 if an account does not exist for the NINO" in {
-        testWithGGAndPrivilegedAccess{ mockAuth =>
+        testWithGGAndPrivilegedAccess { mockAuth =>
           inSequence {
             mockAuth()
             mockGetAccount(nino, systemId, None, path)(Right(None))

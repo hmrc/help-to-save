@@ -24,25 +24,25 @@ object UCResponse {
 
   implicit val reads: Format[UCResponse] = new Format[UCResponse] {
 
-    override def reads(json: JsValue): JsResult[UCResponse] = {
-
-      (json \ "ucClaimant").validate[String]
+    override def reads(json: JsValue): JsResult[UCResponse] =
+      (json \ "ucClaimant")
+        .validate[String]
         .fold(
           errors => JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
           a =>
-            (json \ "withinThreshold").validateOpt[String]
+            (json \ "withinThreshold")
+              .validateOpt[String]
               .fold(
                 errors => JsError(s"unable to parse UCResponse from proxy, due to=$errors"),
                 b =>
                   (a, b) match {
-                    case ("Y", Some("Y")) => JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(true)))
-                    case ("Y", Some("N")) => JsSuccess(UCResponse(ucClaimant      = true, withinThreshold = Some(false)))
-                    case ("N", None)      => JsSuccess(UCResponse(ucClaimant      = false, withinThreshold = None))
+                    case ("Y", Some("Y")) => JsSuccess(UCResponse(ucClaimant = true, withinThreshold = Some(true)))
+                    case ("Y", Some("N")) => JsSuccess(UCResponse(ucClaimant = true, withinThreshold = Some(false)))
+                    case ("N", None)      => JsSuccess(UCResponse(ucClaimant = false, withinThreshold = None))
                     case _                => JsError(s"unable to parse UCResponse from proxy, json=$json")
-                  }
-              )
+                }
+            )
         )
-    }
 
     override def writes(response: UCResponse): JsValue = {
 
@@ -53,7 +53,7 @@ object UCResponse {
       }
 
       val fields = {
-        val f = List("ucClaimant" -> JsString(a))
+        val f = List("ucClaimant"             -> JsString(a))
         b.fold(f)(value => ("withinThreshold" -> JsString(value)) :: f)
       }
 

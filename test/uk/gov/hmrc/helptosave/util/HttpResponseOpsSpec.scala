@@ -19,11 +19,8 @@ package uk.gov.hmrc.helptosave.util
 import play.api.libs.json.{Format, JsValue, Json}
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{TestData, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.helptosave.utils.TestData
-
-import scala.util.Right
 
 class HttpResponseOpsSpec extends TestSupport with TestData {
 
@@ -65,7 +62,8 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
       val data = payeDetailsNoPostCode("AE123456C")
 
       HttpResponse(200, Json.parse(data), returnHeaders).parseJsonWithoutLoggingBody[PayePersonalDetails] shouldBe
-        Left("Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
+        Left(
+          "Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
     }
   }
 }

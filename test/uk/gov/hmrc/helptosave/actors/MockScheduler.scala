@@ -23,11 +23,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 /**
- * A scheduler whose `tick` can be triggered manually, which is helpful for testing purposes.
- * Tasks are executed synchronously when `tick` is called.
- *
- * Typically this scheduler is used indirectly via a [[VirtualTime]] instance.
- */
+  * A scheduler whose `tick` can be triggered manually, which is helpful for testing purposes.
+  * Tasks are executed synchronously when `tick` is called.
+  *
+  * Typically this scheduler is used indirectly via a [[VirtualTime]] instance.
+  */
 class MockScheduler(time: VirtualTime) extends Scheduler {
 
   private[this] var id = 0L
@@ -36,16 +36,16 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
   private[this] var tasks = new collection.mutable.PriorityQueue[Task]()
 
   /**
-   * Runs any tasks that are due at this point in time.  This includes running recurring tasks multiple times if needed.
-   * The execution of tasks happens synchronously in the calling thread.
-   *
-   * Tasks are executed in order based on their scheduled execution time.  We do not define the execution ordering of
-   * tasks that are scheduled for the same time.
-   *
-   * Implementation detail:  If you are using this scheduler indirectly via a [[VirtualTime]] instance, then this method
-   * will be called automatically by the [[VirtualTime]] instance, and you should not manually call it.
-   */
-  def tick(): Unit = {
+    * Runs any tasks that are due at this point in time.  This includes running recurring tasks multiple times if needed.
+    * The execution of tasks happens synchronously in the calling thread.
+    *
+    * Tasks are executed in order based on their scheduled execution time.  We do not define the execution ordering of
+    * tasks that are scheduled for the same time.
+    *
+    * Implementation detail:  If you are using this scheduler indirectly via a [[VirtualTime]] instance, then this method
+    * will be called automatically by the [[VirtualTime]] instance, and you should not manually call it.
+    */
+  def tick(): Unit =
     time.lock synchronized {
       while (tasks.nonEmpty && tasks.head.delay <= time.elapsed) {
         val head = tasks.dequeue()
@@ -56,12 +56,13 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
         }
       }
     }
-  }
 
-  override def scheduleOnce(delay: FiniteDuration, runnable: Runnable)(implicit executor: ExecutionContext): Cancellable =
+  override def scheduleOnce(delay: FiniteDuration, runnable: Runnable)(
+    implicit executor: ExecutionContext): Cancellable =
     addToTasks(delay, runnable, None)
 
-  override def schedule(initialDelay: FiniteDuration, interval: FiniteDuration, runnable: Runnable)(implicit executor: ExecutionContext): Cancellable =
+  override def schedule(initialDelay: FiniteDuration, interval: FiniteDuration, runnable: Runnable)(
+    implicit executor: ExecutionContext): Cancellable =
     addToTasks(initialDelay, runnable, Option(interval))
 
   private def addToTasks(delay: FiniteDuration, runnable: Runnable, interval: Option[FiniteDuration]): Cancellable =
@@ -73,15 +74,16 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
       MockCancellable(this, task)
     }
 
-  def cancelTask(task: Task): Unit = {
+  def cancelTask(task: Task): Unit =
     time.lock synchronized {
-      tasks = tasks.filterNot { x => x.id == task.id }
+      tasks = tasks.filterNot { x =>
+        x.id == task.id
+      }
     }
-  }
 
   /**
-   * The maximum frequency is 1000 Hz.
-   */
+    * The maximum frequency is 1000 Hz.
+    */
   override val maxFrequency: Double = 1.second / 1.millis
 
 }
@@ -89,9 +91,9 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
 class VirtualTime {
 
   /**
-   * There's a circular dependency between the states of [[MockScheduler]] and this class,
-   * hence we use the same lock for both.
-   */
+    * There's a circular dependency between the states of [[MockScheduler]] and this class,
+    * hence we use the same lock for both.
+    */
   val lock = new Object
 
   private[this] var elapsedTime: FiniteDuration = 0.millis
@@ -101,21 +103,21 @@ class VirtualTime {
   private lazy val minimumAdvanceStep = 1.second / scheduler.maxFrequency
 
   /**
-   * Returns how much "time" has elapsed so far.
-   *
-   * @return elapsed time
-   */
+    * Returns how much "time" has elapsed so far.
+    *
+    * @return elapsed time
+    */
   def elapsed: FiniteDuration = lock synchronized {
     elapsedTime
   }
 
   /**
-   * Advances the time by the requested step, which is similar to [[Thread.sleep( )]].
-   *
-   * This method invokes [[MockScheduler.tick( )]], and any subsequent `advance`s will wait until the tick has completed.
-   *
-   * @param step
-   */
+    * Advances the time by the requested step, which is similar to [[Thread.sleep( )]].
+    *
+    * This method invokes [[MockScheduler.tick( )]], and any subsequent `advance`s will wait until the tick has completed.
+    *
+    * @param step
+    */
   def advance(step: FiniteDuration): Unit = {
     require(step >= minimumAdvanceStep, s"minimum supported step is $minimumAdvanceStep")
     lock synchronized {
@@ -125,12 +127,12 @@ class VirtualTime {
   }
 
   /**
-   * Advances the time by the requested step, which is similar to [[Thread.sleep( )]].
-   *
-   * This method invokes [[MockScheduler.tick( )]], and any subsequent `advance`s will wait until the tick has completed.
-   *
-   * @param millis step in milliseconds
-   */
+    * Advances the time by the requested step, which is similar to [[Thread.sleep( )]].
+    *
+    * This method invokes [[MockScheduler.tick( )]], and any subsequent `advance`s will wait until the tick has completed.
+    *
+    * @param millis step in milliseconds
+    */
   def advance(millis: Long): Unit = advance(FiniteDuration(millis, TimeUnit.MILLISECONDS))
 
   override def toString: String = s"${getClass.getSimpleName}(${elapsed.toMillis})"

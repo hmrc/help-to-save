@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import java.util.Base64
-
 import com.typesafe.config.ConfigFactory
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
+import java.util.Base64
 import scala.util.{Random, Success}
 
 class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
@@ -36,9 +35,8 @@ class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
       new String(Base64.getEncoder.encode(bytes))
     }
 
-    val encrypter = new CryptoImpl(Configuration(ConfigFactory.parseString(
-      s"""
-        | crypto.encryption-key = "$key"
+    val encrypter = new CryptoImpl(Configuration(ConfigFactory.parseString(s"""
+                                                                              | crypto.encryption-key = "$key"
       """.stripMargin)))
 
     "correctly encrypt and decrypt the data given" in {
@@ -68,8 +66,8 @@ class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
     }
 
     "return an error when there are errors decrypting" in {
-      forAll{ s: String =>
-        whenever(s.nonEmpty){
+      forAll { s: String =>
+        whenever(s.nonEmpty) {
           encrypter.decrypt(s).isFailure shouldBe true
         }
       }

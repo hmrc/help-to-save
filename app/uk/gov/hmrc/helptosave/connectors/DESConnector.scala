@@ -21,10 +21,10 @@ import cats.syntax.show._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{JsNull, JsValue, Writes}
 import uk.gov.hmrc.helptosave.config.AppConfig
+import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.models.UCResponse
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
-import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +33,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait DESConnector {
   def desCorrelationId(response: HttpResponse): String = response.header("CorrelationId").getOrElse("-")
 
-  def isEligible(nino: String, ucResponse: Option[UCResponse])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def isEligible(nino: String, ucResponse: Option[UCResponse])(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[HttpResponse]
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
@@ -43,9 +45,8 @@ trait DESConnector {
 }
 
 @Singleton
-class DESConnectorImpl @Inject() (http:           HttpClient,
-                                  servicesConfig: ServicesConfig)(implicit appConfig: AppConfig)
-  extends DESConnector with Logging {
+class DESConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig)
+    extends DESConnector with Logging {
 
   val itmpECBaseURL: String = servicesConfig.baseUrl("itmp-eligibility-check")
   val itmpEnrolmentURL: String = servicesConfig.baseUrl("itmp-enrolment")
@@ -56,7 +57,8 @@ class DESConnectorImpl @Inject() (http:           HttpClient,
 
   val body: JsValue = JsNull
 
-  val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString("microservice.services.paye-personal-details.originatorId")
+  val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
+    "microservice.services.paye-personal-details.originatorId")
 
   def eligibilityCheckUrl(nino: String): String = s"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
 
@@ -71,14 +73,20 @@ class DESConnectorImpl @Inject() (http:           HttpClient,
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
-  override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.desHeaders)(hc.copy(authorization = None), ec)
+  override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[HttpResponse] =
+    http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.desHeaders)(
+      hc.copy(authorization = None),
+      ec)
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.jsValueWrites, hc.copy(authorization = None), ec)
 
   override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(payePersonalDetailsUrl(nino), headers = appConfig.desHeaders + originatorIdHeader)(hc.copy(authorization = None), ec)
+    http.get(payePersonalDetailsUrl(nino), headers = appConfig.desHeaders + originatorIdHeader)(
+      hc.copy(authorization = None),
+      ec)
 
   override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.get(itmpThresholdURL, headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)

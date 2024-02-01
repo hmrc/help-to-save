@@ -24,13 +24,14 @@ import com.google.inject.{Inject, Singleton}
 import scala.annotation.tailrec
 
 @Singleton
-class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
+class Metrics @Inject()(metrics: com.kenshoo.play.metrics.Metrics) {
 
   protected def timer(name: String): Timer = metrics.defaultRegistry.timer(name)
 
   protected def counter(name: String): Counter = metrics.defaultRegistry.counter(name)
 
-  protected def registerIntGauge(name: String, gauge: Gauge[Int]): Gauge[Int] = metrics.defaultRegistry.register(name, gauge)
+  protected def registerIntGauge(name: String, gauge: Gauge[Int]): Gauge[Int] =
+    metrics.defaultRegistry.register(name, gauge)
 
   val itmpEligibilityCheckTimer: Timer = timer("backend.itmp-eligibility-check-time")
 
@@ -84,11 +85,10 @@ class Metrics @Inject() (metrics: com.kenshoo.play.metrics.Metrics) {
 
   val barsErrorCounter: Counter = counter("backend.bars-error.count")
 
-  def registerAccountStatsGauge(reason: String, channel: String, value: () => Int): Gauge[Int] = {
+  def registerAccountStatsGauge(reason: String, channel: String, value: () => Int): Gauge[Int] =
     registerIntGauge(s"backend.create-account.$reason.$channel", new Gauge[Int] {
       override def getValue(): Int = value()
     })
-  }
 
 }
 
@@ -98,10 +98,10 @@ object Metrics {
     "ns" -> 1000L,
     "μs" -> 1000L,
     "ms" -> 1000L,
-    "s" -> 60L,
-    "m" -> 60L,
-    "h" -> 24L,
-    "d" -> 7L
+    "s"  -> 60L,
+    "m"  -> 60L,
+    "h"  -> 24L,
+    "d"  -> 7L
   )
 
   /** Return the integer part and the remainder of the result of dividing th enumerator by the denominator */
@@ -109,38 +109,35 @@ object Metrics {
     (numerator / denominator) -> (numerator % denominator)
 
   /**
-   * Convert `nanos` to a human-friendly string - will return the time in terms of
-   * the two highest time resolutions that are appropriate. For example:
-   *
-   * 2 nanoseconds      -> "2ns"
-   * 1.23456789 seconds -> "1s 234ms"
-   */
+    * Convert `nanos` to a human-friendly string - will return the time in terms of
+    * the two highest time resolutions that are appropriate. For example:
+    *
+    * 2 nanoseconds      -> "2ns"
+    * 1.23456789 seconds -> "1s 234ms"
+    */
   def nanosToPrettyString(nanos: Long): String = {
 
-      @tailrec
-      def loop(l:   List[(String, Long)],
-               t:   Long,
-               acc: List[(Long, String)]): List[(Long, String)] = l match {
-        case Nil =>
-          acc
+    @tailrec
+    def loop(l: List[(String, Long)], t: Long, acc: List[(Long, String)]): List[(Long, String)] = l match {
+      case Nil =>
+        acc
 
-        case (word, number) :: tail =>
-          if (t < number) {
-            (t -> word) :: acc
+      case (word, number) :: tail =>
+        if (t < number) {
+          (t -> word) :: acc
+        } else {
+          val (remaining, currentUnits) = divide(t, number)
+
+          if (currentUnits === 0L) {
+            loop(tail, remaining, acc)
           } else {
-            val (remaining, currentUnits) = divide(t, number)
-
-            if (currentUnits === 0L) {
-              loop(tail, remaining, acc)
-            } else {
-              loop(tail, remaining, (currentUnits -> word) :: acc)
-            }
+            loop(tail, remaining, (currentUnits -> word) :: acc)
           }
-      }
+        }
+    }
 
     val result = loop(timeWordToDenomination, nanos, List.empty[(Long, String)])
     result.take(2).map(x => s"${x._1}${x._2}").mkString(" ")
   }
 
 }
-

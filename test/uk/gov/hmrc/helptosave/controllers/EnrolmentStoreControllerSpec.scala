@@ -35,36 +35,42 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks with TestEnrolmentBehaviour with HttpSupport {
+class EnrolmentStoreControllerSpec
+    extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks with TestEnrolmentBehaviour with HttpSupport {
 
   implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
-    Arbitrary(Gen.oneOf[EnrolmentStore.Status](
-      Gen.const(EnrolmentStore.NotEnrolled),
-      Gen.oneOf(true, false).map(EnrolmentStore.Enrolled)
-    ))
+    Arbitrary(
+      Gen.oneOf[EnrolmentStore.Status](
+        Gen.const(EnrolmentStore.NotEnrolled),
+        Gen.oneOf(true, false).map(EnrolmentStore.Enrolled)
+      ))
 
   val privilegedCredentials = PAClientId("id")
   val ggCredentials = GGCredId("123-gg")
 
-  def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(result: Either[String, Option[Account]]): Unit =
-    (proxyConnector.getAccount(_: String, _: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+  def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(
+    result: Either[String, Option[Account]]): Unit =
+    (proxyConnector
+      .getAccount(_: String, _: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, systemId, correlationId, path, *, *)
       .returning(EitherT.fromEither[Future](result))
 
   def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit =
-    (enrolmentStore.updateWithAccountNumber(_: String, _: String)(_: HeaderCarrier))
+    (enrolmentStore
+      .updateWithAccountNumber(_: String, _: String)(_: HeaderCarrier))
       .expects(nino, accountNumber, *)
       .returning(EitherT.fromEither[Future](result))
 
   "The EnrolmentStoreController" when {
 
-    val controller = new EnrolmentStoreController(enrolmentStore, helpToSaveService, mockAuthConnector, proxyConnector, testCC)
+    val controller =
+      new EnrolmentStoreController(enrolmentStore, helpToSaveService, mockAuthConnector, proxyConnector, testCC)
     val nino = "AE123456C"
 
     "setting the ITMP flag" must {
 
-        def setFlag(): Future[Result] =
-          controller.setITMPFlag()(FakeRequest())
+      def setFlag(): Future[Result] =
+        controller.setITMPFlag()(FakeRequest())
 
       "set the ITMP flag" in {
         mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
@@ -94,10 +100,10 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
       }
 
       "return a Left if any of the steps failed" in {
-          def test(mockActions: => Unit): Unit = {
-            mockActions
-            status(setFlag()) shouldBe INTERNAL_SERVER_ERROR
-          }
+        def test(mockActions: => Unit): Unit = {
+          mockActions
+          status(setFlag()) shouldBe INTERNAL_SERVER_ERROR
+        }
 
         test(inSequence {
           mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
@@ -115,8 +121,8 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
 
     "getting the user's account number" must {
 
-        def getAccountNumber(): Future[Result] =
-          controller.getAccountNumber()(FakeRequest())
+      def getAccountNumber(): Future[Result] =
+        controller.getAccountNumber()(FakeRequest())
 
       val accountNumber = AccountNumber(Some("1234567890123"))
       val correlationId = "-"
@@ -156,8 +162,8 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
 
     "getting the user enrolment status" must {
 
-        def getEnrolmentStatus(nino: Option[String]): Future[Result] =
-          controller.getEnrolmentStatus(nino)(FakeRequest())
+      def getEnrolmentStatus(nino: Option[String]): Future[Result] =
+        controller.getEnrolmentStatus(nino)(FakeRequest())
 
       "get the enrolment status from the enrolment store" in {
         mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
@@ -221,14 +227,14 @@ class EnrolmentStoreControllerSpec extends StrideAuthSupport with ScalaCheckDriv
           EnrolmentStore.Enrolled(false),
           EnrolmentStore.NotEnrolled
         ).foreach { status =>
-            inSequence {
-              mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-              mockEnrolmentStoreGet(nino)(Right(status))
-            }
-
-            val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
-            contentAsJson(result).validate[EnrolmentStore.Status] shouldBe JsSuccess(status)
+          inSequence {
+            mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+            mockEnrolmentStoreGet(nino)(Right(status))
           }
+
+          val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
+          contentAsJson(result).validate[EnrolmentStore.Status] shouldBe JsSuccess(status)
+        }
       }
 
       "return an error if there is a problem getting the enrolment status" in {

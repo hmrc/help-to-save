@@ -19,8 +19,8 @@ package uk.gov.hmrc.helptosave.models
 import play.api.libs.json.{Format, Json}
 
 /**
- * Response from ITMP eligibility check
- */
+  * Response from ITMP eligibility check
+  */
 case class EligibilityCheckResult(result: String, resultCode: Int, reason: String, reasonCode: Int)
 
 object EligibilityCheckResult {

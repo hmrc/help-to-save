@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
 import cats.instances.future._
 import com.google.inject.Inject
 import play.api.libs.json.{Format, Json}
@@ -27,46 +25,54 @@ import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 import uk.gov.hmrc.helptosave.util.Logging._
 
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class EmailStoreController @Inject() (emailStore:           EmailStore,
-                                      htsAuthConnector:     AuthConnector,
-                                      controllerComponents: ControllerComponents)(
-    implicit
-    transformer: LogMessageTransformer, ec: ExecutionContext)
-  extends HelpToSaveAuth(htsAuthConnector, controllerComponents) {
+class EmailStoreController @Inject()(
+  emailStore: EmailStore,
+  htsAuthConnector: AuthConnector,
+  controllerComponents: ControllerComponents)(
+  implicit
+  transformer: LogMessageTransformer,
+  ec: ExecutionContext)
+    extends HelpToSaveAuth(htsAuthConnector, controllerComponents) {
 
   import uk.gov.hmrc.helptosave.controllers.EmailStoreController._
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
-  def store(email: String, maybeNINO: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNINO) { _ => nino =>
-    Try(new String(base64Decoder.decode(email))).fold(
-      { error =>
-        logger.warn(s"Could not store email. Could not decode email: $error", nino)
-        Future.successful(InternalServerError)
-      }, { decodedEmail =>
-        emailStore.store(decodedEmail, nino).fold(
-          { e =>
-            logger.error(s"Could not store email: $e", nino)
-            InternalServerError
-          }, { _ =>
-            Ok
-          }
-        )
-      }
-    )
-  }
+  def store(email: String, maybeNINO: Option[String]): Action[AnyContent] =
+    ggOrPrivilegedAuthorisedWithNINO(maybeNINO) { _ => nino =>
+      Try(new String(base64Decoder.decode(email))).fold(
+        { error =>
+          logger.warn(s"Could not store email. Could not decode email: $error", nino)
+          Future.successful(InternalServerError)
+        }, { decodedEmail =>
+          emailStore
+            .store(decodedEmail, nino)
+            .fold(
+              { e =>
+                logger.error(s"Could not store email: $e", nino)
+                InternalServerError
+              }, { _ =>
+                Ok
+              }
+            )
+        }
+      )
+    }
 
   def get(): Action[AnyContent] = ggAuthorisedWithNino { _ => implicit nino =>
-    emailStore.get(nino).fold(
-      { e =>
-        logger.warn(e, nino)
-        InternalServerError
-      },
-      maybeEmail => Ok(Json.toJson(EmailGetResponse(maybeEmail)))
-    )
+    emailStore
+      .get(nino)
+      .fold(
+        { e =>
+          logger.warn(e, nino)
+          InternalServerError
+        },
+        maybeEmail => Ok(Json.toJson(EmailGetResponse(maybeEmail)))
+      )
   }
 
 }

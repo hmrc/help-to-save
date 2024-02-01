@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import java.nio.charset.Charset
-
 import akka.stream.Materializer
 import akka.util.ByteString
 import org.scalatest.matchers.should.Matchers
@@ -25,9 +23,11 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.inject.guice.GuiceableModule
 import play.api.libs.json.{JsValue, Json}
 
+import java.nio.charset.Charset
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, FiniteDuration, _}
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 trait UnitSpec extends AnyWordSpecLike with Matchers {
 
@@ -44,20 +44,18 @@ trait UnitSpec extends AnyWordSpecLike with Matchers {
     status(Await.result(of, timeout))
 
   def jsonBodyOf(result: play.api.mvc.Result)(
-      implicit
-      mat: Materializer): JsValue = {
+    implicit
+    mat: Materializer): JsValue =
     Json.parse(bodyOf(result))
-  }
 
   def jsonBodyOf(resultF: Future[play.api.mvc.Result])(
-      implicit
-      mat: Materializer): Future[JsValue] = {
+    implicit
+    mat: Materializer): Future[JsValue] =
     resultF.map(jsonBodyOf)
-  }
 
   def bodyOf(result: play.api.mvc.Result)(
-      implicit
-      mat: Materializer): String = {
+    implicit
+    mat: Materializer): String = {
     val bodyBytes: ByteString = await(result.body.consumeData)
     // We use the default charset to preserve the behaviour of a previous
     // version of this code, which used new String(Array[Byte]).
@@ -68,14 +66,14 @@ trait UnitSpec extends AnyWordSpecLike with Matchers {
   }
 
   def bodyOf(resultF: Future[play.api.mvc.Result])(
-      implicit
-      mat: Materializer): Future[String] = {
+    implicit
+    mat: Materializer): Future[String] =
     resultF.map(bodyOf)
-  }
 
-  case class ExternalService(serviceName: String,
-                             runFrom:     String         = "SNAPSHOT_JAR",
-                             classifier:  Option[String] = None,
-                             version:     Option[String] = None)
+  case class ExternalService(
+    serviceName: String,
+    runFrom: String = "SNAPSHOT_JAR",
+    classifier: Option[String] = None,
+    version: Option[String] = None)
 
 }

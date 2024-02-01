@@ -24,11 +24,11 @@ import uk.gov.hmrc.helptosave.util.LogMessageTransformer
 
 import scala.concurrent.ExecutionContext
 
-class TransactionsController @Inject() (proxyConnector:       HelpToSaveProxyConnector,
-                                        authConnector:        AuthConnector,
-                                        controllerComponents: ControllerComponents)(implicit transformer: LogMessageTransformer,
-                                                                                    ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector, controllerComponents) with AccountQuery {
+class TransactionsController @Inject()(
+  proxyConnector: HelpToSaveProxyConnector,
+  authConnector: AuthConnector,
+  controllerComponents: ControllerComponents)(implicit transformer: LogMessageTransformer, ec: ExecutionContext)
+    extends HelpToSaveAuth(authConnector, controllerComponents) with AccountQuery {
 
   def getTransactions(nino: String, systemId: String, correlationId: Option[String]): Action[AnyContent] =
     accountQuery(nino, systemId, correlationId) { implicit request => nsiParams =>

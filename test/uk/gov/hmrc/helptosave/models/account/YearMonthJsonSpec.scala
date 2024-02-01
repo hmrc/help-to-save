@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.YearMonth
-
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsString, Json}
+
+import java.time.YearMonth
 
 class YearMonthJsonSpec extends AnyWordSpec with Matchers {
   "YearMonth JSON" should {

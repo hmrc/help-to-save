@@ -35,14 +35,17 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
-                                          val helpToSaveService: HelpToSaveService,
-                                          authConnector:         AuthConnector,
-                                          proxyConnector:        HelpToSaveProxyConnector,
-                                          controllerComponents:  ControllerComponents)(
-    implicit
-    transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
-  extends HelpToSaveAuth(authConnector, controllerComponents) with EnrolmentBehaviour with AccountQuery {
+class EnrolmentStoreController @Inject()(
+  val enrolmentStore: EnrolmentStore,
+  val helpToSaveService: HelpToSaveService,
+  authConnector: AuthConnector,
+  proxyConnector: HelpToSaveProxyConnector,
+  controllerComponents: ControllerComponents)(
+  implicit
+  transformer: LogMessageTransformer,
+  appConfig: AppConfig,
+  ec: ExecutionContext)
+    extends HelpToSaveAuth(authConnector, controllerComponents) with EnrolmentBehaviour with AccountQuery {
 
   import EnrolmentStoreController._
 
@@ -56,11 +59,14 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
     handleAccountNumber(enrolmentStore.getAccountNumber(nino), nino, request.uri)
   }
 
-  def getEnrolmentStatus(maybeNino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNino) { implicit request => implicit nino =>
-    handle(enrolmentStore.get(nino), "get enrolment status", nino)
+  def getEnrolmentStatus(maybeNino: Option[String]): Action[AnyContent] = ggOrPrivilegedAuthorisedWithNINO(maybeNino) {
+    implicit request => implicit nino =>
+      handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 
-  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit hc: HeaderCarrier, writes: Writes[A]): Future[Result] = {
+  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(
+    implicit hc: HeaderCarrier,
+    writes: Writes[A]): Future[Result] = {
     val additionalParams = "apiCorrelationId" -> getApiCorrelationId()
     f.fold(
       { e =>
@@ -73,25 +79,26 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
     )
   }
 
-  private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] = {
+  private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], nino: NINO, uri: String)(
+    implicit hc: HeaderCarrier): Future[Result] =
     f.leftFlatMap {
-      case e =>
-        logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
-        EitherT.pure[Future, String](AccountNumber(None))
-    }.semiflatMap {
-      accountNumber =>
+        case e =>
+          logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
+          EitherT.pure[Future, String](AccountNumber(None))
+      }
+      .semiflatMap { accountNumber =>
         accountNumber.accountNumber match {
           case Some(accountNumStr) => Future.successful(Ok(Json.toJson(accountNumber)))
           case None                => processGetAccountNumberFromNSI(nino, uri)
         }
-    }.fold(
-      { e =>
-        InternalServerError
-      }, {
-        identity
       }
-    )
-  }
+      .fold(
+        { e =>
+          InternalServerError
+        }, {
+          identity
+        }
+      )
 
   private def processGetAccountNumberFromNSI(nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] =
     getAccountNumberFromNSI(nino, uri).fold(
@@ -103,7 +110,8 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
       }
     )
 
-  private def getAccountNumberFromNSI(nino: NINO, uri: String)(implicit hc: HeaderCarrier): EitherT[Future, String, AccountNumber] = {
+  private def getAccountNumberFromNSI(nino: NINO, uri: String)(
+    implicit hc: HeaderCarrier): EitherT[Future, String, AccountNumber] =
     proxyConnector.getAccount(nino, "help-to-save", getApiCorrelationId(), uri).map { response =>
       response match {
         case Some(account) => {
@@ -118,7 +126,6 @@ class EnrolmentStoreController @Inject() (val enrolmentStore:    EnrolmentStore,
       }
       response.fold[AccountNumber](AccountNumber(None))(ac => AccountNumber(Some(ac.accountNumber)))
     }
-  }
 
 }
 

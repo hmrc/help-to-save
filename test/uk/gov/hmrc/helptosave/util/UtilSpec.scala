@@ -20,8 +20,8 @@ class UtilSpec extends UnitSpec {
 
   "Util.maskNino(*)" must {
     "mask ninos in the given string" in {
-        def errorJson(nino: String) =
-          s"""eligibility response body from DES is:
+      def errorJson(nino: String) =
+        s"""eligibility response body from DES is:
           <am:fault xmlns:am="http://wso2.org/apimanager">
             <am:code>404</am:code>
             <am:type>Status report</am:type>

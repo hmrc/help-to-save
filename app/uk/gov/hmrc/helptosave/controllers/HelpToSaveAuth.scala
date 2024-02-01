@@ -39,8 +39,8 @@ object HelpToSaveAuth {
 
 }
 
-class HelpToSaveAuth(htsAuthConnector:     AuthConnector,
-                     controllerComponents: ControllerComponents) extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
+class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)
+    extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
 
   import HelpToSaveAuth._
 
@@ -58,9 +58,9 @@ class HelpToSaveAuth(htsAuthConnector:     AuthConnector,
           mayBeNino.fold[Future[Result]] {
             logger.warn("Could not find NINO for logged in user")
             Forbidden
-          }(nino => action(request)(nino)
-          )
-        }.recover {
+          }(nino => action(request)(nino))
+        }
+        .recover {
           handleFailure()
         }
     }
@@ -74,42 +74,45 @@ class HelpToSaveAuth(htsAuthConnector:     AuthConnector,
       }
     }
 
-  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
+  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNINO)(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      authorised(GGAndPrivilegedProviders).retrieve(v2.Retrievals.authProviderId) {
-        case GGCredId(_) =>
-          authorised().retrieve(v2Nino) { retrievedNINO =>
-            (nino, retrievedNINO) match {
-              case (Some(given), Some(retrieved)) =>
-                if (given === retrieved) {
-                  action(request)(given)
-                } else {
-                  logger.warn("Given NINO did not match retrieved NINO")
-                  toFuture(Forbidden)
-                }
+      authorised(GGAndPrivilegedProviders)
+        .retrieve(v2.Retrievals.authProviderId) {
+          case GGCredId(_) =>
+            authorised().retrieve(v2Nino) { retrievedNINO =>
+              (nino, retrievedNINO) match {
+                case (Some(given), Some(retrieved)) =>
+                  if (given === retrieved) {
+                    action(request)(given)
+                  } else {
+                    logger.warn("Given NINO did not match retrieved NINO")
+                    toFuture(Forbidden)
+                  }
 
-              case (None, Some(retrieved)) =>
-                action(request)(retrieved)
+                case (None, Some(retrieved)) =>
+                  action(request)(retrieved)
 
-              case (_, None) =>
-                logger.warn("Could not retrieve NINO for GG session")
-                Forbidden
+                case (_, None) =>
+                  logger.warn("Could not retrieve NINO for GG session")
+                  Forbidden
+              }
             }
-          }
 
-        case PAClientId(_) =>
-          nino.fold[Future[Result]]{
-            logger.warn("NINO not given for privileged request")
-            BadRequest
-          }(n => action(request)(n))
+          case PAClientId(_) =>
+            nino.fold[Future[Result]] {
+              logger.warn("NINO not given for privileged request")
+              BadRequest
+            }(n => action(request)(n))
 
-        case other =>
-          logger.warn(s"Recevied request from unsupported authProvider: ${other.getClass.getSimpleName}")
-          toFuture(Forbidden)
+          case other =>
+            logger.warn(s"Recevied request from unsupported authProvider: ${other.getClass.getSimpleName}")
+            toFuture(Forbidden)
 
-      }.recover {
-        handleFailure()
-      }
+        }
+        .recover {
+          handleFailure()
+        }
     }
 
   def handleFailure(): PartialFunction[Throwable, Result] = {
@@ -127,4 +130,3 @@ class HelpToSaveAuth(htsAuthConnector:     AuthConnector,
   }
 
 }
-

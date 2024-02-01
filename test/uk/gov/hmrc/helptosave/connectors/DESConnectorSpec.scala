@@ -24,7 +24,8 @@ import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
 
-class DESConnectorSpec extends TestSupport with MockPagerDuty with TestData with HttpSupport with ScalaCheckDrivenPropertyChecks {
+class DESConnectorSpec
+    extends TestSupport with MockPagerDuty with TestData with HttpSupport with ScalaCheckDrivenPropertyChecks {
   val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
 
   val nino = "NINO"
@@ -34,32 +35,34 @@ class DESConnectorSpec extends TestSupport with MockPagerDuty with TestData with
 
   "the isEligible method" when {
 
-      def url(nino: NINO): String = s"${connector.itmpECBaseURL}/help-to-save/eligibility-check/$nino"
+    def url(nino: NINO): String = s"${connector.itmpECBaseURL}/help-to-save/eligibility-check/$nino"
 
     "return 200 status when call to DES successfully returns eligibility check response" in {
       List[(Option[UCResponse], Map[String, String])](
-        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(true))) ->
+        Some(UCResponse(ucClaimant = true, withinThreshold = Some(true))) ->
           Map("universalCreditClaimant" -> "Y", "withinThreshold" -> "Y"),
-        Some(UCResponse(ucClaimant      = true, withinThreshold = Some(false))) ->
+        Some(UCResponse(ucClaimant = true, withinThreshold = Some(false))) ->
           Map("universalCreditClaimant" -> "Y", "withinThreshold" -> "N"),
-        Some(UCResponse(ucClaimant      = false, withinThreshold = None)) ->
+        Some(UCResponse(ucClaimant = false, withinThreshold = None)) ->
           Map("universalCreditClaimant" -> "N"),
         None ->
           Map()
-      ).foreach{
-          case (ucResponse, expectedQueryParameters) =>
-            withClue(s"For ucResponse: $ucResponse:"){
-              mockGet(url(nino), expectedQueryParameters, appConfig.desHeaders)(Some(HttpResponse(200, Json.toJson(eligibilityCheckResultJson), returnHeaders)))
-              val result = await(connector.isEligible(nino, ucResponse))
+      ).foreach {
+        case (ucResponse, expectedQueryParameters) =>
+          withClue(s"For ucResponse: $ucResponse:") {
+            mockGet(url(nino), expectedQueryParameters, appConfig.desHeaders)(
+              Some(HttpResponse(200, Json.toJson(eligibilityCheckResultJson), returnHeaders)))
+            val result = await(connector.isEligible(nino, ucResponse))
 
-              result.status shouldBe 200
-            }
-        }
+            result.status shouldBe 200
+          }
+      }
 
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url(nino), headers = appConfig.desHeaders)(Some(HttpResponse(500, Json.toJson(eligibilityCheckResultJson), returnHeaders)))
+      mockGet(url(nino), headers = appConfig.desHeaders)(
+        Some(HttpResponse(500, Json.toJson(eligibilityCheckResultJson), returnHeaders)))
       val result = await(connector.isEligible(nino, None))
 
       result.status shouldBe 500
@@ -68,7 +71,7 @@ class DESConnectorSpec extends TestSupport with MockPagerDuty with TestData with
 
   "the setFlag method" when {
 
-      def url(nino: NINO): String = s"${connector.itmpECBaseURL}/help-to-save/accounts/$nino"
+    def url(nino: NINO): String = s"${connector.itmpECBaseURL}/help-to-save/accounts/$nino"
 
     "setting the ITMP flag" must {
 
@@ -103,7 +106,8 @@ class DESConnectorSpec extends TestSupport with MockPagerDuty with TestData with
     val url = connector.payePersonalDetailsUrl(nino)
 
     "return pay personal details for a successful nino" in {
-      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(Some(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders))) // scalastyle:ignore magic.number
+      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(
+        Some(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders))) // scalastyle:ignore magic.number
       val result = await(connector.getPersonalDetails(nino))
 
       result.status shouldBe 200
@@ -111,7 +115,8 @@ class DESConnectorSpec extends TestSupport with MockPagerDuty with TestData with
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(Some(HttpResponse(500, Json.parse(payeDetails(nino)), returnHeaders))) // scalastyle:ignore magic.number
+      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(
+        Some(HttpResponse(500, Json.parse(payeDetails(nino)), returnHeaders))) // scalastyle:ignore magic.number
       val result = await(connector.getPersonalDetails(nino))
 
       result.status shouldBe 500

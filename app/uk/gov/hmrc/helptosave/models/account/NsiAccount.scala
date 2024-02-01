@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.helptosave.models.account
 
-import java.time.LocalDate
-
 import play.api.libs.json.{Json, Reads}
 
+import java.time.LocalDate
+
 case class NsiCurrentInvestmentMonth(
-    investmentRemaining: BigDecimal,
-    investmentLimit:     BigDecimal,
-    endDate:             LocalDate
+  investmentRemaining: BigDecimal,
+  investmentLimit: BigDecimal,
+  endDate: LocalDate
 )
 
 object NsiCurrentInvestmentMonth {
@@ -31,11 +31,11 @@ object NsiCurrentInvestmentMonth {
 }
 
 case class NsiBonusTerm(
-    termNumber:    Int,
-    startDate:     LocalDate,
-    endDate:       LocalDate,
-    bonusEstimate: BigDecimal,
-    bonusPaid:     BigDecimal
+  termNumber: Int,
+  startDate: LocalDate,
+  endDate: LocalDate,
+  bonusEstimate: BigDecimal,
+  bonusPaid: BigDecimal
 )
 
 object NsiBonusTerm {
@@ -43,25 +43,24 @@ object NsiBonusTerm {
 }
 
 case class NsiAccount(
-    accountNumber:          String,
-    accountClosedFlag:      String,
-    accountBlockingCode:    String,
-    clientBlockingCode:     String,
-    accountBalance:         BigDecimal,
-    currentInvestmentMonth: NsiCurrentInvestmentMonth,
-    clientForename:         String,
-    clientSurname:          String,
-    emailAddress:           Option[String],
-    terms:                  Seq[NsiBonusTerm],
-    accountClosureDate:     Option[LocalDate]         = None,
-    accountClosingBalance:  Option[BigDecimal]        = None,
-    nbaAccountNumber:       Option[String]            = None,
-    nbaPayee:               Option[String]            = None,
-    nbaRollNumber:          Option[String]            = None,
-    nbaSortCode:            Option[String]            = None
+  accountNumber: String,
+  accountClosedFlag: String,
+  accountBlockingCode: String,
+  clientBlockingCode: String,
+  accountBalance: BigDecimal,
+  currentInvestmentMonth: NsiCurrentInvestmentMonth,
+  clientForename: String,
+  clientSurname: String,
+  emailAddress: Option[String],
+  terms: Seq[NsiBonusTerm],
+  accountClosureDate: Option[LocalDate] = None,
+  accountClosingBalance: Option[BigDecimal] = None,
+  nbaAccountNumber: Option[String] = None,
+  nbaPayee: Option[String] = None,
+  nbaRollNumber: Option[String] = None,
+  nbaSortCode: Option[String] = None
 )
 
 object NsiAccount {
   implicit val reads: Reads[NsiAccount] = Json.reads[NsiAccount]
 }
-

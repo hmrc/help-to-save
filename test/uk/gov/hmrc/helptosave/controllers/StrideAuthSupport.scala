@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.Base64
-
-import configs.syntax._
 import org.scalamock.handlers.CallHandler4
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core.authorise.Predicate
@@ -27,23 +24,24 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.auth.core.{AuthProviders, Enrolment, Enrolments}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 trait StrideAuthSupport extends AuthSupport {
-
-  lazy val roles: List[String] =
-    fakeApplication.configuration.underlying
-      .get[List[String]]("stride.base64-encoded-roles")
-      .value
+  lazy val roles: Seq[String] =
+    fakeApplication.configuration
+      .get[Seq[String]]("stride.base64-encoded-roles")
       .map(s => new String(Base64.getDecoder.decode(s)))
 
-  def mockAuthorised[A](expectedPredicate: Predicate,
-                        expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
-    (mockAuthConnector.authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
+  def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
+    result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
+    (mockAuthConnector
+      .authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
       .expects(expectedPredicate, expectedRetrieval, *, *)
       .returning(result.fold(Future.failed, Future.successful))
 
-  def mockSuccessfulAuthorisation(): CallHandler4[Predicate, Retrieval[Enrolments], HeaderCarrier, ExecutionContext, Future[Enrolments]] =
+  def mockSuccessfulAuthorisation()
+    : CallHandler4[Predicate, Retrieval[Enrolments], HeaderCarrier, ExecutionContext, Future[Enrolments]] =
     mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(
       Right(Enrolments(roles.map(Enrolment(_)).toSet)))
 }

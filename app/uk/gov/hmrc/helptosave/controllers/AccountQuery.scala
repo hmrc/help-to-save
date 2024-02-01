@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import java.util.UUID
-
 import cats.instances.future._
 import cats.instances.string._
 import cats.syntax.eq._
@@ -28,6 +26,7 @@ import uk.gov.hmrc.helptosave.util
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 
 case class NsiAccountQueryParams(nino: String, systemId: String, correlationId: String)
@@ -36,11 +35,13 @@ trait AccountQuery extends Logging with Results {
   this: HelpToSaveAuth =>
 
   /**
-   * Behaviour common to actions that query for Help to Save account data based on NINO
-   */
-  protected def accountQuery[A](nino:          String,
-                                systemId:      String,
-                                correlationId: Option[String])(query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]])(implicit transformer: LogMessageTransformer, writes: Writes[A], ec: ExecutionContext): Action[AnyContent] =
+    * Behaviour common to actions that query for Help to Save account data based on NINO
+    */
+  protected def accountQuery[A](nino: String, systemId: String, correlationId: Option[String])(
+    query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]])(
+    implicit transformer: LogMessageTransformer,
+    writes: Writes[A],
+    ec: ExecutionContext): Action[AnyContent] =
     if (!isValid(nino)) {
       Action {
         logger.warn("NINO in request was not valid")

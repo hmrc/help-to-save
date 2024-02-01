@@ -25,13 +25,13 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 
 class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
 
-  def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) = new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
+  def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) =
+    new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
   val repository = newEligibilityStatsMongoStore(mongoComponent)
 
-  override def beforeEach(): Unit = {
+  override def beforeEach(): Unit =
     //    await(repository.collection.drop().toFuture())
     dropDatabase()
-  }
 
   "The EligibilityStatsStore" when {
 
@@ -39,7 +39,15 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
 
       "return results as expected" in {
 
-        await(repository.collection.insertOne(EnrolmentData(nino              = randomNINO(), itmpHtSFlag = false, eligibilityReason = Some(7), source = Some("Digital"))).toFuture())
+        await(
+          repository.collection
+            .insertOne(
+              EnrolmentData(
+                nino = randomNINO(),
+                itmpHtSFlag = false,
+                eligibilityReason = Some(7),
+                source = Some("Digital")))
+            .toFuture())
         await(repository.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
       }
     }
@@ -51,24 +59,27 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
 
     "return aggregated results when there is more than one result" in {
       val enrolmentData = EnrolmentData(
-        nino              = randomNINO(),
-        itmpHtSFlag       = false,
+        nino = randomNINO(),
+        itmpHtSFlag = false,
         eligibilityReason = Some(7),
-        source            = Some("Digital")
+        source = Some("Digital")
       )
 
       await(repository.collection.insertOne(enrolmentData).toFuture())
 
       await(repository.collection.insertOne(enrolmentData).toFuture())
 
-      await(repository.collection.insertOne(
-        EnrolmentData(
-          nino              = randomNINO(),
-          itmpHtSFlag       = false,
-          eligibilityReason = Some(8),
-          source            = Some("Digital")
-        )
-      ).toFuture())
+      await(
+        repository.collection
+          .insertOne(
+            EnrolmentData(
+              nino = randomNINO(),
+              itmpHtSFlag = false,
+              eligibilityReason = Some(8),
+              source = Some("Digital")
+            )
+          )
+          .toFuture())
 
       await(repository.getEligibilityStats).sortBy(_.eligibilityReason) shouldBe List(
         EligibilityStats(Some(7), Some("Digital"), 2),

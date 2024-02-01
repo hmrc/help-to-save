@@ -24,7 +24,8 @@ trait MockPagerDuty { this: MockFactory =>
   val mockPagerDuty: PagerDutyAlerting = mock[PagerDutyAlerting]
 
   def mockPagerDutyAlert(expectedMessage: String): Unit =
-    (mockPagerDuty.alert(_: String))
+    (mockPagerDuty
+      .alert(_: String))
       .expects(expectedMessage)
       .returning(())
 

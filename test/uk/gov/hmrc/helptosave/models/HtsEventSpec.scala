@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import java.time.LocalDate
-
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ManuallyEnteredDetails, PrePopulatedUserData}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.audit.EventKeys._
+
+import java.time.LocalDate
 
 class HtsEventSpec extends TestSupport {
 
@@ -31,8 +31,10 @@ class HtsEventSpec extends TestSupport {
   "EligibilityCheckEvent" must { // scalastyle:off magic.number
 
     val nino = "AE123456C"
-    val eligibleResult = EligibilityCheckResult("Eligible to HtS Account", 1, "In receipt of UC and income sufficient", 6)
-    val inEligibleResult = EligibilityCheckResult("HtS account was previously created", 3, "HtS account already exists", 1)
+    val eligibleResult =
+      EligibilityCheckResult("Eligible to HtS Account", 1, "In receipt of UC and income sufficient", 6)
+    val inEligibleResult =
+      EligibilityCheckResult("HtS account was previously created", 3, "HtS account already exists", 1)
 
     val eligibleUCClaimantWithinThreshold =
       s"""{"nino":"$nino","eligible":true,"isUCClaimant":true,"isWithinUCThreshold":true}""".stripMargin
@@ -130,7 +132,8 @@ class HtsEventSpec extends TestSupport {
             "comms",
             "channel",
             "source"
-          ), ManuallyEnteredDetails(
+          ),
+          ManuallyEnteredDetails(
             "accountName",
             "accountNumber",
             "sortCode",
@@ -153,7 +156,8 @@ class HtsEventSpec extends TestSupport {
             "comms",
             "channel",
             "source"
-          ), ManuallyEnteredDetails(
+          ),
+          ManuallyEnteredDetails(
             Some("accountName"),
             Some("accountNumber"),
             Some("sortCode"),
@@ -182,39 +186,38 @@ class HtsEventSpec extends TestSupport {
 
     val nino = randomNINO()
 
-    val nsiAccountJson = Json.parse(
-      """
-        |{
-        |  "accountNumber": "AC01",
-        |  "accountBalance": "200.34",
-        |  "accountClosedFlag": "",
-        |  "accountBlockingCode": "00",
-        |  "clientBlockingCode": "00",
-        |  "currentInvestmentMonth": {
-        |    "investmentRemaining": "15.50",
-        |    "investmentLimit": "50.00",
-        |    "endDate": "2018-02-28"
-        |  },
-        |  "clientForename":"Testforename",
-        |  "clientSurname":"Testsurname",
-        |  "emailAddress":"test@example.com",
-        |  "terms": [
-        |     {
-        |       "termNumber":2,
-        |       "startDate":"2020-01-01",
-        |       "endDate":"2021-12-31",
-        |       "bonusEstimate":"67.00",
-        |       "bonusPaid":"0.00"
-        |    },
-        |    {
-        |       "termNumber":1,
-        |       "startDate":"2018-01-01",
-        |       "endDate":"2019-12-31",
-        |       "bonusEstimate":"123.45",
-        |       "bonusPaid":"123.45"
-        |    }
-        |  ]
-        |}
+    val nsiAccountJson = Json.parse("""
+                                      |{
+                                      |  "accountNumber": "AC01",
+                                      |  "accountBalance": "200.34",
+                                      |  "accountClosedFlag": "",
+                                      |  "accountBlockingCode": "00",
+                                      |  "clientBlockingCode": "00",
+                                      |  "currentInvestmentMonth": {
+                                      |    "investmentRemaining": "15.50",
+                                      |    "investmentLimit": "50.00",
+                                      |    "endDate": "2018-02-28"
+                                      |  },
+                                      |  "clientForename":"Testforename",
+                                      |  "clientSurname":"Testsurname",
+                                      |  "emailAddress":"test@example.com",
+                                      |  "terms": [
+                                      |     {
+                                      |       "termNumber":2,
+                                      |       "startDate":"2020-01-01",
+                                      |       "endDate":"2021-12-31",
+                                      |       "bonusEstimate":"67.00",
+                                      |       "bonusPaid":"0.00"
+                                      |    },
+                                      |    {
+                                      |       "termNumber":1,
+                                      |       "startDate":"2018-01-01",
+                                      |       "endDate":"2019-12-31",
+                                      |       "bonusEstimate":"123.45",
+                                      |       "bonusPaid":"123.45"
+                                      |    }
+                                      |  ]
+                                      |}
       """.stripMargin).as[JsObject]
 
     "construct GetAccountResult event correctly" in {

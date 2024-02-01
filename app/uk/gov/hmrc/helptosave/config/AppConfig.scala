@@ -16,45 +16,47 @@
 
 package uk.gov.hmrc.helptosave.config
 
-import configs.syntax._
 import com.google.inject.Singleton
 import com.typesafe.config.ConfigRenderOptions
-
-import javax.inject.Inject
-import play.api.Mode
 import play.api.libs.json.Json
-import play.api.{Configuration, Environment}
+import play.api.{Configuration, Environment, Mode}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import scala.jdk.CollectionConverters._
+import javax.inject.Inject
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.CollectionConverters._
 
 @Singleton
-class AppConfig @Inject() (val runModeConfiguration: Configuration,
-                           val environment:          Environment,
-                           servicesConfig:           ServicesConfig) {
-
+class AppConfig @Inject()(
+  val runModeConfiguration: Configuration,
+  environment: Environment,
+  servicesConfig: ServicesConfig) {
   protected def mode: Mode = environment.mode
 
   val appName: String = servicesConfig.getString("appName")
 
   val desHeaders: Map[String, String] = Map(
-    "Environment" -> servicesConfig.getString("microservice.services.des.environment"),
+    "Environment"   -> servicesConfig.getString("microservice.services.des.environment"),
     "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.des.token")}"
   )
 
   val correlationIdHeaderName: String = servicesConfig.getString("microservice.correlationIdHeaderName")
 
-  val thresholdAskTimeout: FiniteDuration = runModeConfiguration.underlying.get[FiniteDuration]("uc-threshold.ask-timeout").value
+  val thresholdAskTimeout: FiniteDuration =
+    runModeConfiguration.get[FiniteDuration]("uc-threshold.ask-timeout")
 
   val createAccountVersion: String = servicesConfig.getString("nsi.create-account.version")
 
   val barsUrl: String = servicesConfig.baseUrl("bank-account-reputation")
 
   val ninoDeletionConfig: String => Seq[NINODeletionConfig] = (configSuffix: String) => {
-    runModeConfiguration.underlying.getObjectList(s"enrolment.$configSuffix").asScala.flatMap(config => {
-      Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
-    }).toSeq
+    runModeConfiguration.underlying
+      .getObjectList(s"enrolment.$configSuffix")
+      .asScala
+      .flatMap(config => {
+        Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
+      })
+      .toSeq
   }
 }

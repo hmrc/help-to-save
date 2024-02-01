@@ -17,7 +17,6 @@
 package uk.gov.hmrc.helptosave.actors
 
 import java.time.{Clock, LocalTime}
-
 import scala.concurrent.duration._
 trait TimeCalculator {
 
@@ -51,4 +50,3 @@ class TimeCalculatorImpl(clock: Clock) extends TimeCalculator {
   }
 
 }
-

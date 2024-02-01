@@ -29,40 +29,43 @@ import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoEligibilityStatsStore])
 trait EligibilityStatsStore {
-
   def getEligibilityStats: Future[List[EligibilityStats]]
-
 }
 
 @Singleton
-class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
-                                            metrics: Metrics)(implicit ec: ExecutionContext)
-  extends PlayMongoRepository[EnrolmentData](
-    mongoComponent = mongo,
-    collectionName = "enrolments",
-    domainFormat   = EnrolmentData.ninoFormat,
-    indexes        = Seq(IndexModel(ascending("eligibilityReason"), IndexOptions().name("eligibilityReasonIndex")))
-  ) with EligibilityStatsStore with Logging {
+class MongoEligibilityStatsStore @Inject()(mongo: MongoComponent, metrics: Metrics)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[EnrolmentData](
+      mongoComponent = mongo,
+      collectionName = "enrolments",
+      domainFormat = EnrolmentData.ninoFormat,
+      indexes = Seq(IndexModel(ascending("eligibilityReason"), IndexOptions().name("eligibilityReasonIndex")))
+    ) with EligibilityStatsStore with Logging {
 
   private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
     import MongoEligibilityStatsStore.format
 
-    collection.aggregate[BsonValue](Seq(
-      Aggregates.group(BsonDocument("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"), Accumulators.sum("total", 1)),
-      Aggregates.project(Projections.fields(
-        Projections.computed("_id", 0),
-        Projections.computed("eligibilityReason", "$_id.eligibilityReason"),
-        Projections.computed("source", "$_id.source"),
-        Projections.computed("total", "$total"),
-      ))
-    )).toFuture()
-      .map(_.toList.map(Codecs.fromBson[EligibilityStats]))
-
+    preservingMdc {
+      collection
+        .aggregate[BsonValue](Seq(
+          Aggregates.group(
+            BsonDocument("eligibilityReason" -> "$eligibilityReason", "source" -> "$source"),
+            Accumulators.sum("total", 1)),
+          Aggregates.project(Projections.fields(
+            Projections.computed("_id", 0),
+            Projections.computed("eligibilityReason", "$_id.eligibilityReason"),
+            Projections.computed("source", "$_id.source"),
+            Projections.computed("total", "$total")
+          ))
+        ))
+        .toFuture()
+        .map(_.toList.map(Codecs.fromBson[EligibilityStats]))
+    }
   }
 
   override def getEligibilityStats: Future[List[EligibilityStats]] = {
@@ -72,7 +75,8 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
         val time = timerContext.stop()
         logger.info(s"eligibility stats query took ${nanosToPrettyString(time)}")
         response
-      }.recover {
+      }
+      .recover {
         case e =>
           val _ = timerContext.stop()
           logger.warn(s"error retrieving the eligibility stats from mongo, error = ${e.getMessage}")
@@ -82,9 +86,7 @@ class MongoEligibilityStatsStore @Inject() (mongo:   MongoComponent,
 }
 
 object MongoEligibilityStatsStore {
-
   case class EligibilityStats(eligibilityReason: Option[Int], source: Option[String], total: Int)
 
   implicit val format: Format[EligibilityStats] = Json.format[EligibilityStats]
 }
-

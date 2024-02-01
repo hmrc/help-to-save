@@ -16,28 +16,29 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.time.LocalDate
-import java.util.UUID
-
 import org.scalatest.EitherValues
 import play.api.libs.json.{JsValue, Json}
 import play.mvc.Http.Status._
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
-import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.HttpResponse
 
+import java.time.LocalDate
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 // scalastyle:off magic.number
-class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with HttpSupport {
+class HelpToSaveProxyConnectorSpec
+    extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with HttpSupport {
 
   val mockAuditor = mock[HTSAuditor]
   val returnHeaders = Map[String, Seq[String]]()
-  override val proxyConnector = new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
+  override val proxyConnector =
+    new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
   val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
   val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
 
@@ -47,12 +48,26 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
       "surname",
       LocalDate.now(),
       "nino",
-      ContactDetails("address1", "address2", Some("address3"), Some("address4"), Some("address5"), "postcode", Some("GB"), Some("phoneNumber"), Some("email"), "commPref"),
-      "regChannel", None, Some("version"), Some("systemId")
+      ContactDetails(
+        "address1",
+        "address2",
+        Some("address3"),
+        Some("address4"),
+        Some("address5"),
+        "postcode",
+        Some("GB"),
+        Some("phoneNumber"),
+        Some("email"),
+        "commPref"),
+      "regChannel",
+      None,
+      Some("version"),
+      Some("systemId")
     )
 
   def mockSendAuditEvent(event: GetAccountResultEvent, nino: String) =
-    (mockAuditor.sendEvent(_: GetAccountResultEvent, _: String)(_: ExecutionContext))
+    (mockAuditor
+      .sendEvent(_: GetAccountResultEvent, _: String)(_: ExecutionContext))
       .expects(event, nino, *)
       .returning(())
 
@@ -90,8 +105,7 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
         result.status shouldBe INTERNAL_SERVER_ERROR
         Json.parse(result.body) shouldBe
-          Json.parse(
-            """{
+          Json.parse("""{
               "errorMessageId" : "",
               "errorMessage" : "unexpected error from proxy during /create-de-account",
               "errorDetail"  : "Test exception message"
@@ -120,14 +134,13 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle success response from proxy" in {
 
-          def test(uCResponse: UCResponse): Unit = {
-            withClue(s"For UCResponse $uCResponse:"){
-              mockGet(url, queryParams)(Some(HttpResponse(OK, Json.toJson(uCResponse), returnHeaders)))
+        def test(uCResponse: UCResponse): Unit =
+          withClue(s"For UCResponse $uCResponse:") {
+            mockGet(url, queryParams)(Some(HttpResponse(OK, Json.toJson(uCResponse), returnHeaders)))
 
-              val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
+            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
 
-              result shouldBe Right(uCResponse)
-            }
+            result shouldBe Right(uCResponse)
           }
 
         test(UCResponse(true, Some(true)))
@@ -145,13 +158,12 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handles failures due to invalid json" in {
 
-          def test(json: String) = {
-            withClue(s"For json $json:") {
-              mockGet(url, queryParams)(Some(HttpResponse(OK, Json.parse(json), returnHeaders)))
+        def test(json: String) =
+          withClue(s"For json $json:") {
+            mockGet(url, queryParams)(Some(HttpResponse(OK, Json.parse(json), returnHeaders)))
 
-              val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
-              result.left.value contains "unable to parse UCResponse from proxy"
-            }
+            val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
+            result.left.value contains "unable to parse UCResponse from proxy"
           }
 
         test("""{"foo": "bar"}""")
@@ -174,10 +186,12 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
       val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
 
       val getAccountUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/account"
-      val queryParameters = Map("nino" -> nino, "correlationId" -> correlationId, "version" -> version, "systemId" -> systemId)
+      val queryParameters =
+        Map("nino" -> nino, "correlationId" -> correlationId, "version" -> version, "systemId" -> systemId)
 
       val path = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
-        def event(accountJson: JsValue = nsiAccountJson) = GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
+      def event(accountJson: JsValue = nsiAccountJson) =
+        GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
 
       "handle success response with Accounts having Terms" in {
         mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, nsiAccountJson, returnHeaders)))
@@ -199,7 +213,8 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
 
-        result shouldBe Left("Could not parse getNsiAccount response, received 200 (OK), error=[Bonus terms list returned by NS&I was empty]")
+        result shouldBe Left(
+          "Could not parse getNsiAccount response, received 200 (OK), error=[Bonus terms list returned by NS&I was empty]")
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
@@ -247,22 +262,22 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle the case where an account does not exist" in {
         val errorResponse =
-          Json.parse(
-            s"""
-               |{
-               |  "errors" : [
-               |    {
-               |      "errorMessageId" : "id",
-               |      "errorMessage"   : "message",
-               |      "errorDetail"    : "detail"
-               |    },
-               |    {
-               |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString("nsi.no-account-error-message-id")}",
-               |      "errorMessage"   : "Oh no!",
-               |      "errorDetail"    : "Account doesn't exist"
-               |    }
-               |  ]
-               |}
+          Json.parse(s"""
+                        |{
+                        |  "errors" : [
+                        |    {
+                        |      "errorMessageId" : "id",
+                        |      "errorMessage"   : "message",
+                        |      "errorDetail"    : "detail"
+                        |    },
+                        |    {
+                        |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString(
+                          "nsi.no-account-error-message-id")}",
+                        |      "errorMessage"   : "Oh no!",
+                        |      "errorDetail"    : "Account doesn't exist"
+                        |    }
+                        |  ]
+                        |}
           """.stripMargin)
 
         mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400, errorResponse, returnHeaders)))
@@ -281,15 +296,21 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       val getTransactionsUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/transactions"
       val queryParameters = Map(
-        "nino" -> nino, "correlationId" -> correlationId, "version" -> version, "systemId" -> systemId
+        "nino"          -> nino,
+        "correlationId" -> correlationId,
+        "version"       -> version,
+        "systemId"      -> systemId
       )
 
-        def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
-          val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
-          val errorCountBefore = mockMetrics.getTransactionsErrorCounter.getCount
-          val result = body
-          (result, mockMetrics.getTransactionsTimer.getCount - timerCountBefore, mockMetrics.getTransactionsErrorCounter.getCount - errorCountBefore)
-        }
+      def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
+        val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
+        val errorCountBefore = mockMetrics.getTransactionsErrorCounter.getCount
+        val result = body
+        (
+          result,
+          mockMetrics.getTransactionsTimer.getCount - timerCountBefore,
+          mockMetrics.getTransactionsErrorCounter.getCount - errorCountBefore)
+      }
 
       "handle success response by translating transactions from NS&I domain into MDTP domain" in {
         val json = Json.parse(
@@ -347,15 +368,54 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
         mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
 
-        val (result, timerMetricChange, errorMetricChange) = transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+        val (result, timerMetricChange, errorMetricChange) =
+          transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
-        result shouldBe Right(Some(Transactions(Seq(
-          Transaction(Credit, BigDecimal("11.50"), LocalDate.parse("2017-11-20"), LocalDate.parse("2017-11-20"), "Debit card online deposit", "A1A11AA1A00A0034", BigDecimal("11.50")),
-          Transaction(Debit, BigDecimal("1.01"), LocalDate.parse("2017-11-27"), LocalDate.parse("2017-11-27"), "BACS payment", "A1A11AA1A00A000I", BigDecimal("10.49")),
-          Transaction(Debit, BigDecimal("1.11"), LocalDate.parse("2017-11-27"), LocalDate.parse("2017-11-27"), "BACS payment", "A1A11AA1A00A000G", BigDecimal("9.38")),
-          Transaction(Credit, BigDecimal("1.11"), LocalDate.parse("2017-11-27"), LocalDate.parse("2017-12-04"), "Reinstatement Adjustment", "A1A11AA1A00A000G", BigDecimal("10.49")),
-          Transaction(Credit, BigDecimal(50), LocalDate.parse("2018-04-10"), LocalDate.parse("2018-04-10"), "Debit card online deposit", "A1A11AA1A00A0059", BigDecimal("60.49"))
-        ))))
+        result shouldBe Right(
+          Some(Transactions(Seq(
+            Transaction(
+              Credit,
+              BigDecimal("11.50"),
+              LocalDate.parse("2017-11-20"),
+              LocalDate.parse("2017-11-20"),
+              "Debit card online deposit",
+              "A1A11AA1A00A0034",
+              BigDecimal("11.50")
+            ),
+            Transaction(
+              Debit,
+              BigDecimal("1.01"),
+              LocalDate.parse("2017-11-27"),
+              LocalDate.parse("2017-11-27"),
+              "BACS payment",
+              "A1A11AA1A00A000I",
+              BigDecimal("10.49")),
+            Transaction(
+              Debit,
+              BigDecimal("1.11"),
+              LocalDate.parse("2017-11-27"),
+              LocalDate.parse("2017-11-27"),
+              "BACS payment",
+              "A1A11AA1A00A000G",
+              BigDecimal("9.38")),
+            Transaction(
+              Credit,
+              BigDecimal("1.11"),
+              LocalDate.parse("2017-11-27"),
+              LocalDate.parse("2017-12-04"),
+              "Reinstatement Adjustment",
+              "A1A11AA1A00A000G",
+              BigDecimal("10.49")
+            ),
+            Transaction(
+              Credit,
+              BigDecimal(50),
+              LocalDate.parse("2018-04-10"),
+              LocalDate.parse("2018-04-10"),
+              "Debit card online deposit",
+              "A1A11AA1A00A0059",
+              BigDecimal("60.49"))
+          ))))
         timerMetricChange shouldBe 1
         errorMetricChange shouldBe 0
       }
@@ -386,7 +446,8 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
-        result shouldBe Left("Could not parse transactions response from NS&I, received 200 (OK), error=[Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]]")
+        result shouldBe Left(
+          "Could not parse transactions response from NS&I, received 200 (OK), error=[Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]]")
         timerMetricChange shouldBe 1
         errorMetricChange shouldBe 1
       }
@@ -418,7 +479,8 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
-        result shouldBe Left("""Could not parse transactions response from NS&I, received 200 (OK), error=[Unknown value for operation: "bad"]""")
+        result shouldBe Left(
+          """Could not parse transactions response from NS&I, received 200 (OK), error=[Unknown value for operation: "bad"]""")
         timerMetricChange shouldBe 1
         errorMetricChange shouldBe 1
       }
@@ -451,22 +513,22 @@ class HelpToSaveProxyConnectorSpec extends TestEnrolmentBehaviour with MockPager
 
       "handle the case where an account does not exist by returning Right(None)" in {
         val errorResponse =
-          Json.parse(
-            s"""
-               |{
-               |  "errors" : [
-               |    {
-               |      "errorMessageId" : "id",
-               |      "errorMessage"   : "message",
-               |      "errorDetail"    : "detail"
-               |    },
-               |    {
-               |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString("nsi.no-account-error-message-id")}",
-               |      "errorMessage"   : "Oh no!",
-               |      "errorDetail"    : "Account doesn't exist"
-               |    }
-               |  ]
-               |}
+          Json.parse(s"""
+                        |{
+                        |  "errors" : [
+                        |    {
+                        |      "errorMessageId" : "id",
+                        |      "errorMessage"   : "message",
+                        |      "errorDetail"    : "detail"
+                        |    },
+                        |    {
+                        |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString(
+                          "nsi.no-account-error-message-id")}",
+                        |      "errorMessage"   : "Oh no!",
+                        |      "errorDetail"    : "Account doesn't exist"
+                        |    }
+                        |  ]
+                        |}
           """.stripMargin)
 
         mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(400, errorResponse, returnHeaders)))

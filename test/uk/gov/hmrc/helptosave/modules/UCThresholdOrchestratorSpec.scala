@@ -28,8 +28,8 @@ import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestratorSpec") with Eventually {
 
@@ -40,35 +40,40 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   val pagerDutyAlert = mock[PagerDutyAlerting]
   val proxyActor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
 
-  val testConfiguration = Configuration(ConfigFactory.parseString(
-    """
-       |uc-threshold {
-       |ask-timeout = 10 seconds
-       |min-backoff = 1 second
-       |max-backoff = 5 seconds
-       |number-of-retries-until-initial-wait-doubles = 5
-       |update-timezone = UTC
-       |update-time = "00:00"
-       |update-time-delay = 1 hour
-       |}
+  val testConfiguration = Configuration(
+    ConfigFactory.parseString(
+      """
+        |uc-threshold {
+        |ask-timeout = 10 seconds
+        |min-backoff = 1 second
+        |max-backoff = 5 seconds
+        |number-of-retries-until-initial-wait-doubles = 5
+        |update-timezone = UTC
+        |update-time = "00:00"
+        |update-time-delay = 1 hour
+        |}
     """.stripMargin
-  ))
+    ))
 
   "The UCThresholdOrchestrator" should {
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
 
-      (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+      (connector
+        .getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
         .returning(Future.successful(HttpResponse(500, "")))
 
-      (pagerDutyAlert.alert(_: String))
+      (pagerDutyAlert
+        .alert(_: String))
         .expects("Received unexpected http status in response to get UC threshold from DES")
         .returning(())
 
-      (connector.getThreshold()(_: HeaderCarrier, _: ExecutionContext))
+      (connector
+        .getThreshold()(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *)
-        .returning(Future.successful(HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]())))
+        .returning(Future.successful(
+          HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]())))
 
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 

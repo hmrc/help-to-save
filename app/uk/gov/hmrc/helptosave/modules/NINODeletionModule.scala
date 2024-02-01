@@ -20,7 +20,6 @@ import com.google.inject.AbstractModule
 import uk.gov.hmrc.helptosave.services.ApplicationStart
 
 class NINODeletionModule extends AbstractModule {
-  override def configure(): Unit = {
+  override def configure(): Unit =
     bind(classOf[ApplicationStart]).asEagerSingleton()
-  }
 }

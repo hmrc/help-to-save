@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import java.util.UUID
-
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.config.AppConfig
@@ -26,16 +24,19 @@ import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.Logging
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[BarsConnectorImpl])
 trait BarsConnector {
 
-  def validate(request: BankDetailsValidationRequest, trackingId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def validate(request: BankDetailsValidationRequest, trackingId: UUID)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[HttpResponse]
 }
 
 @Singleton
-class BarsConnectorImpl @Inject() (http: HttpClient)(implicit appConfig: AppConfig) extends BarsConnector with Logging {
+class BarsConnectorImpl @Inject()(http: HttpClient)(implicit appConfig: AppConfig) extends BarsConnector with Logging {
 
   import uk.gov.hmrc.helptosave.connectors.BarsConnectorImpl._
 
@@ -43,10 +44,13 @@ class BarsConnectorImpl @Inject() (http: HttpClient)(implicit appConfig: AppConf
 
   private val headers = Map("Content-Type" -> "application/json")
 
-  override def validate(request: BankDetailsValidationRequest, trackingId: UUID)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+  override def validate(request: BankDetailsValidationRequest, trackingId: UUID)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[HttpResponse] =
     http.post(barsEndpoint, bodyJson(request), headers.+("X-Tracking-Id" -> trackingId.toString))
 
-  private def bodyJson(request: BankDetailsValidationRequest) = Json.toJson(BarsRequest(Account(request.sortCode, request.accountNumber)))
+  private def bodyJson(request: BankDetailsValidationRequest) =
+    Json.toJson(BarsRequest(Account(request.sortCode, request.accountNumber)))
 }
 
 object BarsConnectorImpl {

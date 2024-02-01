@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import java.util.UUID
-
 import org.scalamock.handlers.CallHandler4
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Request
@@ -29,6 +27,7 @@ import uk.gov.hmrc.helptosave.util.{NINO, UnitSpec}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
@@ -37,12 +36,16 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
   val mockAuditor = mock[HTSAuditor]
   val returnHeaders = Map[String, Seq[String]]()
-  def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: Option[HttpResponse]): CallHandler4[BankDetailsValidationRequest, UUID, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
-    (mockBarsConnector.validate(_: BankDetailsValidationRequest, _: UUID)(_: HeaderCarrier, _: ExecutionContext)).expects(barsRequest, *, *, *)
+  def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: Option[HttpResponse])
+    : CallHandler4[BankDetailsValidationRequest, UUID, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
+    (mockBarsConnector
+      .validate(_: BankDetailsValidationRequest, _: UUID)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(barsRequest, *, *, *)
       .returning(response.fold[Future[HttpResponse]](Future.failed(new Exception("")))(r => Future.successful(r)))
 
   def mockAuditBarsEvent(expectedEvent: BARSCheck, nino: NINO) =
-    (mockAuditor.sendEvent(_: HTSEvent, _: NINO)(_: ExecutionContext))
+    (mockAuditor
+      .sendEvent(_: HTSEvent, _: NINO)(_: ExecutionContext))
       .expects(expectedEvent, nino, *)
       .returning(())
 
@@ -54,11 +57,12 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
       val nino = "NINO"
       val barsRequest = BankDetailsValidationRequest(nino, "123456", "accountNumber")
-      implicit val request: Request[JsValue] = FakeRequest("GET", "/validate-bank-details").withBody(Json.toJson(barsRequest))
+      implicit val request: Request[JsValue] =
+        FakeRequest("GET", "/validate-bank-details").withBody(Json.toJson(barsRequest))
       val path = request.uri
 
-        def newResponse(accountNumberWithSortCodeIsValid: String, sortCodeIsPresentOnEISCD: String): String =
-          s"""{
+      def newResponse(accountNumberWithSortCodeIsValid: String, sortCodeIsPresentOnEISCD: String): String =
+        s"""{
            |  "accountNumberIsWellFormatted": "$accountNumberWithSortCodeIsValid",
            |  "nonStandardAccountDetailsRequiredForBacs": "no",
            |  "sortCodeIsPresentOnEISCD":"$sortCodeIsPresentOnEISCD",

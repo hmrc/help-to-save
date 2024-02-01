@@ -23,8 +23,8 @@ import play.api.libs.json.Json
 import play.api.mvc.{Result => PlayResult}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino => v2Nino}
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
@@ -41,8 +41,10 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
     def doRequest(controller: EligibilityCheckController, nino: Option[String]): Future[PlayResult] =
       controller.eligibilityCheck(nino)(FakeRequest())
 
-    def mockEligibilityCheckerService(nino: NINO, expectedPath: String)(result: Either[String, EligibilityCheckResponse]): Unit =
-      (eligibilityService.getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
+    def mockEligibilityCheckerService(nino: NINO, expectedPath: String)(
+      result: Either[String, EligibilityCheckResponse]): Unit =
+      (eligibilityService
+        .getEligibility(_: NINO, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(nino, expectedPath, *, *)
         .returning(EitherT.fromEither[Future](result))
 
@@ -61,7 +63,8 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
         mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-        mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Left("The Eligibility Check service is unavailable"))
+        mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
+          Left("The Eligibility Check service is unavailable"))
 
         val result = doRequest(controller, Some(nino))
         status(result) shouldBe 500
@@ -69,14 +72,15 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
 
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
-          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
-          mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Right(eligibility))
+        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
+        mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+        mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
+          Right(eligibility))
 
-          val result = doRequest(controller, Some(nino))
-          status(result) shouldBe 200
-          contentAsJson(result) shouldBe Json.toJson(eligibility)
-        }
+        val result = doRequest(controller, Some(nino))
+        status(result) shouldBe 200
+        contentAsJson(result) shouldBe Json.toJson(eligibility)
+      }
 
       "return Forbidden if the ggNino does not match the given nino" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
@@ -90,7 +94,8 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
         new TestApparatus {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
           mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(None).url)(Right(eligibility))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(None).url)(
+            Right(eligibility))
 
           val result = doRequest(controller, None)
           status(result) shouldBe 200
@@ -104,7 +109,8 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Right(eligibility))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
+            Right(eligibility))
         }
 
         val result = doRequest(controller, Some(nino))
@@ -115,7 +121,8 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
       "return with a 500 status if the eligibility check service fails" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(Left("The Eligibility Check service is unavailable"))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
+            Left("The Eligibility Check service is unavailable"))
         }
 
         val result = doRequest(controller, Some(nino))

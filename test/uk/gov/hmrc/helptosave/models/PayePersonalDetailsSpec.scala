@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.models
 
-import java.time.LocalDate
-
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import uk.gov.hmrc.helptosave.models.PayePersonalDetails._
 import uk.gov.hmrc.helptosave.utils.{TestData, TestSupport}
+
+import java.time.LocalDate
 
 class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:off magic.number
 
@@ -29,8 +29,8 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
   "The PayePersonalDetails" when {
 
     "parsing Names" must {
-        def nameJson(type1: Int, type2: Int) =
-          s"""{
+      def nameJson(type1: Int, type2: Int) =
+        s"""{
            |  "names": {
            |    "$type1": {
            |      "sequenceNumber": 12345,
@@ -61,8 +61,8 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
 
     "parsing Addresses" must {
 
-        def addressJson(type1: Int, type2: Int) =
-          s"""{
+      def addressJson(type1: Int, type2: Int) =
+        s"""{
            |  "addresses": {
            |    "$type1": {
            |      "line1": "Residential line1",
@@ -91,13 +91,29 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
          """.stripMargin
 
       "read the Correspondence Address first" in {
-        readAddress(Json.parse(addressJson(1, 2))) shouldBe JsSuccess(Address("Correspondence line1",
-          "Correspondence line2", Some("Correspondence line3"), Some("Correspondence line4"), Some("Correspondence line5"), "Correspondence Postcode", Some("GB")))
+        readAddress(Json.parse(addressJson(1, 2))) shouldBe JsSuccess(
+          Address(
+            "Correspondence line1",
+            "Correspondence line2",
+            Some("Correspondence line3"),
+            Some("Correspondence line4"),
+            Some("Correspondence line5"),
+            "Correspondence Postcode",
+            Some("GB")
+          ))
       }
 
       "read the Residential Address if Correspondence address is not found" in {
-        readAddress(Json.parse(addressJson(1, 5))) shouldBe JsSuccess(Address("Residential line1",
-          "Residential line2", Some("Residential line3"), Some("Residential line4"), Some("Residential line5"), "Residential Postcode", Some("GB")))
+        readAddress(Json.parse(addressJson(1, 5))) shouldBe JsSuccess(
+          Address(
+            "Residential line1",
+            "Residential line2",
+            Some("Residential line3"),
+            Some("Residential line4"),
+            Some("Residential line5"),
+            "Residential Postcode",
+            Some("GB")
+          ))
       }
 
       "return error if no Correspondence and Residential names not found" in {
@@ -107,23 +123,30 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
       "handle gracefully in case countryCode is not found in the DES response" in {
         val json =
           """{
-             |  "addresses": {
-             |    "1": {
-             |      "line1": "Residential line1",
-             |      "line2": "Residential line2",
-             |      "line3": "Residential line3",
-             |      "line4": "Residential line4",
-             |      "postcode": "Residential Postcode",
-             |      "line5": "Residential line5",
-             |      "sequenceNumber": 1,
-             |      "startDate": "2000-01-01"
-             |    }
-             |  }
-             |  }
+            |  "addresses": {
+            |    "1": {
+            |      "line1": "Residential line1",
+            |      "line2": "Residential line2",
+            |      "line3": "Residential line3",
+            |      "line4": "Residential line4",
+            |      "postcode": "Residential Postcode",
+            |      "line5": "Residential line5",
+            |      "sequenceNumber": 1,
+            |      "startDate": "2000-01-01"
+            |    }
+            |  }
+            |  }
          """.stripMargin
 
-        readAddress(Json.parse(json)) shouldBe JsSuccess(Address("Residential line1",
-          "Residential line2", Some("Residential line3"), Some("Residential line4"), Some("Residential line5"), "Residential Postcode", None))
+        readAddress(Json.parse(json)) shouldBe JsSuccess(
+          Address(
+            "Residential line1",
+            "Residential line2",
+            Some("Residential line3"),
+            Some("Residential line4"),
+            Some("Residential line5"),
+            "Residential Postcode",
+            None))
       }
 
     }
@@ -146,8 +169,8 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
 
     "parsing phone numbers" must {
 
-        def phoneJson(type1: Int, type2: Int, callingCode: Option[Int] = None) =
-          s"""{"phoneNumbers": {
+      def phoneJson(type1: Int, type2: Int, callingCode: Option[Int] = None) =
+        s"""{"phoneNumbers": {
            |    "$type1": {
            |	     "callingCode": ${callingCode.getOrElse(1)},
            |       "telephoneType": $type1,
@@ -179,13 +202,13 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
 
         val json =
           """{"phoneNumbers": {
-           |    "1": {
-           |       "telephoneType": 1,
-           |	     "areaDiallingCode": "03000",
-           |	     "telephoneNumber": "599614",
-           |	     "convertedAreaDiallingCode": "020"
-           |      }
-           |  }
+            |    "1": {
+            |       "telephoneType": 1,
+            |	     "areaDiallingCode": "03000",
+            |	     "telephoneNumber": "599614",
+            |	     "convertedAreaDiallingCode": "020"
+            |      }
+            |  }
              }""".stripMargin
 
         readPhoneNumber(Json.parse(json)) shouldBe JsSuccess(Some("020599614"))
@@ -195,13 +218,13 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
 
         val json =
           """{"phoneNumbers": {
-           |    "1": {
-           |       "callingCode": 1,
-           |       "telephoneType": 1,
-           |	     "areaDiallingCode": "03000",
-           |	     "telephoneNumber": "059961478"
-           |      }
-           |  }
+            |    "1": {
+            |       "callingCode": 1,
+            |       "telephoneType": 1,
+            |	     "areaDiallingCode": "03000",
+            |	     "telephoneNumber": "059961478"
+            |      }
+            |  }
              }""".stripMargin
 
         readPhoneNumber(Json.parse(json)) shouldBe JsSuccess(Some("+4459961478"))
@@ -211,13 +234,13 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
 
         val json =
           """{"phoneNumbers": {
-           |    "1": {
-           |       "callingCode": 1,
-           |       "telephoneType": 1,
-           |	     "areaDiallingCode": "03000",
-           |	     "convertedAreaDiallingCode": "020"
-           |      }
-           |  }
+            |    "1": {
+            |       "callingCode": 1,
+            |       "telephoneType": 1,
+            |	     "areaDiallingCode": "03000",
+            |	     "convertedAreaDiallingCode": "020"
+            |      }
+            |  }
              }""".stripMargin
 
         readPhoneNumber(Json.parse(json)) shouldBe JsSuccess(None)
@@ -227,12 +250,12 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
 
         val json =
           """{"phoneNumbers": {
-           |    "1": {
-           |       "telephoneType": 1,
-           |	     "areaDiallingCode": "03000",
-           |	     "telephoneNumber": "59961478"
-           |      }
-           |  }
+            |    "1": {
+            |       "telephoneType": 1,
+            |	     "areaDiallingCode": "03000",
+            |	     "telephoneNumber": "59961478"
+            |      }
+            |  }
              }""".stripMargin
 
         readPhoneNumber(Json.parse(json)) shouldBe JsSuccess(Some("59961478"))

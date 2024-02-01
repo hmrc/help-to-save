@@ -19,13 +19,13 @@ package uk.gov.hmrc.helptosave.services
 import cats.instances.int._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject}
-import javax.inject.Singleton
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
 import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -39,8 +39,8 @@ trait UserCapService {
 }
 
 @Singleton
-class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
-                                    servicesConfig: ServicesConfig) extends UserCapService with Logging {
+class UserCapServiceImpl @Inject()(userCapStore: UserCapStore, servicesConfig: ServicesConfig)
+    extends UserCapService with Logging {
 
   private val isDailyCapEnabled = servicesConfig.getBoolean("microservice.user-cap.daily.enabled")
 
@@ -54,44 +54,48 @@ class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
 
   private val check: UserCap => UserCapResponse = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
-      case (false, false) => _ =>
-        //This is the normal code path post private-beta, eg: uncapped
-        UserCapResponse()
+      case (false, false) =>
+        _ =>
+          //This is the normal code path post private-beta, eg: uncapped
+          UserCapResponse()
 
-      case (true, true) => userCap =>
-        if (userCap.isTodaysRecord) {
+      case (true, true) =>
+        userCap =>
+          if (userCap.isTodaysRecord) {
+            if (userCap.totalCount >= totalCap) {
+              UserCapResponse(isTotalCapReached = true)
+            } else if (userCap.dailyCount >= dailyCap) {
+              UserCapResponse(isDailyCapReached = true)
+            } else {
+              UserCapResponse()
+            }
+          } else {
+            if (userCap.totalCount >= totalCap) {
+              UserCapResponse(isTotalCapReached = true)
+            } else {
+              UserCapResponse()
+            }
+          }
+
+      case (true, false) =>
+        userCap =>
           if (userCap.totalCount >= totalCap) {
             UserCapResponse(isTotalCapReached = true)
-          } else if (userCap.dailyCount >= dailyCap) {
+          } else {
+            UserCapResponse()
+          }
+
+      case (false, true) =>
+        userCap =>
+          if (userCap.isTodaysRecord && userCap.dailyCount >= dailyCap) {
             UserCapResponse(isDailyCapReached = true)
           } else {
             UserCapResponse()
           }
-        } else {
-          if (userCap.totalCount >= totalCap) {
-            UserCapResponse(isTotalCapReached = true)
-          } else {
-            UserCapResponse()
-          }
-        }
-
-      case (true, false) => userCap =>
-        if (userCap.totalCount >= totalCap) {
-          UserCapResponse(isTotalCapReached = true)
-        } else {
-          UserCapResponse()
-        }
-
-      case (false, true) => userCap =>
-        if (userCap.isTodaysRecord && userCap.dailyCount >= dailyCap) {
-          UserCapResponse(isDailyCapReached = true)
-        } else {
-          UserCapResponse()
-        }
     }
   }
 
-  override def isAccountCreateAllowed()(implicit ec: ExecutionContext): Future[UserCapResponse] = {
+  override def isAccountCreateAllowed()(implicit ec: ExecutionContext): Future[UserCapResponse] =
     if (totalCap === 0 && dailyCap === 0) {
       toFuture(UserCapResponse(isDailyCapDisabled = true, isTotalCapDisabled = true))
     } else if (totalCap === 0) {
@@ -99,18 +103,21 @@ class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
     } else if (dailyCap === 0) {
       toFuture(UserCapResponse(isDailyCapDisabled = true))
     } else {
-      userCapStore.get().map(_.fold(UserCapResponse())(check))
+      userCapStore
+        .get()
+        .map(_.fold(UserCapResponse())(check))
         .recover {
           case NonFatal(e) =>
             logger.warn("error checking account cap", e)
             UserCapResponse()
         }
     }
-  }
 
   private val calculateUserCap: Option[UserCap] => UserCap = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
-      case (false, false) => _ => UserCap(0, 0)
+      case (false, false) =>
+        _ =>
+          UserCap(0, 0)
       case (_, _) => {
         case Some(uc) =>
           val c = if (uc.isPreviousRecord) 1 else uc.dailyCount + 1
@@ -121,16 +128,17 @@ class UserCapServiceImpl @Inject() (userCapStore:   UserCapStore,
   }
 
   override def update()(implicit ec: ExecutionContext): Future[Unit] =
-    userCapStore.get().flatMap {
-      userCap =>
+    userCapStore
+      .get()
+      .flatMap { userCap =>
         userCapStore.upsert(calculateUserCap(userCap)).map { updatedUserCap =>
           val logMessage = "Updated user cap - " + updatedUserCap.fold("could not retrieve user cap data") { cap =>
             s"counts are now (daily: ${cap.dailyCount}, total: ${cap.totalCount})"
           }
           logger.info(logMessage)
         }
-    }.recover {
-      case e => logger.warn("error updating the account cap", e)
-    }
+      }
+      .recover {
+        case e => logger.warn("error updating the account cap", e)
+      }
 }
-

@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import java.time.{Clock, ZoneId}
-
 import akka.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
@@ -25,10 +23,11 @@ import uk.gov.hmrc.helptosave.actors.{TimeCalculatorImpl, UCThresholdConnectorPr
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
 
+import java.time.{Clock, ZoneId}
+
 class UCThresholdModule extends AbstractModule {
-
-  override def configure() = bind(classOf[ThresholdManagerProvider]).to(classOf[UCThresholdOrchestrator]).asEagerSingleton()
-
+  override def configure(): Unit =
+    bind(classOf[ThresholdManagerProvider]).to(classOf[UCThresholdOrchestrator]).asEagerSingleton()
 }
 
 trait ThresholdManagerProvider {
@@ -36,12 +35,14 @@ trait ThresholdManagerProvider {
 }
 
 @Singleton
-class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
-                                         pagerDutyAlerting: PagerDutyAlerting,
-                                         configuration:     Configuration,
-                                         desConnector:      DESConnector) extends ThresholdManagerProvider with Logging {
-
-  private lazy val connectorProxy: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
+class UCThresholdOrchestrator @Inject()(
+  system: ActorSystem,
+  pagerDutyAlerting: PagerDutyAlerting,
+  configuration: Configuration,
+  desConnector: DESConnector)
+    extends ThresholdManagerProvider with Logging {
+  private lazy val connectorProxy: ActorRef =
+    system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
 
   private val timeCalculator = {
     val clock = Clock.system(ZoneId.of(configuration.underlying.getString("uc-threshold.update-timezone")))
@@ -50,13 +51,13 @@ class UCThresholdOrchestrator @Inject() (system:            ActorSystem,
 
   val thresholdManager: ActorRef = {
     logger.info("Starting UCThresholdManager")
-    system.actorOf(UCThresholdManager.props(
-      connectorProxy,
-      pagerDutyAlerting,
-      system.scheduler,
-      timeCalculator,
-      configuration.underlying
-    ))
+    system.actorOf(
+      UCThresholdManager.props(
+        connectorProxy,
+        pagerDutyAlerting,
+        system.scheduler,
+        timeCalculator,
+        configuration
+      ))
   }
-
 }

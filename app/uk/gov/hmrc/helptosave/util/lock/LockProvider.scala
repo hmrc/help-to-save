@@ -38,11 +38,12 @@ trait LockProvider {
 object LockProvider {
 
   /**
-   * This lock provider ensures that some operation is only performed once across multiple
-   * instances of an application. It is backed by [[LockRepository]] from the
-   * `hmrc-mongo` library
-   */
-  case class TimePeriodLockProvider(repo: LockRepository, lockId: String, holdLockFor: FiniteDuration) extends LockProvider {
+    * This lock provider ensures that some operation is only performed once across multiple
+    * instances of an application. It is backed by [[LockRepository]] from the
+    * `hmrc-mongo` library
+    */
+  case class TimePeriodLockProvider(repo: LockRepository, lockId: String, holdLockFor: FiniteDuration)
+      extends LockProvider {
 
     lazy private val ownerId = UUID.randomUUID().toString
 
@@ -52,20 +53,17 @@ object LockProvider {
     override def tryToAcquireOrRenewLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       (for {
         refreshed <- repo.refreshExpiry(lockId, ownerId, holdLockFor)
-        acquired <- if (!refreshed) { repo.takeLock(lockId, ownerId, holdLockFor) }
-        else {
-          Future.successful(false)
-        }
+        acquired <- if (!refreshed) { repo.takeLock(lockId, ownerId, holdLockFor) } else {
+                     Future.successful(false)
+                   }
         result <- if (refreshed || acquired) {
-          body.map(Option.apply)
-        } else {
-          Future.successful(None)
-        }
-      } yield result
-      ).recoverWith {
+                   body.map(Option.apply)
+                 } else {
+                   Future.successful(None)
+                 }
+      } yield result).recoverWith {
         case ex => repo.releaseLock(lockId, ownerId).flatMap(_ => Future.failed(ex))
       }
   }
 }
 // $COVERAGE-ON$
-
