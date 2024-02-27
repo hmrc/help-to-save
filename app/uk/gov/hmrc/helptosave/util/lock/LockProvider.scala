@@ -53,14 +53,8 @@ object LockProvider {
     override def tryToAcquireOrRenewLock[T](body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
       (for {
         refreshed <- repo.refreshExpiry(lockId, ownerId, holdLockFor)
-        acquired <- if (!refreshed) { repo.takeLock(lockId, ownerId, holdLockFor) } else {
-                     Future.successful(false)
-                   }
-        result <- if (refreshed || acquired) {
-                   body.map(Option.apply)
-                 } else {
-                   Future.successful(None)
-                 }
+        lockOpt <- if (!refreshed) repo.takeLock(lockId, ownerId, holdLockFor) else Future.successful(None)
+        result <- if (refreshed || lockOpt.isDefined) body.map(Option.apply) else Future.successful(None)
       } yield result).recoverWith {
         case ex => repo.releaseLock(lockId, ownerId).flatMap(_ => Future.failed(ex))
       }

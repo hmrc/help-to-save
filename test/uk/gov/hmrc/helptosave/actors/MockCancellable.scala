@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.Cancellable
+import org.apache.pekko.actor.Cancellable
 
 private case class MockCancellable(scheduler: MockScheduler, task: Task) extends Cancellable {
 

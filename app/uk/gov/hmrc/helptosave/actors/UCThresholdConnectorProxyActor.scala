@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.{Actor, Props}
-import akka.pattern.pipe
+import org.apache.pekko.actor.{Actor, Props}
+import org.apache.pekko.pattern.pipe
 import play.api.http.Status
 import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxyActor.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.connectors.DESConnector

@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.testkit.TestProbe
-import akka.util.Timeout
-import com.codahale.metrics.{Counter, Gauge, Timer}
-import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.testkit.TestProbe
+import org.apache.pekko.util.Timeout
+import com.codahale.metrics.{Counter, Gauge, MetricRegistry, Timer}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import play.api.Configuration
@@ -42,17 +41,16 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
   implicit val timeout: Timeout = Timeout(10.seconds)
 
   class TestApparatus {
-
-    val connectorProxy = TestProbe()
-    val timeCalculatorListener = TestProbe()
-    val schedulerListener = TestProbe()
-    val metricsListener = TestProbe()
-    val eligibilityStatsStoreListener = TestProbe()
-    val eligibilityStatsParserListener = TestProbe()
+    val connectorProxy: TestProbe = TestProbe()
+    val timeCalculatorListener: TestProbe = TestProbe()
+    val schedulerListener: TestProbe = TestProbe()
+    val metricsListener: TestProbe = TestProbe()
+    val eligibilityStatsStoreListener: TestProbe = TestProbe()
+    val eligibilityStatsParserListener: TestProbe = TestProbe()
 
     val timeCalculator = new TimeCalculatorImpl(Clock.systemUTC())
 
-    val config = Configuration(
+    val config: Configuration = Configuration(
       ConfigFactory.parseString(
         """
           |eligibility-stats {
@@ -63,7 +61,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
     """.stripMargin
       ))
 
-    val actor = system.actorOf(
+    val actor: ActorRef = system.actorOf(
       EligibilityStatsActor.props(
         system.scheduler,
         config,
@@ -75,7 +73,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
   object TestApparatus {
 
-    class MockMetrics(reportTo: ActorRef) extends Metrics(stub[PlayMetrics]) {
+    class MockMetrics(reportTo: ActorRef) extends Metrics(stub[MetricRegistry]) {
       override def timer(name: String): Timer = new Timer()
 
       override def counter(name: String): Counter = new Counter()
@@ -140,8 +138,8 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
       }
 
       "handle stats returned from mongo" in new TestApparatus {
-        val stats = List(EligibilityStats(Some(1), Some("some source"), 2))
-        val table = Map("1" -> Map("some source" -> 2))
+        val stats: List[EligibilityStats] = List(EligibilityStats(Some(1), Some("some source"), 2))
+        val table: Map[String, Map[String, Int]] = Map("1" -> Map("some source" -> 2))
 
         // trigger the process
         actor ? GetStats
@@ -154,7 +152,7 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
         eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.CreateTableRequestReceived(stats))
 
         // gauge should now be registered
-        val registered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
+        val registered: TestApparatus.MockMetrics.GaugeRegistered = metricsListener.expectMsgType[MockMetrics.GaugeRegistered]
         metricsListener.expectNoMessage()
 
         registered.name shouldBe "backend.create-account.1.some-source"
@@ -164,14 +162,14 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
         eligibilityStatsParserListener.expectMsg(TestEligibilityStatsParser.PrettyFormatTableRequestReceived(table))
 
         // now check that gauges that have already been registered don't get registered again
-        val newStats = EligibilityStats(Some(2), Some("new source"), 3) :: stats
-        val newTable = Map(
+        val newStats: List[EligibilityStats] = EligibilityStats(Some(2), Some("new source"), 3) :: stats
+        val newTable: Map[String, Map[String, Int]] = Map(
           "1" -> Map("some source" -> 2, "new source" -> 0),
           "2" -> Map("some source" -> 0, "new source" -> 3)
         )
 
         // we won't expect "backend.create-account.1.some-source" because it has already been registered
-        val expectedGauges =
+        val expectedGauges: List[(String, Int)] =
           List(
             ("backend.create-account.1.new-source", 0),
             ("backend.create-account.2.some-source", 0),

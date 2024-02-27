@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import org.joda.time.LocalDate
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.{JsNull, Json}
 import uk.gov.hmrc.helptosave.models.{UCResponse, UCThreshold}
@@ -24,14 +23,16 @@ import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.HttpResponse
 
+import java.time.LocalDate
+
 class DESConnectorSpec
     extends TestSupport with MockPagerDuty with TestData with HttpSupport with ScalaCheckDrivenPropertyChecks {
-  val date = new LocalDate(2017, 6, 12) // scalastyle:ignore magic.number
+  val date: LocalDate = LocalDate.of(2017, 6, 12) // scalastyle:ignore magic.number
 
   val nino = "NINO"
 
   lazy val connector = new DESConnectorImpl(mockHttp, servicesConfig)
-  val returnHeaders = Map[String, Seq[String]]()
+  val returnHeaders: Map[NINO, Seq[NINO]] = Map[String, Seq[String]]()
 
   "the isEligible method" when {
 

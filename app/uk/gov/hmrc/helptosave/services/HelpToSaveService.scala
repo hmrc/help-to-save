@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import akka.pattern.ask
+import org.apache.pekko.pattern.ask
 import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}

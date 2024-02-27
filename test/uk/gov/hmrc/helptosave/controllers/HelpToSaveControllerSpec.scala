@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
-import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.Request
+import org.scalamock.handlers.{CallHandler1, CallHandler3}
+import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.mvc.{Request, Result}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status._
@@ -43,18 +44,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
-  val returnHeaders = Map[String, Seq[String]]()
+  val returnHeaders: Map[NINO, Seq[NINO]] = Map[String, Seq[String]]()
   class TestApparatus {
-
-    val proxyConnector = mock[HelpToSaveProxyConnector]
-
-    val userCapService = mock[UserCapService]
-
-    val mockAuditor = mock[HTSAuditor]
-
-    val emailStore = mock[EmailStore]
-
-    val barsService = mock[BarsService]
+    val proxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
+    val userCapService: UserCapService = mock[UserCapService]
+    val mockAuditor: HTSAuditor = mock[HTSAuditor]
+    val emailStore: EmailStore = mock[EmailStore]
+    val barsService: BarsService = mock[BarsService]
 
     val controller = new HelpToSaveController(
       enrolmentStore,
@@ -67,27 +63,27 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       barsService,
       testCC)
 
-    val accountNumber = Some("AC01")
+    val accountNumber: Option[NINO] = Some("AC01")
 
-    def mockSendAuditEvent(event: HTSEvent, nino: String) =
+    def mockSendAuditEvent(event: HTSEvent, nino: String): CallHandler3[HTSEvent, NINO, ExecutionContext, Unit] =
       (mockAuditor
         .sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
         .expects(event, nino, *)
         .returning(())
 
-    def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse) =
+    def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse): CallHandler3[NSIPayload, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
       (proxyConnector
         .createAccount(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
-    def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse) =
+    def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse): CallHandler3[NSIPayload, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
       (proxyConnector
         .updateEmail(_: NSIPayload)(_: HeaderCarrier, _: ExecutionContext))
         .expects(expectedPayload, *, *)
         .returning(toFuture(response))
 
-    def mockUserCapServiceUpdate(result: Either[String, Unit]) =
+    def mockUserCapServiceUpdate(result: Either[String, Unit]): CallHandler1[ExecutionContext, Future[Unit]] =
       (userCapService
         .update()(_: ExecutionContext))
         .expects(*)
@@ -115,16 +111,16 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
+          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
-            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            mockEnrolmentStoreUpdate("nino", itmpFlag = true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", false), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", detailsManuallyEntered = false), "nino")
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -136,16 +132,16 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
+          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
-            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            mockEnrolmentStoreUpdate("nino", itmpFlag = true)(Right(()))
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", true), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", detailsManuallyEntered = true), "nino")
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(true)))
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = true)))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -157,14 +153,14 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Left("error!"))
+          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Left("error!"))
           inAnyOrder {
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", false), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", detailsManuallyEntered = false), "nino")
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -173,15 +169,15 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", true, Some(7), "Stride-Manual", accountNumber)(Right(()))
+          mockEnrolmentStoreInsert("nino", itmpFlag = true, Some(7), "Stride-Manual", accountNumber)(Right(()))
           inAnyOrder {
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Stride-Manual", false), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Stride-Manual", detailsManuallyEntered = false), "nino")
           }
         }
 
-        val body = validCreateAccountRequestPayload().as[JsObject] ++ Json.obj("source" -> "Stride-Manual")
-        val result = controller.createAccount()(FakeRequest().withJsonBody(body))
+        val body: JsObject = validCreateAccountRequestPayload().as[JsObject] ++ Json.obj("source" -> "Stride-Manual")
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(body))
 
         status(result)(10.seconds) shouldBe CREATED
       }
@@ -190,16 +186,16 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
+          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
-            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            mockEnrolmentStoreUpdate("nino", itmpFlag = true)(Right(()))
             mockUserCapServiceUpdate(Left(""))
-            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", false), "nino")
+            mockSendAuditEvent(AccountCreated(validNSIUserInfo, "Digital", detailsManuallyEntered = false), "nino")
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -208,22 +204,22 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       }
 
       "delete any existing emails of DE users before creating the account" in new TestApparatus {
-        val payloadDE =
+        val payloadDE: NSIPayload =
           validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockEmailDelete("nino")(Right(()))
           mockCreateAccount(payloadDE)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
+          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
             mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(payloadDE, "Digital", false), "nino")
+            mockSendAuditEvent(AccountCreated(payloadDE, "Digital", detailsManuallyEntered = false), "nino")
           }
         }
 
-        val result =
-          controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
+        val result: Future[Result] =
+          controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = false, "00")))
 
         status(result)(10.seconds) shouldBe CREATED
 
@@ -235,8 +231,8 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockEmailDelete("nino")(Left("mongo error"))
         }
 
-        val result =
-          controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(false, "00")))
+        val result: Future[Result] =
+          controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = false, "00")))
 
         status(result)(10.seconds) shouldBe INTERNAL_SERVER_ERROR
 
@@ -244,15 +240,15 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "return bad request response if the request body is not a valid CreateAccountRequest json" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val requestBody = Json.parse(createAccountJson("\"123456\"", false))
-        val result = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
+        val requestBody: JsValue = Json.parse(createAccountJson("\"123456\"", detailsManuallyEntered = false))
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")
       }
 
       "return bad request response if there is no json the in the request body" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val result = controller.createAccount()(FakeRequest())
+        val result: Future[Result] = controller.createAccount()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result)
           .toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
@@ -262,14 +258,14 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", accountNumber)(Right(()))
+          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
-            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            mockEnrolmentStoreUpdate("nino", itmpFlag = true)(Right(()))
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CONFLICT
         // allow time for asynchronous calls to mocks to be made
@@ -280,14 +276,14 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
           mockCreateAccount(validNSIUserInfo)(HttpResponse(CONFLICT, "", returnHeaders))
-          mockEnrolmentStoreInsert("nino", false, Some(7), "Digital", None)(Right(()))
+          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", None)(Right(()))
           inAnyOrder {
             mockSetFlag("nino")(Right(()))
-            mockEnrolmentStoreUpdate("nino", true)(Right(()))
+            mockEnrolmentStoreUpdate("nino", itmpFlag = true)(Right(()))
           }
         }
 
-        val result = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
+        val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
         status(result)(10.seconds) shouldBe CONFLICT
         // allow time for asynchronous calls to mocks to be made
@@ -301,7 +297,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
         mockUpdateEmail(validUpdateAccountRequest.payload)(HttpResponse(OK, ""))
 
-        val result = controller.updateEmail()(
+        val result: Future[Result] = controller.updateEmail()(
           FakeRequest().withJsonBody(validUserInfoPayload.as[JsObject] - "version" - "systemId"))
 
         status(result)(10.seconds) shouldBe OK
@@ -309,15 +305,15 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
       "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val requestBody = Json.parse(payloadJson("\"123456\""))
-        val result = controller.updateEmail()(FakeRequest().withJsonBody(requestBody))
+        val requestBody: JsValue = Json.parse(payloadJson("\"123456\""))
+        val result: Future[Result] = controller.updateEmail()(FakeRequest().withJsonBody(requestBody))
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result).toString() should include("error.expected.date.isoformat")
       }
 
       "return bad request response if there is no json the in the request body" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val result = controller.updateEmail()(FakeRequest())
+        val result: Future[Result] = controller.updateEmail()(FakeRequest())
         status(result) shouldBe BAD_REQUEST
         contentAsJson(result)
           .toString() shouldBe """{"errorMessageId":"","errorMessage":"No JSON found in request body","errorDetail":""}"""
@@ -332,24 +328,24 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "handle send success response if the details are valid or invalid" in new TestApparatus {
         inSequence {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockBarsService(barsRequest)(Right(BankDetailsValidationResult(true, true)))
+          mockBarsService(barsRequest)(Right(BankDetailsValidationResult(isValid = true, sortCodeExists = true)))
         }
 
-        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
+        val result: Future[Result] = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
         status(result) shouldBe 200
         contentAsJson(result) shouldBe Json.parse("""{"isValid":true, "sortCodeExists":true}""")
       }
 
       "handle invalid json from the request" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val result =
+        val result: Future[Result] =
           controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson("""{"invalid":"barsRequest"}""")))
         status(result) shouldBe 400
       }
 
       "handle No json from the request" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-        val result = controller.doBarsCheck()(FakeRequest("POST", url))
+        val result: Future[Result] = controller.doBarsCheck()(FakeRequest("POST", url))
         status(result) shouldBe 400
       }
 
@@ -359,7 +355,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockBarsService(barsRequest)(Left("unexpected error"))
         }
 
-        val result = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
+        val result: Future[Result] = controller.doBarsCheck()(FakeRequest("POST", url).withJsonBody(Json.toJson(barsRequest)))
         status(result) shouldBe 500
       }
     }

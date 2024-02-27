@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.{Actor, ActorRef, Cancellable, Props, Scheduler}
-import akka.pattern.{ask, pipe}
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorRef, Cancellable, Props, Scheduler}
+import org.apache.pekko.pattern.{ask, pipe}
+import org.apache.pekko.util.Timeout
 import cats.instances.double._
 import cats.syntax.eq._
 import play.api.Configuration
