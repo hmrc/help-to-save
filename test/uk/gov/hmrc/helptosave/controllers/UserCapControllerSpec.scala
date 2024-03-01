@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -32,11 +32,8 @@ import scala.concurrent.ExecutionContext
 
 // scalastyle:off magic.number
 class UserCapControllerSpec extends AuthSupport {
-
-  val userCapService = mock[UserCapService]
-
+  val userCapService: UserCapService = mock[UserCapService]
   val controller = new UserCapController(userCapService, mockAuthConnector, testCC)
-
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
 
   "The UserCapController" when {

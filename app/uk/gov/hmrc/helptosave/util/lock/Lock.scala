@@ -16,13 +16,14 @@
 
 package uk.gov.hmrc.helptosave.util.lock
 
-import akka.actor.{Actor, Cancellable, Props, Scheduler}
-import akka.pattern.pipe
+import org.apache.pekko.actor.{Actor, Cancellable, Props, Scheduler}
+import org.apache.pekko.pattern.pipe
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.helptosave.util.lock.LockProvider.TimePeriodLockProvider
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -125,7 +126,8 @@ object Lock {
     val lockProvider: TimePeriodLockProvider = TimePeriodLockProvider(
       repo = mongoLockRepository,
       lockId = lockID,
-      holdLockFor = org.joda.time.Duration.millis(lockDuration.toMillis).getMillis.millis)
+      holdLockFor = FiniteDuration.apply(length = lockDuration.toMillis, unit = TimeUnit.MILLISECONDS)
+    )
 
     Props(new Lock(lockProvider, scheduler, initialState, onLockAcquired, onLockReleased, lifecycle.addStopHook))
   }
@@ -136,7 +138,6 @@ object Lock {
     case object AcquireLock extends LockMessages
     case class AcquireLockResult(lockAcquired: Boolean) extends LockMessages
     case class AcquireLockFailure(error: Throwable) extends LockMessages
-
   }
 
 }

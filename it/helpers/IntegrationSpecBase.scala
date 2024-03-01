@@ -16,7 +16,7 @@
 
 package helpers
 
-import akka.http.scaladsl.model.HttpResponse
+import org.apache.pekko.http.scaladsl.model.HttpResponse
 import helpers.WiremockHelper.stubPost
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
@@ -99,8 +99,8 @@ trait IntegrationSpecBase
   def statusOf(res: Future[HttpResponse])(implicit timeout: Duration): Int =
     Await.result(res, timeout).status.intValue()
 
-  val enrolmentStoreRepository = app.injector.instanceOf[MongoEnrolmentStore]
-  val userCapStoreRepository = app.injector.instanceOf[MongoUserCapStore]
+  val enrolmentStoreRepository: MongoEnrolmentStore = app.injector.instanceOf[MongoEnrolmentStore]
+  val userCapStoreRepository: MongoUserCapStore = app.injector.instanceOf[MongoUserCapStore]
 
   override def beforeEach(): Unit = {
     resetWiremock()
@@ -116,5 +116,5 @@ trait IntegrationSpecBase
     super.afterAll()
   }
 
-  protected def stubAudit: Unit = stubPost(s"/write/audit", Status.OK)
+  protected def stubAudit(): Unit = stubPost(s"/write/audit", Status.OK)
 }

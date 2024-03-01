@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.{ActorRef, ActorSystem}
+import org.apache.pekko.testkit.TestProbe
 import cats.data.EitherT
 import cats.instances.future._
 import cats.instances.int._
 import cats.syntax.eq._
 import com.typesafe.config.ConfigFactory
 import org.scalacheck.{Arbitrary, Gen}
+import org.scalamock.handlers.CallHandler3
 import org.scalatest.EitherValues
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
@@ -48,14 +49,14 @@ class HelpToSaveServiceSpec
     with TestData with ScalaCheckDrivenPropertyChecks {
 
   class TestThresholdProvider extends ThresholdManagerProvider {
-    val probe = TestProbe()
+    val probe: TestProbe = TestProbe()
     override val thresholdManager: ActorRef = probe.ref
   }
 
   private val mockDESConnector = mock[DESConnector]
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
-  val mockAuditor = mock[HTSAuditor]
-  val returnHeaders = Map[String, Seq[String]]()
+  val mockAuditor: HTSAuditor = mock[HTSAuditor]
+  val returnHeaders: Map[NINO, Seq[NINO]] = Map[String, Seq[String]]()
 
   val threshold = 1.23
 
@@ -97,19 +98,19 @@ class HelpToSaveServiceSpec
       .expects(nino, *, threshold, *, *)
       .returning(EitherT.fromEither[Future](result))
 
-  def mockSendAuditEvent(event: HTSEvent, nino: String) =
+  def mockSendAuditEvent(event: HTSEvent, nino: String): CallHandler3[HTSEvent, NINO, ExecutionContext, Unit] =
     (mockAuditor
       .sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
       .expects(event, nino, *)
       .returning(())
 
-  def mockSetFlag(nino: String)(response: HttpResponse) =
+  def mockSetFlag(nino: String)(response: HttpResponse): CallHandler3[NINO, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
     (mockDESConnector
       .setFlag(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
       .returning(toFuture(response))
 
-  def mockPayeGet(nino: String)(response: Option[HttpResponse]) =
+  def mockPayeGet(nino: String)(response: Option[HttpResponse]): CallHandler3[NINO, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
     (mockDESConnector
       .getPersonalDetails(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(nino, *, *)
@@ -125,7 +126,7 @@ class HelpToSaveServiceSpec
   "HelpToSaveService" when {
 
     val nino = "AE123456C"
-    val uCResponse = UCResponse(true, Some(true))
+    val uCResponse = UCResponse(ucClaimant = true, Some(true))
 
     val wtcEligibleResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
 
@@ -149,7 +150,7 @@ class HelpToSaveServiceSpec
       }
 
       "return with the eligibility check result unchanged from ITMP" in {
-        val uCResponse = UCResponse(false, Some(false))
+        val uCResponse = UCResponse(ucClaimant = false, Some(false))
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -182,7 +183,7 @@ class HelpToSaveServiceSpec
       }
 
       "pass the UC params to DES if they are provided" in {
-        val uCResponse = UCResponse(true, Some(true))
+        val uCResponse = UCResponse(ucClaimant = true, Some(true))
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -196,7 +197,7 @@ class HelpToSaveServiceSpec
       }
 
       "do not pass the UC withinThreshold param to DES if its not set" in {
-        val uCResponse = UCResponse(true, None)
+        val uCResponse = UCResponse(ucClaimant = true, None)
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
           inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))

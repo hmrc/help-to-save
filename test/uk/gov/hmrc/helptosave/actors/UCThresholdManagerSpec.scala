@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.{ActorRef, Cancellable}
-import akka.pattern.ask
-import akka.testkit.TestProbe
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, Cancellable}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.testkit.TestProbe
+import org.apache.pekko.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import play.api.Configuration
@@ -39,25 +39,25 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
   implicit val timeout: Timeout = Timeout(10.seconds)
 
-  val updateWindowStartTime = LocalTime.MIDNIGHT
+  val updateWindowStartTime: LocalTime = LocalTime.MIDNIGHT
 
-  val updateDelay = 30.minutes
+  val updateDelay: FiniteDuration = 30.minutes
 
-  val updateWindowEndTime = updateWindowStartTime.plusSeconds(updateDelay.toSeconds)
+  val updateWindowEndTime: LocalTime = updateWindowStartTime.plusSeconds(updateDelay.toSeconds)
 
   class TestApparatus {
-    val connectorProxy = TestProbe()
-    val timeCalculatorListener = TestProbe()
-    val schedulerListener = TestProbe()
-    val pagerDutyAlertListener = TestProbe()
+    val connectorProxy: TestProbe = TestProbe()
+    val timeCalculatorListener: TestProbe = TestProbe()
+    val schedulerListener: TestProbe = TestProbe()
+    val pagerDutyAlertListener: TestProbe = TestProbe()
 
     val testTimeCalculator = new TestTimeCalculator(timeCalculatorListener.ref)
 
-    val time = new VirtualTime() {
+    val time: VirtualTime = new VirtualTime() {
       override val scheduler = new TestScheduler(schedulerListener.ref, this)
     }
 
-    val config = Configuration(
+    val config: Configuration = Configuration(
       ConfigFactory.parseString(
         s"""
            |uc-threshold {
@@ -71,7 +71,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       """.stripMargin
       ))
 
-    val actor = system.actorOf(
+    val actor: ActorRef = system.actorOf(
       UCThresholdManager.props(
         connectorProxy.ref,
         new TestPagerDutyAlerting(pagerDutyAlertListener.ref),
@@ -87,21 +87,21 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
     /**
       * In tests we are typically getting the actor into the ready state by having the connectorProxy reply
       * back to a request. If we had something like this:
-      * ```
+      * ``
       *   connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
       *   connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(1.0)))
       *
       *   // should be in ready state now
       *   actor ! UCThresholdManager.GetThresholdValue
       *   expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(1.0)))
-      * ```
+      * ``
       * Then the danger is that the final expectMsg fails. This is because when the connectorProxy
       * replies to the threshold request, it is replying to a temporary actor, not the UCThresholdManager
       * actor itself. Thus, it is possible that the connectorProxy's response doesn't reach the UCThresholdActor
       * before the `UCThresholdManager.GetThresholdValue` message above. Thus, the actor receives the latter
       * message in the wrong state. To ensure that the `UCThresholdManager.GetThresholdValue` reaches the actor
       * in the ready state, the above should be re-written as:
-      * ```
+      * ``
       *  connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
       *  connectorProxy.reply(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Right(1.0)))
       *
@@ -109,7 +109,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       *  awaitInReadyState()
       *  actor ! UCThresholdManager.GetThresholdValue
       *  expectMsg(UCThresholdManager.GetThresholdValueResponse(Some(1.0)))
-      * ```
+      * ``
       */
     def awaitInReadyState(): Unit =
       eventually {
@@ -170,7 +170,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
           TestPagerDutyAlerting.PagerDutyAlert("Could not obtain UC threshold value from DES"))
 
         // make sure retry is done again
-        val nextRetryTime = schedulerListener.expectMsgType[JobScheduledOnce].delay
+        val nextRetryTime: FiniteDuration = schedulerListener.expectMsgType[JobScheduledOnce].delay
         time.advance(nextRetryTime)
 
         connectorProxy.expectMsg(UCThresholdConnectorProxyActor.GetThresholdValue)
@@ -534,7 +534,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       "handle cases where a threshold request is received just after a scheduled retrieval " +
         "is triggered but before a response from DES to the scheduled retrieval is obtained and " +
         "DES responds to the scheduled retrieval request first" in {
-        def doTest(test: TestApparatus => Unit) = {
+        def doTest(test: TestApparatus => Unit): Unit = {
           val testApparatus = new TestApparatus
           test(testApparatus)
         }
@@ -643,7 +643,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
       "handle cases where a threshold request is received just after a scheduled retrieval " +
         "is triggered but before a response from DES to the scheduled retrieval is obtained and " +
         "DES responds to the scheduled retrieval request second" in {
-        def doTest(test: TestApparatus => Unit) = {
+        def doTest(test: TestApparatus => Unit): Unit = {
           val testApparatus = new TestApparatus
           test(testApparatus)
         }

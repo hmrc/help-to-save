@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import akka.actor.{Actor, ActorRef, Cancellable, Scheduler}
+import org.apache.pekko.actor.{Actor, ActorRef, Cancellable, Scheduler}
 import uk.gov.hmrc.helptosave.util.WithExponentialBackoffRetry.ExponentialBackoffRetry
 
 import scala.concurrent.ExecutionContext

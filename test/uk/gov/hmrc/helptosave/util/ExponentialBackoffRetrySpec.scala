@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.util
 
-import akka.testkit.TestProbe
+import org.apache.pekko.testkit.TestProbe
 import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, VirtualTime}
 import uk.gov.hmrc.helptosave.util.WithExponentialBackoffRetry.ExponentialBackoffRetry
 
@@ -28,7 +28,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
 
   // if we have an exponential increase rate which tends towards 5 seconds, then the difference
   // between consecutive retry times should decrease with time
-  def testRetryTimes(retryTimes: List[FiniteDuration]) = {
+  def testRetryTimes(retryTimes: List[FiniteDuration]): Seq[FiniteDuration] = {
     def loop(
       previousPreviousTime: FiniteDuration,
       previousTime: FiniteDuration,
@@ -69,12 +69,12 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
         .foldLeft(List.empty[FiniteDuration]) {
           case (acc, curr) =>
             exponentialBackoffRetry
-              .retry(curr.toString())
+              .retry(curr.toString)
               .fold[List[FiniteDuration]](
                 fail("Retry time was not defined")
               ) { t =>
                 time.advance(t)
-                probe.expectMsg(TestMessage(curr.toString()))
+                probe.expectMsg(TestMessage(curr.toString))
                 t :: acc
               }
         }

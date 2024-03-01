@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import com.codahale.metrics.{Counter, Gauge, Timer}
-import com.kenshoo.play.metrics.{Metrics => PlayMetrics}
+import com.codahale.metrics.{Counter, Gauge, MetricRegistry, Timer}
 import com.typesafe.config.ConfigFactory
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -36,8 +35,7 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with BeforeAndAfterEach {
-
-  lazy val additionalConfig = Configuration()
+  lazy val additionalConfig: Configuration = Configuration()
 
   def buildFakeApplication(extraConfig: Configuration): Application =
     new GuiceApplicationBuilder()
@@ -46,7 +44,7 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
           ConfigFactory.parseString("""
                                       | metrics.jvm = false
                                       | metrics.enabled = true
-                                      | mongo-async-driver.akka.loglevel = ERROR
+                                      | mongo-async-driver.org.apache.pekko.loglevel = ERROR
                                       | uc-threshold.ask-timeout = 10 seconds
                                       | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule",
                                       | "play.modules.reactivemongo.ReactiveMongoHmrcModule",
@@ -75,9 +73,9 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
 
   val testCC: ControllerComponents = fakeApplication.injector.instanceOf[ControllerComponents]
 
-  val servicesConfig = fakeApplication.injector.instanceOf[ServicesConfig]
+  val servicesConfig: ServicesConfig = fakeApplication.injector.instanceOf[ServicesConfig]
 
-  val mockMetrics = new Metrics(stub[PlayMetrics]) {
+  val mockMetrics: Metrics = new Metrics(stub[MetricRegistry]) {
     override def timer(name: String): Timer = new Timer()
 
     override def counter(name: String): Counter = new Counter()
@@ -97,7 +95,7 @@ trait TestSupport extends UnitSpec with MockFactory with BeforeAndAfterAll with 
 
   implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
 
-  val nsiAccountJson = Json.parse("""
+  val nsiAccountJson: JsObject = Json.parse("""
                                     |{
                                     |  "accountNumber": "AC01",
                                     |  "accountBalance": "200.34",

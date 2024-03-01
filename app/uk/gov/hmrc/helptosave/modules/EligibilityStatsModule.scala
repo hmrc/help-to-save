@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import akka.actor.{ActorRef, ActorSystem, PoisonPill}
+import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle

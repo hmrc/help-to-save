@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.{Actor, Cancellable, Props, Scheduler}
-import akka.pattern.pipe
+import org.apache.pekko.actor.{Actor, Cancellable, Props, Scheduler}
+import org.apache.pekko.pattern.pipe
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsActor.{GetStats, GetStatsResponse}
 import uk.gov.hmrc.helptosave.actors.EligibilityStatsParser.{EligibilityReason, Source, Table}

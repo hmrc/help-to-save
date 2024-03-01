@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.helptosave.util.lock
 
-import akka.actor.{ActorRef, Props}
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.scalamock.handlers.CallHandler0
 import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, VirtualTime}
 
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -36,11 +37,11 @@ class LockSpec extends ActorTestSupport("LockSpec") {
 
     override val lockId: String = testLockID
 
-    override val holdLockFor = lockDuration
+    override val holdLockFor: FiniteDuration = lockDuration
 
   }
 
-  val internalLock = mock[TimePeriodLock]
+  val internalLock: TimePeriodLock = mock[TimePeriodLock]
 
   def sendToSelf[A](a: A): A = {
     self ! a
@@ -64,7 +65,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
         )
       ))
 
-  lazy val lock = newLock(time)
+  lazy val lock: ActorRef = newLock(time)
 
   def mockTryToAcquireOrRenewLock(result: Either[String, Option[Unit]]): Unit =
     (internalLock
@@ -72,7 +73,7 @@ class LockSpec extends ActorTestSupport("LockSpec") {
       .expects(*, *)
       .returning(result.fold(e => Future.failed(new Exception(e)), Future.successful))
 
-  def mockReleaseLock(result: Either[String, Unit]) =
+  def mockReleaseLock(result: Either[String, Unit]): CallHandler0[Future[Unit]] =
     (internalLock.releaseLock _)
       .expects()
       .returning(result.fold(e => Future.failed(new Exception(e)), Future.successful))

@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import akka.pattern.ask
-import akka.util.Timeout
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import com.typesafe.config.ConfigFactory
+import org.apache.pekko.actor.ActorRef
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -32,15 +33,14 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestratorSpec") with Eventually {
-
   implicit val timeout: Timeout = Timeout(10.seconds)
 
-  val connector = mock[DESConnector]
-  val service = mock[HelpToSaveService]
-  val pagerDutyAlert = mock[PagerDutyAlerting]
-  val proxyActor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
+  val connector: DESConnector = mock[DESConnector]
+  val service: HelpToSaveService = mock[HelpToSaveService]
+  val pagerDutyAlert: PagerDutyAlerting = mock[PagerDutyAlerting]
+  val proxyActor: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
 
-  val testConfiguration = Configuration(
+  val testConfiguration: Configuration = Configuration(
     ConfigFactory.parseString(
       """
         |uc-threshold {

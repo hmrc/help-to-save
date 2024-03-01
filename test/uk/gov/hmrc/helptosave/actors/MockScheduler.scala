@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.{Cancellable, Scheduler}
+import org.apache.pekko.actor.{Cancellable, Scheduler}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
@@ -51,7 +51,7 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
         val head = tasks.dequeue()
         head.runnable.run()
         head.interval match {
-          case Some(interval) => tasks += new Task(head.delay + interval, head.id, head.runnable, head.interval)
+          case Some(interval) => tasks += Task(head.delay + interval, head.id, head.runnable, head.interval)
           case None           =>
         }
       }
@@ -69,7 +69,7 @@ class MockScheduler(time: VirtualTime) extends Scheduler {
     time.lock synchronized {
       id += 1
       val startTime = time.elapsed + delay
-      val task = new Task(startTime, id, runnable, interval)
+      val task = Task(startTime, id, runnable, interval)
       tasks += task
       MockCancellable(this, task)
     }

@@ -170,7 +170,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
       "handling requests from other AuthProviders" must {
 
         "return a Forbidden" in {
-          List[LegacyCredentials](VerifyPid(""), OneTimeLogin).foreach { cred =>
+          List[LegacyCredentials](StandardApplication(""), OneTimeLogin).foreach { cred =>
             mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(cred))
             status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
           }

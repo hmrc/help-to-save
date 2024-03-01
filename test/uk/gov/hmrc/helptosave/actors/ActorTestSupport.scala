@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.helptosave.actors
 
-import akka.actor.{ActorIdentity, ActorRef, ActorSystem, Identify}
-import akka.pattern.ask
-import akka.testkit.{ImplicitSender, TestKit}
+import org.apache.pekko.actor.{ActorIdentity, ActorRef, ActorSystem, Identify}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
@@ -32,7 +32,7 @@ class ActorTestSupport(name: String)
         ConfigFactory
           .defaultApplication()
           .resolve()
-          .withValue("akka.test.single-expect-default", ConfigValueFactory.fromAnyRef("5 seconds"))
+          .withValue("org.apache.pekko.test.single-expect-default", ConfigValueFactory.fromAnyRef("5 seconds"))
       )) with ImplicitSender with TestSupport {
 
   override def afterAll(): Unit = {
