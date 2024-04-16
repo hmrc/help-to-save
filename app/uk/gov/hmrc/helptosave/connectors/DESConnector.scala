@@ -76,19 +76,19 @@ class DESConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfi
   override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[HttpResponse] =
-    http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.desHeaders)(
+    http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.headers)(
       hc.copy(authorization = None),
       ec)
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.jsValueWrites, hc.copy(authorization = None), ec)
+    http.put(setFlagUrl(nino), body, appConfig.headers)(Writes.jsValueWrites, hc.copy(authorization = None), ec)
 
   override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(payePersonalDetailsUrl(nino), headers = appConfig.desHeaders + originatorIdHeader)(
+    http.get(payePersonalDetailsUrl(nino), headers = appConfig.headers + originatorIdHeader)(
       hc.copy(authorization = None),
       ec)
 
   override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
-    http.get(itmpThresholdURL, headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)
+    http.get(itmpThresholdURL, headers = appConfig.headers)(hc.copy(authorization = None), ec)
 
 }

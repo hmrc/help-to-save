@@ -20,6 +20,7 @@ import com.google.inject.Singleton
 import com.typesafe.config.ConfigRenderOptions
 import play.api.libs.json.Json
 import play.api.{Configuration, Environment, Mode}
+import uk.gov.hmrc.helptosave.config.FeatureSwitch.{CallDES, FeatureSwitch}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
@@ -41,6 +42,11 @@ class AppConfig @Inject()(
     "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.des.token")}"
   )
 
+  val ifHeaders: Map[String, String] = Map(
+    "Environment"   -> servicesConfig.getString("microservice.services.if.environment"),
+    "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.if.token")}"
+  )
+
   val correlationIdHeaderName: String = servicesConfig.getString("microservice.correlationIdHeaderName")
 
   val thresholdAskTimeout: FiniteDuration =
@@ -58,5 +64,16 @@ class AppConfig @Inject()(
         Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
       })
       .toSeq
+  }
+
+  private def isFeatureSwitchEnabled(featureSwitch: FeatureSwitch): Boolean = runModeConfiguration.get[Boolean](featureSwitch.name)
+
+  def headers: Map[String, String] = {
+    if (isFeatureSwitchEnabled(CallDES)) {
+      desHeaders
+    }
+    else {
+      ifHeaders
+    }
   }
 }
