@@ -25,7 +25,8 @@ import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
+import uk.gov.hmrc.helptosave.config.FeatureSwitch.CallDES
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
@@ -57,6 +58,7 @@ trait HelpToSaveService {
 class HelpToSaveServiceImpl @Inject()(
   helpToSaveProxyConnector: HelpToSaveProxyConnector,
   dESConnector: DESConnector,
+  iFConnector: IFConnector,
   auditor: HTSAuditor,
   metrics: Metrics,
   pagerDutyAlerting: PagerDutyAlerting,
@@ -136,54 +138,105 @@ class HelpToSaveServiceImpl @Inject()(
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] =
     EitherT({
       val timerContext = metrics.payePersonalDetailsTimer.time()
+      if(appConfig.isFeatureSwitchEnabled(CallDES)){
+        dESConnector
+          .getPersonalDetails(nino)
+          .map[Either[String, PayePersonalDetails]] {
+            response =>
+              val time = timerContext.stop()
 
-      dESConnector
-        .getPersonalDetails(nino)
-        .map[Either[String, PayePersonalDetails]] {
-          response =>
-            val time = timerContext.stop()
+              val additionalParams = "DesCorrelationId" -> response.desCorrelationId
 
-            val additionalParams = "DesCorrelationId" -> response.desCorrelationId
+              response.status match {
+                case Status.OK =>
+                  val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
+                  result.fold(
+                    { e =>
+                      metrics.payePersonalDetailsErrorCounter.inc()
+                      logger.warn(
+                        s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
+                        nino,
+                        additionalParams)
+                      pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
+                    },
+                    _ =>
+                      logger.debug(
+                        s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
+                        nino,
+                        additionalParams)
+                  )
+                  result
 
-            response.status match {
-              case Status.OK =>
-                val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
-                result.fold(
-                  { e =>
-                    metrics.payePersonalDetailsErrorCounter.inc()
-                    logger.warn(
-                      s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
-                      nino,
-                      additionalParams)
-                    pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
-                  },
-                  _ =>
-                    logger.debug(
-                      s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
-                      nino,
-                      additionalParams)
-                )
-                result
+                case other =>
+                  logger.warn(
+                    s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
+                    nino,
+                    additionalParams)
+                  metrics.payePersonalDetailsErrorCounter.inc()
+                  pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
+                  Left(s"Received unexpected status $other")
 
-              case other =>
-                logger.warn(
-                  s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
-                  nino,
-                  additionalParams)
-                metrics.payePersonalDetailsErrorCounter.inc()
-                pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
-                Left(s"Received unexpected status $other")
+              }
 
-            }
+          }
+          .recover {
+            case e =>
+              val time = timerContext.stop()
+              pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
+              metrics.payePersonalDetailsErrorCounter.inc()
+              Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+          }
+      }
+      else{
+        iFConnector
+          .getPersonalDetails(nino)
+          .map[Either[String, PayePersonalDetails]] {
+            response =>
+              val time = timerContext.stop()
 
-        }
-        .recover {
-          case e =>
-            val time = timerContext.stop()
-            pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
-            metrics.payePersonalDetailsErrorCounter.inc()
-            Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
-        }
+              val additionalParams = "IfCorrelationId" -> response.ifCorrelationId
+
+              response.status match {
+                case Status.OK =>
+                  val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
+                  result.fold(
+                    { e =>
+                      metrics.payePersonalDetailsErrorCounter.inc()
+                      logger.warn(
+                        s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
+                        nino,
+                        additionalParams)
+                      pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
+                    },
+                    _ =>
+                      logger.debug(
+                        s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
+                        nino,
+                        additionalParams)
+                  )
+                  result
+
+                case other =>
+                  logger.warn(
+                    s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
+                    nino,
+                    additionalParams)
+                  metrics.payePersonalDetailsErrorCounter.inc()
+                  pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
+                  Left(s"Received unexpected status $other")
+
+              }
+
+          }
+          .recover {
+            case e =>
+              val time = timerContext.stop()
+              pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
+              metrics.payePersonalDetailsErrorCounter.inc()
+              Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+          }
+      }
+
     })
 
   private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(

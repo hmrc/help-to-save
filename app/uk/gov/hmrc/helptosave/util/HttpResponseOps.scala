@@ -47,6 +47,8 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
 
   def desCorrelationId: String = response.header("CorrelationId").getOrElse("-")
 
+  def ifCorrelationId: String = response.header("CorrelationId").getOrElse("-")
+
   private def parseJsonImpl[A](
     couldntReadJson: (HttpResponse, Throwable) => String,
     couldntParseJson: (HttpResponse, JsError) => String

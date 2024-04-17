@@ -66,14 +66,6 @@ class AppConfig @Inject()(
       .toSeq
   }
 
-  private def isFeatureSwitchEnabled(featureSwitch: FeatureSwitch): Boolean = runModeConfiguration.get[Boolean](featureSwitch.name)
+  def isFeatureSwitchEnabled(featureSwitch: FeatureSwitch): Boolean = runModeConfiguration.get[Boolean](featureSwitch.name)
 
-  def headers: Map[String, String] = {
-    if (isFeatureSwitchEnabled(CallDES)) {
-      desHeaders
-    }
-    else {
-      ifHeaders
-    }
-  }
 }

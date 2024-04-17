@@ -51,7 +51,7 @@ class DESConnectorSpec
       ).foreach {
         case (ucResponse, expectedQueryParameters) =>
           withClue(s"For ucResponse: $ucResponse:") {
-            mockGet(url(nino), expectedQueryParameters, appConfig.headers)(
+            mockGet(url(nino), expectedQueryParameters, appConfig.desHeaders)(
               Some(HttpResponse(200, Json.toJson(eligibilityCheckResultJson), returnHeaders)))
             val result = await(connector.isEligible(nino, ucResponse))
 
@@ -62,7 +62,7 @@ class DESConnectorSpec
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url(nino), headers = appConfig.headers)(
+      mockGet(url(nino), headers = appConfig.desHeaders)(
         Some(HttpResponse(500, Json.toJson(eligibilityCheckResultJson), returnHeaders)))
       val result = await(connector.isEligible(nino, None))
 
@@ -77,21 +77,21 @@ class DESConnectorSpec
     "setting the ITMP flag" must {
 
       "return 200 status if the call to DES is successful" in {
-        mockPut(url(nino), JsNull, appConfig.headers)(Some(HttpResponse(200, "200")))
+        mockPut(url(nino), JsNull, appConfig.desHeaders)(Some(HttpResponse(200, "200")))
         val result = await(connector.setFlag(nino))
 
         result.status shouldBe 200
       }
 
       "return 403 status if the call to DES comes back with a 403 (FORBIDDEN) status" in {
-        mockPut(url(nino), JsNull, appConfig.headers)(Some(HttpResponse(403, "403")))
+        mockPut(url(nino), JsNull, appConfig.desHeaders)(Some(HttpResponse(403, "403")))
         val result = await(connector.setFlag(nino))
 
         result.status shouldBe 403
       }
 
       "return 500 status when call to DES fails" in {
-        mockPut(url(nino), JsNull, appConfig.headers)(Some(HttpResponse(500, "")))
+        mockPut(url(nino), JsNull, appConfig.desHeaders)(Some(HttpResponse(500, "")))
         val result = await(connector.setFlag(nino))
 
         result.status shouldBe 500
@@ -107,7 +107,7 @@ class DESConnectorSpec
     val url = connector.payePersonalDetailsUrl(nino)
 
     "return pay personal details for a successful nino" in {
-      mockGet(url, headers = appConfig.headers + connector.originatorIdHeader)(
+      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(
         Some(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders))) // scalastyle:ignore magic.number
       val result = await(connector.getPersonalDetails(nino))
 
@@ -116,7 +116,7 @@ class DESConnectorSpec
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url, headers = appConfig.headers + connector.originatorIdHeader)(
+      mockGet(url, headers = appConfig.desHeaders + connector.originatorIdHeader)(
         Some(HttpResponse(500, Json.parse(payeDetails(nino)), returnHeaders))) // scalastyle:ignore magic.number
       val result = await(connector.getPersonalDetails(nino))
 
@@ -131,14 +131,14 @@ class DESConnectorSpec
     val result = UCThreshold(500.50)
 
     "return 200 status when call to get threshold from DES has been successful" in {
-      mockGet(url, headers = appConfig.headers)(Some(HttpResponse(200, Json.toJson(result), returnHeaders)))
+      mockGet(url, headers = appConfig.desHeaders)(Some(HttpResponse(200, Json.toJson(result), returnHeaders)))
 
       val response = await(connector.getThreshold())
       response.status shouldBe 200
     }
 
     "return 500 status when call to DES fails" in {
-      mockGet(url, headers = appConfig.headers)(Some(HttpResponse(500, Json.toJson(result), returnHeaders)))
+      mockGet(url, headers = appConfig.desHeaders)(Some(HttpResponse(500, Json.toJson(result), returnHeaders)))
 
       val response = await(connector.getThreshold())
       response.status shouldBe 500
