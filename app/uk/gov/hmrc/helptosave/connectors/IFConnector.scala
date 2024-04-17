@@ -40,14 +40,15 @@ trait IFConnector {
 class IFConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig)
     extends IFConnector with Logging {
 
-  val payeURL: String = servicesConfig.baseUrl("paye-personal-details")
+  val payeURL: String = servicesConfig.baseUrl("paye-personal-details-if")
+  val root: String = servicesConfig.getString("microservice.services.paye-personal-details-if.root")
 
   implicit val booleanShow: Show[Boolean] = Show.show(if (_) "Y" else "N")
 
   val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
     "microservice.services.paye-personal-details.originatorId")
 
-  def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
+  def payePersonalDetailsUrl(nino: String): String = s"$payeURL$root/pay-as-you-earn/02.00.00/individuals/$nino"
 
   override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http.get(payePersonalDetailsUrl(nino), headers = appConfig.ifHeaders + originatorIdHeader)(
