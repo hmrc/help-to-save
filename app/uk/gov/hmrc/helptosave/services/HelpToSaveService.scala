@@ -20,12 +20,14 @@ import org.apache.pekko.pattern.ask
 import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import play.api.Configuration
 import play.api.http.Status
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.config.FeatureSwitch.CallDES
+import uk.gov.hmrc.helptosave.config.featureSwitches.FeatureSwitch.CallDES
+import uk.gov.hmrc.helptosave.config.featureSwitches.FeatureSwitching
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models._
@@ -64,8 +66,8 @@ class HelpToSaveServiceImpl @Inject()(
   pagerDutyAlerting: PagerDutyAlerting,
   ucThresholdProvider: ThresholdManagerProvider)(
   implicit ninoLogMessageTransformer: LogMessageTransformer,
-  appConfig: AppConfig)
-    extends HelpToSaveService with Logging {
+  appConfig: AppConfig, val config: Configuration)
+    extends HelpToSaveService with Logging  with FeatureSwitching{
 
   override def getEligibility(nino: NINO, path: String)(
     implicit hc: HeaderCarrier,
@@ -138,7 +140,7 @@ class HelpToSaveServiceImpl @Inject()(
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] =
     EitherT({
       val timerContext = metrics.payePersonalDetailsTimer.time()
-      if(appConfig.isFeatureSwitchEnabled(CallDES)){
+      if(isEnabled(CallDES)){
         dESConnector
           .getPersonalDetails(nino)
           .map[Either[String, PayePersonalDetails]] {

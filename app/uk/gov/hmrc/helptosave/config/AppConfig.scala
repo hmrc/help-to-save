@@ -20,7 +20,7 @@ import com.google.inject.Singleton
 import com.typesafe.config.ConfigRenderOptions
 import play.api.libs.json.Json
 import play.api.{Configuration, Environment, Mode}
-import uk.gov.hmrc.helptosave.config.FeatureSwitch.{CallDES, FeatureSwitch}
+import uk.gov.hmrc.helptosave.config.featureSwitches.FeatureSwitch.{CallDES, FeatureSwitch}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
@@ -30,6 +30,7 @@ import scala.jdk.CollectionConverters._
 
 @Singleton
 class AppConfig @Inject()(
+                           val config: Configuration,
   val runModeConfiguration: Configuration,
   environment: Environment,
   servicesConfig: ServicesConfig) {
@@ -65,7 +66,5 @@ class AppConfig @Inject()(
       })
       .toSeq
   }
-
-  def isFeatureSwitchEnabled(featureSwitch: FeatureSwitch): Boolean = runModeConfiguration.get[Boolean](featureSwitch.name)
 
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.config
+package uk.gov.hmrc.helptosave.config.featureSwitches
 
 object FeatureSwitch {
 
