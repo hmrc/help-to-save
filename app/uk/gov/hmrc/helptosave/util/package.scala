@@ -17,9 +17,11 @@
 package uk.gov.hmrc.helptosave
 
 import cats.data.EitherT
+import com.codahale.metrics.Timer
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 
 package object util {
@@ -37,4 +39,10 @@ package object util {
       case Some(text) => ninoRegex.replaceAllIn(text, "<NINO>")
       case None       => original
     }
+  def withTime[T](timer: Timer)(block: => Future[T])(implicit ec: ExecutionContext): Future[(Long, Try[T])] = {
+    val timerContext = timer.time()
+    block
+      .map(response => timerContext.stop() -> Success[T](response))
+      .recover(error => timerContext.stop() -> Failure[T](error))
+  }
 }

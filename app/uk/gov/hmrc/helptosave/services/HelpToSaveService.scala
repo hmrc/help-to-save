@@ -36,13 +36,14 @@ import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino, withTime}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.chaining.scalaUtilChainingOps
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
 @ImplementedBy(classOf[HelpToSaveServiceImpl])
 trait HelpToSaveService {
@@ -89,94 +90,88 @@ class HelpToSaveServiceImpl @Inject()(
       .map(r => r.result)
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] = {
-    val timerContext = metrics.itmpSetFlagTimer.time()
-    (for {
-      response <- dESConnector.setFlag(nino)
-      time = timerContext.stop()
-      additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId())
-    } yield response.status match {
-      case OK =>
-        logger.info(
-          s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})",
-          nino,
-          additionalParams: _*)
-        Right(())
+    withTime(metrics.itmpSetFlagTimer)(dESConnector.setFlag(nino)).map {
+      case (time, Success(response)) =>
+        val additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId())
+        response.status match {
+          case OK =>
+            logger.info(
+              s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})",
+              nino,
+              additionalParams: _*)
+            Right(())
 
-      case FORBIDDEN =>
-        metrics.itmpSetFlagConflictCounter.inc()
-        logger.warn(
-          s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
-            s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})",
-          nino,
-          additionalParams: _*
-        )
-        Right(())
+          case FORBIDDEN =>
+            metrics.itmpSetFlagConflictCounter.inc()
+            logger.warn(
+              s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
+                s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})",
+              nino,
+              additionalParams: _*
+            )
+            Right(())
 
-      case other =>
+          case other =>
+            metrics.itmpSetFlagErrorCounter.inc()
+            pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
+            Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: " +
+              s"${maskNino(response.body)} (round-trip time: ${nanosToPrettyString(time)})")
+        }
+      case (time, Failure(NonFatal(e))) =>
         metrics.itmpSetFlagErrorCounter.inc()
-        pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
-        Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: " +
-          s"${maskNino(response.body)} (round-trip time: ${nanosToPrettyString(time)})")
-    }).recover { case NonFatal(e) =>
-      val time = timerContext.stop()
-      metrics.itmpSetFlagErrorCounter.inc()
-      pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
-      Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
+        pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
+        Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
     }.pipe(EitherT(_))
   }
 
-  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] = {
-    val timerContext = metrics.payePersonalDetailsTimer.time()
-    (for {
-      response <- if (isEnabled(CallDES)) dESConnector.getPersonalDetails(nino) else iFConnector.getPersonalDetails(nino)
-      time = timerContext.stop()
-      additionalParams =
-        if (isEnabled(CallDES)) {
-          "DesCorrelationId" -> response.desCorrelationId
-        } else {
-          "IfCorrelationId" -> response.ifCorrelationId
-        }
-    } yield response.status match {
-      case Status.OK =>
-        response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap (_.left.foreach { e =>
-          metrics.payePersonalDetailsErrorCounter.inc()
-          logger.warn(
-            s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
-            nino,
-            additionalParams)
-          pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
-        })
+  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] =
+    withTime(metrics.itmpSetFlagTimer) {
+      if (isEnabled(CallDES)) dESConnector.getPersonalDetails(nino) else iFConnector.getPersonalDetails(nino)
+    } map {
+      case (time, Success(response)) =>
+        val additionalParams =
+          if (isEnabled(CallDES)) {
+            "DesCorrelationId" -> response.desCorrelationId
+          } else {
+            "IfCorrelationId" -> response.ifCorrelationId
+          }
+        response.status match {
+          case Status.OK =>
+            response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap (_.left.foreach { e =>
+              metrics.payePersonalDetailsErrorCounter.inc()
+              logger.warn(
+                s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
+                nino,
+                additionalParams)
+              pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
+            })
 
-      case other =>
-        logger.warn(
-          s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
-          nino,
-          additionalParams)
+          case other =>
+            logger.warn(
+              s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
+              nino,
+              additionalParams)
+            metrics.payePersonalDetailsErrorCounter.inc()
+            pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
+            Left(s"Received unexpected status $other")
+        }
+      case (time, Failure(e)) =>
+        pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
         metrics.payePersonalDetailsErrorCounter.inc()
-        pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
-        Left(s"Received unexpected status $other")
-    }) recover { e =>
-      val time = timerContext.stop()
-      pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
-      metrics.payePersonalDetailsErrorCounter.inc()
-      Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+        Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
     } pipe (EitherT(_))
-  }
 
   private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Result[EligibilityCheckResult] = {
-    val timerContext = metrics.itmpEligibilityCheckTimer.time()
-    (for {
-      response <- dESConnector.isEligible(nino, ucResponse)
-      time = timerContext.stop()
-      additionalParams = "DesCorrelationId" -> response.desCorrelationId
-    } yield response.status match {
-      case Status.OK =>
+    ec: ExecutionContext): Result[EligibilityCheckResult] =
+    withTime(metrics.itmpSetFlagTimer)(dESConnector.isEligible(nino, ucResponse)).map {
+      case (_, Success(response)) if response.status == OK =>
         response.parseJson[EligibilityCheckResult] tap (_.left.foreach { _ =>
           pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
         })
-      case other =>
+      case (time, Success(response)) =>
+        val other = response.status
+        val additionalParams = "DesCorrelationId" -> response.desCorrelationId
         logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}. " +
           s"Body was: ${response.body}",
           nino,
@@ -184,14 +179,10 @@ class HelpToSaveServiceImpl @Inject()(
         )
         pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
         Left(s"Received unexpected status $other")
-    }).recover { e =>
-        val time = timerContext.stop()
+      case (time, Failure(response)) =>
         pagerDutyAlerting.alert("Failed to make call to check eligibility")
         Left(s"Call to check eligibility unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
-      }
-      .map(_.tap { _ => metrics.itmpEligibilityCheckErrorCounter.inc() })
-      .pipe(EitherT(_))
-  }
+    }.pipe(EitherT(_))
 
   private def timeString(nanos: Long): String = s"(round-trip time: ${nanosToPrettyString(nanos)})"
 
