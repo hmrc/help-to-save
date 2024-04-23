@@ -36,7 +36,7 @@ import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
-import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino, toFuture}
+import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.util.UUID
@@ -88,57 +88,42 @@ class HelpToSaveServiceImpl @Inject()(
       .mapTo[GetThresholdValueResponse]
       .map(r => r.result)
 
-  def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
-    EitherT({
-      val timerContext = metrics.itmpSetFlagTimer.time()
+  def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] = {
+    val timerContext = metrics.itmpSetFlagTimer.time()
+    (for {
+      response <- dESConnector.setFlag(nino)
+      time = timerContext.stop()
+      additionalParams = Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId())
+    } yield response.status match {
+      case OK =>
+        logger.info(
+          s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})",
+          nino,
+          additionalParams: _*)
+        Right(())
 
-      dESConnector
-        .setFlag(nino)
-        .map[Either[String, Unit]] {
-          response =>
-            val time = timerContext.stop()
+      case FORBIDDEN =>
+        metrics.itmpSetFlagConflictCounter.inc()
+        logger.warn(
+          s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
+            s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})",
+          nino,
+          additionalParams: _*
+        )
+        Right(())
 
-            val additionalParams =
-              Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId())
-
-            response.status match {
-              case OK =>
-                logger.info(
-                  s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})",
-                  nino,
-                  additionalParams: _*)
-                Right(())
-
-              case FORBIDDEN =>
-                metrics.itmpSetFlagConflictCounter.inc()
-                logger.warn(
-                  s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
-                    s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})",
-                  nino,
-                  additionalParams: _*
-                )
-                Right(())
-
-              case other =>
-                metrics.itmpSetFlagErrorCounter.inc()
-                pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
-                Left(
-                  s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${
-                    maskNino(
-                      response.body)
-                  } " +
-                    s"(round-trip time: ${nanosToPrettyString(time)})")
-            }
-        }
-        .recover {
-          case NonFatal(e) =>
-            val time = timerContext.stop()
-            metrics.itmpSetFlagErrorCounter.inc()
-            pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
-            Left(
-              s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
-        }
-    })
+      case other =>
+        metrics.itmpSetFlagErrorCounter.inc()
+        pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
+        Left(s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: " +
+          s"${maskNino(response.body)} (round-trip time: ${nanosToPrettyString(time)})")
+    }).recover { case NonFatal(e) =>
+      val time = timerContext.stop()
+      metrics.itmpSetFlagErrorCounter.inc()
+      pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
+      Left(s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
+    }.pipe(EitherT(_))
+  }
 
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] = {
     val timerContext = metrics.payePersonalDetailsTimer.time()
