@@ -180,58 +180,33 @@ class HelpToSaveServiceImpl @Inject()(
 
   private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Result[EligibilityCheckResult] =
-    EitherT({
-      val timerContext = metrics.itmpEligibilityCheckTimer.time()
-
-      dESConnector
-        .isEligible(nino, ucResponse)
-        .map[Either[String, EligibilityCheckResult]] {
-          response =>
-            val time = timerContext.stop()
-
-            val additionalParams = "DesCorrelationId" -> response.desCorrelationId
-
-            response.status match {
-              case Status.OK =>
-                response
-                  .parseJson[EligibilityCheckResult]
-                  .fold(
-                    { e =>
-                      metrics.itmpEligibilityCheckErrorCounter.inc()
-                      pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
-                      Left(e)
-                    },
-                    res => {
-                      logger.debug(
-                        s"Call to check eligibility successful, received 200 (OK) ${timeString(time)}",
-                        nino,
-                        additionalParams)
-                      Right(res)
-                    }
-                  )
-
-              case other =>
-                logger.warn(
-                  s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}. " +
-                    s"Body was: ${response.body}",
-                  nino,
-                  additionalParams
-                )
-                metrics.itmpEligibilityCheckErrorCounter.inc()
-                pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
-                Left(s"Received unexpected status $other")
-            }
-
-        }
-        .recover {
-          case e =>
-            val time = timerContext.stop()
-            pagerDutyAlerting.alert("Failed to make call to check eligibility")
-            metrics.itmpEligibilityCheckErrorCounter.inc()
-            Left(s"Call to check eligibility unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
-        }
-    })
+    ec: ExecutionContext): Result[EligibilityCheckResult] = {
+    val timerContext = metrics.itmpEligibilityCheckTimer.time()
+    (for {
+      response <- dESConnector.isEligible(nino, ucResponse)
+      val time = timerContext.stop()
+      val additionalParams = "DesCorrelationId" -> response.desCorrelationId
+    } yield response.status match {
+      case Status.OK =>
+        response.parseJson[EligibilityCheckResult] tap (_.left.foreach { _ =>
+          pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
+        })
+      case other =>
+        logger.warn(s"Call to check eligibility unsuccessful. Received unexpected status $other ${timeString(time)}. " +
+          s"Body was: ${response.body}",
+          nino,
+          additionalParams
+        )
+        pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
+        Left(s"Received unexpected status $other")
+    }).recover { e =>
+        val time = timerContext.stop()
+        pagerDutyAlerting.alert("Failed to make call to check eligibility")
+        Left(s"Call to check eligibility unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+      }
+      .map(_.tap { _ => metrics.itmpEligibilityCheckErrorCounter.inc() })
+      .pipe(EitherT(_))
+  }
 
   private def timeString(nanos: Long): String = s"(round-trip time: ${nanosToPrettyString(nanos)})"
 
