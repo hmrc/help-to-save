@@ -170,12 +170,11 @@ class HelpToSaveServiceImpl @Inject()(
         metrics.payePersonalDetailsErrorCounter.inc()
         pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
         Left(s"Received unexpected status $other")
-    }) recover {
-      case e =>
-        val time = timerContext.stop()
-        pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
-        metrics.payePersonalDetailsErrorCounter.inc()
-        Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+    }) recover { e =>
+      val time = timerContext.stop()
+      pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
+      metrics.payePersonalDetailsErrorCounter.inc()
+      Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
     } pipe (EitherT(_))
   }
 
