@@ -213,16 +213,14 @@ class HelpToSaveServiceImpl @Inject()(
   private def getUCDetails(nino: NINO, txnId: UUID, threshold: Option[Double])(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[UCResponse]] =
-    threshold.fold[Future[Option[UCResponse]]]({
-      logger.warn("call to uc claimant check will not be made as there is no threshold value present", nino)
-      None
-    })(
-      thresholdValue =>
-        helpToSaveProxyConnector
-          .ucClaimantCheck(nino, txnId, thresholdValue)
-          .fold({ e =>
-            logger.warn(s"Error while retrieving UC details: $e", nino)
-            None
-          }, Some(_)))
+    threshold match {
+      case None =>
+        logger.warn("call to uc claimant check will not be made as there is no threshold value present", nino)
+        Future.successful(None)
+      case Some(thresholdValue) =>
+        helpToSaveProxyConnector.ucClaimantCheck(nino, txnId, thresholdValue)
+          .leftMap(_.tap(e => logger.warn(s"Error while retrieving UC details: $e", nino)))
+          .toOption.value
+    }
 
 }
