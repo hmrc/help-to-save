@@ -141,46 +141,42 @@ class HelpToSaveServiceImpl @Inject()(
     })
 
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] = {
-    val response = if (isEnabled(CallDES)) dESConnector.getPersonalDetails(nino) else iFConnector.getPersonalDetails(nino)
     val timerContext = metrics.payePersonalDetailsTimer.time()
-    response.map { response =>
-        val time = timerContext.stop()
-        val additionalParams =
-          if (isEnabled(CallDES)) {
-            "DesCorrelationId" -> response.desCorrelationId
-          } else {
-            "IfCorrelationId" -> response.ifCorrelationId
-          }
-
-        response.status match {
-          case Status.OK =>
-            response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap (_.left.foreach { e =>
-              metrics.payePersonalDetailsErrorCounter.inc()
-              logger.warn(
-                s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
-                nino,
-                additionalParams)
-              pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
-            })
-
-          case other =>
-            logger.warn(
-              s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
-              nino,
-              additionalParams)
-            metrics.payePersonalDetailsErrorCounter.inc()
-            pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
-            Left(s"Received unexpected status $other")
+    (for {
+      response <- if (isEnabled(CallDES)) dESConnector.getPersonalDetails(nino) else iFConnector.getPersonalDetails(nino)
+      time = timerContext.stop()
+      additionalParams =
+        if (isEnabled(CallDES)) {
+          "DesCorrelationId" -> response.desCorrelationId
+        } else {
+          "IfCorrelationId" -> response.ifCorrelationId
         }
-      }
-      .recover {
-        case e =>
-          val time = timerContext.stop()
-          pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
+    } yield response.status match {
+      case Status.OK =>
+        response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap (_.left.foreach { e =>
           metrics.payePersonalDetailsErrorCounter.inc()
-          Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
-      }
-      .pipe(EitherT(_))
+          logger.warn(
+            s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
+            nino,
+            additionalParams)
+          pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
+        })
+
+      case other =>
+        logger.warn(
+          s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
+          nino,
+          additionalParams)
+        metrics.payePersonalDetailsErrorCounter.inc()
+        pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
+        Left(s"Received unexpected status $other")
+    }) recover {
+      case e =>
+        val time = timerContext.stop()
+        pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
+        metrics.payePersonalDetailsErrorCounter.inc()
+        Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+    } pipe (EitherT(_))
   }
 
   private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(
