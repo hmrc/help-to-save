@@ -184,8 +184,8 @@ class HelpToSaveServiceImpl @Inject()(
     val timerContext = metrics.itmpEligibilityCheckTimer.time()
     (for {
       response <- dESConnector.isEligible(nino, ucResponse)
-      val time = timerContext.stop()
-      val additionalParams = "DesCorrelationId" -> response.desCorrelationId
+      time = timerContext.stop()
+      additionalParams = "DesCorrelationId" -> response.desCorrelationId
     } yield response.status match {
       case Status.OK =>
         response.parseJson[EligibilityCheckResult] tap (_.left.foreach { _ =>
