@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import org.apache.pekko.pattern.ask
 import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import org.apache.pekko.pattern.ask
 import play.api.Configuration
 import play.api.http.Status
 import play.mvc.Http.Status.{FORBIDDEN, OK}
@@ -59,24 +59,24 @@ trait HelpToSaveService {
 
 @Singleton
 class HelpToSaveServiceImpl @Inject()(
-  helpToSaveProxyConnector: HelpToSaveProxyConnector,
-  dESConnector: DESConnector,
-  iFConnector: IFConnector,
-  auditor: HTSAuditor,
-  metrics: Metrics,
-  pagerDutyAlerting: PagerDutyAlerting,
-  ucThresholdProvider: ThresholdManagerProvider)(
-  implicit ninoLogMessageTransformer: LogMessageTransformer,
-  appConfig: AppConfig, val config: Configuration)
-    extends HelpToSaveService with Logging  with FeatureSwitching{
+                                       helpToSaveProxyConnector: HelpToSaveProxyConnector,
+                                       dESConnector: DESConnector,
+                                       iFConnector: IFConnector,
+                                       auditor: HTSAuditor,
+                                       metrics: Metrics,
+                                       pagerDutyAlerting: PagerDutyAlerting,
+                                       ucThresholdProvider: ThresholdManagerProvider)(
+                                       implicit ninoLogMessageTransformer: LogMessageTransformer,
+                                       appConfig: AppConfig, val config: Configuration)
+  extends HelpToSaveService with Logging with FeatureSwitching {
 
   override def getEligibility(nino: NINO, path: String)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Result[EligibilityCheckResponse] =
     for {
-      threshold  <- EitherT.liftF(getThresholdValue())
+      threshold <- EitherT.liftF(getThresholdValue())
       ucResponse <- EitherT.liftF(getUCDetails(nino, UUID.randomUUID(), threshold))
-      result     <- getEligibility(nino, ucResponse)
+      result <- getEligibility(nino, ucResponse)
     } yield {
       auditor.sendEvent(EligibilityCheckEvent(nino, result, ucResponse, path), nino)
       EligibilityCheckResponse(result, threshold)
@@ -123,8 +123,10 @@ class HelpToSaveServiceImpl @Inject()(
                 metrics.itmpSetFlagErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
                 Left(
-                  s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${maskNino(
-                    response.body)} " +
+                  s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${
+                    maskNino(
+                      response.body)
+                  } " +
                     s"(round-trip time: ${nanosToPrettyString(time)})")
             }
         }
@@ -152,20 +154,14 @@ class HelpToSaveServiceImpl @Inject()(
 
         response.status match {
           case Status.OK =>
-            response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap {
-              case Left(e) =>
-                metrics.payePersonalDetailsErrorCounter.inc()
-                logger.warn(
-                  s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
-                  nino,
-                  additionalParams)
-                pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
-              case Right(_) =>
-                logger.debug(
-                  s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
-                  nino,
-                  additionalParams)
-            }
+            response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap (_.left.foreach { e =>
+              metrics.payePersonalDetailsErrorCounter.inc()
+              logger.warn(
+                s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
+                nino,
+                additionalParams)
+              pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
+            })
 
           case other =>
             logger.warn(
