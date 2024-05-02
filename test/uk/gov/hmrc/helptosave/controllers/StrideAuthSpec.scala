@@ -29,6 +29,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.helptosave.controllers.StrideAuthSpec.NotLoggedInException
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.http.HeaderCarrier
+import org.mockito.ArgumentMatchersSugar.*
 
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
@@ -51,10 +52,9 @@ class StrideAuthSpec extends TestSupport {
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]) =
-    (mockAuthConnector
-      .authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(expectedPredicate, expectedRetrieval, *, *)
-      .returning(result.fold(Future.failed, Future.successful))
+    mockAuthConnector
+      .authorise(expectedPredicate, expectedRetrieval)(*, *)
+      .returns(result.fold(Future.failed, Future.successful))
 
   "StrideAuth" must {
 

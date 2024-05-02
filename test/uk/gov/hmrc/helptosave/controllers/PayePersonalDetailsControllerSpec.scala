@@ -28,6 +28,7 @@ import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestData
 import uk.gov.hmrc.http.HeaderCarrier
+import org.mockito.ArgumentMatchersSugar.*
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,10 +46,9 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
     def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =
-      (helpToSaveService
-        .getPersonalDetails(_: NINO)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(nino, *, *)
-        .returning(EitherT.fromEither[Future](result))
+      helpToSaveService
+        .getPersonalDetails(nino)(*, *)
+        .returns(EitherT.fromEither[Future](result))
 
     val controller = new PayePersonalDetailsController(helpToSaveService, mockAuthConnector, testCC)
   }
@@ -58,10 +58,8 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
     "handling requests to Get paye-personal-details from DES" must {
 
       "ask the payeDetailsService for the personal details and return successful result for a valid nino" in new TestApparatus {
-        inSequence {
           mockSuccessfulAuthorisation()
           mockPayeDetailsConnector(nino)(Right(ppDetails))
-        }
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 200
@@ -69,21 +67,17 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
       }
 
       "return with a status 500 if the paye-personal-details call fails" in new TestApparatus {
-        inSequence {
           mockSuccessfulAuthorisation()
           mockPayeDetailsConnector(nino)(Left(""))
-        }
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500
       }
 
       "return with a status 500 and empty json if the pay details is NOT_FOUND in DES" in new TestApparatus {
-        inSequence {
           mockSuccessfulAuthorisation()
           mockPayeDetailsConnector(nino)(
             Left("Could not parse JSON response from paye-personal-details, received 200 (OK)"))
-        }
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500

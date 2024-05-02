@@ -26,6 +26,7 @@ import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.toFuture
+import org.mockito.ArgumentMatchersSugar.*
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
@@ -40,10 +41,9 @@ class UserCapControllerSpec extends AuthSupport {
 
     "checking if account creation is allowed " should {
       "return successful result" in {
-        (userCapService
-          .isAccountCreateAllowed()(_: ExecutionContext))
-          .expects(*)
-          .returning(toFuture(UserCapResponse()))
+        userCapService
+          .isAccountCreateAllowed()(*)
+          .returns(toFuture(UserCapResponse()))
 
         mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         val result = controller.isAccountCreateAllowed()(FakeRequest())

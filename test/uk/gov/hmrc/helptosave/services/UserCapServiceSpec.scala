@@ -52,20 +52,17 @@ class UserCapServiceSpec extends TestSupport {
     lazy val totalLimit = servicesConfig.getInt("microservice.user-cap.total.limit")
 
     def mockUserCapStoreGetOne(userCap: Option[UserCap]) =
-      (userCapStore.get _)
-        .expects()
-        .returning(Future.successful(userCap))
+      userCapStore.get()
+        .returns(Future.successful(userCap))
 
     def mockUserCapStoreGetOneFailure() =
-      (userCapStore.get _)
-        .expects()
-        .returning(Future.failed(new RuntimeException("oh no")))
+      userCapStore.get()
+        .returns(Future.failed(new RuntimeException("oh no")))
 
     def mockUserCapStoreUpsert(userCap: UserCap) =
-      (userCapStore
-        .upsert(_: UserCap))
-        .expects(userCap)
-        .returning(Future.successful(Some(userCap)))
+      userCapStore
+        .upsert(userCap)
+        .returns(Future.successful(Some(userCap)))
 
     "checking if account create is allowed" must {
 

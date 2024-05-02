@@ -32,6 +32,7 @@ import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import uk.gov.hmrc.http.HeaderCarrier
+import org.mockito.ArgumentMatchersSugar.*
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,16 +51,14 @@ class EnrolmentStoreControllerSpec
 
   def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(
     result: Either[String, Option[Account]]): Unit =
-    (proxyConnector
-      .getAccount(_: String, _: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(nino, systemId, correlationId, path, *, *)
-      .returning(EitherT.fromEither[Future](result))
+    proxyConnector
+      .getAccount(nino, systemId, correlationId, path)(*, *)
+      .returns(EitherT.fromEither[Future](result))
 
   def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit =
-    (enrolmentStore
-      .updateWithAccountNumber(_: String, _: String)(_: HeaderCarrier))
-      .expects(nino, accountNumber, *)
-      .returning(EitherT.fromEither[Future](result))
+    enrolmentStore
+      .updateWithAccountNumber(nino, accountNumber)(*)
+      .returns(EitherT.fromEither[Future](result))
 
   "The EnrolmentStoreController" when {
 
@@ -80,21 +79,17 @@ class EnrolmentStoreControllerSpec
       }
 
       "update the mongo record with the ITMP flag set to true" in {
-        inSequence {
           mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
-        }
 
         await(setFlag())
       }
 
       "return a 200 if all the steps were successful" in {
-        inSequence {
           mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
-        }
 
         status(setFlag()) shouldBe OK
       }
@@ -105,16 +100,16 @@ class EnrolmentStoreControllerSpec
           status(setFlag()) shouldBe INTERNAL_SERVER_ERROR
         }
 
-        test(inSequence {
+        test{
           mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockSetFlag(nino)(Left(""))
-        })
+        }
 
-        test(inSequence {
+        test{
           mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
-        })
+        }
       }
 
     }
@@ -227,10 +222,8 @@ class EnrolmentStoreControllerSpec
           EnrolmentStore.Enrolled(false),
           EnrolmentStore.NotEnrolled
         ).foreach { status =>
-          inSequence {
             mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
             mockEnrolmentStoreGet(nino)(Right(status))
-          }
 
           val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
           contentAsJson(result).validate[EnrolmentStore.Status] shouldBe JsSuccess(status)
@@ -238,10 +231,8 @@ class EnrolmentStoreControllerSpec
       }
 
       "return an error if there is a problem getting the enrolment status" in {
-        inSequence {
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
           mockEnrolmentStoreGet(nino)(Left(""))
-        }
 
         val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
         status(result) shouldBe 500
