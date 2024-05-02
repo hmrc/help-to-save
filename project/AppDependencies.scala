@@ -1,5 +1,5 @@
 import play.sbt.PlayImport.ws
-import sbt._
+import sbt.*
 
 object AppDependencies {
   val hmrc = "uk.gov.hmrc"
@@ -19,7 +19,7 @@ object AppDependencies {
     hmrc                %% s"bootstrap-test-$playVersion"  % bootstrapBackendVersion % scope,
     s"$hmrc.mongo"      %% s"hmrc-mongo-test-$playVersion" % mongoVersion            % scope,
     "org.scalatestplus" %% "scalacheck-1-17"               % "3.2.18.0"              % scope,
-    "org.scalamock"     %% "scalamock"                     % "5.2.0"                 % scope,
-    "org.apache.pekko"  %% "pekko-testkit"                 % "1.0.2"                 % scope
+    "org.apache.pekko"  %% "pekko-testkit"                 % "1.0.2"                 % scope,
+    "org.mockito"       %% "mockito-scala"                 % "1.17.31"               % scope
   )
 }

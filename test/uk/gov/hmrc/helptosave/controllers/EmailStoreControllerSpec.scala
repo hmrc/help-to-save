@@ -28,6 +28,7 @@ import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.util.NINO
+import org.mockito.ArgumentMatchersSugar.*
 
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,16 +38,14 @@ class EmailStoreControllerSpec extends AuthSupport {
   val emailStore: EmailStore = mock[EmailStore]
 
   def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
-    (emailStore
-      .store(_: String, _: NINO)(_: ExecutionContext))
-      .expects(email, nino, *)
-      .returning(EitherT.fromEither[Future](result))
+    emailStore
+      .store(email, nino)(*)
+      .returns(EitherT.fromEither[Future](result))
 
   def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit =
-    (emailStore
-      .get(_: NINO)(_: ExecutionContext))
-      .expects(nino, *)
-      .returning(EitherT.fromEither[Future](result))
+    emailStore
+      .get(nino)(*)
+      .returns(EitherT.fromEither[Future](result))
 
   "The EmailStoreController" when {
 
@@ -60,20 +59,16 @@ class EmailStoreControllerSpec extends AuthSupport {
     "handling requests to store emails" must {
 
       "return a HTTP 200 if the email is successfully stored with a GG login" in {
-        inSequence {
           mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(GGCredId("")))
           mockAuth(EmptyPredicate, v2Nino)(Right(Some(nino)))
           mockStore(email, nino)(Right(()))
-        }
 
         status(store(encodedEmail, None)) shouldBe 200
       }
 
       "return a HTTP 200 if the email is successfully stored with a privileged login" in {
-        inSequence {
           mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
           mockStore(email, nino)(Right(()))
-        }
 
         status(store(encodedEmail, Some(nino))) shouldBe 200
       }
@@ -87,10 +82,8 @@ class EmailStoreControllerSpec extends AuthSupport {
         }
 
         "the email is not successfully stored" in {
-          inSequence {
             mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
             mockStore(email, nino)(Left(""))
-          }
 
           status(store(encodedEmail, Some(nino))) shouldBe 500
         }

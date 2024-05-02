@@ -16,16 +16,15 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.scalamock.handlers.CallHandler4
+import org.mockito.ArgumentMatchersSugar.*
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.auth.core.{AuthProviders, Enrolment, Enrolments}
-import uk.gov.hmrc.http.HeaderCarrier
 
 import java.util.Base64
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 trait StrideAuthSupport extends AuthSupport {
   lazy val roles: Seq[String] =
@@ -34,14 +33,12 @@ trait StrideAuthSupport extends AuthSupport {
       .map(s => new String(Base64.getDecoder.decode(s)))
 
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
-    result: Either[Throwable, A]): CallHandler4[Predicate, Retrieval[A], HeaderCarrier, ExecutionContext, Future[A]] =
-    (mockAuthConnector
-      .authorise(_: Predicate, _: Retrieval[A])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(expectedPredicate, expectedRetrieval, *, *)
-      .returning(result.fold(Future.failed, Future.successful))
+    result: Either[Throwable, A]) =
+    mockAuthConnector
+      .authorise(expectedPredicate, expectedRetrieval)(*, *)
+      .returns(result.fold(Future.failed, Future.successful))
 
-  def mockSuccessfulAuthorisation()
-    : CallHandler4[Predicate, Retrieval[Enrolments], HeaderCarrier, ExecutionContext, Future[Enrolments]] =
+  def mockSuccessfulAuthorisation() =
     mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(
       Right(Enrolments(roles.map(Enrolment(_)).toSet)))
 }

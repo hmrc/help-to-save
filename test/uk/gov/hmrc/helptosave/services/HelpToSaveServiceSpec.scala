@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import org.apache.pekko.actor.{ActorRef, ActorSystem}
-import org.apache.pekko.testkit.TestProbe
 import cats.data.EitherT
 import cats.instances.future._
 import cats.instances.int._
 import cats.syntax.eq._
 import com.typesafe.config.ConfigFactory
+import org.apache.pekko.actor.{ActorRef, ActorSystem}
+import org.apache.pekko.testkit.TestProbe
+import org.mockito.ArgumentMatchersSugar.*
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalamock.handlers.CallHandler3
 import org.scalatest.EitherValues
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
@@ -38,11 +38,10 @@ import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.{ThresholdManagerProvider, UCThresholdOrchestrator}
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestEnrolmentBehaviour}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HttpResponse
 
-import java.util.UUID
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 class HelpToSaveServiceSpec
     extends ActorTestSupport("HelpToSaveServiceSpec") with TestEnrolmentBehaviour with EitherValues with MockPagerDuty
@@ -87,34 +86,29 @@ class HelpToSaveServiceSpec
   }
 
   private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: HttpResponse) =
-    (mockDESConnector
-      .isEligible(_: String, _: Option[UCResponse])(_: HeaderCarrier, _: ExecutionContext))
-      .expects(nino, uCResponse, *, *)
-      .returning(toFuture(response))
+    mockDESConnector
+      .isEligible(nino, uCResponse)(*, *)
+      .returns(toFuture(response))
 
   private def mockUCClaimantCheck(nino: String, threshold: Double)(result: Either[String, UCResponse]) =
-    (mockProxyConnector
-      .ucClaimantCheck(_: String, _: UUID, _: Double)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(nino, *, threshold, *, *)
-      .returning(EitherT.fromEither[Future](result))
+    mockProxyConnector
+      .ucClaimantCheck(nino, *, threshold)(*, *)
+      .returns(EitherT.fromEither[Future](result))
 
-  def mockSendAuditEvent(event: HTSEvent, nino: String): CallHandler3[HTSEvent, NINO, ExecutionContext, Unit] =
-    (mockAuditor
-      .sendEvent(_: HTSEvent, _: String)(_: ExecutionContext))
-      .expects(event, nino, *)
-      .returning(())
+  def mockSendAuditEvent(event: HTSEvent, nino: String) =
+    mockAuditor
+      .sendEvent(event, nino)(*)
+      .doesNothing()
 
-  def mockSetFlag(nino: String)(response: HttpResponse): CallHandler3[NINO, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
-    (mockDESConnector
-      .setFlag(_: String)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(nino, *, *)
-      .returning(toFuture(response))
+  def mockSetFlag(nino: String)(response: HttpResponse) =
+    mockDESConnector
+      .setFlag(nino)(*, *)
+      .returns(toFuture(response))
 
-  def mockPayeGet(nino: String)(response: Option[HttpResponse]): CallHandler3[NINO, HeaderCarrier, ExecutionContext, Future[HttpResponse]] =
-    (mockDESConnector
-      .getPersonalDetails(_: String)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(nino, *, *)
-      .returning(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
+  def mockPayeGet(nino: String)(response: Option[HttpResponse]) =
+    mockDESConnector
+      .getPersonalDetails(nino)(*, *)
+      .returns(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
     result     <- Gen.alphaStr
@@ -152,32 +146,26 @@ class HelpToSaveServiceSpec
       "return with the eligibility check result unchanged from ITMP" in {
         val uCResponse = UCResponse(ucClaimant = false, Some(false))
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
-          inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(
               HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
             mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-          }
 
           getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
         }
       }
 
       "call DES even if there is an errors during UC claimant check" in {
-        inSequence {
           mockUCClaimantCheck(nino, threshold)(Left("unexpected error during UCClaimant check"))
           mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
           mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
-        }
 
         getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, Some(1.23)))
       }
 
       "continue the eligibility check when the threshold cannot be retrieved and the applicant is eligible from a WTC perspective" in {
-        inSequence {
           mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
           mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
-        }
 
         getEligibility(None) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, None))
       }
@@ -185,12 +173,10 @@ class HelpToSaveServiceSpec
       "pass the UC params to DES if they are provided" in {
         val uCResponse = UCResponse(ucClaimant = true, Some(true))
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
-          inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(
               HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
             mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-          }
 
           getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
         }
@@ -199,12 +185,10 @@ class HelpToSaveServiceSpec
       "do not pass the UC withinThreshold param to DES if its not set" in {
         val uCResponse = UCResponse(ucClaimant = true, None)
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
-          inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(
               HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
             mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-          }
 
           getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
         }
@@ -212,12 +196,10 @@ class HelpToSaveServiceSpec
 
       "return with an error" when {
         "the call to DES fails" in {
-          inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, ""))
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to check eligibility")
-          }
 
           getEligibility(Some(threshold)).isLeft shouldBe true
         }
@@ -225,12 +207,10 @@ class HelpToSaveServiceSpec
         "the call comes back with an unexpected http status" in {
           forAll { status: Int =>
             whenever(status > 0 && status =!= 200 && status =!= 404) {
-              inSequence {
                 mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
                 mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(status, ""))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
-              }
 
               getEligibility(Some(threshold)).isLeft shouldBe true
             }
@@ -238,13 +218,11 @@ class HelpToSaveServiceSpec
         }
 
         "parsing invalid json" in {
-          inSequence {
             mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
             mockDESEligibilityCheck(nino, Some(uCResponse))(
               HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders)) // scalastyle:ignore magic.number
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Could not parse JSON in eligibility check response")
-          }
 
           getEligibility(Some(threshold)) shouldBe
             Left(
@@ -271,11 +249,9 @@ class HelpToSaveServiceSpec
         "the call to ITMP comes back with a status which isn't 200 or 403" in {
           forAll { status: Int =>
             whenever(status != 200 && status != 403) {
-              inSequence {
                 mockSetFlag(nino)(HttpResponse(status, ""))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to setting ITMP flag")
-              }
 
               await(service.setFlag(nino).value).isLeft shouldBe true
             }
@@ -283,11 +259,9 @@ class HelpToSaveServiceSpec
         }
 
         "an error occurs while calling the ITMP endpoint" in {
-          inSequence {
             mockSetFlag(nino)(HttpResponse(500, ""))
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to set ITMP flag")
-          }
           await(service.setFlag(nino).value).isLeft shouldBe true
         }
 
@@ -311,29 +285,23 @@ class HelpToSaveServiceSpec
       }
 
       "handle errors when parsing invalid json" in {
-        inSequence {
           mockPayeGet(nino)(Some(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders))) // scalastyle:ignore magic.number
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("Could not parse JSON in the paye-personal-details response")
-        }
         Await.result(service.getPersonalDetails(nino).value, 15.seconds).isLeft shouldBe true
       }
 
       "handle errors when parsing json with personal details containing no Postcode " in {
-        inSequence {
           mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetailsNoPostCode(nino)), returnHeaders)))
           mockPagerDutyAlert("Could not parse JSON in the paye-personal-details response")
-        }
         Await.result(service.getPersonalDetails(nino).value, 15.seconds).isLeft shouldBe true
       }
 
       "return with an error" when {
         "the call fails" in {
-          inSequence {
             mockPayeGet(nino)(None)
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to paye-personal-details")
-          }
 
           Await.result(service.getPersonalDetails(nino).value, 5.seconds).isLeft shouldBe true
         }
@@ -341,11 +309,9 @@ class HelpToSaveServiceSpec
         "the call comes back with an unexpected http status" in {
           forAll { status: Int =>
             whenever(status > 0 && status =!= 200 && status =!= 404) {
-              inSequence {
                 mockPayeGet(nino)(Some(HttpResponse(status, "")))
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to paye-personal-details")
-              }
 
               Await.result(service.getPersonalDetails(nino).value, 5.seconds).isLeft shouldBe true
             }

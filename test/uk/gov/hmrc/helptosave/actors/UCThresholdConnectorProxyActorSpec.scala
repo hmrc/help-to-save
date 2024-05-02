@@ -16,26 +16,25 @@
 
 package uk.gov.hmrc.helptosave.actors
 
+import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.IdiomaticMockito
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.helptosave.utils.MockPagerDuty
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-
-import scala.concurrent.ExecutionContext
+import uk.gov.hmrc.http.HttpResponse
 
 class UCThresholdConnectorProxyActorSpec
-    extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") with MockPagerDuty {
+    extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") with IdiomaticMockito with MockPagerDuty {
   val returnHeaders = Map[String, Seq[String]]()
   val connector = mock[DESConnector]
 
   val actor = system.actorOf(UCThresholdConnectorProxyActor.props(connector, mockPagerDuty))
 
   def mockConnectorGetValue(response: HttpResponse) =
-    (connector
-      .getThreshold()(_: HeaderCarrier, _: ExecutionContext))
-      .expects(*, *)
-      .returning(toFuture(response))
+    connector
+      .getThreshold()(*, *)
+      .returns(toFuture(response))
 
   "The UCThresholdConnectorProxyActor" when {
 
@@ -53,10 +52,9 @@ class UCThresholdConnectorProxyActorSpec
 
         mockConnectorGetValue(HttpResponse(500, Json.toJson("error occurred"), returnHeaders))
 
-        (mockPagerDuty
-          .alert(_: String))
-          .expects("Received unexpected http status in response to get UC threshold from DES")
-          .returning(())
+        mockPagerDuty
+          .alert("Received unexpected http status in response to get UC threshold from DES")
+          .doesNothing()
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
         expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("Received unexpected status 500")))

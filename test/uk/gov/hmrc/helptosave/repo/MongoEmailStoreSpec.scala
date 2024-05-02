@@ -35,16 +35,14 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
   val crypto: Crypto = mock[Crypto]
 
   def mockEncrypt(input: String)(output: String): Unit =
-    (crypto
-      .encrypt(_: String))
-      .expects(input)
-      .returning(output)
+    crypto
+      .encrypt(input)
+      .returns(output)
 
   def mockDecrypt(input: String)(output: Option[String]): Unit =
-    (crypto
-      .decrypt(_: String))
-      .expects(input)
-      .returning(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
+    crypto
+      .decrypt(input)
+      .returns(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
 
   def newMongoEmailStore(mongoComponent: MongoComponent) =
     new MongoEmailStore(mongoComponent, crypto, mockMetrics)
@@ -67,10 +65,8 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       "store the email in the mongo database" in {
         val nino = randomNINO()
 
-        inSequence {
           mockEncrypt(email)(encryptedEmail)
           mockDecrypt(encryptedEmail)(Some(email))
-        }
 
         val result = for {
           _           <- storeConfirmedEmail(nino, email, emailStore)
@@ -86,11 +82,9 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         val ninoDifferentSuffix = "AE123456B"
         val updatedEmail = "test@gmail.com"
 
-        inSequence {
           mockEncrypt(email)(encryptedEmail)
           mockDecrypt(encryptedEmail)(Some(email))
           mockEncrypt(updatedEmail)(encryptedEmail)
-        }
 
         //there should no emails to start with
         await(getConfirmedEmail(nino, emailStore).value) shouldBe Right(None)
@@ -116,10 +110,8 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       "return a right if the get is successful" in {
         val nino = randomNINO()
 
-        inSequence {
           mockEncrypt(email)(encryptedEmail)
           mockDecrypt(encryptedEmail)(Some(email))
-        }
 
         //there should no emails to start with
         get(nino, emailStore) shouldBe Right(None)
@@ -142,11 +134,9 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
         val nino = "AE123456A"
         val ninoDifferentSuffix = "AE123456B"
 
-        inSequence {
           mockEncrypt(email)(encryptedEmail)
           mockDecrypt(encryptedEmail)(Some(email))
           mockDecrypt(encryptedEmail)(Some(email))
-        }
 
         //there should no emails to start with
         get(nino, emailStore) shouldBe Right(None)

@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import org.apache.pekko.pattern.ask
-import org.apache.pekko.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -28,6 +28,7 @@ import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import org.mockito.ArgumentMatchersSugar.*
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -59,20 +60,17 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
 
-      (connector
-        .getThreshold()(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *)
-        .returning(Future.successful(HttpResponse(500, "")))
+      connector
+        .getThreshold()(*, *)
+        .returns(Future.successful(HttpResponse(500, "")))
 
-      (pagerDutyAlert
-        .alert(_: String))
-        .expects("Received unexpected http status in response to get UC threshold from DES")
-        .returning(())
+      pagerDutyAlert
+        .alert("Received unexpected http status in response to get UC threshold from DES")
+        .doesNothing()
 
-      (connector
-        .getThreshold()(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *)
-        .returning(Future.successful(
+      connector
+        .getThreshold()(*, *)
+        .returns(Future.successful(
           HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]())))
 
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)

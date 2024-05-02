@@ -73,9 +73,8 @@ class EligibilityStatsActorSpec extends ActorTestSupport("EligibilityStatsActorS
 
   object TestApparatus {
 
-    class MockMetrics(reportTo: ActorRef) extends Metrics(stub[MetricRegistry]) {
+    class MockMetrics(reportTo: ActorRef) extends Metrics(mock[MetricRegistry]) {
       override def timer(name: String): Timer = new Timer()
-
       override def counter(name: String): Counter = new Counter()
 
       override def registerIntGauge(name: String, gauge: Gauge[Int]): Gauge[Int] = {
