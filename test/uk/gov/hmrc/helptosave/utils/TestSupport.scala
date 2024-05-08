@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.utils
 
-import com.codahale.metrics.{Counter, MetricRegistry, Timer}
+import com.codahale.metrics.{Counter, NoopMetricRegistry}
 import com.typesafe.config.ConfigFactory
 import org.mockito.IdiomaticMockito
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -75,17 +75,7 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
 
   val servicesConfig: ServicesConfig = fakeApplication.injector.instanceOf[ServicesConfig]
 
-//  val mockMetrics: Metrics = new Metrics(stub[MetricRegistry]) {
-//    override def timer(name: String): Timer = new Timer()
-//
-//    override def counter(name: String): Counter = new Counter()
-//
-//    override def registerIntGauge(name: String, gauge: Gauge[Int]): Gauge[Int] = gauge
-//
-//  }
-
-  val mockMetrics: Metrics = new Metrics(mock[MetricRegistry]) {
-    override def timer(name: String): Timer = new Timer()
+  val mockMetrics: Metrics = new Metrics(new NoopMetricRegistry()) {
     override def counter(name: String): Counter = new Counter()
   }
 

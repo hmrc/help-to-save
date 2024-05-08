@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DESConnectorImpl])
 trait DESConnector {
-  def desCorrelationId(response: HttpResponse): String = response.header("CorrelationId").getOrElse("-")
+  def desCorrelationId(response: HttpResponse): String = response.header("DesCorrelationId").getOrElse("-")
 
   def isEligible(nino: String, ucResponse: Option[UCResponse])(
     implicit hc: HeaderCarrier,

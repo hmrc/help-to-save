@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import org.apache.pekko.pattern.ask
 import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import org.apache.pekko.pattern.ask
 import play.api.http.Status
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
@@ -34,10 +34,11 @@ import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino, toFuture}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.chaining.scalaUtilChainingOps
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[HelpToSaveServiceImpl])
@@ -55,23 +56,24 @@ trait HelpToSaveService {
 
 @Singleton
 class HelpToSaveServiceImpl @Inject()(
-  helpToSaveProxyConnector: HelpToSaveProxyConnector,
-  dESConnector: DESConnector,
-  auditor: HTSAuditor,
-  metrics: Metrics,
-  pagerDutyAlerting: PagerDutyAlerting,
-  ucThresholdProvider: ThresholdManagerProvider)(
-  implicit ninoLogMessageTransformer: LogMessageTransformer,
-  appConfig: AppConfig)
-    extends HelpToSaveService with Logging {
+                                       helpToSaveProxyConnector: HelpToSaveProxyConnector,
+                                       dESConnector: DESConnector,
+                                       iFConnector: IFConnector,
+                                       auditor: HTSAuditor,
+                                       metrics: Metrics,
+                                       pagerDutyAlerting: PagerDutyAlerting,
+                                       ucThresholdProvider: ThresholdManagerProvider)(
+                                       implicit ninoLogMessageTransformer: LogMessageTransformer,
+                                       appConfig: AppConfig)
+  extends HelpToSaveService with Logging {
 
   override def getEligibility(nino: NINO, path: String)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Result[EligibilityCheckResponse] =
     for {
-      threshold  <- EitherT.liftF(getThresholdValue())
+      threshold <- EitherT.liftF(getThresholdValue())
       ucResponse <- EitherT.liftF(getUCDetails(nino, UUID.randomUUID(), threshold))
-      result     <- getEligibility(nino, ucResponse)
+      result <- getEligibility(nino, ucResponse)
     } yield {
       auditor.sendEvent(EligibilityCheckEvent(nino, result, ucResponse, path), nino)
       EligibilityCheckResponse(result, threshold)
@@ -118,8 +120,10 @@ class HelpToSaveServiceImpl @Inject()(
                 metrics.itmpSetFlagErrorCounter.inc()
                 pagerDutyAlerting.alert("Received unexpected http status in response to setting ITMP flag")
                 Left(
-                  s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${maskNino(
-                    response.body)} " +
+                  s"Received unexpected response status ($other) when trying to set ITMP flag. Body was: ${
+                    maskNino(
+                      response.body)
+                  } " +
                     s"(round-trip time: ${nanosToPrettyString(time)})")
             }
         }
@@ -133,58 +137,50 @@ class HelpToSaveServiceImpl @Inject()(
         }
     })
 
-  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] =
-    EitherT({
-      val timerContext = metrics.payePersonalDetailsTimer.time()
-
-      dESConnector
-        .getPersonalDetails(nino)
-        .map[Either[String, PayePersonalDetails]] {
-          response =>
-            val time = timerContext.stop()
-
-            val additionalParams = "DesCorrelationId" -> response.desCorrelationId
-
-            response.status match {
-              case Status.OK =>
-                val result = response.parseJsonWithoutLoggingBody[PayePersonalDetails]
-                result.fold(
-                  { e =>
-                    metrics.payePersonalDetailsErrorCounter.inc()
-                    logger.warn(
-                      s"Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
-                      nino,
-                      additionalParams)
-                    pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
-                  },
-                  _ =>
-                    logger.debug(
-                      s"Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
-                      nino,
-                      additionalParams)
-                )
-                result
-
-              case other =>
-                logger.warn(
-                  s"Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
-                  nino,
-                  additionalParams)
+  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] = {
+    val ifSwitch: Boolean = appConfig.ifEnabled
+    val (response, params, tag) =
+      if (ifSwitch) {
+        val params = (response: HttpResponse) => "IfCorrelationId" -> response.ifCorrelationId
+        (iFConnector.getPersonalDetails(nino), params, "[IF]")
+      } else {
+        val params = (response: HttpResponse) => "DesCorrelationId" -> response.desCorrelationId
+        (dESConnector.getPersonalDetails(nino), params, "[DES]")
+      }
+    val timerContext = metrics.payePersonalDetailsTimer.time()
+    response.map { response =>
+        val time = timerContext.stop()
+        response.status match {
+          case Status.OK =>
+            response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap {
+              case Left(e) =>
                 metrics.payePersonalDetailsErrorCounter.inc()
-                pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
-                Left(s"Received unexpected status $other")
-
+                logger.warn(
+                  s"$tag Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
+                  nino, params(response))
+                pagerDutyAlerting.alert(s"$tag Could not parse JSON in the paye-personal-details response")
+              case Right(_) =>
+                logger.debug(
+                  s"$tag Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
+                  nino, params(response))
             }
-
-        }
-        .recover {
-          case e =>
-            val time = timerContext.stop()
-            pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
+          case other =>
+            logger.warn(
+              s"$tag Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
+              nino, params(response))
             metrics.payePersonalDetailsErrorCounter.inc()
-            Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+            pagerDutyAlerting.alert(s"$tag Received unexpected http status in response to paye-personal-details")
+            Left(s"Received unexpected status $other")
         }
-    })
+      }
+      .recover { e =>
+        val time = timerContext.stop()
+        pagerDutyAlerting.alert(s"$tag Failed to make call to paye-personal-details")
+        metrics.payePersonalDetailsErrorCounter.inc()
+        Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+      }
+      .pipe(EitherT(_))
+  }
 
   private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(
     implicit hc: HeaderCarrier,

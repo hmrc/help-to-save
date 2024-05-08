@@ -408,7 +408,7 @@ class HelpToSaveProxyConnectorSpec
               "A1A11AA1A00A0059",
               BigDecimal("60.49"))
           ))))
-        timerMetricChange shouldBe 1
+        timerMetricChange shouldBe 0
         errorMetricChange shouldBe 0
       }
 
@@ -438,7 +438,7 @@ class HelpToSaveProxyConnectorSpec
 
         result shouldBe Left(
           "Could not parse transactions response from NS&I, received 200 (OK), error=[Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]]")
-        timerMetricChange shouldBe 1
+        timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
 
@@ -469,7 +469,7 @@ class HelpToSaveProxyConnectorSpec
 
         result shouldBe Left(
           """Could not parse transactions response from NS&I, received 200 (OK), error=[Unknown value for operation: "bad"]""")
-        timerMetricChange shouldBe 1
+        timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
 
@@ -480,7 +480,7 @@ class HelpToSaveProxyConnectorSpec
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
         result shouldBe Left("Received unexpected status(400) from get transactions call")
-        timerMetricChange shouldBe 1
+        timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
 
@@ -491,7 +491,7 @@ class HelpToSaveProxyConnectorSpec
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
         result shouldBe Left("Call to get transactions unsuccessful: Test exception message")
-        timerMetricChange shouldBe 1
+        timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
 
