@@ -28,8 +28,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[IFConnectorImpl])
 trait IFConnector {
-  def ifCorrelationId(response: HttpResponse): String = response.header("IfCorrelationId").getOrElse("-")
-
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[HttpResponse]
 }
 

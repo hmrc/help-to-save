@@ -96,7 +96,7 @@ class HelpToSaveServiceImpl @Inject()(
             val time = timerContext.stop()
 
             val additionalParams =
-              Seq("DesCorrelationId" -> response.desCorrelationId, "apiCorrelationId" -> getApiCorrelationId())
+              Seq("DesCorrelationId" -> response.correlationId, "apiCorrelationId" -> getApiCorrelationId())
 
             response.status match {
               case OK =>
@@ -139,18 +139,17 @@ class HelpToSaveServiceImpl @Inject()(
 
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] = {
     val ifSwitch: Boolean = appConfig.ifEnabled
-    val (response, params, tag) =
+    val (response, tag) =
       if (ifSwitch) {
-        val params = (response: HttpResponse) => "IfCorrelationId" -> response.ifCorrelationId
-        (iFConnector.getPersonalDetails(nino), params, "[IF]")
+        (iFConnector.getPersonalDetails(nino), "[IF]")
       } else {
-        val params = (response: HttpResponse) => "DesCorrelationId" -> response.desCorrelationId
-        (dESConnector.getPersonalDetails(nino), params, "[DES]")
+        (dESConnector.getPersonalDetails(nino), "[DES]")
       }
     val timerContext = metrics.payePersonalDetailsTimer.time()
     response.map { response =>
         val time = timerContext.stop()
-        response.status match {
+        val params = (response: HttpResponse) => "CorrelationId" -> response.correlationId
+      response.status match {
           case Status.OK =>
             response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap {
               case Left(e) =>
@@ -194,7 +193,7 @@ class HelpToSaveServiceImpl @Inject()(
           response =>
             val time = timerContext.stop()
 
-            val additionalParams = "DesCorrelationId" -> response.desCorrelationId
+            val additionalParams = "DesCorrelationId" -> response.correlationId
 
             response.status match {
               case Status.OK =>

@@ -45,9 +45,7 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
       couldntParseJson = (_, e: JsError) => s"Could not parse http response JSON: ${e.prettyPrint()}"
     )
 
-  def desCorrelationId: String = response.header("DesCorrelationId").getOrElse("-")
-
-  def ifCorrelationId: String = response.header("IfCorrelationId").getOrElse("-")
+  def correlationId: String = response.header("CorrelationId").getOrElse("-")
 
   private def parseJsonImpl[A](
     couldntReadJson: (HttpResponse, Throwable) => String,

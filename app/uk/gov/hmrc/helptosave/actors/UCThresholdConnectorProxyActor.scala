@@ -38,7 +38,7 @@ class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerti
     dESConnector
       .getThreshold()
       .map[Either[String, Double]] { response =>
-        val additionalParams = "DesCorrelationId" -> response.desCorrelationId
+        val additionalParams = "DesCorrelationId" -> response.correlationId
 
         response.status match {
           case Status.OK =>
