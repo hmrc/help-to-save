@@ -29,7 +29,6 @@ import scala.jdk.CollectionConverters._
 
 @Singleton
 class AppConfig @Inject()(
-  val config: Configuration,
   val runModeConfiguration: Configuration,
   environment: Environment,
   servicesConfig: ServicesConfig) {

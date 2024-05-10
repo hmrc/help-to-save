@@ -70,7 +70,7 @@ class HelpToSaveServiceSpec
       mockPagerDuty,
       thresholdManagerProvider)(
       transformer,
-      new AppConfig(configuration,
+      new AppConfig(
         fakeApplication.injector.instanceOf[Configuration],
         fakeApplication.injector.instanceOf[Environment],
         servicesConfig)
@@ -320,7 +320,7 @@ class HelpToSaveServiceSpec
           mockPagerDuty,
           thresholdManagerProvider)(
           transformer,
-          new AppConfig(configuration,
+          new AppConfig(
             fakeApplication.injector.instanceOf[Configuration],
             fakeApplication.injector.instanceOf[Environment],
             new ServicesConfig(Configuration(
