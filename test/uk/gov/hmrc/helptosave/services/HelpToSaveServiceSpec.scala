@@ -260,30 +260,50 @@ class HelpToSaveServiceSpec
     }
 
     "handling getPersonalDetails DES calls" must {
+      val serviceWithDES =
+        new HelpToSaveServiceImpl(
+          mockProxyConnector,
+          mockDESConnector,
+          mockIFConnector,
+          mockAuditor,
+          mockMetrics,
+          mockPagerDuty,
+          thresholdManagerProvider)(
+          transformer,
+          new AppConfig(
+            fakeApplication.injector.instanceOf[Configuration],
+            fakeApplication.injector.instanceOf[Environment],
+            new ServicesConfig(Configuration(
+              ConfigFactory.parseString(
+                """
+                  | feature.if.enabled = false
+            """.stripMargin)
+            ).withFallback(configuration)
+            )))
       val nino = "AA123456A"
 
       "return a Right when nino is successfully found in DES" in {
         mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders)))
-        await(service.getPersonalDetails(nino).value) shouldBe Right(ppDetails)
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Right(ppDetails)
       }
 
       "handle 404 response when a nino is not found in DES" in {
         mockPayeGet(nino)(Some(HttpResponse(404, ""))) // scalastyle:ignore magic.number
         mockPagerDutyAlert("[DES] Received unexpected http status in response to paye-personal-details")
-        await(service.getPersonalDetails(nino).value) shouldBe Left("Received unexpected status 404")
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Received unexpected status 404")
       }
 
       "handle errors when parsing invalid json" in {
         mockPayeGet(nino)(Some(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders))) // scalastyle:ignore magic.number
         // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
         mockPagerDutyAlert("[DES] Could not parse JSON in the paye-personal-details response")
-        await(service.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : [No Name found in the DES response]")
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : [No Name found in the DES response]")
       }
 
       "handle errors when parsing json with personal details containing no Postcode " in {
         mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetailsNoPostCode(nino)), returnHeaders)))
         mockPagerDutyAlert("[DES] Could not parse JSON in the paye-personal-details response")
-        await(service.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
       }
 
       "return with an error" when {
@@ -292,7 +312,7 @@ class HelpToSaveServiceSpec
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("[DES] Failed to make call to paye-personal-details")
 
-          await(service.getPersonalDetails(nino).value) shouldBe Left("Call to paye-personal-details unsuccessful:  (round-trip time: (round-trip time: 0ns))")
+          await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Call to paye-personal-details unsuccessful:  (round-trip time: (round-trip time: 0ns))")
         }
 
         "the call comes back with an unexpected http status" in {
@@ -302,7 +322,7 @@ class HelpToSaveServiceSpec
               // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
               mockPagerDutyAlert("[DES] Received unexpected http status in response to paye-personal-details")
 
-              await(service.getPersonalDetails(nino).value) shouldBe Left(s"Received unexpected status $status")
+              await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left(s"Received unexpected status $status")
             }
           }
         }
