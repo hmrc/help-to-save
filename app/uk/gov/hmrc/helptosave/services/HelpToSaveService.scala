@@ -157,7 +157,7 @@ class HelpToSaveServiceImpl @Inject()(
                 logger.warn(
                   s"$tag Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
                   nino, params(response))
-                pagerDutyAlerting.alert(s"$tag Could not parse JSON in the paye-personal-details response")
+                pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
               case Right(_) =>
                 logger.debug(
                   s"$tag Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
@@ -168,13 +168,13 @@ class HelpToSaveServiceImpl @Inject()(
               s"$tag Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
               nino, params(response))
             metrics.payePersonalDetailsErrorCounter.inc()
-            pagerDutyAlerting.alert(s"$tag Received unexpected http status in response to paye-personal-details")
+            pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
             Left(s"Received unexpected status $other")
         }
       }
       .recover { e =>
         val time = timerContext.stop()
-        pagerDutyAlerting.alert(s"$tag Failed to make call to paye-personal-details")
+        pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
         metrics.payePersonalDetailsErrorCounter.inc()
         Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
       }
