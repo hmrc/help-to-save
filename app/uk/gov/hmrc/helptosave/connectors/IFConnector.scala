@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import cats.Show
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
@@ -37,8 +36,6 @@ class IFConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig
 
   val payeURL: String = servicesConfig.baseUrl("paye-personal-details-if")
   val root: String = servicesConfig.getString("microservice.services.paye-personal-details-if.root")
-
-  implicit val booleanShow: Show[Boolean] = Show.show(if (_) "Y" else "N")
 
   val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
     "microservice.services.paye-personal-details.originatorId")
