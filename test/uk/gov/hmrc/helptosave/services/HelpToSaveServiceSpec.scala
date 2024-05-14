@@ -21,11 +21,10 @@ import cats.instances.future._
 import cats.instances.int._
 import cats.syntax.eq._
 import com.typesafe.config.ConfigFactory
-import org.apache.pekko.actor.{ActorRef, ActorSystem}
+import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.testkit.TestProbe
 import org.mockito.ArgumentMatchersSugar.*
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalatest.EitherValues
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
 import play.api.{Configuration, Environment}
@@ -33,18 +32,18 @@ import uk.gov.hmrc.helptosave.actors.ActorTestSupport
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.modules.{ThresholdManagerProvider, UCThresholdOrchestrator}
+import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
 import uk.gov.hmrc.helptosave.util._
-import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestEnrolmentBehaviour}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData}
 import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class HelpToSaveServiceSpec
-    extends ActorTestSupport("HelpToSaveServiceSpec") with TestEnrolmentBehaviour with EitherValues with MockPagerDuty
+    extends ActorTestSupport("HelpToSaveServiceSpec") with MockPagerDuty
     with TestData with ScalaCheckDrivenPropertyChecks {
 
   class TestThresholdProvider extends ThresholdManagerProvider {
@@ -53,37 +52,29 @@ class HelpToSaveServiceSpec
   }
 
   private val mockDESConnector = mock[DESConnector]
+  private val mockIFConnector = mock[IFConnector]
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
-  val mockAuditor: HTSAuditor = mock[HTSAuditor]
-  val returnHeaders: Map[NINO, Seq[NINO]] = Map[String, Seq[String]]()
+  private val mockAuditor = mock[HTSAuditor]
+  private val returnHeaders = Map[String, Seq[String]]()
+  private val threshold = 1.23
 
-  val threshold = 1.23
+  private val thresholdManagerProvider = new TestThresholdProvider
 
-  val thresholdManagerProvider = new TestThresholdProvider
-
-  val UCThresholdOrchestrator = new UCThresholdOrchestrator(
-    fakeApplication.injector.instanceOf[ActorSystem],
-    mockPagerDuty,
-    fakeApplication.injector.instanceOf[Configuration],
-    mockDESConnector)
-
-  val service: HelpToSaveServiceImpl = {
-    val testConfig = Configuration(ConfigFactory.parseString("""uc-threshold { ask-timeout = 10 seconds }"""))
-
+  private val service =
     new HelpToSaveServiceImpl(
       mockProxyConnector,
       mockDESConnector,
+      mockIFConnector,
       mockAuditor,
       mockMetrics,
       mockPagerDuty,
       thresholdManagerProvider)(
       transformer,
       new AppConfig(
-        fakeApplication.injector.instanceOf[Configuration].withFallback(testConfig),
+        fakeApplication.injector.instanceOf[Configuration],
         fakeApplication.injector.instanceOf[Environment],
         servicesConfig)
     )
-  }
 
   private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: HttpResponse) =
     mockDESConnector
@@ -95,19 +86,24 @@ class HelpToSaveServiceSpec
       .ucClaimantCheck(nino, *, threshold)(*, *)
       .returns(EitherT.fromEither[Future](result))
 
-  def mockSendAuditEvent(event: HTSEvent, nino: String) =
+  private def mockSendAuditEvent(event: HTSEvent, nino: String): Unit =
     mockAuditor
       .sendEvent(event, nino)(*)
       .doesNothing()
 
-  def mockSetFlag(nino: String)(response: HttpResponse) =
+  private def mockSetFlag(nino: String)(response: HttpResponse) =
     mockDESConnector
       .setFlag(nino)(*, *)
       .returns(toFuture(response))
 
-  def mockPayeGet(nino: String)(response: Option[HttpResponse]) =
+  private def mockPayeGet(nino: String)(response: Option[HttpResponse]) =
     mockDESConnector
       .getPersonalDetails(nino)(*, *)
+      .returns(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
+
+  private def mockIFPayeGet(nino: String)(response: Option[HttpResponse]) =
+    mockIFConnector
+      .getPersonalDetails(nino)(*)
       .returns(response.fold(Future.failed[HttpResponse](new Exception("")))(Future.successful))
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
@@ -201,7 +197,7 @@ class HelpToSaveServiceSpec
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to check eligibility")
 
-          getEligibility(Some(threshold)).isLeft shouldBe true
+          getEligibility(Some(threshold)) shouldBe Left("Received unexpected status 500")
         }
 
         "the call comes back with an unexpected http status" in {
@@ -212,7 +208,7 @@ class HelpToSaveServiceSpec
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
 
-              getEligibility(Some(threshold)).isLeft shouldBe true
+              getEligibility(Some(threshold)) shouldBe Left(s"Received unexpected status $status")
             }
           }
         }
@@ -229,21 +225,17 @@ class HelpToSaveServiceSpec
               "Could not parse http response JSON: : [error.expected.jsobject]. Response body was " +
                 "\"{\\\"invalid\\\": \\\"foo\\\"}\"")
         }
-
       }
     }
 
     "handling setFlag calls" must {
-
       "return a Right when call to ITMP comes back with 200" in {
         mockSetFlag(nino)(HttpResponse(200, ""))
 
-        await(service.setFlag(nino).value).isRight shouldBe true
-
+        await(service.setFlag(nino).value) shouldBe Right()
       }
 
       "return a Left" when {
-
         val nino = "NINO"
 
         "the call to ITMP comes back with a status which isn't 200 or 403" in {
@@ -253,7 +245,7 @@ class HelpToSaveServiceSpec
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to setting ITMP flag")
 
-              await(service.setFlag(nino).value).isLeft shouldBe true
+              await(service.setFlag(nino).value) shouldBe Left(s"Received unexpected response status ($status) when trying to set ITMP flag. Body was:  (round-trip time: 0ns)")
             }
           }
         }
@@ -262,67 +254,148 @@ class HelpToSaveServiceSpec
             mockSetFlag(nino)(HttpResponse(500, ""))
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to set ITMP flag")
-          await(service.setFlag(nino).value).isLeft shouldBe true
+          await(service.setFlag(nino).value) shouldBe Left("Received unexpected response status (500) when trying to set ITMP flag. Body was:  (round-trip time: 0ns)")
         }
-
       }
-
     }
 
-    "handling getPersonalDetails calls" must {
-
+    "handling getPersonalDetails DES calls" must {
+      val serviceWithDES =
+        new HelpToSaveServiceImpl(
+          mockProxyConnector,
+          mockDESConnector,
+          mockIFConnector,
+          mockAuditor,
+          mockMetrics,
+          mockPagerDuty,
+          thresholdManagerProvider)(
+          transformer,
+          new AppConfig(
+            fakeApplication.injector.instanceOf[Configuration],
+            fakeApplication.injector.instanceOf[Environment],
+            new ServicesConfig(Configuration(
+              ConfigFactory.parseString(
+                """
+                  | feature.if.enabled = false
+            """.stripMargin)
+            ).withFallback(configuration)
+            )))
       val nino = "AA123456A"
 
       "return a Right when nino is successfully found in DES" in {
         mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders)))
-        Await.result(service.getPersonalDetails(nino).value, 5.seconds).isRight shouldBe true
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Right(ppDetails)
       }
 
       "handle 404 response when a nino is not found in DES" in {
         mockPayeGet(nino)(Some(HttpResponse(404, ""))) // scalastyle:ignore magic.number
-        mockPagerDutyAlert("Received unexpected http status in response to paye-personal-details")
-        Await.result(service.getPersonalDetails(nino).value, 5.seconds).isLeft shouldBe true
+        mockPagerDutyAlert("[DES] Received unexpected http status in response to paye-personal-details")
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Received unexpected status 404")
       }
 
       "handle errors when parsing invalid json" in {
-          mockPayeGet(nino)(Some(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders))) // scalastyle:ignore magic.number
-          // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
-          mockPagerDutyAlert("Could not parse JSON in the paye-personal-details response")
-        Await.result(service.getPersonalDetails(nino).value, 15.seconds).isLeft shouldBe true
+        mockPayeGet(nino)(Some(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders))) // scalastyle:ignore magic.number
+        // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+        mockPagerDutyAlert("[DES] Could not parse JSON in the paye-personal-details response")
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : [No Name found in the DES response]")
       }
 
       "handle errors when parsing json with personal details containing no Postcode " in {
-          mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetailsNoPostCode(nino)), returnHeaders)))
-          mockPagerDutyAlert("Could not parse JSON in the paye-personal-details response")
-        Await.result(service.getPersonalDetails(nino).value, 15.seconds).isLeft shouldBe true
+        mockPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetailsNoPostCode(nino)), returnHeaders)))
+        mockPagerDutyAlert("[DES] Could not parse JSON in the paye-personal-details response")
+        await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
       }
 
       "return with an error" when {
         "the call fails" in {
-            mockPayeGet(nino)(None)
-            // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
-            mockPagerDutyAlert("Failed to make call to paye-personal-details")
+          mockPayeGet(nino)(None)
+          // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+          mockPagerDutyAlert("[DES] Failed to make call to paye-personal-details")
 
-          Await.result(service.getPersonalDetails(nino).value, 5.seconds).isLeft shouldBe true
+          await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left("Call to paye-personal-details unsuccessful:  (round-trip time: (round-trip time: 0ns))")
         }
 
         "the call comes back with an unexpected http status" in {
           forAll { status: Int =>
             whenever(status > 0 && status =!= 200 && status =!= 404) {
-                mockPayeGet(nino)(Some(HttpResponse(status, "")))
-                // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
-                mockPagerDutyAlert("Received unexpected http status in response to paye-personal-details")
+              mockPayeGet(nino)(Some(HttpResponse(status, "")))
+              // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+              mockPagerDutyAlert("[DES] Received unexpected http status in response to paye-personal-details")
 
-              Await.result(service.getPersonalDetails(nino).value, 5.seconds).isLeft shouldBe true
+              await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Left(s"Received unexpected status $status")
             }
-
           }
-
         }
       }
-
     }
 
-  }
+    "handling getPersonalDetails IF calls" must {
+      val serviceWithIf =
+        new HelpToSaveServiceImpl(
+          mockProxyConnector,
+          mockDESConnector,
+          mockIFConnector,
+          mockAuditor,
+          mockMetrics,
+          mockPagerDuty,
+          thresholdManagerProvider)(
+          transformer,
+          new AppConfig(
+            fakeApplication.injector.instanceOf[Configuration],
+            fakeApplication.injector.instanceOf[Environment],
+            new ServicesConfig(Configuration(
+              ConfigFactory.parseString("""
+                                          | feature.if.enabled = true
+            """.stripMargin)
+            ).withFallback(configuration)
+        )))
 
+      val nino = "AA123456A"
+      "return a Right when nino is successfully found in IF" in {
+        mockIFPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders)))
+        await(serviceWithIf.getPersonalDetails(nino).value) shouldBe Right(ppDetails)
+      }
+
+      "handle 404 response when a nino is not found in IF" in {
+        mockIFPayeGet(nino)(Some(HttpResponse(404, ""))) // scalastyle:ignore magic.number
+        mockPagerDutyAlert("[IF] Received unexpected http status in response to paye-personal-details")
+        await(serviceWithIf.getPersonalDetails(nino).value) shouldBe Left("Received unexpected status 404")
+      }
+
+      "handle errors when parsing invalid json" in {
+          mockIFPayeGet(nino)(Some(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders))) // scalastyle:ignore magic.number
+          // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+          mockPagerDutyAlert("[IF] Could not parse JSON in the paye-personal-details response")
+        await(serviceWithIf.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : [No Name found in the DES response]")
+      }
+
+      "handle errors when parsing json with personal details containing no Postcode " in {
+          mockIFPayeGet(nino)(Some(HttpResponse(200, Json.parse(payeDetailsNoPostCode(nino)), returnHeaders)))
+          mockPagerDutyAlert("[IF] Could not parse JSON in the paye-personal-details response")
+        await(serviceWithIf.getPersonalDetails(nino).value) shouldBe Left("Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
+      }
+
+      "return with an error" when {
+        "the call fails" in {
+            mockIFPayeGet(nino)(None)
+            // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+            mockPagerDutyAlert("[IF] Failed to make call to paye-personal-details")
+
+          await(serviceWithIf.getPersonalDetails(nino).value) shouldBe Left("Call to paye-personal-details unsuccessful:  (round-trip time: (round-trip time: 0ns))")
+        }
+
+        "the call comes back with an unexpected http status" in {
+          forAll { status: Int =>
+            whenever(status > 0 && status =!= 200 && status =!= 404) {
+                mockIFPayeGet(nino)(Some(HttpResponse(status, "")))
+                // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+                mockPagerDutyAlert("[IF] Received unexpected http status in response to paye-personal-details")
+
+              await(serviceWithIf.getPersonalDetails(nino).value) shouldBe Left(s"Received unexpected status $status")
+            }
+          }
+        }
+      }
+    }
+  }
 }
