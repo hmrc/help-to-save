@@ -34,8 +34,8 @@ trait IFConnector {
 class IFConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig, ec: ExecutionContext)
     extends IFConnector with Logging {
 
-  val payeURL: String = servicesConfig.baseUrl("paye-personal-details-if")
-  val root: String = servicesConfig.getString("microservice.services.paye-personal-details-if.root")
+  val payeURL: String = servicesConfig.baseUrl("if")
+  val root: String = servicesConfig.getString("microservice.services.if.root")
 
   val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
     "microservice.services.paye-personal-details.originatorId")
