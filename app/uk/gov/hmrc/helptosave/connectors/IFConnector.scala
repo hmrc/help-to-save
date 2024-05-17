@@ -42,9 +42,13 @@ class IFConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig
 
   def payePersonalDetailsUrl(nino: String): String = s"$payeURL$root/pay-as-you-earn/02.00.00/individuals/$nino"
 
-  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[HttpResponse] =
+  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+    logger.info(s"[IFConnector][getPersonalDetails] GET request: " +
+      s" header - ${appConfig.ifHeaders + originatorIdHeader}" +
+      s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}")
     http.get(payePersonalDetailsUrl(nino), headers = appConfig.ifHeaders + originatorIdHeader)(
       hc.copy(authorization = None),
       ec)
+  }
 
 }
