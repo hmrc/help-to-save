@@ -83,7 +83,7 @@ class DESConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfi
   }
 
   override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-    logger.info(s"[DESConnector][setFlag] GET request: " +
+    logger.info(s"[DESConnector][setFlag] PUT request: " +
       s" header - ${appConfig.desHeaders} " +
       s" setFlagUrl - ${setFlagUrl(nino)}")
     http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.jsValueWrites, hc.copy(authorization = None), ec)
@@ -100,7 +100,7 @@ class DESConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfi
 
   override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
     logger.info(s"[DESConnector][getThreshold] GET request: " +
-      s"itmpThresholdURL - ${itmpThresholdURL}" +
+      s"itmpThresholdURL - $itmpThresholdURL" +
       s" header - ${appConfig.desHeaders + originatorIdHeader}")
     http.get(itmpThresholdURL, headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)
   }
