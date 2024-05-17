@@ -73,20 +73,36 @@ class DESConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfi
 
   override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] =
+    ec: ExecutionContext): Future[HttpResponse] = {
+    logger.info(s"[DESConnector][isEligible] GET request: " +
+      s" header - ${appConfig.desHeaders}" +
+      s" eligibilityCheckUrl - ${eligibilityCheckUrl(nino)}")
     http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.desHeaders)(
       hc.copy(authorization = None),
       ec)
+  }
 
-  override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+  override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+    logger.info(s"[DESConnector][setFlag] GET request: " +
+      s" header - ${appConfig.desHeaders} " +
+      s" setFlagUrl - ${setFlagUrl(nino)}")
     http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.jsValueWrites, hc.copy(authorization = None), ec)
+  }
 
-  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+    logger.info(s"[DESConnector][getPersonalDetails] GET request: " +
+      s" header - ${appConfig.desHeaders+ originatorIdHeader}" +
+      s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}")
     http.get(payePersonalDetailsUrl(nino), headers = appConfig.desHeaders + originatorIdHeader)(
       hc.copy(authorization = None),
       ec)
+  }
 
-  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
+  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+    logger.info(s"[DESConnector][getThreshold] GET request: " +
+      s"itmpThresholdURL - ${itmpThresholdURL}" +
+      s" header - ${appConfig.desHeaders + originatorIdHeader}")
     http.get(itmpThresholdURL, headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)
+  }
 
 }
