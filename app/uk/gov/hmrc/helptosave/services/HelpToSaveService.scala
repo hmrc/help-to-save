@@ -157,7 +157,6 @@ class HelpToSaveServiceImpl @Inject()(
                 logger.warn(
                   s"$tag Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
                   nino, params(response))
-                pagerDutyAlerting.alert("Could not parse JSON in the paye-personal-details response")
               case Right(_) =>
                 logger.debug(
                   s"$tag Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
