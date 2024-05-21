@@ -45,7 +45,7 @@ class PayePersonalDetailsController @Inject()(
       .getPersonalDetails(nino)
       .fold(
         { error =>
-          logger.warn(s"Could not retrieve paye-personal-details from DES: $error", nino)
+          logger.warn(s"Could not retrieve paye-personal-details: $error", nino)
           InternalServerError
         }, { r =>
           Ok(Json.toJson(r))
