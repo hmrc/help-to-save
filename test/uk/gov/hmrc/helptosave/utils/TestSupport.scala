@@ -46,9 +46,7 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
                                       | metrics.enabled = true
                                       | mongo-async-driver.org.apache.pekko.loglevel = ERROR
                                       | uc-threshold.ask-timeout = 10 seconds
-                                      | play.modules.disabled = [ "uk.gov.hmrc.helptosave.modules.EligibilityStatsModule",
-                                      | "play.modules.reactivemongo.ReactiveMongoHmrcModule",
-                                      |  "play.api.mvc.CookiesModule" ]
+                                      | play.modules.disabled = [ "play.api.mvc.CookiesModule" ]
             """.stripMargin)
         ).withFallback(extraConfig))
       .build()
