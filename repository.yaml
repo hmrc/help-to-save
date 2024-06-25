@@ -3,3 +3,4 @@ repoVisibility: public_0C3F0CE3E6E6448FAD341E7BFA50FCD333E06A20CFF05FCACE61154DD
 test-repositories:
   - help-to-save-integration-tests
   - help-to-save-acceptance-tests
+  - help-to-save-performance-tests
