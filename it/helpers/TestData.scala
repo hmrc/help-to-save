@@ -73,8 +73,8 @@ object TestData {
 
   val account = Account(
     YearMonth.of(2018, 1),
-    "AC01", false,
-    Blocking(false, false, false),
+    "AC01", isClosed = false,
+    Blocking(payments = false, withdrawals = false, bonuses = false),
     200.34,
     34.50,
     15.50,

@@ -19,8 +19,9 @@ package uk.gov.hmrc.helptosave.controllers
 import cats.data.EitherT
 import cats.instances.future._
 import org.apache.pekko.util.Timeout
+import org.mockito.ArgumentMatchersSugar.*
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Request, Result}
+import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.mvc.Http.Status._
@@ -33,12 +34,11 @@ import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.services.{BarsService, UserCapService}
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HttpResponse
 
 import java.util.concurrent.TimeUnit
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
-import org.mockito.ArgumentMatchersSugar.*
 
 // scalastyle:off magic.number
 class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {

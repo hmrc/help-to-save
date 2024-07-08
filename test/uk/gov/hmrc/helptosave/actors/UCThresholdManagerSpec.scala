@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.actors
 
+import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.{ActorRef, Cancellable}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.testkit.TestProbe
 import org.apache.pekko.util.Timeout
-import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.UCThresholdManagerSpec.TestScheduler.JobScheduledOnce
@@ -763,7 +763,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
         // there should be a check now done to see if we're still in the update window
         timeCalculatorListener.expectMsg(IsTimeInBetweenRequest(updateWindowStartTime, updateWindowEndTime))
-        timeCalculatorListener.reply(IsTimeInBetweenResponse(false))
+        timeCalculatorListener.reply(IsTimeInBetweenResponse(result = false))
 
         // expect the next update window to be scheduled
         timeCalculatorListener.expectMsg(TimeUntilRequest)
@@ -792,7 +792,7 @@ class UCThresholdManagerSpec extends ActorTestSupport("UCThresholdManagerSpec") 
 
         // there should be a check now done to see if we're still in the update window
         timeCalculatorListener.expectMsg(IsTimeInBetweenRequest(updateWindowStartTime, updateWindowEndTime))
-        timeCalculatorListener.reply(IsTimeInBetweenResponse(true))
+        timeCalculatorListener.reply(IsTimeInBetweenResponse(result = true))
 
         // we should now be in the in-update window state
         // expect the end of the update window to be scheduled

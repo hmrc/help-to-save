@@ -18,6 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
+import org.mockito.ArgumentMatchersSugar.*
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.{JsSuccess, JsValue, Json}
@@ -31,10 +32,8 @@ import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
-import uk.gov.hmrc.http.HeaderCarrier
-import org.mockito.ArgumentMatchersSugar.*
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 class EnrolmentStoreControllerSpec
     extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks with TestEnrolmentBehaviour with HttpSupport {
@@ -170,14 +169,14 @@ class EnrolmentStoreControllerSpec
 
       "return the enrolment status if the call was successful" in {
         val m: Map[EnrolmentStore.Status, String] = Map(
-          EnrolmentStore.Enrolled(true) ->
+          EnrolmentStore.Enrolled(itmpHtSFlag = true) ->
             """
               |{
               |  "enrolled"    : true,
               |  "itmpHtSFlag" : true
               |}
             """.stripMargin,
-          EnrolmentStore.Enrolled(false) ->
+          EnrolmentStore.Enrolled(itmpHtSFlag = false) ->
             """
               |{
               |  "enrolled"    : true,
@@ -218,8 +217,8 @@ class EnrolmentStoreControllerSpec
 
       "ask the enrolment store for the enrolment status and return the result" in {
         List[EnrolmentStore.Status](
-          EnrolmentStore.Enrolled(true),
-          EnrolmentStore.Enrolled(false),
+          EnrolmentStore.Enrolled(itmpHtSFlag = true),
+          EnrolmentStore.Enrolled(itmpHtSFlag = false),
           EnrolmentStore.NotEnrolled
         ).foreach { status =>
             mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))

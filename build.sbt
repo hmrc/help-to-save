@@ -1,4 +1,4 @@
-import sbt._
+import sbt.*
 import uk.gov.hmrc.DefaultBuildSettings.addTestReportOption
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 

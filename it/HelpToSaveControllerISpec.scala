@@ -24,7 +24,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubAudit
           val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true, source = "Stride-Manual"))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) {resp =>
             resp.status shouldBe CREATED
@@ -39,11 +39,11 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubPost("/auth/authorise", OK, Json.obj().toString())
           stubPost("/help-to-save-proxy/create-account", CONFLICT, Json.obj().toString())
           stubAudit
-          insertEnrolmentData(NINO, true, Some(7), "Digital", Some("AC01"))
+          insertEnrolmentData(NINO, itmpFlag = true, Some(7), "Digital", Some("AC01"))
           updateUserCap()
           lazy val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true, source = "Stride-Manual"))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) { resp =>
             resp.status shouldBe CONFLICT
@@ -58,11 +58,11 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubPost("/auth/authorise", OK, Json.obj().toString())
           stubPost("/help-to-save-proxy/create-account", CONFLICT)
           stubAudit
-          insertEnrolmentData(NINO, true, Some(7), "Digital", Some("AC01"))
+          insertEnrolmentData(NINO, itmpFlag = true, Some(7), "Digital", Some("AC01"))
           updateUserCap()
           lazy val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true, source = "Stride-Manual"))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) { resp =>
             resp.status shouldBe CONFLICT
@@ -78,11 +78,11 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubPost("/auth/authorise", OK, Json.obj().toString())
           stubPost("/help-to-save-proxy/create-account", CONFLICT, "")
           stubAudit
-          insertEnrolmentData(NINO, true, Some(7), "Digital", Some("AC01"))
+          insertEnrolmentData(NINO, itmpFlag = true, Some(7), "Digital", Some("AC01"))
           updateUserCap()
           lazy val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true, source = "Stride-Manual"))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) { resp =>
             resp.status shouldBe CONFLICT
@@ -103,7 +103,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubAudit
           val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { resp =>
             resp.status shouldBe CREATED
@@ -124,12 +124,12 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubAudit
           val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { resp =>
             resp.status shouldBe CREATED
             eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-              getEnrolmentCount(NINO, false) shouldBe 1
+              getEnrolmentCount(NINO, itmpFlag = false) shouldBe 1
             }
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
@@ -142,11 +142,11 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubPost("/help-to-save-proxy/create-account", CONFLICT, Json.obj().toString())
           stubPut(s"/help-to-save/accounts/$NINO", OK)
           stubAudit
-          insertEnrolmentData(NINO, true, Some(7), "Digital", Some("AC01"))
+          insertEnrolmentData(NINO, itmpFlag = true, Some(7), "Digital", Some("AC01"))
           updateUserCap()
           lazy val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { resp =>
             resp.status shouldBe CONFLICT
@@ -161,11 +161,11 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubPost("/help-to-save-proxy/create-account", CONFLICT)
           stubPut(s"/help-to-save/accounts/$NINO", FORBIDDEN)
           stubAudit
-          insertEnrolmentData(NINO, true, Some(7), "Digital", Some("AC01"))
+          insertEnrolmentData(NINO, itmpFlag = true, Some(7), "Digital", Some("AC01"))
           updateUserCap()
           lazy val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { resp =>
             resp.status shouldBe CONFLICT
@@ -180,11 +180,11 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubPost("/help-to-save-proxy/create-account", CONFLICT, "")
           stubPut(s"/help-to-save/accounts/$NINO", OK)
           stubAudit
-          insertEnrolmentData(NINO, true, Some(7), "Digital", Some("AC01"))
+          insertEnrolmentData(NINO, itmpFlag = true, Some(7), "Digital", Some("AC01"))
           updateUserCap()
           lazy val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { resp =>
             resp.status shouldBe CONFLICT
@@ -199,11 +199,11 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           stubPost("/help-to-save-proxy/create-account", CONFLICT, "")
           stubPut(s"/help-to-save/accounts/$NINO", INTERNAL_SERVER_ERROR)
           stubAudit
-          insertEnrolmentData(NINO, true, Some(7), "Digital", Some("AC01"))
+          insertEnrolmentData(NINO, itmpFlag = true, Some(7), "Digital", Some("AC01"))
           updateUserCap()
           lazy val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
-            .post(validCreateAccountRequestPayload(true))
+            .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { resp =>
             resp.status shouldBe CONFLICT
