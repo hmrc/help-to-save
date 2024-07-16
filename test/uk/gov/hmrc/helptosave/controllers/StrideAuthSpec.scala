@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
+import org.mockito.ArgumentMatchersSugar.*
 import play.api.Configuration
 import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.Results._
@@ -28,11 +29,9 @@ import uk.gov.hmrc.auth.core.retrieve.Retrieval
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.helptosave.controllers.StrideAuthSpec.NotLoggedInException
 import uk.gov.hmrc.helptosave.utils.TestSupport
-import uk.gov.hmrc.http.HeaderCarrier
-import org.mockito.ArgumentMatchersSugar.*
 
 import java.util.Base64
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 class StrideAuthSpec extends TestSupport {
 

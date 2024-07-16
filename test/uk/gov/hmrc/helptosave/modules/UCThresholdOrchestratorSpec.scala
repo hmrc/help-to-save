@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
+import org.mockito.ArgumentMatchersSugar.*
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -27,11 +28,10 @@ import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdConnectorProx
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import org.mockito.ArgumentMatchersSugar.*
+import uk.gov.hmrc.http.HttpResponse
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestratorSpec") with Eventually {
   implicit val timeout: Timeout = Timeout(10.seconds)

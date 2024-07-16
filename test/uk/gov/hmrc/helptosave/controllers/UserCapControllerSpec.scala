@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import org.apache.pekko.util.Timeout
+import org.mockito.ArgumentMatchersSugar.*
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -26,10 +27,8 @@ import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.AuthWithCL200
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.services.UserCapService
 import uk.gov.hmrc.helptosave.util.toFuture
-import org.mockito.ArgumentMatchersSugar.*
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.ExecutionContext
 
 // scalastyle:off magic.number
 class UserCapControllerSpec extends AuthSupport {

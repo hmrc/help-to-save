@@ -110,7 +110,7 @@ class HtsEventSpec extends TestSupport {
 
     "construct an event correctly when the details have not been manually entered" in {
 
-      val event = AccountCreated(nsiPayload, "source", false)
+      val event = AccountCreated(nsiPayload, "source", detailsManuallyEntered = false)
       event.value.auditType shouldBe "AccountCreated"
       event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
       event.value.detail shouldBe Json.toJson(
@@ -146,7 +146,7 @@ class HtsEventSpec extends TestSupport {
 
     "construct an event correctly when the details have been manually entered" in {
 
-      val event = AccountCreated(nsiPayload, "source", true)
+      val event = AccountCreated(nsiPayload, "source", detailsManuallyEntered = true)
       event.value.auditType shouldBe "AccountCreated"
       event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
       event.value.detail shouldBe Json.toJson(

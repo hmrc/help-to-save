@@ -73,13 +73,13 @@ object EligibilityResult {
       if (eligibilityResult.resultCode === 1) {
         EligibilityResult(
           nino,
-          true,
+          eligible = true,
           isUCClaimant = ucResponse.map(_.ucClaimant),
           isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold))
       } else {
         EligibilityResult(
           nino,
-          false,
+          eligible = false,
           Some(eligibilityResult),
           ucResponse.map(_.ucClaimant),
           ucResponse.flatMap(_.withinThreshold))

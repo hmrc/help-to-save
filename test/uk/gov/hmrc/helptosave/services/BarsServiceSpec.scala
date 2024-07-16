@@ -75,7 +75,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
-        result shouldBe Right(BankDetailsValidationResult(true, true))
+        result shouldBe Right(BankDetailsValidationResult(isValid = true, sortCodeExists = true))
       }
 
       "handle the case when the bank details are not valid" in {
@@ -84,7 +84,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
-        result shouldBe Right(BankDetailsValidationResult(false, false))
+        result shouldBe Right(BankDetailsValidationResult(isValid = false, sortCodeExists = false))
       }
 
       "handle the case when the bank details are valid but the sort code does not exist" in {
@@ -93,7 +93,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
-        result shouldBe Right(BankDetailsValidationResult(true, false))
+        result shouldBe Right(BankDetailsValidationResult(isValid = true, sortCodeExists = false))
       }
 
       "handle the case when the bank details are indeterminate" in {
@@ -102,7 +102,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
           mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
-        result shouldBe Right(BankDetailsValidationResult(true, false))
+        result shouldBe Right(BankDetailsValidationResult(isValid = true, sortCodeExists = false))
       }
 
       "handle the case when the bank details are valid but the sort code response cannot be parsed" in {

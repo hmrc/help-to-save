@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.helptosave.actors
 
+import cats.instances.double._
+import cats.syntax.eq._
 import org.apache.pekko.actor.{Actor, ActorRef, Cancellable, Props, Scheduler}
 import org.apache.pekko.pattern.{ask, pipe}
 import org.apache.pekko.util.Timeout
-import cats.instances.double._
-import cats.syntax.eq._
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.UCThresholdConnectorProxyActor.{GetThresholdValue => GetDESThresholdValue, GetThresholdValueResponse => GetDESThresholdValueResponse}
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager._

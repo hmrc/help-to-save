@@ -16,8 +16,8 @@
 
 package helpers
 
-import org.apache.pekko.http.scaladsl.model.HttpResponse
 import helpers.WiremockHelper.stubPost
+import org.apache.pekko.http.scaladsl.model.HttpResponse
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers

@@ -40,8 +40,8 @@ class AccountControllerSpec extends AuthSupport {
   val account = Account(
     YearMonth.of(1900, 1),
     "AC01",
-    false,
-    Blocking(false, false, false),
+    isClosed = false,
+    Blocking(payments = false, withdrawals = false, bonuses = false),
     123.45,
     0,
     0,

@@ -1,4 +1,4 @@
-import sbt._
+import sbt.*
 import uk.gov.hmrc.DefaultBuildSettings.addTestReportOption
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
@@ -25,6 +25,8 @@ lazy val microservice = Project(appName, file("."))
       "target/test-reports/html-report"
     )
   )
+  //silence authprovider warnings - we need to use the deprecated authprovider
+  .settings(scalacOptions += "-Wconf:cat=deprecation:silent")
   // Suppress successful events in Scalatest in standard output (-o)
   // Options described here: https://www.scalatest.org/user_guide/using_scalatest_with_sbt
   .settings(

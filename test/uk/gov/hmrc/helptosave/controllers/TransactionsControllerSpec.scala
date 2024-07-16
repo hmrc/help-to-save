@@ -18,6 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
+import org.mockito.ArgumentMatchersSugar.*
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, _}
@@ -26,12 +27,9 @@ import uk.gov.hmrc.auth.core.retrieve.{GGCredId, v2}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models.account._
-import uk.gov.hmrc.http.HeaderCarrier
-import org.mockito.ArgumentMatchersSugar.*
 
 import java.time.LocalDate
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
 
 class TransactionsControllerSpec extends AuthSupport {
 

@@ -18,6 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
+import org.mockito.ArgumentMatchersSugar.*
 import play.api.libs.json.Json
 import play.api.mvc.{Result => PlayResult}
 import play.api.test.Helpers.contentAsJson
@@ -27,11 +28,9 @@ import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestData
-import uk.gov.hmrc.http.HeaderCarrier
-import org.mockito.ArgumentMatchersSugar.*
 
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout with TestData {
 

@@ -143,9 +143,9 @@ class HelpToSaveProxyConnectorSpec
             result shouldBe Right(uCResponse)
           }
 
-        test(UCResponse(true, Some(true)))
-        test(UCResponse(true, Some(false)))
-        test(UCResponse(false, None))
+        test(UCResponse(ucClaimant = true, Some(true)))
+        test(UCResponse(ucClaimant = true, Some(false)))
+        test(UCResponse(ucClaimant = false, None))
 
       }
 

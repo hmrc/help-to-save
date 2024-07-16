@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.helptosave.modules
 
-import org.apache.pekko.actor.{ActorRef, ActorSystem}
 import com.google.inject.{AbstractModule, Inject, Singleton}
+import org.apache.pekko.actor.{ActorRef, ActorSystem}
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.{TimeCalculatorImpl, UCThresholdConnectorProxyActor, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
