@@ -27,7 +27,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino => v2Nino}
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
-import uk.gov.hmrc.helptosave.connectors.HttpSupport
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
 import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
@@ -36,7 +35,7 @@ import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import scala.concurrent.Future
 
 class EnrolmentStoreControllerSpec
-    extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks with TestEnrolmentBehaviour with HttpSupport {
+    extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks with TestEnrolmentBehaviour {
 
   implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
     Arbitrary(

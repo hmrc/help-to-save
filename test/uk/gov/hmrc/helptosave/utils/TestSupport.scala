@@ -36,29 +36,37 @@ import scala.concurrent.ExecutionContext
 
 trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll with BeforeAndAfterEach {
   lazy val additionalConfig: Configuration = Configuration()
+  val originatorIdHeaderValue = "test-originator"
 
   def buildFakeApplication(extraConfig: Configuration): Application =
     new GuiceApplicationBuilder()
       .configure(
         Configuration(
-          ConfigFactory.parseString("""
+          ConfigFactory.parseString(s"""
                                       | metrics.jvm = false
                                       | metrics.enabled = true
                                       | mongo-async-driver.org.apache.pekko.loglevel = ERROR
                                       | uc-threshold.ask-timeout = 10 seconds
                                       | play.modules.disabled = [ "play.api.mvc.CookiesModule" ]
+                                      | microservice {
+                                      |   services {
+                                      |     paye-personal-details {
+                                      |       originatorId = $originatorIdHeaderValue
+                                      |     }
+                                      |   }
+                                      | }
             """.stripMargin)
         ).withFallback(extraConfig))
       .build()
 
   lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
 
-  override def beforeAll(): Unit = {
+  override protected def beforeAll(): Unit = {
     Play.start(fakeApplication)
     super.beforeAll()
   }
 
-  override def afterAll(): Unit = {
+  override protected def afterAll(): Unit = {
     Play.stop(fakeApplication)
     super.afterAll()
   }

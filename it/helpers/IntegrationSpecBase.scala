@@ -16,7 +16,6 @@
 
 package helpers
 
-import helpers.WiremockHelper.stubPost
 import org.apache.pekko.http.scaladsl.model.HttpResponse
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
@@ -27,9 +26,12 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, GivenWhenThen, Test
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.http.Status
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.ws.{WSClient, WSRequest}
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import play.api.{Application, Environment, Mode}
 import uk.gov.hmrc.helptosave.repo.{MongoEnrolmentStore, MongoUserCapStore}
+import uk.gov.hmrc.helptosave.util.WireMockMethods
+import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 
 import scala.concurrent.duration.Duration
@@ -42,7 +44,8 @@ trait IntegrationSpecBase
     with ScalaFutures
     with IntegrationPatience
     with Matchers
-    with WiremockHelper
+    with WireMockSupport
+    with WireMockMethods
     with GuiceOneServerPerSuite
     with BeforeAndAfterEach
     with BeforeAndAfterAll
@@ -52,32 +55,29 @@ trait IntegrationSpecBase
     with EnrolmentStoreRepoHelper
     with UserCapStoreRepoHelper {
 
-  val mockHost: String = WiremockHelper.wiremockHost
-  val mockPort: Int    = WiremockHelper.wiremockPort
-  val mockUrl          = s"http://$mockHost:$mockPort"
+  val mockUrl          = s"http://$wireMockHost:$wireMockPort"
 
   val timeout: Timeout   = Timeout(Span(5, Seconds))
   val interval: Interval = Interval(Span(100, Millis))
 
   val AUTHORISATION_TOKEN = "Bearer ab9e219d-0d9d-4a1d-90e5-f2a5c287668c"
 
-
   def config: Map[String, String] = Map(
     "application.router"                                      -> "testOnlyDoNotUseInAppConf.Routes",
-    "auditing.consumer.baseUri.host"                          -> s"$mockHost",
-    "auditing.consumer.baseUri.port"                          -> s"$mockPort",
-    "microservice.services.auth.host"                         -> s"$mockHost",
-    "microservice.services.auth.port"                         -> s"$mockPort",
-    "microservice.services.help-to-save-proxy.host" -> s"$mockHost",
-    "microservice.services.help-to-save-proxy.port" -> s"$mockPort",
-    "microservice.services.des.host" -> s"$mockHost",
-    "microservice.services.des.port" -> s"$mockPort",
-    "microservice.services.itmp-enrolment.host" -> s"$mockHost",
-    "microservice.services.itmp-enrolment.port" -> s"$mockPort",
-    "microservice.services.itmp-eligibility-check.host" -> s"$mockHost",
-    "microservice.services.itmp-eligibility-check.port" -> s"$mockPort",
-    "microservice.services.itmp-threshold.host" -> s"$mockHost",
-    "microservice.services.itmp-threshold.port" -> s"$mockPort",
+    "auditing.consumer.baseUri.host"                          -> s"$wireMockHost",
+    "auditing.consumer.baseUri.port"                          -> s"$wireMockPort",
+    "microservice.services.auth.host"                         -> s"$wireMockHost",
+    "microservice.services.auth.port"                         -> s"$wireMockPort",
+    "microservice.services.help-to-save-proxy.host" -> s"$wireMockHost",
+    "microservice.services.help-to-save-proxy.port" -> s"$wireMockPort",
+    "microservice.services.des.host" -> s"$wireMockHost",
+    "microservice.services.des.port" -> s"$wireMockPort",
+    "microservice.services.itmp-enrolment.host" -> s"$wireMockHost",
+    "microservice.services.itmp-enrolment.port" -> s"$wireMockPort",
+    "microservice.services.itmp-eligibility-check.host" -> s"$wireMockHost",
+    "microservice.services.itmp-eligibility-check.port" -> s"$wireMockPort",
+    "microservice.services.itmp-threshold.host" -> s"$wireMockHost",
+    "microservice.services.itmp-threshold.port" -> s"$wireMockPort",
     "nsi.create-account.version" -> "V2.0"
   )
 
@@ -91,6 +91,8 @@ trait IntegrationSpecBase
     .configure(config)
     .build
 
+  lazy val ws: WSClient = app.injector.instanceOf[WSClient]
+
   implicit lazy val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit lazy val hc: HeaderCarrier = HeaderCarrier(
     authorization = Some(Authorization("Bearer some-token"))
@@ -102,19 +104,8 @@ trait IntegrationSpecBase
   val enrolmentStoreRepository: MongoEnrolmentStore = app.injector.instanceOf[MongoEnrolmentStore]
   val userCapStoreRepository: MongoUserCapStore = app.injector.instanceOf[MongoUserCapStore]
 
-  override def beforeEach(): Unit = {
-    resetWiremock()
-  }
+  def buildRequest(path: String): WSRequest =
+    ws.url(s"http://localhost:$port/help-to-save$path").withFollowRedirects(false)
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    startWiremock()
-  }
-
-  override def afterAll(): Unit = {
-    stopWiremock()
-    super.afterAll()
-  }
-
-  protected def stubAudit(): Unit = stubPost(s"/write/audit", Status.OK)
+  protected def stubAudit(): Unit = when(POST, "write/audit").thenReturn(Status.OK)
 }

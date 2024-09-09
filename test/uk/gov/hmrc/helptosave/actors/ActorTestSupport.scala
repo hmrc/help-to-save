@@ -35,7 +35,7 @@ class ActorTestSupport(name: String)
           .withValue("org.apache.pekko.test.single-expect-default", ConfigValueFactory.fromAnyRef("5 seconds"))
       )) with ImplicitSender with TestSupport {
 
-  override def afterAll(): Unit = {
+  override protected def afterAll(): Unit = {
     super.afterAll()
     TestKit.shutdownActorSystem(system)
   }
