@@ -16,17 +16,26 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
+import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
+import uk.gov.hmrc.helptosave.util.WireMockMethods
 import uk.gov.hmrc.helptosave.utils.TestSupport
-import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.test.WireMockSupport
 
 import java.util.UUID
 
-class BarsConnectorSpec extends TestSupport with HttpSupport {
+class BarsConnectorSpec extends TestSupport with WireMockSupport with WireMockMethods {
 
-  val connector = new BarsConnectorImpl(mockHttp)
+  override lazy val additionalConfig: Configuration = {
+    Configuration(
+      "microservice.services.bank-account-reputation.host" -> wireMockHost,
+      "microservice.services.bank-account-reputation.port" -> wireMockPort
+    )
+  }
+
+  val connector: BarsConnector = fakeApplication.injector.instanceOf[BarsConnector]
 
   "The BarsConnector" when {
 
@@ -55,8 +64,9 @@ class BarsConnectorSpec extends TestSupport with HttpSupport {
             |  "iban": "GB59 HBUK 1234 5678"
             |}""".stripMargin
 
-        mockPost("http://localhost:7002/validate/bank-details", headers, body)(
-          Some(HttpResponse(Status.OK, Json.parse(response), Map[String, Seq[String]]())))
+        when(POST, "/validate/bank-details", headers = headers, body = Some(body.toString()))
+          .thenReturn(Status.OK, Json.parse(response))
+
         val result =
           await(connector.validate(BankDetailsValidationRequest("AE123456C", "123456", "0201234"), trackingId))
 

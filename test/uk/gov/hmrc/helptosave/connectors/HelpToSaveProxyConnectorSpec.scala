@@ -18,15 +18,19 @@ package uk.gov.hmrc.helptosave.connectors
 
 import org.mockito.ArgumentMatchersSugar.*
 import org.scalatest.EitherValues
+import play.api.Configuration
+import play.api.http.Status
 import play.api.libs.json.{JsValue, Json}
 import play.mvc.Http.Status._
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.models.account._
+import uk.gov.hmrc.helptosave.util.WireMockMethods
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
-import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.test.WireMockSupport
 
+import uk.gov.hmrc.http.HttpClient
 import java.time.LocalDate
 import java.util.UUID
 import scala.concurrent.Await
@@ -34,14 +38,27 @@ import scala.concurrent.duration._
 
 // scalastyle:off magic.number
 class HelpToSaveProxyConnectorSpec
-    extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with HttpSupport {
+    extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with WireMockSupport with WireMockMethods {
 
-  val mockAuditor = mock[HTSAuditor]
-  val returnHeaders = Map[String, Seq[String]]()
+  val mockAuditor: HTSAuditor = mock[HTSAuditor]
+
+  override lazy val additionalConfig: Configuration = {
+    Configuration(
+      "microservice.services.help-to-save-proxy.host" -> wireMockHost,
+      "microservice.services.help-to-save-proxy.port" -> wireMockPort
+    )
+  }
+
+  val mockHttp: HttpClient = fakeApplication.injector.instanceOf[HttpClient]
   override val proxyConnector =
     new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
-  val createAccountURL: String = "http://localhost:7005/help-to-save-proxy/create-account"
-  val updateEmailURL: String = "http://localhost:7005/help-to-save-proxy/update-email"
+
+  val createAccountURL: String = "/help-to-save-proxy/create-account"
+  val updateEmailURL: String = "/help-to-save-proxy/update-email"
+
+  val connectorCallFailureMessage: (HTTPMethod, String) => String = (httpMethod, urlPath) => {
+    s"$httpMethod of 'http://$wireMockHost:$wireMockPort$urlPath' failed. Caused by: 'Connection refused"
+  }
 
   val userInfo: NSIPayload =
     NSIPayload(
@@ -66,59 +83,52 @@ class HelpToSaveProxyConnectorSpec
       Some("systemId")
     )
 
-  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String) =
+  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit =
     mockAuditor
       .sendEvent(event, nino)(*)
       .doesNothing()
+
+  def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
+    val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
+    val errorCountBefore = mockMetrics.getTransactionsErrorCounter.getCount
+    val result = body
+    (
+      result,
+      mockMetrics.getTransactionsTimer.getCount - timerCountBefore,
+      mockMetrics.getTransactionsErrorCounter.getCount - errorCountBefore)
+  }
 
   "The HelpToSaveProxyConnector" when {
     "creating account" must {
 
       "handle 201 response from the help-to-save-proxy" in {
+        when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.CREATED)
 
-        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(CREATED, "")))
         val result = await(proxyConnector.createAccount(userInfo))
-
         result.status shouldBe CREATED
       }
 
       "handle 409 response from the help-to-save-proxy" in {
+        when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.CONFLICT)
 
-        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(CONFLICT, "")))
         val result = await(proxyConnector.createAccount(userInfo))
-
         result.status shouldBe CONFLICT
       }
 
       "handle bad_request response from frontend" in {
+        when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.BAD_REQUEST)
 
-        mockPost(createAccountURL, Map.empty[String, String], userInfo)(Some(HttpResponse(BAD_REQUEST, "")))
         val result = await(proxyConnector.createAccount(userInfo))
-
         result.status shouldBe BAD_REQUEST
-      }
-
-      "handle unexpected errors" in {
-
-        mockPost(createAccountURL, Map.empty[String, String], userInfo)(None)
-        val result = await(proxyConnector.createAccount(userInfo))
-
-        result.status shouldBe INTERNAL_SERVER_ERROR
-        Json.parse(result.body) shouldBe
-          Json.parse("""{
-              "errorMessageId" : "",
-              "errorMessage" : "unexpected error from proxy during /create-de-account",
-              "errorDetail"  : "Test exception message"
-            }""")
       }
     }
 
     "update email" must {
 
       "handle 200 response from the help-to-save-proxy" in {
-        mockPut(updateEmailURL, userInfo)(Some(HttpResponse(OK, "")))
-        val result = await(proxyConnector.updateEmail(userInfo))
+        when(PUT, updateEmailURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.OK)
 
+        val result = await(proxyConnector.updateEmail(userInfo))
         result.status shouldBe OK
       }
     }
@@ -129,17 +139,16 @@ class HelpToSaveProxyConnectorSpec
       val nino = "AE123456C"
       val threshold = 650.0
 
-      val url = "http://localhost:7005/help-to-save-proxy/uc-claimant-check"
+      val url = "/help-to-save-proxy/uc-claimant-check"
       val queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)
 
       "handle success response from proxy" in {
 
         def test(uCResponse: UCResponse): Unit =
           withClue(s"For UCResponse $uCResponse:") {
-            mockGet(url, queryParams)(Some(HttpResponse(OK, Json.toJson(uCResponse), returnHeaders)))
+            when(GET, url, queryParams).thenReturn(Status.OK, Json.toJson(uCResponse).toString())
 
             val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
-
             result shouldBe Right(uCResponse)
           }
 
@@ -150,9 +159,9 @@ class HelpToSaveProxyConnectorSpec
       }
 
       "handle bad_request response from frontend" in {
-        mockGet(url, queryParams)(Some(HttpResponse(BAD_REQUEST, "")))
-        val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
+        when(GET, url, queryParams).thenReturn(Status.BAD_REQUEST)
 
+        val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
         result shouldBe Left("Received unexpected status(400) from UniversalCredit check")
       }
 
@@ -160,7 +169,7 @@ class HelpToSaveProxyConnectorSpec
 
         def test(json: String) =
           withClue(s"For json $json:") {
-            mockGet(url, queryParams)(Some(HttpResponse(OK, Json.parse(json), returnHeaders)))
+            when(GET, url, queryParams).thenReturn(Status.OK, Json.toJson(json).toString())
 
             val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
             result.left.value contains "unable to parse UCResponse from proxy"
@@ -168,13 +177,6 @@ class HelpToSaveProxyConnectorSpec
 
         test("""{"foo": "bar"}""")
         test("""{"ucClaimant":"foo", "withinThreshold":"bar"}""")
-      }
-
-      "handle unexpected errors" in {
-        mockGet(url, queryParams)(None)
-        val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
-
-        result shouldBe Left("Call to UniversalCredit check unsuccessful: Test exception message")
       }
     }
 
@@ -185,7 +187,7 @@ class HelpToSaveProxyConnectorSpec
       val systemId = "123"
       val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
 
-      val getAccountUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/account"
+      val getAccountUrl: String = "/help-to-save-proxy/nsi-services/account"
       val queryParameters =
         Map("nino" -> nino, "correlationId" -> correlationId, "version" -> version, "systemId" -> systemId)
 
@@ -194,59 +196,55 @@ class HelpToSaveProxyConnectorSpec
         GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
 
       "handle success response with Accounts having Terms" in {
-        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, nsiAccountJson, returnHeaders)))
+        when(GET, getAccountUrl, queryParameters).thenReturn(Status.OK, Json.toJson(nsiAccountJson).toString())
         mockSendAuditEvent(event(), nino)
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
-
         result shouldBe Right(Some(account))
       }
 
       "throw error when there are no Terms in the json" in {
         val json = nsiAccountJson + ("terms" -> Json.arr())
+        when(GET, getAccountUrl, queryParameters).thenReturn(Status.OK, json.toString())
 
-          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
-          mockSendAuditEvent(event(json), nino)
-          mockPagerDutyAlert("Could not parse JSON in the getAccount response")
+        mockSendAuditEvent(event(json), nino)
+        mockPagerDutyAlert("Could not parse JSON in the getAccount response")
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
-
         result shouldBe Left(
           "Could not parse getNsiAccount response, received 200 (OK), error=[Bonus terms list returned by NS&I was empty]")
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
         val json = nsiAccountJson - "accountBalance"
-
-          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
-          mockSendAuditEvent(event(json), nino)
-          mockPagerDutyAlert("Could not parse JSON in the getAccount response")
+        when(GET, getAccountUrl, queryParameters).thenReturn(Status.OK, json.toString())
+        mockSendAuditEvent(event(json), nino)
+        mockPagerDutyAlert("Could not parse JSON in the getAccount response")
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
-
         result.isLeft shouldBe true
       }
 
       "succeed when the NS&I response omits the emailAddress optional field" in {
         val json = nsiAccountJson - "emailAddress"
-        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
+        when(GET, getAccountUrl, queryParameters).thenReturn(Status.OK, json.toString())
         mockSendAuditEvent(event(json), nino)
-        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
 
+        val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result shouldBe Right(Some(account.copy(accountHolderEmail = None)))
       }
 
       "handle non 200 responses from help-to-save-proxy" in {
-          mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400, "")))
-          mockPagerDutyAlert("Received unexpected http status in response to getAccount")
+        when(GET, getAccountUrl, queryParameters).thenReturn(Status.BAD_REQUEST)
+        mockPagerDutyAlert("Received unexpected http status in response to getAccount")
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result shouldBe Left("Received unexpected status(400) from getNsiAccount call")
       }
 
       "handle unexpected server errors" in {
-          mockGet(getAccountUrl, queryParameters)(None)
-          mockPagerDutyAlert("Failed to make call to getAccount")
+        when(GET, getAccountUrl, queryParameters).thenReturn(Status.INTERNAL_SERVER_ERROR)
+        mockPagerDutyAlert("Failed to make call to getAccount")
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result.isLeft shouldBe true
@@ -271,8 +269,7 @@ class HelpToSaveProxyConnectorSpec
                         |  ]
                         |}
           """.stripMargin)
-
-        mockGet(getAccountUrl, queryParameters)(Some(HttpResponse(400, errorResponse, returnHeaders)))
+        when(GET, getAccountUrl, queryParameters).thenReturn(Status.BAD_REQUEST, errorResponse.toString())
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result shouldBe Right(None)
@@ -286,23 +283,13 @@ class HelpToSaveProxyConnectorSpec
       val systemId = "123"
       val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")
 
-      val getTransactionsUrl: String = "http://localhost:7005/help-to-save-proxy/nsi-services/transactions"
+      val getTransactionsUrl: String = "/help-to-save-proxy/nsi-services/transactions"
       val queryParameters = Map(
         "nino"          -> nino,
         "correlationId" -> correlationId,
         "version"       -> version,
         "systemId"      -> systemId
       )
-
-      def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
-        val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
-        val errorCountBefore = mockMetrics.getTransactionsErrorCounter.getCount
-        val result = body
-        (
-          result,
-          mockMetrics.getTransactionsTimer.getCount - timerCountBefore,
-          mockMetrics.getTransactionsErrorCounter.getCount - errorCountBefore)
-      }
 
       "handle success response by translating transactions from NS&I domain into MDTP domain" in {
         val json = Json.parse(
@@ -357,8 +344,7 @@ class HelpToSaveProxyConnectorSpec
             |}
             |""".stripMargin
         )
-
-        mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
+        when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.OK, json.toString())
 
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
@@ -429,9 +415,8 @@ class HelpToSaveProxyConnectorSpec
             |}
             |""".stripMargin
         )
-
-          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
-          mockPagerDutyAlert("Could not parse get transactions response")
+        when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.OK, json.toString())
+        mockPagerDutyAlert("Could not parse get transactions response")
 
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
@@ -460,9 +445,8 @@ class HelpToSaveProxyConnectorSpec
             |}
             |""".stripMargin
         )
-
-          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(200, json, returnHeaders)))
-          mockPagerDutyAlert("Could not parse get transactions response")
+        when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.OK, json.toString())
+        mockPagerDutyAlert("Could not parse get transactions response")
 
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
@@ -474,23 +458,12 @@ class HelpToSaveProxyConnectorSpec
       }
 
       "handle non 200 responses from help-to-save-proxy" in {
-          mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(400, "")))
-          mockPagerDutyAlert("Received unexpected http status in response to get transactions")
+        when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.BAD_REQUEST, "")
+        mockPagerDutyAlert("Received unexpected http status in response to get transactions")
 
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
         result shouldBe Left("Received unexpected status(400) from get transactions call")
-        timerMetricChange shouldBe 0
-        errorMetricChange shouldBe 1
-      }
-
-      "handle unexpected server errors" in {
-          mockGet(getTransactionsUrl, queryParameters)(None)
-          mockPagerDutyAlert("Failed to make call to get transactions")
-
-        val (result, timerMetricChange, errorMetricChange) =
-          transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
-        result shouldBe Left("Call to get transactions unsuccessful: Test exception message")
         timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
@@ -514,13 +487,84 @@ class HelpToSaveProxyConnectorSpec
                         |  ]
                         |}
           """.stripMargin)
-
-        mockGet(getTransactionsUrl, queryParameters)(Some(HttpResponse(400, errorResponse, returnHeaders)))
+        when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.BAD_REQUEST, errorResponse)
 
         val result = await(proxyConnector.getTransactions(nino, systemId, correlationId).value)
         result shouldBe Right(None)
       }
 
+    }
+  }
+
+  "Failed calls to HelpToSaveConnector" when {
+    "querying DWP for UC Claimant checks" must {
+
+      val txnId = UUID.randomUUID()
+      val nino = "AE123456C"
+      val threshold = 650.0
+
+      val url = "/help-to-save-proxy/uc-claimant-check"
+      val queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)
+
+      "handle unexpected errors" in {
+        wireMockServer.stop()
+        when(GET, url, queryParams)
+
+        val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
+        result.isLeft shouldBe true
+        result.left.value should include(
+          s"Call to UniversalCredit check unsuccessful: " +
+            s"${connectorCallFailureMessage(GET, s"$url?nino=$nino&transactionId=$txnId&threshold=$threshold")}"
+        )
+        wireMockServer.start()
+      }
+    }
+
+    "creating account" must {
+      "handle unexpected errors" in {
+        wireMockServer.stop()
+        when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString()))
+
+        val result = await(proxyConnector.createAccount(userInfo))
+        val jsonResult = Json.parse(result.body)
+
+        result.status shouldBe INTERNAL_SERVER_ERROR
+        (jsonResult \ "errorMessage").as[String] shouldBe "unexpected error from proxy during /create-de-account"
+        (jsonResult \ "errorDetail").as[String] should include(s"${connectorCallFailureMessage(POST, s"$createAccountURL")}")
+        wireMockServer.start()
+      }
+    }
+
+    "retrieving transactions" must {
+      val nino = randomNINO()
+      val correlationId = UUID.randomUUID().toString
+      val systemId = "123"
+      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")
+
+      val queryParameters = Map(
+        "nino" -> nino,
+        "correlationId" -> correlationId,
+        "version" -> version,
+        "systemId" -> systemId
+      )
+      val getTransactionsUrl: String = "/help-to-save-proxy/nsi-services/transactions"
+      val urlWithParams: String = s"$getTransactionsUrl?nino=$nino&correlationId=$correlationId&version=$version&systemId=$systemId"
+
+      "handle unexpected server errors" in {
+        wireMockServer.stop()
+        when(GET, getTransactionsUrl, queryParameters)
+        mockPagerDutyAlert("Failed to make call to get transactions")
+
+        val (result, timerMetricChange, errorMetricChange) =
+          transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
+        result.isLeft shouldBe true
+        result.left.value should include(
+          s"Call to get transactions unsuccessful: ${connectorCallFailureMessage(GET, urlWithParams)}"
+        )
+        timerMetricChange shouldBe 0
+        errorMetricChange shouldBe 1
+        wireMockServer.start()
+      }
     }
   }
 }

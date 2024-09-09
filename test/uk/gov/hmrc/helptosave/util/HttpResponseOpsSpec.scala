@@ -30,14 +30,14 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
   implicit val test1Format: Format[Test1] = Json.format[Test1]
   implicit val test2Format: Format[Test2] = Json.format[Test2]
 
-  val returnHeaders = Map[String, Seq[String]]()
+  val returnHeaders: Map[NINO, Seq[NINO]] = Map[String, Seq[String]]()
 
   case class ThrowingHttpResponse() extends HttpResponse {
     override def json: JsValue = sys.error("")
     override def body: String = ""
     override def status: Int = 0
 
-    override def allHeaders: Map[String, Seq[String]] = ???
+    override def headers: Map[String, Seq[String]] = ???
   }
 
   "HttpResponseOps" must {
