@@ -29,8 +29,8 @@ import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.util.WireMockMethods
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.test.WireMockSupport
+import uk.gov.hmrc.http.client.HttpClientV2
 
-import uk.gov.hmrc.http.HttpClient
 import java.time.LocalDate
 import java.util.UUID
 import scala.concurrent.Await
@@ -49,7 +49,7 @@ class HelpToSaveProxyConnectorSpec
     )
   }
 
-  val mockHttp: HttpClient = fakeApplication.injector.instanceOf[HttpClient]
+  val mockHttp: HttpClientV2 = fakeApplication.injector.instanceOf[HttpClientV2]
   override val proxyConnector =
     new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
 
