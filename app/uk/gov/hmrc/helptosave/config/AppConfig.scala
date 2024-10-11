@@ -36,12 +36,12 @@ class AppConfig @Inject()(
 
   val appName: String = servicesConfig.getString("appName")
   val ifEnabled: Boolean = servicesConfig.getBoolean("feature.if.enabled")
-  val desHeaders: Map[String, String] = Map(
+  val desHeaders: Seq[(String, String)] = Seq(
     "Environment"   -> servicesConfig.getString("microservice.services.des.environment"),
     "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.des.token")}"
   )
 
-  val ifHeaders: Map[String, String] = Map(
+  val ifHeaders: Seq[(String, String)] = Seq(
     "Environment"   -> servicesConfig.getString("microservice.services.if.environment"),
     "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.if.token")}"
   )

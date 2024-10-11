@@ -19,13 +19,14 @@ package uk.gov.hmrc.helptosave.connectors
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.http.HttpClient._
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.Logging
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.client.HttpClientV2
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import java.net.URL
 
 @ImplementedBy(classOf[BarsConnectorImpl])
 trait BarsConnector {
@@ -36,18 +37,19 @@ trait BarsConnector {
 }
 
 @Singleton
-class BarsConnectorImpl @Inject()(http: HttpClient)(implicit appConfig: AppConfig) extends BarsConnector with Logging {
+class BarsConnectorImpl @Inject()(httpClientV2: HttpClientV2)(implicit appConfig: AppConfig) extends BarsConnector with Logging {
 
   import uk.gov.hmrc.helptosave.connectors.BarsConnectorImpl._
 
-  private val barsEndpoint: String = s"${appConfig.barsUrl}/validate/bank-details"
+  private val barsEndpoint: URL = url"${appConfig.barsUrl}/validate/bank-details"
 
-  private val headers = Map("Content-Type" -> "application/json")
+  private val headers:(String, String) = "Content-Type" -> "application/json"
 
   override def validate(request: BankDetailsValidationRequest, trackingId: UUID)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] =
-    http.post(barsEndpoint, bodyJson(request), headers.+("X-Tracking-Id" -> trackingId.toString))
+    ec: ExecutionContext): Future[HttpResponse] = {
+    httpClientV2.post(barsEndpoint).withBody(bodyJson(request)).transform(_.addHttpHeaders(headers, "X-Tracking-Id" -> trackingId.toString)).execute[HttpResponse]
+  }
 
   private def bodyJson(request: BankDetailsValidationRequest) =
     Json.toJson(BarsRequest(Account(request.sortCode, request.accountNumber)))

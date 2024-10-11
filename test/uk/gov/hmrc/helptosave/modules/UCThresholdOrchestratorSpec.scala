@@ -62,7 +62,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
 
       connector
         .getThreshold()(*, *)
-        .returns(Future.successful(HttpResponse(500, "")))
+        .returns(Future.successful(Right(HttpResponse(500, ""))))
 
       pagerDutyAlert
         .alert("Received unexpected http status in response to get UC threshold from DES")
@@ -71,7 +71,8 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       connector
         .getThreshold()(*, *)
         .returns(Future.successful(
-          HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]())))
+          Right(HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]()))
+        ))
 
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 
