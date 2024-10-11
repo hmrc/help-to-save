@@ -28,8 +28,8 @@ import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.util.WireMockMethods
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
-import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.test.WireMockSupport
 
 import java.time.LocalDate
 import java.util.UUID
@@ -239,7 +239,7 @@ class HelpToSaveProxyConnectorSpec
         mockPagerDutyAlert("Received unexpected http status in response to getAccount")
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
-        result shouldBe Left("Received unexpected status(400) from getNsiAccount call")
+        result shouldBe Left("Call to getNsiAccount unsuccessful: GET of 'http://localhost:6001/help-to-save-proxy/nsi-services/account' returned 400 (Bad Request). Response body ''")
       }
 
       "handle unexpected server errors" in {
@@ -272,7 +272,7 @@ class HelpToSaveProxyConnectorSpec
         when(GET, getAccountUrl, queryParameters).thenReturn(Status.BAD_REQUEST, errorResponse.toString())
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
-        result shouldBe Right(None)
+        result shouldBe Left("Call to getNsiAccount unsuccessful: GET of 'http://localhost:6001/help-to-save-proxy/nsi-services/account' returned 400 (Bad Request). Response body '"+errorResponse+"'")
       }
 
     }
@@ -463,7 +463,7 @@ class HelpToSaveProxyConnectorSpec
 
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
-        result shouldBe Left("Received unexpected status(400) from get transactions call")
+        result shouldBe Left("Call to get transactions unsuccessful: GET of 'http://localhost:6001/help-to-save-proxy/nsi-services/transactions' returned 400 (Bad Request). Response body ''")
         timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
@@ -490,7 +490,7 @@ class HelpToSaveProxyConnectorSpec
         when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.BAD_REQUEST, errorResponse)
 
         val result = await(proxyConnector.getTransactions(nino, systemId, correlationId).value)
-        result shouldBe Right(None)
+        result shouldBe Left("Call to get transactions unsuccessful: GET of 'http://localhost:6001/help-to-save-proxy/nsi-services/transactions' returned 400 (Bad Request). Response body '"+errorResponse+"'")
       }
 
     }
@@ -529,7 +529,7 @@ class HelpToSaveProxyConnectorSpec
         val jsonResult = Json.parse(result.body)
 
         result.status shouldBe INTERNAL_SERVER_ERROR
-        (jsonResult \ "errorMessage").as[String] shouldBe "unexpected error from proxy during /create-de-account"
+        (jsonResult \ "errorMessage").as[String] shouldBe "unexpected error from proxy during /create-account"
         (jsonResult \ "errorDetail").as[String] should include(s"${connectorCallFailureMessage(POST, s"$createAccountURL")}")
         wireMockServer.start()
       }

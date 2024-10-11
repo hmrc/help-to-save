@@ -19,13 +19,13 @@ package uk.gov.hmrc.helptosave.connectors
 import cats.Show
 import cats.syntax.show._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json.{JsNull, JsValue, Writes, __}
+import play.api.libs.json.{JsNull, JsValue}
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.models.UCResponse
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.net.URL
@@ -41,7 +41,7 @@ trait DESConnector {
 
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
 
-  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
 }
 
 @Singleton
@@ -91,8 +91,8 @@ class DESConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesCon
       s" header - ${appConfig.desHeaders} " +
       s" setFlagUrl - ${setFlagUrl(nino)}")
     http.put(setFlagUrl(nino))(hc.copy(authorization = None)).transform(_
+      .addHttpHeaders(appConfig.desHeaders: _*))
       .withBody(body)
-      .addHttpHeaders(appConfig.desHeaders:_*))
       .execute[HttpResponse]
   }
 
@@ -105,13 +105,13 @@ class DESConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesCon
       .execute[HttpResponse]
   }
 
-  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     logger.info(s"[DESConnector][getThreshold] GET request: " +
       s"itmpThresholdURL - $itmpThresholdURL" +
       s" header - ${appConfig.desHeaders:+ originatorIdHeader}")
     http.get(itmpThresholdURL)(hc.copy(authorization = None)).transform(_
       .addHttpHeaders(appConfig.desHeaders:_*))
-      .execute[HttpResponse]
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
 }
