@@ -28,7 +28,7 @@ import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdConnectorProx
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
-import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -59,15 +59,6 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   "The UCThresholdOrchestrator" should {
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
-
-      connector
-        .getThreshold()(*, *)
-        .returns(Future.successful(Right(HttpResponse(500, ""))))
-
-      pagerDutyAlert
-        .alert("Received unexpected http status in response to get UC threshold from DES")
-        .doesNothing()
-
       connector
         .getThreshold()(*, *)
         .returns(Future.successful(
@@ -87,6 +78,17 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       // definitely gets called since it happens asynchronously
       Thread.sleep(1000L)
     }
+    "instance of the UCThresholdManager doesn't start" in {
+      connector
+        .getThreshold()(*, *)
+        .returns(Future.successful(Left(UpstreamErrorResponse("error occurred",500))))
 
+      val response = await(connector.getThreshold())
+      response shouldBe Left(UpstreamErrorResponse("error occurred",500))
+
+      pagerDutyAlert
+        .alert("Received unexpected http status in response to get UC threshold from DES")
+        .doesNothing()
+    }
   }
 }

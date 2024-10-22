@@ -112,6 +112,9 @@ class DESConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesCon
     http.get(itmpThresholdURL)(hc.copy(authorization = None)).transform(_
       .addHttpHeaders(appConfig.desHeaders:_*))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
+      .map(_.fold(_ => Left(UpstreamErrorResponse("error occurred",500)),
+        _ => Right(HttpResponse(200)))
+      )
   }
 
 }
