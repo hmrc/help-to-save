@@ -23,11 +23,11 @@ import cats.syntax.either._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
+import play.api.http.Status.{BAD_REQUEST, CONFLICT}
 import play.api.libs.json.{Format, Json}
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount, NsiTransactions, Transactions}
@@ -35,8 +35,10 @@ import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting, Result}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.http.HttpReads.Implicits._
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -67,11 +69,11 @@ trait HelpToSaveProxyConnector {
 
 @Singleton
 class HelpToSaveProxyConnectorImpl @Inject()(
-  http: HttpClient,
-  metrics: Metrics,
-  pagerDutyAlerting: PagerDutyAlerting,
-  auditor: HTSAuditor,
-  servicesConfig: ServicesConfig)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+                                              http: HttpClientV2,
+                                              metrics: Metrics,
+                                              pagerDutyAlerting: PagerDutyAlerting,
+                                              auditor: HTSAuditor,
+                                              servicesConfig: ServicesConfig)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
     extends HelpToSaveProxyConnector with Logging {
 
   import HelpToSaveProxyConnectorImpl._
@@ -88,23 +90,37 @@ class HelpToSaveProxyConnectorImpl @Inject()(
   override def createAccount(
     userInfo: NSIPayload)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http
-      .post(s"$proxyURL/help-to-save-proxy/create-account", userInfo)
+      .post(url"$proxyURL/help-to-save-proxy/create-account")
+      .withBody(Json.toJson(userInfo))
+      .execute[HttpResponse]
       .recover {
+        case UpstreamErrorResponse(_, 409, _, _) =>
+          logger.warn("CONFLICT from proxy during /create-account")
+          HttpResponse(CONFLICT)
+        case e:BadRequestException =>
+          logger.warn(
+            s"unexpected error from proxy during /create-account, message=${e.getMessage}",
+            userInfo.nino,
+            "apiCorrelationId" -> getApiCorrelationId())
+          val errorJson =
+            ErrorResponse("unexpected error from proxy during /create-account", s"${e.getMessage}").toJson()
+          HttpResponse(BAD_REQUEST, errorJson.toString)
         case e =>
           logger.warn(
-            s"unexpected error from proxy during /create-de-account, message=${e.getMessage}",
+            s"unexpected error from proxy during /create-account, message=${e.getMessage}",
             userInfo.nino,
             "apiCorrelationId" -> getApiCorrelationId())
 
           val errorJson =
-            ErrorResponse("unexpected error from proxy during /create-de-account", s"${e.getMessage}").toJson()
+            ErrorResponse("unexpected error from proxy during /create-account", s"${e.getMessage}").toJson()
           HttpResponse(INTERNAL_SERVER_ERROR, errorJson.toString)
       }
 
   override def updateEmail(
     userInfo: NSIPayload)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] =
     http
-      .put(s"$proxyURL/help-to-save-proxy/update-email", userInfo)
+      .put(url"$proxyURL/help-to-save-proxy/update-email").withBody(Json.toJson(userInfo))
+      .execute[HttpResponse]
       .recover {
         case e =>
           logger.warn(
@@ -119,42 +135,37 @@ class HelpToSaveProxyConnectorImpl @Inject()(
   override def ucClaimantCheck(nino: String, txnId: UUID, threshold: Double)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Result[UCResponse] = {
-    val url = s"$proxyURL/help-to-save-proxy/uc-claimant-check"
+    val url = url"$proxyURL/help-to-save-proxy/uc-claimant-check"
 
     EitherT[Future, String, UCResponse](
       http
-        .get(
-          url,
-          queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString))
-        .map { response =>
+        .get(url).transform(_
+      .withQueryStringParameters("nino" -> nino , "transactionId" -> txnId.toString , "threshold" -> threshold.toString))
+        .execute[Either[UpstreamErrorResponse, HttpResponse]]
+        .map { maybeResponse =>
           val correlationId = "apiCorrelationId" -> getApiCorrelationId()
 
-          response.status match {
-            case Status.OK =>
-              val result = response.parseJson[UCResponse]
-              result.fold(
-                e =>
-                  logger.warn(
-                    s"Could not parse UniversalCredit response, received 200 (OK), error=$e",
-                    nino,
-                    correlationId),
-                _ =>
-                  logger
-                    .info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
-              )
-              result
+          maybeResponse.map(response => {
+            val result = response.parseJson[UCResponse]
+            result.fold(
+              e =>
+            logger.warn(
+              s"Could not parse UniversalCredit response, received 200 (OK), error=$e",
+              nino,
+              correlationId),
+            _ =>
+            logger
+              .info(s"Call to check UniversalCredit check is successful, received 200 (OK)", nino, correlationId)
+            )
+            result
 
-            case other =>
-              logger.warn(
-                s"Call to check UniversalCredit check unsuccessful. Received unexpected status $other",
-                nino,
-                correlationId)
-              Left(s"Received unexpected status($other) from UniversalCredit check")
-          }
-        }
-        .recover {
-          case e =>
-            Left(s"Call to UniversalCredit check unsuccessful: ${e.getMessage}")
+          }).left.flatMap(error => {
+            logger.warn(
+              s"Call to check UniversalCredit check unsuccessful. Received unexpected status ${error.statusCode}",
+              nino,
+              correlationId)
+            Left(s"Received unexpected status(${error.statusCode}) from UniversalCredit check")
+          }).flatten
         }
     )
   }
@@ -163,13 +174,13 @@ class HelpToSaveProxyConnectorImpl @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Result[Option[Account]] = {
 
-    val url = s"$proxyURL/help-to-save-proxy/nsi-services/account"
+    val url = url"$proxyURL/help-to-save-proxy/nsi-services/account"
     val timerContext = metrics.getAccountTimer.time()
     EitherT[Future, String, Option[Account]](
       http
-        .get(
-          url,
-          Map("nino" -> nino, "correlationId" -> correlationId, "version" -> getAccountVersion, "systemId" -> systemId))
+        .get(url).transform(_
+        .withQueryStringParameters("nino" -> nino, "correlationId" -> correlationId, "version" -> getAccountVersion, "systemId" -> systemId))
+        .execute[HttpResponse]
         .map[Either[String, Option[Account]]] { response =>
           val _ = timerContext.stop()
           response.status match {
@@ -225,13 +236,13 @@ class HelpToSaveProxyConnectorImpl @Inject()(
     hc: HeaderCarrier,
     ec: ExecutionContext): Result[Option[Transactions]] = {
 
-    val url = s"$proxyURL/help-to-save-proxy/nsi-services/transactions"
+    val url = url"$proxyURL/help-to-save-proxy/nsi-services/transactions"
     val timerContext = metrics.getTransactionsTimer.time()
     EitherT[Future, String, Option[Transactions]](
       http
-        .get(
-          url,
-          Map("nino" -> nino, "correlationId" -> correlationId, "version" -> getAccountVersion, "systemId" -> systemId))
+        .get(url).transform(_
+        .withQueryStringParameters("nino" -> nino, "correlationId" -> correlationId, "version" -> getAccountVersion, "systemId" -> systemId))
+        .execute[HttpResponse]
         .map[Either[String, Option[Transactions]]] { response =>
           val _ = timerContext.stop()
           response.status match {
