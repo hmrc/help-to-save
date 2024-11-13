@@ -73,12 +73,12 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse) =
       proxyConnector
         .createAccount(expectedPayload)(*, *)
-        .returns(toFuture(response))
+        .returns(toFuture(Right(response)))
 
     def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse) =
       proxyConnector
         .updateEmail(expectedPayload)(*, *)
-        .returns(toFuture(response))
+        .returns(toFuture(Right(response)))
 
     def mockUserCapServiceUpdate(result: Either[String, Unit]) =
       userCapService

@@ -34,9 +34,9 @@ import uk.gov.hmrc.helptosave.services.{BarsService, HelpToSaveService, UserCapS
 import uk.gov.hmrc.helptosave.util.JsErrorOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, toFuture}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class HelpToSaveController @Inject()(
@@ -73,11 +73,20 @@ class HelpToSaveController @Inject()(
                 logger.warn(s"couldn't delete email for DE user due to: $error", nino)
                 toFuture(InternalServerError)
               },
-              _ => createAccount(createAccountRequest, additionalParams)
+              _ => createAccount(createAccountRequest, additionalParams).flatMap {
+                case Right(result) => result
+              }
             )
             .flatMap(identity)
         } else {
-          createAccount(createAccountRequest, additionalParams)
+          createAccount(createAccountRequest, additionalParams).flatMap {
+            case Right(result) => result
+            case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
+              upstreamErrorResponse.statusCode match {
+                case 409 => Conflict(ErrorResponse("Upstream Error /create-account", upstreamErrorResponse.message).toJson())
+                case 400 => BadRequest(ErrorResponse("Upstream Error /create-account", upstreamErrorResponse.message).toJson())
+              }
+          }
         }
 
       case Some(error: JsError) =>
@@ -94,8 +103,14 @@ class HelpToSaveController @Inject()(
   def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request =>
     request.body.asJson.map(_.validate[NSIPayload](NSIPayload.nsiPayloadReads(None))) match {
       case Some(JsSuccess(userInfo, _)) =>
-        proxyConnector.updateEmail(userInfo).map { response =>
+        proxyConnector.updateEmail(userInfo).flatMap {
+          case Right(response: HttpResponse) =>
           Option(response.body).fold[Result](Status(response.status))(body => Status(response.status)(body))
+          case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
+            logger.warn(
+              s"Call to updateEmail unsuccessful. Received unexpected status. ")
+
+            Option(upstreamErrorResponse.message).fold[Result](Status(upstreamErrorResponse.statusCode))(body => Status(upstreamErrorResponse.statusCode)(body))
         }
 
       case Some(error: JsError) =>
@@ -134,38 +149,46 @@ class HelpToSaveController @Inject()(
   }
 
   private def createAccount(createAccountRequest: CreateAccountRequest, additionalParams: (String, String))(
-    implicit hc: HeaderCarrier) = {
+    implicit hc: HeaderCarrier):Future[Either[UpstreamErrorResponse,Result]] = {
     val payload = createAccountRequest.payload
     val nino = payload.nino
-    proxyConnector.createAccount(payload).map { response =>
-      if (response.status === CREATED || response.status === CONFLICT) {
-        Try {
-          (response.json \ "accountNumber").as[String]
-        } match {
-          case Success(accountNumber) =>
-            enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, Some(accountNumber))
-          case _ =>
+    proxyConnector.createAccount(payload).map(response => {
+        response.map(httpResponse => {
+          if (httpResponse.status === CREATED) {
+            Try {
+              (httpResponse.json \ "accountNumber").as[String]
+            } match {
+              case Success(accountNumber) =>
+                enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, Some(accountNumber))
+              case _ =>
+                logger.warn("No account number was found in create account NSI response")
+                enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, None)
+            }
+          }
+
+          if (httpResponse.status === CREATED) {
+            auditor.sendEvent(
+              AccountCreated(payload, createAccountRequest.source, createAccountRequest.detailsManuallyEntered),
+              nino)
+
+            userCapService.update().onComplete {
+              case Success(_) =>
+                logger.debug("Successfully updated user cap counts after account creation", nino, additionalParams)
+              case Failure(e) =>
+                logger
+                  .warn(s"Could not update user cap counts after account creation: ${e.getMessage}", nino, additionalParams)
+            }
+          }
+          Option(httpResponse.body).fold[Result](Status(httpResponse.status))(body => Status(httpResponse.status)(body))
+        })
+      }.left.map{upstreamErrorResponse =>
+      if (upstreamErrorResponse.statusCode === CONFLICT) {
             logger.warn("No account number was found in create account NSI response")
             enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, None)
-        }
       }
-
-      if (response.status === CREATED) {
-        auditor.sendEvent(
-          AccountCreated(payload, createAccountRequest.source, createAccountRequest.detailsManuallyEntered),
-          nino)
-
-        userCapService.update().onComplete {
-          case Success(_) =>
-            logger.debug("Successfully updated user cap counts after account creation", nino, additionalParams)
-          case Failure(e) =>
-            logger
-              .warn(s"Could not update user cap counts after account creation: ${e.getMessage}", nino, additionalParams)
-        }
-      }
-
-      Option(response.body).fold[Result](Status(response.status))(body => Status(response.status)(body))
-    }
+      Option(upstreamErrorResponse.message).fold[Result](Status(upstreamErrorResponse.statusCode))(body => Status(upstreamErrorResponse.statusCode)(body))
+    UpstreamErrorResponse("Upstream Error status - Conflict",CONFLICT)
+    })
   }
 
   def enrolUserAndHandleResult(

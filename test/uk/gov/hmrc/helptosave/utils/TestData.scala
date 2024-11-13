@@ -106,7 +106,7 @@ trait TestData {
     Some("+4420599614")
   )
 
-  val eligibilityCheckResultJson =
+  val eligibilityCheckResultJson: String =
     """{
       | "result" : "Yes",
       | "resultCode" : 1,

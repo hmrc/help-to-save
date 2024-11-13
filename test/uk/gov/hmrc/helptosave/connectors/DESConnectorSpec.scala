@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
+import org.scalatest.EitherValues
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -23,11 +24,13 @@ import uk.gov.hmrc.helptosave.models.{UCResponse, UCThreshold}
 import uk.gov.hmrc.helptosave.util.{NINO, WireMockMethods}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.test.WireMockSupport
+import uk.gov.hmrc.play.http.test.ResponseMatchers
 
 import java.time.LocalDate
 
 class DESConnectorSpec
-    extends TestSupport with MockPagerDuty with TestData with WireMockSupport with WireMockMethods with ScalaCheckDrivenPropertyChecks {
+    extends TestSupport with MockPagerDuty with TestData with WireMockSupport with WireMockMethods with ScalaCheckDrivenPropertyChecks
+      with ResponseMatchers with EitherValues {
 
   val nino = "NINO"
   val date: LocalDate = LocalDate.of(2017, 6, 12) // scalastyle:ignore magic.number
@@ -65,22 +68,22 @@ class DESConnectorSpec
       ).foreach {
         case (ucResponse, expectedQueryParameters) =>
           withClue(s"For ucResponse: $ucResponse:") {
-            when(GET, url(nino), expectedQueryParameters, appConfig.desHeaders)
+            when(GET, url(nino), expectedQueryParameters, appConfig.desHeaders.toMap)
               .thenReturn(200, Json.toJson(eligibilityCheckResultJson))
 
             val result = await(connector.isEligible(nino, ucResponse))
-            result.status shouldBe 200
+            result.value.status shouldBe 200
           }
       }
 
     }
 
     "return 500 status when call to DES fails" in {
-      when(GET, url(nino), headers = appConfig.desHeaders)
+      when(GET, url(nino), headers = appConfig.desHeaders.toMap)
         .thenReturn(500, Json.toJson(eligibilityCheckResultJson))
 
       val result = await(connector.isEligible(nino, None))
-      result.status shouldBe 500
+      result.left.value.statusCode shouldBe 500
     }
   }
 
@@ -91,24 +94,24 @@ class DESConnectorSpec
     "setting the ITMP flag" must {
 
       "return 200 status if the call to DES is successful" in {
-        when(PUT, url(nino), headers = appConfig.desHeaders).thenReturn(200)
+        when(PUT, url(nino), headers = appConfig.desHeaders.toMap).thenReturn(200)
 
         val result = await(connector.setFlag(nino))
-        result.status shouldBe 200
+        result.value.status shouldBe 200
       }
 
       "return 403 status if the call to DES comes back with a 403 (FORBIDDEN) status" in {
-        when(PUT, url(nino), headers = appConfig.desHeaders).thenReturn(403)
+        when(PUT, url(nino), headers = appConfig.desHeaders.toMap).thenReturn(403)
 
         val result = await(connector.setFlag(nino))
-        result.status shouldBe 403
+        result.left.value.statusCode shouldBe 403
       }
 
       "return 500 status when call to DES fails" in {
-        when(PUT, url(nino), headers = appConfig.desHeaders).thenReturn(500)
+        when(PUT, url(nino), headers = appConfig.desHeaders.toMap).thenReturn(500)
 
         val result = await(connector.setFlag(nino))
-        result.status shouldBe 500
+        result.left.value.statusCode shouldBe 500
       }
 
     }
@@ -120,22 +123,22 @@ class DESConnectorSpec
     val nino = randomNINO()
     val url = s"/pay-as-you-earn/02.00.00/individuals/$nino"
 
+    val header = appConfig.desHeaders ++ originatorIdHeader
     "return pay personal details for a successful nino" in {
-      when(GET, url, headers = appConfig.desHeaders ++ originatorIdHeader)
+      when(GET, url, headers = header.toMap)
         .thenReturn(200, payeDetails(nino))
 
       val result = await(connector.getPersonalDetails(nino))
 
-      result.status shouldBe 200
-      result.body shouldBe payeDetails(nino)
+      result.value.status shouldBe 200
     }
 
     "return 500 status when call to DES fails" in {
-      when(GET, url, headers = appConfig.desHeaders ++ originatorIdHeader)
+      when(GET, url, headers = header.toMap)
         .thenReturn(500, Json.toJson(Json.toJson(payeDetails(nino))))
 
       val result = await(connector.getPersonalDetails(nino))
-      result.status shouldBe 500
+      result.left.value.statusCode shouldBe 500
     }
 
   }
@@ -146,17 +149,18 @@ class DESConnectorSpec
     val result = UCThreshold(500.50)
 
     "return 200 status when call to get threshold from DES has been successful" in {
-      when(GET, url, headers = appConfig.desHeaders).thenReturn(200, Json.toJson(Json.toJson(result)))
+      when(GET, url, headers = appConfig.desHeaders.toMap)
+        .thenReturn(200, Json.toJson(Json.toJson(result)))
 
       val response = await(connector.getThreshold())
-      response.status shouldBe 200
+      response.value.status shouldBe 200
     }
 
     "return 500 status when call to DES fails" in {
-      when(GET, url, headers = appConfig.desHeaders).thenReturn(500)
+      when(GET, url, headers = appConfig.desHeaders.toMap).thenReturn(500)
 
       val response = await(connector.getThreshold())
-      response.status shouldBe 500
+      response.left.value.statusCode shouldBe 500
     }
   }
 

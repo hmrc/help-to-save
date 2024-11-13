@@ -24,9 +24,9 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
 import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationRequest, BankDetailsValidationResult}
-import uk.gov.hmrc.helptosave.util.{NINO, UnitSpec}
+import uk.gov.hmrc.helptosave.util.{NINO, UnitSpec, toFuture}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
-import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
 
 import scala.concurrent.Future
 
@@ -36,10 +36,10 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
   val mockAuditor = mock[HTSAuditor]
   val returnHeaders = Map[String, Seq[String]]()
-  def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: Option[HttpResponse]): ScalaOngoingStubbing[Future[HttpResponse]] =
+  def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: HttpResponse): ScalaOngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
     mockBarsConnector
       .validate(barsRequest,*)(*, *)
-      .returns(response.fold[Future[HttpResponse]](Future.failed(new Exception("")))(r => Future.successful(r)))
+      .returns(toFuture(Right(response)))
 
   def mockAuditBarsEvent(expectedEvent: BARSCheck, nino: NINO) =
     mockAuditor
@@ -72,7 +72,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       "handle the case when the bank details are valid and the sort code exists" in {
         val response = newResponse("yes", "yes")
 
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
+          mockBarsConnector(barsRequest)((HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
         result shouldBe Right(BankDetailsValidationResult(isValid = true, sortCodeExists = true))
@@ -81,7 +81,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       "handle the case when the bank details are not valid" in {
         val response = newResponse("no", "no")
 
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
+          mockBarsConnector(barsRequest)((HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
         result shouldBe Right(BankDetailsValidationResult(isValid = false, sortCodeExists = false))
@@ -90,7 +90,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       "handle the case when the bank details are valid but the sort code does not exist" in {
         val response = newResponse("yes", "no")
 
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
+          mockBarsConnector(barsRequest)((HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
         result shouldBe Right(BankDetailsValidationResult(isValid = true, sortCodeExists = false))
@@ -99,7 +99,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       "handle the case when the bank details are indeterminate" in {
         val response = newResponse("indeterminate", "no")
 
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
+          mockBarsConnector(barsRequest)((HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
         result shouldBe Right(BankDetailsValidationResult(isValid = true, sortCodeExists = false))
@@ -108,7 +108,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       "handle the case when the bank details are valid but the sort code response cannot be parsed" in {
         val response = newResponse("yes", "blah")
 
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
+          mockBarsConnector(barsRequest)((HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         val result = await(service.validate(barsRequest))
         result.isLeft shouldBe true
@@ -125,7 +125,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
             |  "directDebitInstructionsDisallowed": "yes"
             |}""".stripMargin
 
-          mockBarsConnector(barsRequest)(Some(HttpResponse(200, Json.parse(response), returnHeaders)))
+          mockBarsConnector(barsRequest)((HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
         mockPagerDutyAlert("error parsing the response json from bars check")
         val result = await(service.validate(barsRequest))
@@ -133,14 +133,16 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       }
 
       "handle unsuccessful response from bars check" in {
-        mockBarsConnector(barsRequest)(Some(HttpResponse(400, "")))
+        mockBarsConnector(barsRequest)((HttpResponse(400, "")))
         mockPagerDutyAlert("unexpected status from bars check")
         val result = await(service.validate(barsRequest))
         result shouldBe Left("unexpected status from bars check")
       }
 
       "recover from unexpected errors" in {
-        mockBarsConnector(barsRequest)(None)
+        mockBarsConnector
+          .validate(barsRequest, *)(*, *)
+          .returns(toFuture(Left(UpstreamErrorResponse("",500))))
         mockPagerDutyAlert("unexpected error from bars check")
         val result = await(service.validate(barsRequest))
         result shouldBe Left("unexpected error from bars check")

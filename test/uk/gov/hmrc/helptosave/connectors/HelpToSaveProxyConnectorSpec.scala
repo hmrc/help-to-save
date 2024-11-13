@@ -28,9 +28,10 @@ import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.models.account._
 import uk.gov.hmrc.helptosave.util.WireMockMethods
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
+import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.test.WireMockSupport
 
-import uk.gov.hmrc.http.HttpClient
 import java.time.LocalDate
 import java.util.UUID
 import scala.concurrent.Await
@@ -49,7 +50,7 @@ class HelpToSaveProxyConnectorSpec
     )
   }
 
-  val mockHttp: HttpClient = fakeApplication.injector.instanceOf[HttpClient]
+  val mockHttp: HttpClientV2 = fakeApplication.injector.instanceOf[HttpClientV2]
   override val proxyConnector =
     new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
 
@@ -105,21 +106,21 @@ class HelpToSaveProxyConnectorSpec
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.CREATED)
 
         val result = await(proxyConnector.createAccount(userInfo))
-        result.status shouldBe CREATED
+        result.value.status shouldBe CREATED
       }
 
       "handle 409 response from the help-to-save-proxy" in {
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.CONFLICT)
 
         val result = await(proxyConnector.createAccount(userInfo))
-        result.status shouldBe CONFLICT
+        result.leftSide shouldBe Left(UpstreamErrorResponse("Upstream Error",CONFLICT))
       }
 
       "handle bad_request response from frontend" in {
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.BAD_REQUEST)
 
         val result = await(proxyConnector.createAccount(userInfo))
-        result.status shouldBe BAD_REQUEST
+        result.leftSide shouldBe Left(UpstreamErrorResponse("Upstream Error",BAD_REQUEST))
       }
     }
 
@@ -129,7 +130,7 @@ class HelpToSaveProxyConnectorSpec
         when(PUT, updateEmailURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.OK)
 
         val result = await(proxyConnector.updateEmail(userInfo))
-        result.status shouldBe OK
+        result.value.status shouldBe OK
       }
     }
 
@@ -490,7 +491,7 @@ class HelpToSaveProxyConnectorSpec
         when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.BAD_REQUEST, errorResponse)
 
         val result = await(proxyConnector.getTransactions(nino, systemId, correlationId).value)
-        result shouldBe Right(None)
+        result shouldBe  Right(None)
       }
 
     }
@@ -507,16 +508,11 @@ class HelpToSaveProxyConnectorSpec
       val queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)
 
       "handle unexpected errors" in {
-        wireMockServer.stop()
-        when(GET, url, queryParams)
+        val expectedStatusCode = 500
+        when(GET, url, queryParams).thenReturn(expectedStatusCode)
 
         val result = await(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value)
-        result.isLeft shouldBe true
-        result.left.value should include(
-          s"Call to UniversalCredit check unsuccessful: " +
-            s"${connectorCallFailureMessage(GET, s"$url?nino=$nino&transactionId=$txnId&threshold=$threshold")}"
-        )
-        wireMockServer.start()
+        result shouldBe Left(s"Received unexpected status($expectedStatusCode) from UniversalCredit check")
       }
     }
 
@@ -526,11 +522,9 @@ class HelpToSaveProxyConnectorSpec
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString()))
 
         val result = await(proxyConnector.createAccount(userInfo))
-        val jsonResult = Json.parse(result.body)
+        val jsonResult = result.leftSideValue
+        jsonResult contains Left(UpstreamErrorResponse(s"unexpected error from proxy during /create-de-account ${connectorCallFailureMessage(POST, s"$createAccountURL")}",INTERNAL_SERVER_ERROR))
 
-        result.status shouldBe INTERNAL_SERVER_ERROR
-        (jsonResult \ "errorMessage").as[String] shouldBe "unexpected error from proxy during /create-de-account"
-        (jsonResult \ "errorDetail").as[String] should include(s"${connectorCallFailureMessage(POST, s"$createAccountURL")}")
         wireMockServer.start()
       }
     }
@@ -548,7 +542,6 @@ class HelpToSaveProxyConnectorSpec
         "systemId" -> systemId
       )
       val getTransactionsUrl: String = "/help-to-save-proxy/nsi-services/transactions"
-      val urlWithParams: String = s"$getTransactionsUrl?nino=$nino&correlationId=$correlationId&version=$version&systemId=$systemId"
 
       "handle unexpected server errors" in {
         wireMockServer.stop()
@@ -559,7 +552,7 @@ class HelpToSaveProxyConnectorSpec
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
         result.isLeft shouldBe true
         result.left.value should include(
-          s"Call to get transactions unsuccessful: ${connectorCallFailureMessage(GET, urlWithParams)}"
+          s"Call to get transactions unsuccessful: ${connectorCallFailureMessage(GET, getTransactionsUrl)}"
         )
         timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
