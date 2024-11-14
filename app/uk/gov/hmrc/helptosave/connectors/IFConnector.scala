@@ -18,20 +18,22 @@ package uk.gov.hmrc.helptosave.connectors
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[IFConnectorImpl])
 trait IFConnector {
-  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[HttpResponse]
+  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]]
 }
 
 @Singleton
-class IFConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig, ec: ExecutionContext)
+class IFConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig, ec: ExecutionContext)
     extends IFConnector with Logging {
 
   val payeURL: String = servicesConfig.baseUrl("if")
@@ -40,15 +42,15 @@ class IFConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig
   val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
     "microservice.services.paye-personal-details.originatorId")
 
-  def payePersonalDetailsUrl(nino: String): String = s"$payeURL$root/pay-as-you-earn/02.00.00/individuals/$nino"
+  def payePersonalDetailsUrl(nino: String): URL = url"$payeURL$root/pay-as-you-earn/02.00.00/individuals/$nino"
 
-  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     logger.info(s"[IFConnector][getPersonalDetails] GET request: " +
-      s" header - ${appConfig.ifHeaders + originatorIdHeader}" +
+      s" header - ${appConfig.ifHeaders:+ originatorIdHeader}" +
       s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}")
-    http.get(payePersonalDetailsUrl(nino), headers = appConfig.ifHeaders + originatorIdHeader)(
-      hc.copy(authorization = None),
-      ec)
+
+    http.get(payePersonalDetailsUrl(nino)).transform(_.addHttpHeaders(appConfig.ifHeaders:+ originatorIdHeader:_*))
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
 }

@@ -19,37 +19,39 @@ package uk.gov.hmrc.helptosave.connectors
 import cats.Show
 import cats.syntax.show._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.libs.json.{JsNull, JsValue, Writes}
+import play.api.libs.json.{JsNull, JsValue}
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.http.HttpClient.HttpClientOps
 import uk.gov.hmrc.helptosave.models.UCResponse
 import uk.gov.hmrc.helptosave.util.{Logging, NINO}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DESConnectorImpl])
 trait DESConnector {
   def isEligible(nino: String, ucResponse: Option[UCResponse])(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse]
+    ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
 
-  def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
 
-  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
 
-  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse]
+  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
 }
 
 @Singleton
-class DESConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig)
+class DESConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig)
     extends DESConnector with Logging {
 
   val itmpECBaseURL: String = servicesConfig.baseUrl("itmp-eligibility-check")
   val itmpEnrolmentURL: String = servicesConfig.baseUrl("itmp-enrolment")
   val payeURL: String = servicesConfig.baseUrl("paye-personal-details")
-  val itmpThresholdURL: String = s"${servicesConfig.baseUrl("itmp-threshold")}/universal-credits/threshold-amount"
+  val itmpThresholdURL: URL = url"${servicesConfig.baseUrl("itmp-threshold")}/universal-credits/threshold-amount"
 
   implicit val booleanShow: Show[Boolean] = Show.show(if (_) "Y" else "N")
 
@@ -58,51 +60,58 @@ class DESConnectorImpl @Inject()(http: HttpClient, servicesConfig: ServicesConfi
   val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
     "microservice.services.paye-personal-details.originatorId")
 
-  def eligibilityCheckUrl(nino: String): String = s"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
+  def eligibilityCheckUrl(nino: String): URL = url"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
 
-  def eligibilityCheckQueryParameters(ucResponse: Option[UCResponse]): Map[String, String] =
+  def eligibilityCheckQueryParameters(ucResponse: Option[UCResponse]) =
     ucResponse match {
-      case Some(UCResponse(a, Some(b))) => Map("universalCreditClaimant" -> a.show, "withinThreshold" -> b.show)
-      case Some(UCResponse(a, None))    => Map("universalCreditClaimant" -> a.show)
-      case _                            => Map()
+      case Some(UCResponse(a, Some(b))) => Seq("universalCreditClaimant" -> a.show, "withinThreshold" -> b.show)
+      case Some(UCResponse(a, None))    => Seq("universalCreditClaimant" -> a.show)
+      case _                            => Seq()
     }
 
-  def setFlagUrl(nino: NINO): String = s"$itmpEnrolmentURL/help-to-save/accounts/$nino"
+  def setFlagUrl(nino: NINO): URL = url"$itmpEnrolmentURL/help-to-save/accounts/$nino"
 
-  def payePersonalDetailsUrl(nino: String): String = s"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
+  def payePersonalDetailsUrl(nino: String): URL = url"$payeURL/pay-as-you-earn/02.00.00/individuals/$nino"
 
   override def isEligible(nino: String, ucResponse: Option[UCResponse] = None)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] = {
+    ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     logger.info(s"[DESConnector][isEligible] GET request: " +
       s" header - ${appConfig.desHeaders}" +
       s" eligibilityCheckUrl - ${eligibilityCheckUrl(nino)}")
-    http.get(eligibilityCheckUrl(nino), eligibilityCheckQueryParameters(ucResponse), appConfig.desHeaders)(
-      hc.copy(authorization = None),
-      ec)
+
+    http.get(eligibilityCheckUrl(nino))(hc.copy(authorization = None)).transform(_
+      .withQueryStringParameters(eligibilityCheckQueryParameters(ucResponse):_*)
+      .addHttpHeaders(appConfig.desHeaders:_*))
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
-  override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+  override def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     logger.info(s"[DESConnector][setFlag] PUT request: " +
       s" header - ${appConfig.desHeaders} " +
       s" setFlagUrl - ${setFlagUrl(nino)}")
-    http.put(setFlagUrl(nino), body, appConfig.desHeaders)(Writes.jsValueWrites, hc.copy(authorization = None), ec)
+    http.put(setFlagUrl(nino))(hc.copy(authorization = None)).transform(_
+      .addHttpHeaders(appConfig.desHeaders: _*))
+      .withBody(body)
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
-  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     logger.info(s"[DESConnector][getPersonalDetails] GET request: " +
-      s" header - ${appConfig.desHeaders+ originatorIdHeader}" +
+      s" header - ${appConfig.desHeaders:+ originatorIdHeader}" +
       s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}")
-    http.get(payePersonalDetailsUrl(nino), headers = appConfig.desHeaders + originatorIdHeader)(
-      hc.copy(authorization = None),
-      ec)
+    http.get(payePersonalDetailsUrl(nino))(hc.copy(authorization = None)).transform(_
+      .addHttpHeaders(appConfig.desHeaders:+ originatorIdHeader:_*))
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
-  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     logger.info(s"[DESConnector][getThreshold] GET request: " +
       s"itmpThresholdURL - $itmpThresholdURL" +
-      s" header - ${appConfig.desHeaders + originatorIdHeader}")
-    http.get(itmpThresholdURL, headers = appConfig.desHeaders)(hc.copy(authorization = None), ec)
+      s" header - ${appConfig.desHeaders:+ originatorIdHeader}")
+    http.get(itmpThresholdURL)(hc.copy(authorization = None)).transform(_
+      .addHttpHeaders(appConfig.desHeaders:_*))
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
 }

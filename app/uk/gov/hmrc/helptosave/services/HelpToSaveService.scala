@@ -34,12 +34,11 @@ import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, NINO, PagerDutyAlerting, Result, maskNino, toFuture}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.chaining.scalaUtilChainingOps
-import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[HelpToSaveServiceImpl])
 trait HelpToSaveService {
@@ -91,8 +90,8 @@ class HelpToSaveServiceImpl @Inject()(
 
       dESConnector
         .setFlag(nino)
-        .map[Either[String, Unit]] {
-          response =>
+        .flatMap[Either[String, Unit]] {
+          case Right(response) =>
             val time = timerContext.stop()
 
             val additionalParams =
@@ -125,15 +124,12 @@ class HelpToSaveServiceImpl @Inject()(
                       response.body)
                   } " +
                     s"(round-trip time: ${nanosToPrettyString(time)})")
-            }
         }
-        .recover {
-          case NonFatal(e) =>
+          case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
             val time = timerContext.stop()
-            metrics.itmpSetFlagErrorCounter.inc()
-            pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
-            Left(
-              s"Encountered unexpected error while trying to set the ITMP flag: ${e.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
+            pagerDutyAlerting.alert("Failed to make call to check eligibility")
+            metrics.itmpEligibilityCheckErrorCounter.inc()
+            Left(s"Call to check eligibility unsuccessful: ${upstreamErrorResponse.getMessage} (round-trip time: ${timeString(time)})")
         }
     })
 
@@ -146,38 +142,39 @@ class HelpToSaveServiceImpl @Inject()(
         (dESConnector.getPersonalDetails(nino), "[DES]")
       }
     val timerContext = metrics.payePersonalDetailsTimer.time()
-    response.map { response =>
-        val time = timerContext.stop()
-        val params = (response: HttpResponse) => "CorrelationId" -> response.correlationId
-      response.status match {
-          case Status.OK =>
-            response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap {
-              case Left(e) =>
-                metrics.payePersonalDetailsErrorCounter.inc()
-                logger.warn(
-                  s"$tag Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
-                  nino, params(response))
-              case Right(_) =>
-                logger.debug(
-                  s"$tag Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
-                  nino, params(response))
-            }
-          case other =>
-            logger.warn(
-              s"$tag Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
-              nino, params(response))
-            metrics.payePersonalDetailsErrorCounter.inc()
-            pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
-            Left(s"Received unexpected status $other")
-        }
-      }
-      .recover { e =>
-        val time = timerContext.stop()
-        pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
-        metrics.payePersonalDetailsErrorCounter.inc()
-        Left(s"Call to paye-personal-details unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
-      }
-      .pipe(EitherT(_))
+   response.flatMap {
+     case Right(response) =>
+       val time = timerContext.stop()
+       val params = (response: HttpResponse) => "CorrelationId" -> response.correlationId
+       response.status match {
+         case Status.OK =>
+           response.parseJsonWithoutLoggingBody[PayePersonalDetails] tap {
+             case Left(e) =>
+               metrics.payePersonalDetailsErrorCounter.inc()
+               logger.warn(
+                 s"$tag Could not parse JSON response from paye-personal-details, received 200 (OK): $e ${timeString(time)}",
+                 nino, params(response))
+             case Right(_) =>
+               logger.debug(
+                 s"$tag Call to check paye-personal-details successful, received 200 (OK) ${timeString(time)}",
+                 nino, params(response))
+           }
+         case other =>
+           logger.warn(
+             s"$tag Call to paye-personal-details unsuccessful. Received unexpected status $other ${timeString(time)}",
+             nino, params(response))
+           metrics.payePersonalDetailsErrorCounter.inc()
+           pagerDutyAlerting.alert("Received unexpected http status in response to paye-personal-details")
+           Left(s"Received unexpected status $other")
+       }
+
+   case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
+     val time = timerContext.stop()
+     pagerDutyAlerting.alert("Failed to make call to paye-personal-details")
+     metrics.payePersonalDetailsErrorCounter.inc()
+     Left(s"Call to paye-personal-details unsuccessful: ${upstreamErrorResponse.getMessage} (round-trip time: ${timeString(time)})")
+   }
+     .pipe(EitherT(_))
   }
 
   private def getEligibility(nino: NINO, ucResponse: Option[UCResponse])(
@@ -188,8 +185,8 @@ class HelpToSaveServiceImpl @Inject()(
 
       dESConnector
         .isEligible(nino, ucResponse)
-        .map[Either[String, EligibilityCheckResult]] {
-          response =>
+        .flatMap {
+          case Right(response)  =>
             val time = timerContext.stop()
 
             val additionalParams = "DesCorrelationId" -> response.correlationId
@@ -224,14 +221,12 @@ class HelpToSaveServiceImpl @Inject()(
                 pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
                 Left(s"Received unexpected status $other")
             }
-
-        }
-        .recover {
-          case e =>
+          case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
             val time = timerContext.stop()
-            pagerDutyAlerting.alert("Failed to make call to check eligibility")
-            metrics.itmpEligibilityCheckErrorCounter.inc()
-            Left(s"Call to check eligibility unsuccessful: ${e.getMessage} (round-trip time: ${timeString(time)})")
+            metrics.itmpSetFlagErrorCounter.inc()
+            pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
+            Left(s"Encountered unexpected error while trying to set the ITMP flag: ${upstreamErrorResponse.getMessage} (round-trip time: ${nanosToPrettyString(time)})")
+
         }
     })
 

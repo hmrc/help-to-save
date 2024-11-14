@@ -16,17 +16,21 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
+import org.scalatest.EitherValues
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.WireMockMethods
-import uk.gov.hmrc.helptosave.utils.TestSupport
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.test.WireMockSupport
+import uk.gov.hmrc.play.http.test.ResponseMatchers
 
 import java.util.UUID
 
-class BarsConnectorSpec extends TestSupport with WireMockSupport with WireMockMethods {
+class BarsConnectorSpec extends TestSupport with MockPagerDuty with TestData with WireMockSupport with WireMockMethods with ScalaCheckDrivenPropertyChecks
+  with ResponseMatchers with EitherValues{
 
   override lazy val additionalConfig: Configuration = {
     Configuration(
@@ -69,9 +73,8 @@ class BarsConnectorSpec extends TestSupport with WireMockSupport with WireMockMe
 
         val result =
           await(connector.validate(BankDetailsValidationRequest("AE123456C", "123456", "0201234"), trackingId))
-
-        result.status shouldBe 200
-        result.json shouldBe Json.parse(response)
+        result.value.status shouldBe 200
+        result.value.body shouldBe Json.parse(response).toString()
       }
     }
   }
