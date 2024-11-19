@@ -42,7 +42,7 @@ class IFConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesConf
   val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
     "microservice.services.paye-personal-details.originatorId")
 
-  def payePersonalDetailsUrl(nino: String): URL = url"$payeURL$root/pay-as-you-earn/02.00.00/individuals/$nino"
+  def payePersonalDetailsUrl(nino: String): URL = url"${payeURL+root}/pay-as-you-earn/02.00.00/individuals/$nino"
 
   override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     logger.info(s"[IFConnector][getPersonalDetails] GET request: " +
