@@ -27,6 +27,7 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Updates}
 import play.api.Logging
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
 import uk.gov.hmrc.helptosave.util.TryOps._
@@ -35,6 +36,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -49,12 +51,15 @@ trait EmailStore {
 }
 
 @Singleton
-class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: Metrics)(implicit ec: ExecutionContext)
+class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: Metrics, appConfig: AppConfig)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[EmailData](
       mongoComponent = mongo,
       collectionName = "emails",
       domainFormat = EmailData.emailDataFormat,
-      indexes = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex")))
+      indexes = Seq(IndexModel(ascending("nino"),
+        IndexOptions().name("ninoIndex")
+      .expireAfter(appConfig.ttlEmails, TimeUnit.HOURS))),
+      replaceIndexes = true
     ) with EmailStore with Logging {
 
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"

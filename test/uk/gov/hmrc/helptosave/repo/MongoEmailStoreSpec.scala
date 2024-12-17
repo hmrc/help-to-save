@@ -45,7 +45,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       .returns(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
 
   def newMongoEmailStore(mongoComponent: MongoComponent) =
-    new MongoEmailStore(mongoComponent, crypto, mockMetrics)
+    new MongoEmailStore(mongoComponent, crypto, mockMetrics, appConfig)
 
   "The MongoEmailStore" when {
     val emailStore = repository
