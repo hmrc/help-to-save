@@ -64,4 +64,7 @@ class AppConfig @Inject()(
       })
       .toSeq
   }
+  lazy val ttlEnrolments: Long = servicesConfig.getInt("mongodb.enrolments-cache-ttl.expiry-time")
+  lazy val ttlEmails: Long = servicesConfig.getInt("mongodb.emails-cache-ttl.expiry-time")
+  lazy val ttlUsercap: Long = servicesConfig.getInt("mongodb.usercap-cache-ttl.expiry-time")
 }

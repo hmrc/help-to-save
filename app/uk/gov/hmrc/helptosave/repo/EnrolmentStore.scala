@@ -25,6 +25,7 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json._
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.helptosave.models.account.AccountNumber
@@ -39,6 +40,7 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -96,12 +98,15 @@ object EnrolmentStore {
 }
 
 @Singleton
-class MongoEnrolmentStore @Inject()(val mongo: MongoComponent, metrics: Metrics)(implicit ec: ExecutionContext)
+class MongoEnrolmentStore @Inject()(val mongo: MongoComponent, metrics: Metrics, appConfig: AppConfig)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[EnrolmentData](
       mongoComponent = mongo,
       collectionName = "enrolments",
       domainFormat = EnrolmentData.ninoFormat,
-      indexes = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex")))
+      indexes = Seq(IndexModel(ascending("nino"),
+        IndexOptions().name("ninoIndex")
+      .expireAfter(appConfig.ttlEnrolments, TimeUnit.HOURS))),
+      replaceIndexes = true
     ) with EnrolmentStore with Logging {
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
 

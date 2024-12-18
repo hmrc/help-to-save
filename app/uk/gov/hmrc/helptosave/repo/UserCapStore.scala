@@ -22,6 +22,7 @@ import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -29,6 +30,7 @@ import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZoneId}
+import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoUserCapStore])
@@ -39,12 +41,15 @@ trait UserCapStore {
 }
 
 @Singleton
-class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+class MongoUserCapStore @Inject()(mongo: MongoComponent, appConfig: AppConfig)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[UserCap](
       mongoComponent = mongo,
       collectionName = "usercap",
       domainFormat = UserCap.userCapFormat,
-      indexes = Seq(IndexModel(ascending("usercap"), IndexOptions().name("usercapIndex")))
+      indexes = Seq(IndexModel(ascending("usercap"),
+        IndexOptions().name("usercapIndex")
+      .expireAfter(appConfig.ttlUsercap, TimeUnit.HOURS))),
+        replaceIndexes = true
     ) with UserCapStore {
   private[repo] def doFind(): Future[Option[UserCap]] =
     preservingMdc {

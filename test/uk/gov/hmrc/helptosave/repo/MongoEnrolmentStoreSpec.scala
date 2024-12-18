@@ -45,7 +45,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
   val accountNumber = "1234567890"
 
   def newMongoEnrolmentStore(mongoComponent: MongoComponent) =
-    new MongoEnrolmentStore(mongoComponent, mockMetrics)
+    new MongoEnrolmentStore(mongoComponent, mockMetrics, appConfig)
 
   private val duration: FiniteDuration = 15.seconds
 

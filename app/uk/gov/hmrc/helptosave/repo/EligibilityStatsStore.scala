@@ -23,6 +23,7 @@ import org.mongodb.scala.bson.{BsonDocument, BsonValue}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
@@ -31,6 +32,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoEligibilityStatsStore])
@@ -39,12 +41,15 @@ trait EligibilityStatsStore {
 }
 
 @Singleton
-class MongoEligibilityStatsStore @Inject()(mongo: MongoComponent, metrics: Metrics)(implicit ec: ExecutionContext)
+class MongoEligibilityStatsStore @Inject()(mongo: MongoComponent, metrics: Metrics, appConfig: AppConfig)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[EnrolmentData](
       mongoComponent = mongo,
       collectionName = "enrolments",
       domainFormat = EnrolmentData.ninoFormat,
-      indexes = Seq(IndexModel(ascending("eligibilityReason"), IndexOptions().name("eligibilityReasonIndex")))
+      indexes = Seq(IndexModel(ascending("eligibilityReason"),
+        IndexOptions().name("eligibilityReasonIndex")
+        .expireAfter(appConfig.ttlEnrolments, TimeUnit.HOURS))),
+        replaceIndexes = true
     ) with EligibilityStatsStore with Logging {
 
   private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
