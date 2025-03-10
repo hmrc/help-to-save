@@ -18,13 +18,12 @@ package uk.gov.hmrc.helptosave.modules
 
 import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorRef
-import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import org.mockito.ArgumentMatchersSugar.*
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdConnectorProxyActor, UCThresholdManager}
+import uk.gov.hmrc.helptosave.actors.{ActorTestSupport, UCThresholdConnectorProxyActor}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
@@ -68,10 +67,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 
       eventually(PatienceConfiguration.Timeout(10.seconds), PatienceConfiguration.Interval(1.second)) {
-        val response = (orchestrator.thresholdManager ? UCThresholdManager.GetThresholdValue)
-          .mapTo[UCThresholdManager.GetThresholdValueResponse]
-
-        Await.result(response, 1.second).result shouldBe Some(threshold)
+        Await.result(orchestrator.getValue, 1.second) shouldBe Some(threshold)
       }
 
       // sleep here to ensure the mock ThresholdStore's storeUCThreshold method

@@ -23,6 +23,7 @@ import play.api.{Configuration, Environment, Mode}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.time.LocalDate
 import javax.inject.Inject
 import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters._
@@ -50,6 +51,15 @@ class AppConfig @Inject()(
 
   val thresholdAskTimeout: FiniteDuration =
     runModeConfiguration.get[FiniteDuration]("uc-threshold.ask-timeout")
+
+  val useMDTPThresholdConfig: Boolean = {
+    val effectiveDate = LocalDate.parse(runModeConfiguration.get[String]("mdtp-threshold.effective-date"))
+    val isActive = runModeConfiguration.get[Boolean]("mdtp-threshold.active")
+
+    isActive && !LocalDate.now().isBefore(effectiveDate)
+  }
+
+  val mdtpThresholdAmount: Double = runModeConfiguration.get[Double]("mdtp-threshold.amount")
 
   val createAccountVersion: String = servicesConfig.getString("nsi.create-account.version")
 
