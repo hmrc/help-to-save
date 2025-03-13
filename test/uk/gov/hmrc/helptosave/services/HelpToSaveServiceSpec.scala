@@ -24,6 +24,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.testkit.TestProbe
 import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.Mockito.when
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
@@ -34,19 +35,20 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
+import uk.gov.hmrc.helptosave.modules.{MDTPThresholdOrchestrator, ThresholdOrchestrator, ThresholdValueByConfigProvider, UCThresholdOrchestrator}
 import uk.gov.hmrc.helptosave.util._
-import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import javax.inject.Provider
 import scala.concurrent.Future
 
 class HelpToSaveServiceSpec
     extends ActorTestSupport("HelpToSaveServiceSpec") with MockPagerDuty
     with TestData with ScalaCheckDrivenPropertyChecks {
 
-  class TestThresholdProvider extends ThresholdManagerProvider {
+  class TestUCThresholdOrchestrator extends UCThresholdOrchestrator(system, mockPagerDuty, fakeApplication.injector.instanceOf[Configuration], mockDESConnector) {
     val probe: TestProbe = TestProbe()
     override val thresholdManager: ActorRef = probe.ref
   }
@@ -56,9 +58,18 @@ class HelpToSaveServiceSpec
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
   private val mockAuditor = mock[HTSAuditor]
   private val returnHeaders = Map[String, Seq[String]]()
+
+  private val mdtpMockThresholdOrchestrator = mock[MDTPThresholdOrchestrator]
+  private val mdtpthresholdValueByConfigProvider = mock[Provider[MDTPThresholdOrchestrator]]
+
+  private val ucMockThresholdOrchestrator = mock[UCThresholdOrchestrator]
+  private val ucThresholdValueByConfigProvider = mock[Provider[UCThresholdOrchestrator]]
+
   private val threshold = 1.23
 
-  private val thresholdManagerProvider = new TestThresholdProvider
+  private val testUCThresholdOrchestrator = new TestUCThresholdOrchestrator
+  private val thresholdValueByConfigProvider =
+    new ThresholdValueByConfigProvider(appConfig, ucThresholdValueByConfigProvider, mdtpthresholdValueByConfigProvider)
 
   private val service =
     new HelpToSaveServiceImpl(
@@ -68,7 +79,7 @@ class HelpToSaveServiceSpec
       mockAuditor,
       mockMetrics,
       mockPagerDuty,
-      thresholdManagerProvider)(
+      thresholdValueByConfigProvider)(
       transformer,
       new AppConfig(
         fakeApplication.injector.instanceOf[Configuration],
@@ -132,10 +143,20 @@ class HelpToSaveServiceSpec
     "handling eligibility calls" must {
       val nino = randomNINO()
 
-      def getEligibility(thresholdResponse: Option[Double]): Either[String, EligibilityCheckResponse] = {
+      def getEligibility(thresholdResponse: Option[Double]): Either[NINO, EligibilityCheckResponse] = {
+        when(ucThresholdValueByConfigProvider.get()).thenReturn(testUCThresholdOrchestrator)
+        when(mdtpthresholdValueByConfigProvider.get()).thenReturn(mdtpMockThresholdOrchestrator)
+
+        when(ucMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
+        when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
+
         val result = service.getEligibility(nino, "path").value
-        thresholdManagerProvider.probe.expectMsg(GetThresholdValue)
-        thresholdManagerProvider.probe.reply(GetThresholdValueResponse(thresholdResponse))
+
+        if (!appConfig.useMDTPThresholdConfig) {
+          testUCThresholdOrchestrator.probe.expectMsg(GetThresholdValue)
+          testUCThresholdOrchestrator.probe.reply(GetThresholdValueResponse(thresholdResponse))
+        }
+
         await(result)
       }
 
@@ -160,12 +181,12 @@ class HelpToSaveServiceSpec
       }
 
       "continue the eligibility check when the threshold cannot be retrieved and the applicant is eligible from a WTC perspective" in {
-          mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
-          mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
+        mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
+        mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
 
         getEligibility(None) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, None))
       }
-
+      
       "pass the UC params to DES if they are provided" in {
         val uCResponse = UCResponse(ucClaimant = true, Some(true))
         forAll { eligibilityCheckResponse: EligibilityCheckResult =>
@@ -268,7 +289,7 @@ class HelpToSaveServiceSpec
           mockAuditor,
           mockMetrics,
           mockPagerDuty,
-          thresholdManagerProvider)(
+          thresholdValueByConfigProvider)(
           transformer,
           new AppConfig(
             fakeApplication.injector.instanceOf[Configuration],
@@ -348,7 +369,7 @@ class HelpToSaveServiceSpec
           mockAuditor,
           mockMetrics,
           mockPagerDuty,
-          thresholdManagerProvider)(
+          thresholdValueByConfigProvider)(
           transformer,
           new AppConfig(
             fakeApplication.injector.instanceOf[Configuration],

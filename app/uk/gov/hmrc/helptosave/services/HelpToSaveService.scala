@@ -19,16 +19,14 @@ package uk.gov.hmrc.helptosave.services
 import cats.data.EitherT
 import cats.instances.future._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import org.apache.pekko.pattern.ask
 import play.api.http.Status
 import play.mvc.Http.Status.{FORBIDDEN, OK}
-import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.modules.ThresholdManagerProvider
+import uk.gov.hmrc.helptosave.modules.ThresholdValueByConfigProvider
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps.getApiCorrelationId
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
 import uk.gov.hmrc.helptosave.util.Logging._
@@ -61,7 +59,7 @@ class HelpToSaveServiceImpl @Inject()(
                                        auditor: HTSAuditor,
                                        metrics: Metrics,
                                        pagerDutyAlerting: PagerDutyAlerting,
-                                       ucThresholdProvider: ThresholdManagerProvider)(
+                                       ucThresholdProvider: ThresholdValueByConfigProvider)(
                                        implicit ninoLogMessageTransformer: LogMessageTransformer,
                                        appConfig: AppConfig)
   extends HelpToSaveService with Logging {
@@ -70,19 +68,13 @@ class HelpToSaveServiceImpl @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Result[EligibilityCheckResponse] =
     for {
-      threshold <- EitherT.liftF(getThresholdValue())
+      threshold <- EitherT.liftF(ucThresholdProvider.get().getValue)
       ucResponse <- EitherT.liftF(getUCDetails(nino, UUID.randomUUID(), threshold))
       result <- getEligibility(nino, ucResponse)
     } yield {
       auditor.sendEvent(EligibilityCheckEvent(nino, result, ucResponse, path), nino)
       EligibilityCheckResponse(result, threshold)
     }
-
-  private def getThresholdValue()(implicit ec: ExecutionContext): Future[Option[Double]] =
-    ucThresholdProvider.thresholdManager
-      .ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
-      .mapTo[GetThresholdValueResponse]
-      .map(r => r.result)
 
   def setFlag(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[Unit] =
     EitherT({
