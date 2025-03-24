@@ -23,6 +23,9 @@ import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
+import org.mongodb.scala.SingleObservableFuture
+import org.mongodb.scala.ObservableFuture
+
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -37,6 +40,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
+
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}

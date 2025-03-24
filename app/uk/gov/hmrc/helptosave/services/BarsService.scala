@@ -98,8 +98,7 @@ class BarsServiceImpl @Inject()(
                       logger.warn("BARS response: Unexpected Return for valid vank details", nino)
                       false
                     }
-
-                Future(sortCodeExists.map { BankDetailsValidationResult(accountNumbersValid, _) })
+                  Future(sortCodeExists.map { BankDetailsValidationResult(accountNumbersValid, _) })
               case _ =>
                 logger.warn(
                   s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}")

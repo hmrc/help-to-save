@@ -18,6 +18,7 @@ package uk.gov.hmrc.helptosave.connectors
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.libs.json.{Format, Json}
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.Logging

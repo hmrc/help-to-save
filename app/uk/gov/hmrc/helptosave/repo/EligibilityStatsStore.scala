@@ -21,6 +21,7 @@ import com.mongodb.client.model.Indexes._
 import com.mongodb.client.model.{Accumulators, Aggregates, Projections}
 import org.mongodb.scala.bson.{BsonDocument, BsonValue}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
+import org.mongodb.scala.ObservableFuture
 import play.api.Logging
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics

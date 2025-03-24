@@ -25,6 +25,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
 import play.api.http.Status.{BAD_REQUEST, CONFLICT}
 import play.api.libs.json.{Format, Json}
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
@@ -254,7 +255,7 @@ class HelpToSaveProxyConnectorImpl @Inject()(
                   logger.debug(s"Response body that failed to parse: ${response.body}}")
                   s"""Could not parse transactions response from NS&I, received 200 (OK), error=[${errors.toList
                     .mkString(",")}]"""
-                }, { transactions: Transactions =>
+                }, { (transactions: Transactions) =>
                   logger.info("Call to get transactions successful", nino, "correlationId" -> correlationId)
                   Some(transactions)
                 }

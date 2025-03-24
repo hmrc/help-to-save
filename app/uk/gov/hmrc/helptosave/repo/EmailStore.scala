@@ -25,6 +25,9 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import org.mongodb.scala.model.Filters.regex
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Updates}
+import org.mongodb.scala.SingleObservableFuture
+import org.mongodb.scala.ObservableFuture
+
 import play.api.Logging
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
