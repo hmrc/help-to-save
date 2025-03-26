@@ -187,7 +187,7 @@ class HelpToSaveController @Inject()(
             enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, None)
       }
       Option(upstreamErrorResponse.message).fold[Result](Status(upstreamErrorResponse.statusCode))(body => Status(upstreamErrorResponse.statusCode)(body))
-    UpstreamErrorResponse("Upstream Error status - Conflict",CONFLICT)
+      UpstreamErrorResponse("Upstream Error status - Conflict",CONFLICT)
     })
   }
 

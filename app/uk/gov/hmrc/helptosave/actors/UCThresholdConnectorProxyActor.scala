@@ -62,7 +62,7 @@ class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerti
        }
 
   override def receive: Receive = {
-    case GetThresholdValue => getThreshold().map(GetThresholdValueResponse).pipeTo(sender())
+    case GetThresholdValue => getThreshold().map(GetThresholdValueResponse.apply).pipeTo(sender())
   }
 }
 

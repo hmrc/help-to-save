@@ -134,7 +134,7 @@ class HelpToSaveServiceImpl @Inject()(
         (dESConnector.getPersonalDetails(nino), "[DES]")
       }
     val timerContext = metrics.payePersonalDetailsTimer.time()
-   response.flatMap {
+    response.flatMap {
      case Right(response) =>
        val time = timerContext.stop()
        val params = (response: HttpResponse) => "CorrelationId" -> response.correlationId

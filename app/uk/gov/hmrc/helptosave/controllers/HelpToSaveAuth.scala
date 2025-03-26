@@ -82,9 +82,9 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
           case GGCredId(_) =>
             authorised().retrieve(v2Nino) { retrievedNINO =>
               (nino, retrievedNINO) match {
-                case (Some(given), Some(retrieved)) =>
-                  if (given === retrieved) {
-                    action(request)(given)
+                case (Some(inputNino), Some(retrieved)) =>
+                  if (inputNino === retrieved) {
+                    action(request)(inputNino)
                   } else {
                     logger.warn("Given NINO did not match retrieved NINO")
                     toFuture(Forbidden)
