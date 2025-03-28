@@ -17,19 +17,21 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import cats.instances.future.*
+import org.mockito.Mockito.when
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
-import play.api.mvc.{Result => PlayResult}
+import play.api.mvc.Result as PlayResult
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino => v2Nino}
+import play.api.test.Helpers.*
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino as v2Nino}
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
-import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
-import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.*
+import uk.gov.hmrc.helptosave.models.*
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
+import org.mockito.ArgumentMatchers
+import org.mockito.ArgumentMatchers.any
 
 import scala.concurrent.Future
 
@@ -43,9 +45,9 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
 
     def mockEligibilityCheckerService(nino: NINO, expectedPath: String)(
       result: Either[String, EligibilityCheckResponse]): Unit =
-      eligibilityService
-        .getEligibility(nino, expectedPath)(*, *)
-        .returns(EitherT.fromEither[Future](result))
+      when(eligibilityService
+        .getEligibility(nino, expectedPath)(any, any))
+        .thenReturn(EitherT.fromEither[Future](result))
 
     val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector, testCC)
 

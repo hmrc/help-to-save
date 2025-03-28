@@ -17,8 +17,9 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import org.apache.pekko.util.Timeout
-import org.mockito.ArgumentMatchersSugar.*
-import play.api.http.Status._
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
+import play.api.http.Status.*
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
@@ -40,9 +41,9 @@ class UserCapControllerSpec extends AuthSupport {
 
     "checking if account creation is allowed " should {
       "return successful result" in {
-        userCapService
-          .isAccountCreateAllowed()(*)
-          .returns(toFuture(UserCapResponse()))
+        when(userCapService
+          .isAccountCreateAllowed()(any))
+          .thenReturn(toFuture(UserCapResponse()))
 
         mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         val result = controller.isAccountCreateAllowed()(FakeRequest())

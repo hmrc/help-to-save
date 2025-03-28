@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
-import uk.gov.hmrc.auth.core.retrieve._
+import uk.gov.hmrc.auth.core.retrieve.*
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
@@ -35,15 +36,15 @@ trait AuthSupport extends TestSupport {
 
   def mockAuth[A](predicate: Predicate, retrieval: Retrieval[A])(
     result: Either[Exception, A]) =
-    mockAuthConnector
-      .authorise(predicate, retrieval)(*, *)
-      .returns(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+    when(mockAuthConnector
+      .authorise(predicate, retrieval)(any, any))
+      .thenReturn(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
   def mockAuth[A](retrieval: Retrieval[A])(
     result: Either[Exception, A]) =
-    mockAuthConnector
-      .authorise(*, retrieval)(*, *)
-      .returns(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+    when(mockAuthConnector
+      .authorise(any, retrieval)(any, any))
+      .thenReturn(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
   def testWithGGAndPrivilegedAccess(f: (() => Unit) => Unit): Unit = {
     withClue("For GG access: ") {

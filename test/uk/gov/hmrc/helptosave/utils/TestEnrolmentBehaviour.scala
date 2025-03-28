@@ -17,8 +17,10 @@
 package uk.gov.hmrc.helptosave.utils
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.controllers.EnrolmentBehaviour
@@ -26,7 +28,7 @@ import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber, Blocking, 
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
-import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.helptosave.util.*
 
 import java.time.{LocalDate, YearMonth}
 import scala.concurrent.Future
@@ -39,10 +41,16 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val helpToSaveService: HelpToSaveService = mock[HelpToSaveService]
   val proxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
-  def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
-    enrolmentStore
-      .updateItmpFlag(nino, itmpFlag)(*)
-      .returns(EitherT.fromEither[Future](result))
+//  def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
+//    enrolmentStore
+//      .updateItmpFlag(nino, itmpFlag)(any)
+//      .returns(EitherT.fromEither[Future](result))
+
+  def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit = {
+    when(enrolmentStore
+      .updateItmpFlag(nino, itmpFlag)(any))
+      .thenReturn(EitherT.fromEither[Future](result))
+  }
 
   def mockEnrolmentStoreInsert(
     nino: NINO,
@@ -51,24 +59,24 @@ trait TestEnrolmentBehaviour extends TestSupport {
     source: String,
     accountNumber: Option[String],
     deleteFlag: Option[Boolean] = None)(result: Either[String, Unit]): Unit =
-    enrolmentStore
-      .insert(nino, itmpFlag, eligibilityReason, source, accountNumber, deleteFlag)(*)
-      .returns(EitherT.fromEither[Future](result))
+    when(enrolmentStore
+      .insert(nino, itmpFlag, eligibilityReason, source, accountNumber, deleteFlag)(any))
+      .thenReturn(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
-    enrolmentStore
-      .get(nino)(*)
-      .returns(EitherT.fromEither[Future](result))
+    when(enrolmentStore
+      .get(nino)(any))
+      .thenReturn(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGetAccountNumber(nino: NINO)(result: Either[String, AccountNumber]): Unit =
-    enrolmentStore
-      .getAccountNumber(nino)(*)
-      .returns(EitherT.fromEither[Future](result))
+    when(enrolmentStore
+      .getAccountNumber(nino)(any))
+      .thenReturn(EitherT.fromEither[Future](result))
 
   def mockSetFlag(nino: NINO)(result: Either[String, Unit]): Unit =
-    helpToSaveService
-      .setFlag(nino)(*, *)
-      .returns(EitherT.fromEither[Future](result))
+    when(helpToSaveService
+      .setFlag(nino)(any, any))
+      .thenReturn(EitherT.fromEither[Future](result))
 
   def payloadJson(dobValue: String, communicationPreference: String = "02"): String =
     s"""{

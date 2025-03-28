@@ -17,6 +17,7 @@
 package uk.gov.hmrc.helptosave.services
 
 import com.typesafe.config.ConfigFactory
+import org.mockito.Mockito.when
 import play.api.Configuration
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
@@ -25,7 +26,7 @@ import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.LocalDate
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 // scalastyle:off magic.number
@@ -52,17 +53,19 @@ class UserCapServiceSpec extends TestSupport {
     lazy val totalLimit = servicesConfig.getInt("microservice.user-cap.total.limit")
 
     def mockUserCapStoreGetOne(userCap: Option[UserCap]) =
-      userCapStore.get()
-        .returns(Future.successful(userCap))
+      when(userCapStore
+        .get())
+        .thenReturn(Future.successful(userCap))
 
     def mockUserCapStoreGetOneFailure() =
-      userCapStore.get()
-        .returns(Future.failed(new RuntimeException("oh no")))
+      when(userCapStore
+        .get())
+        .thenReturn(Future.failed(new RuntimeException("oh no")))
 
     def mockUserCapStoreUpsert(userCap: UserCap) =
-      userCapStore
-        .upsert(userCap)
-        .returns(Future.successful(Some(userCap)))
+      when(userCapStore
+        .upsert(userCap))
+        .thenReturn(Future.successful(Some(userCap)))
 
     "checking if account create is allowed" must {
 

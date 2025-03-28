@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
@@ -34,9 +35,9 @@ trait StrideAuthSupport extends AuthSupport {
 
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
     result: Either[Throwable, A]) =
-    mockAuthConnector
-      .authorise(expectedPredicate, expectedRetrieval)(*, *)
-      .returns(result.fold(Future.failed, Future.successful))
+    when(mockAuthConnector
+      .authorise(expectedPredicate, expectedRetrieval)(any, any))
+      .thenReturn(result.fold(Future.failed, Future.successful))
 
   def mockSuccessfulAuthorisation() =
     mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(

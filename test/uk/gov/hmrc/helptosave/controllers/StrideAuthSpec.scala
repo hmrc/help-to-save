@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 import play.api.Configuration
 import play.api.mvc.AnyContentAsEmpty
-import play.api.mvc.Results._
+import play.api.mvc.Results.*
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
-import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
@@ -51,9 +52,9 @@ class StrideAuthSpec extends TestSupport {
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]) =
-    mockAuthConnector
-      .authorise(expectedPredicate, expectedRetrieval)(*, *)
-      .returns(result.fold(Future.failed, Future.successful))
+    when(mockAuthConnector
+      .authorise(expectedPredicate, expectedRetrieval)(any, any))
+      .thenReturn(result.fold(Future.failed, Future.successful))
 
   "StrideAuth" must {
 

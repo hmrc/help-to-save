@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.helptosave.services
 
-import org.mockito.ArgumentMatchersSugar.*
-import org.mockito.stubbing.ScalaOngoingStubbing
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
+import org.scalatestplus.mockito.MockitoSugar
+import org.mockito.Mockito._
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Request
 import play.api.test.FakeRequest
@@ -27,6 +29,8 @@ import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationRequest, B
 import uk.gov.hmrc.helptosave.util.{NINO, UnitSpec, toFuture}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
+import scala.concurrent.Future
+import cats.data.EitherT
 
 import scala.concurrent.Future
 
@@ -36,15 +40,16 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
 
   val mockAuditor = mock[HTSAuditor]
   val returnHeaders = Map[String, Seq[String]]()
-  def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: HttpResponse): ScalaOngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
-    mockBarsConnector
-      .validate(barsRequest,*)(*, *)
-      .returns(toFuture(Right(response)))
+
+  def mockBarsConnector(barsRequest: BankDetailsValidationRequest)(response: HttpResponse): Unit = {
+    when(mockBarsConnector.validate(barsRequest, any)(any, any))
+      .thenReturn(Future.successful(Right(response)))
+  }
 
   def mockAuditBarsEvent(expectedEvent: BARSCheck, nino: NINO) =
-    mockAuditor
-      .sendEvent(expectedEvent, nino)(*)
-      .doesNothing()
+    when(mockAuditor
+      .sendEvent(expectedEvent, nino)(any))
+      .thenReturn(())
 
   val service = new BarsServiceImpl(mockBarsConnector, mockMetrics, mockPagerDuty, mockAuditor)
 
@@ -140,9 +145,9 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       }
 
       "recover from unexpected errors" in {
-        mockBarsConnector
-          .validate(barsRequest, *)(*, *)
-          .returns(toFuture(Left(UpstreamErrorResponse("",500))))
+        when(mockBarsConnector
+          .validate(barsRequest, any)(any, any))
+          .thenReturn(toFuture(Left(UpstreamErrorResponse("",500))))
         mockPagerDutyAlert("unexpected error from bars check")
         val result = await(service.validate(barsRequest))
         result shouldBe Left("unexpected error from bars check")

@@ -29,7 +29,7 @@ class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
   "The CryptoImpl" must {
 
     val key = {
-      // create a 256 bit key
+      // create a 256-bit key
       val bytes = new Array[Byte](32)
       Random.nextBytes(bytes)
       new String(Base64.getEncoder.encode(bytes))
@@ -66,7 +66,7 @@ class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
     }
 
     "return an error when there are errors decrypting" in {
-      forAll { s: String =>
+      forAll { (s: String) =>
         whenever(s.nonEmpty) {
           encrypter.decrypt(s).isFailure shouldBe true
         }

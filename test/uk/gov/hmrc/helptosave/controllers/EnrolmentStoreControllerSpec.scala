@@ -17,17 +17,18 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.{JsSuccess, JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino => v2Nino}
+import play.api.test.Helpers.*
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino as v2Nino}
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
-import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
+import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.*
 import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
@@ -49,14 +50,14 @@ class EnrolmentStoreControllerSpec
 
   def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(
     result: Either[String, Option[Account]]): Unit =
-    proxyConnector
-      .getAccount(nino, systemId, correlationId, path)(*, *)
-      .returns(EitherT.fromEither[Future](result))
+    when(proxyConnector
+      .getAccount(nino, systemId, correlationId, path)(any, any))
+      .thenReturn(EitherT.fromEither[Future](result))
 
   def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit =
-    enrolmentStore
-      .updateWithAccountNumber(nino, accountNumber)(*)
-      .returns(EitherT.fromEither[Future](result))
+    when(enrolmentStore
+      .updateWithAccountNumber(nino, accountNumber)(any))
+      .thenReturn(EitherT.fromEither[Future](result))
 
   "The EnrolmentStoreController" when {
 
@@ -81,7 +82,7 @@ class EnrolmentStoreControllerSpec
           mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
 
-        await(setFlag())
+          await(setFlag())
       }
 
       "return a 200 if all the steps were successful" in {

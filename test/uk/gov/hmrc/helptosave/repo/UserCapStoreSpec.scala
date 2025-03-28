@@ -20,6 +20,8 @@ import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
+import org.mongodb.scala.SingleObservableFuture
+
 
 import java.time.{LocalDate, ZoneId}
 

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.*
 import org.scalatest.EitherValues
 import play.api.Configuration
 import play.api.http.Status
@@ -84,10 +84,9 @@ class HelpToSaveProxyConnectorSpec
       Some("systemId")
     )
 
-  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit =
+  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit = 
     mockAuditor
-      .sendEvent(event, nino)(*)
-      .doesNothing()
+      .sendEvent(event, nino)(any)
 
   def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
     val timerCountBefore = mockMetrics.getTransactionsTimer.getCount

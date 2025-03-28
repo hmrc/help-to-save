@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosave.utils
 
 import com.codahale.metrics.{Counter, NoopMetricRegistry}
 import com.typesafe.config.ConfigFactory
-import org.mockito.IdiomaticMockito
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
@@ -34,7 +34,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll with BeforeAndAfterEach {
+trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with BeforeAndAfterEach {
   lazy val additionalConfig: Configuration = Configuration()
   val originatorIdHeaderValue = "test-originator"
 
@@ -43,18 +43,18 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
       .configure(
         Configuration(
           ConfigFactory.parseString(s"""
-                                      | metrics.jvm = false
-                                      | metrics.enabled = true
-                                      | mongo-async-driver.org.apache.pekko.loglevel = ERROR
-                                      | uc-threshold.ask-timeout = 10 seconds
-                                      | play.modules.disabled = [ "play.api.mvc.CookiesModule" ]
-                                      | microservice {
-                                      |   services {
-                                      |     paye-personal-details {
-                                      |       originatorId = $originatorIdHeaderValue
-                                      |     }
-                                      |   }
-                                      | }
+                                       | metrics.jvm = false
+                                       | metrics.enabled = true
+                                       | mongo-async-driver.org.apache.pekko.loglevel = ERROR
+                                       | uc-threshold.ask-timeout = 10 seconds
+                                       | play.modules.disabled = [ "play.api.mvc.CookiesModule" ]
+                                       | microservice {
+                                       |   services {
+                                       |     paye-personal-details {
+                                       |       originatorId = $originatorIdHeaderValue
+                                       |     }
+                                       |   }
+                                       | }
             """.stripMargin)
         ).withFallback(extraConfig))
       .build()
@@ -97,36 +97,36 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
   implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
 
   val nsiAccountJson: JsObject = Json.parse("""
-                                    |{
-                                    |  "accountNumber": "AC01",
-                                    |  "accountBalance": "200.34",
-                                    |  "accountClosedFlag": "",
-                                    |  "accountBlockingCode": "00",
-                                    |  "clientBlockingCode": "00",
-                                    |  "currentInvestmentMonth": {
-                                    |    "investmentRemaining": "15.50",
-                                    |    "investmentLimit": "50.00",
-                                    |    "endDate": "2018-02-28"
-                                    |  },
-                                    |  "clientForename":"Testforename",
-                                    |  "clientSurname":"Testsurname",
-                                    |  "emailAddress":"test@example.com",
-                                    |  "terms": [
-                                    |     {
-                                    |       "termNumber":2,
-                                    |       "startDate":"2020-01-01",
-                                    |       "endDate":"2021-12-31",
-                                    |       "bonusEstimate":"67.00",
-                                    |       "bonusPaid":"0.00"
-                                    |    },
-                                    |    {
-                                    |       "termNumber":1,
-                                    |       "startDate":"2018-01-01",
-                                    |       "endDate":"2019-12-31",
-                                    |       "bonusEstimate":"123.45",
-                                    |       "bonusPaid":"123.45"
-                                    |    }
-                                    |  ]
-                                    |}
+                                              |{
+                                              |  "accountNumber": "AC01",
+                                              |  "accountBalance": "200.34",
+                                              |  "accountClosedFlag": "",
+                                              |  "accountBlockingCode": "00",
+                                              |  "clientBlockingCode": "00",
+                                              |  "currentInvestmentMonth": {
+                                              |    "investmentRemaining": "15.50",
+                                              |    "investmentLimit": "50.00",
+                                              |    "endDate": "2018-02-28"
+                                              |  },
+                                              |  "clientForename":"Testforename",
+                                              |  "clientSurname":"Testsurname",
+                                              |  "emailAddress":"test@example.com",
+                                              |  "terms": [
+                                              |     {
+                                              |       "termNumber":2,
+                                              |       "startDate":"2020-01-01",
+                                              |       "endDate":"2021-12-31",
+                                              |       "bonusEstimate":"67.00",
+                                              |       "bonusPaid":"0.00"
+                                              |    },
+                                              |    {
+                                              |       "termNumber":1,
+                                              |       "startDate":"2018-01-01",
+                                              |       "endDate":"2019-12-31",
+                                              |       "bonusEstimate":"123.45",
+                                              |       "bonusPaid":"123.45"
+                                              |    }
+                                              |  ]
+                                              |}
     """.stripMargin).as[JsObject]
 }

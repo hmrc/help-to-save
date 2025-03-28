@@ -17,16 +17,17 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsJson, _}
+import play.api.test.Helpers.{contentAsJson, *}
 import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, v2}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
-import uk.gov.hmrc.helptosave.models.account._
+import uk.gov.hmrc.helptosave.models.account.*
 
 import java.time.LocalDate
 import java.util.UUID
@@ -55,7 +56,9 @@ class TransactionsControllerSpec extends AuthSupport {
   val fakeRequest = FakeRequest("GET", s"/nsi-account?$queryString")
 
   def mockGetTransactions(nino: String, systemId: String)(response: Either[String, Option[Transactions]]): Unit = {
-      mockProxyConnector.getTransactions(nino, systemId, *)(*, *).returns(EitherT.fromEither(response))
+      when(mockProxyConnector
+        .getTransactions(nino, systemId, any)(any, any))
+        .thenReturn(EitherT.fromEither(response))
   }
 
   "The TransactionsController" when {

@@ -17,19 +17,19 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
-import cats.instances.future._
 import org.apache.pekko.util.Timeout
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
-import play.mvc.Http.Status._
+import play.mvc.Http.Status.*
 import uk.gov.hmrc.auth.core.retrieve.EmptyRetrieval
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
-import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.*
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.services.{BarsService, UserCapService}
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}
@@ -38,7 +38,11 @@ import uk.gov.hmrc.http.HttpResponse
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
+
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 
 // scalastyle:off magic.number
 class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
@@ -66,35 +70,35 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     val accountNumber: Option[NINO] = Some("AC01")
 
     def mockSendAuditEvent(event: HTSEvent, nino: String) =
-      mockAuditor
-        .sendEvent(event, nino)(*)
-        .doesNothing()
+      when(mockAuditor
+        .sendEvent(event, nino)(any))
+        .thenReturn(())
 
     def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse) =
-      proxyConnector
-        .createAccount(expectedPayload)(*, *)
-        .returns(toFuture(Right(response)))
+      when(proxyConnector
+        .createAccount(expectedPayload)(any, any))
+        .thenReturn(toFuture(Right(response)))
 
     def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse) =
-      proxyConnector
-        .updateEmail(expectedPayload)(*, *)
-        .returns(toFuture(Right(response)))
+      when(proxyConnector
+        .updateEmail(expectedPayload)(any, any))
+        .thenReturn(toFuture(Right(response)))
 
     def mockUserCapServiceUpdate(result: Either[String, Unit]) =
-      userCapService
-        .update()(*)
-        .returns(result.fold[Future[Unit]](e => Future.failed(new Exception(e)), _ => Future.successful(())))
+      when(userCapService
+        .update()(any))
+        .thenReturn(result.fold[Future[Unit]](e => Future.failed(new Exception(e)), _ => Future.successful(())))
 
     def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
-      emailStore
-        .delete(nino)(*)
-        .returns(EitherT.fromEither[Future](result))
+      when(emailStore
+        .delete(nino)(any))
+        .thenReturn(EitherT.fromEither[Future](result))
 
     def mockBarsService(barsRequest: BankDetailsValidationRequest)(
       result: Either[String, BankDetailsValidationResult]): Unit =
-      barsService
-        .validate(barsRequest)(*, *, *)
-        .returns(Future.successful(result))
+      when(barsService
+        .validate(barsRequest)(any, any, any))
+        .thenReturn(Future.successful(result))
   }
 
   "The HelpToSaveController" when {
@@ -184,9 +188,9 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           mockEmailDelete("nino")(Right(()))
           mockCreateAccount(payloadDE)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
           mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
-            mockSetFlag("nino")(Right(()))
-            mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(payloadDE, "Digital", detailsManuallyEntered = false), "nino")
+          mockSetFlag("nino")(Right(()))
+          mockUserCapServiceUpdate(Right(()))
+          mockSendAuditEvent(AccountCreated(payloadDE, "Digital", detailsManuallyEntered = false), "nino")
 
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = false, "00")))

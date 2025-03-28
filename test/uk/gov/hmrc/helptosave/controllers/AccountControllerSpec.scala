@@ -17,11 +17,12 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsJson, _}
+import play.api.test.Helpers.{contentAsJson, *}
 import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, v2}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
@@ -62,8 +63,9 @@ class AccountControllerSpec extends AuthSupport {
   val fakeRequest = FakeRequest("GET", path)
 
   def mockGetAccount(nino: String, systemId: String, path: String)(response: Either[String, Option[Account]]): Any = {
-      mockProxyConnector.getAccount(nino, systemId, *, path)(*, *)
-     .returns(EitherT.fromEither(response))
+      when(mockProxyConnector
+        .getAccount(nino, systemId, any, path)(any, any))
+        .thenReturn(EitherT.fromEither(response))
   }
 
   "The AccountController" when {
