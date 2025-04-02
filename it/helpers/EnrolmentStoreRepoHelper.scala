@@ -13,7 +13,7 @@ trait EnrolmentStoreRepoHelper {
   val enrolmentStoreRepository: MongoEnrolmentStore
 
   def getEnrolmentCount(nino: String, itmpFlag: Boolean = true): Long = {
-    await(enrolmentStoreRepository.collection.countDocuments(and(Filters.equal("nino", nino), Filters.equal("itmpHtSFlag", itmpFlag))).toFuture())
+    await(future = enrolmentStoreRepository.collection.countDocuments(and(Filters.equal("nino", nino), Filters.equal("itmpHtSFlag", itmpFlag))).toFuture())
   }
 
   def insertEnrolmentData(nino: NINO,
@@ -22,9 +22,9 @@ trait EnrolmentStoreRepoHelper {
                           source: String,
                           accountNumber: Option[String],
                           deleteFlag: Option[Boolean] = None)(implicit hc: HeaderCarrier) = {
-    await(enrolmentStoreRepository.insert(nino, itmpFlag, eligibilityReason, source, accountNumber, deleteFlag).value)
+    await(future = enrolmentStoreRepository.insert(nino, itmpFlag, eligibilityReason, source, accountNumber, deleteFlag).value)
   }
 
-  def deleteAllEnrolmentData() = await(enrolmentStoreRepository.collection.deleteMany(Filters.empty()).toFuture())
+  def deleteAllEnrolmentData() = await(future = enrolmentStoreRepository.collection.deleteMany(Filters.empty()).toFuture())
 
 }

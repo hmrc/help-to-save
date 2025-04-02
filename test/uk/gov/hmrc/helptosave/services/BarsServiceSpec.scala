@@ -31,6 +31,11 @@ import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
 import scala.concurrent.Future
 import cats.data.EitherT
+import org.scalactic.Prettifier.default
+import play.api.libs.ws.writeableOf_JsValue
+
+
+
 
 import scala.concurrent.Future
 
@@ -120,15 +125,15 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       }
 
       "handle 200 response but missing json field (accountNumberWithSortCodeIsValid)" in {
-        val response =
-          """{
-            |  "nonStandardAccountDetailsRequiredForBacs": "no",
-            |  "sortCodeIsPresentOnEISCD":"yes",
-            |  "supportsBACS":"yes",
-            |  "ddiVoucherFlag":"no",
-            |  "directDebitsDisallowed": "yes",
-            |  "directDebitInstructionsDisallowed": "yes"
-            |}""".stripMargin
+        val response:String =
+            s"""{
+               |  "nonStandardAccountDetailsRequiredForBacs": "no",
+               |  "sortCodeIsPresentOnEISCD":"yes",
+               |  "supportsBACS":"yes",
+               |  "ddiVoucherFlag":"no",
+               |  "directDebitsDisallowed": "yes",
+               |  "directDebitInstructionsDisallowed": "yes"
+               |}""".stripMargin
 
           mockBarsConnector(barsRequest)((HttpResponse(200, Json.parse(response), returnHeaders)))
           mockAuditBarsEvent(BARSCheck(barsRequest, Json.parse(response), path), nino)
@@ -136,6 +141,8 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
         val result = await(service.validate(barsRequest))
         result shouldBe Left("error parsing the response json from bars check")
       }
+      
+      
 
       "handle unsuccessful response from bars check" in {
         mockBarsConnector(barsRequest)((HttpResponse(400, "")))

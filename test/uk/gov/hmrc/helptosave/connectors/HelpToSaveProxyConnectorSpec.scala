@@ -84,7 +84,7 @@ class HelpToSaveProxyConnectorSpec
       Some("systemId")
     )
 
-  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit = 
+  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit =
     mockAuditor
       .sendEvent(event, nino)(any)
 
@@ -521,12 +521,22 @@ class HelpToSaveProxyConnectorSpec
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString()))
 
         val result = await(proxyConnector.createAccount(userInfo))
-        val jsonResult = result.leftSideValue
-        jsonResult contains Left(UpstreamErrorResponse(s"unexpected error from proxy during /create-de-account ${connectorCallFailureMessage(POST, s"$createAccountURL")}",INTERNAL_SERVER_ERROR))
+        val jsonResult = result.fold(
+          error => error,
+          _ => fail("Expected an error but got a success response")
+        )
 
+        jsonResult shouldBe UpstreamErrorResponse(
+          s"unexpected error from proxy during /create-de-account ${connectorCallFailureMessage(POST, s"$createAccountURL")}",
+          INTERNAL_SERVER_ERROR
+        )
         wireMockServer.start()
       }
     }
+
+
+
+
 
     "retrieving transactions" must {
       val nino = randomNINO()

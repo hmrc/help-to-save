@@ -19,8 +19,9 @@ object AppDependencies {
     hmrc                      %% s"bootstrap-test-$playVersion"   % bootstrapBackendVersion % scope,
     s"$hmrc.mongo"            %% s"hmrc-mongo-test-$playVersion"  % mongoVersion            % scope,
     "org.scalatestplus"       %% "scalacheck-1-17"                % "3.2.18.0"              % scope,
-    "org.apache.pekko"        %% "pekko-testkit"                  % "1.1.3"                 % scope,
-    "org.scalatestplus"       %% "mockito-4-11"                   % "3.2.18.0"              % scope,
+    "org.apache.pekko"        %% "pekko-testkit"                  % "1.0.3"                 % scope,
+    "org.scalatestplus"       %% "mockito-4-11"                   % "3.2.17.0"              % scope,
+    "org.scalatest"           %% "scalatest"                      % "3.2.17"                % scope,
     "com.github.tomakehurst"  % "wiremock"                        % "3.0.0-beta-7"          % scope
   )
 }

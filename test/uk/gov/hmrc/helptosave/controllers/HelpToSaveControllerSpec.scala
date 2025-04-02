@@ -184,20 +184,22 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       "delete any existing emails of DE users before creating the account" in new TestApparatus {
         val payloadDE: NSIPayload =
           validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
-          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockEmailDelete("nino")(Right(()))
-          mockCreateAccount(payloadDE)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
-          mockSetFlag("nino")(Right(()))
-          mockUserCapServiceUpdate(Right(()))
-          mockSendAuditEvent(AccountCreated(payloadDE, "Digital", detailsManuallyEntered = false), "nino")
+
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+        mockEmailDelete("nino")(Right(()))
+        mockCreateAccount(payloadDE)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
+        mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
+        mockSetFlag("nino")(Right(()))
+        mockUserCapServiceUpdate(Right(()))
+        mockSendAuditEvent(AccountCreated(payloadDE, "Digital", detailsManuallyEntered = false), "nino")
 
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = false, "00")))
 
         status(result)(10.seconds) shouldBe CREATED
-
       }
+      
+      
 
       "handle any unexpected mongo errors during deleting emails of DE users" in new TestApparatus {
           mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
