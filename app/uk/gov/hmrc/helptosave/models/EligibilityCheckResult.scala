@@ -29,7 +29,7 @@ object EligibilityCheckResult {
 
 }
 
-case class EligibilityCheckResponse(eligibilityCheckResult: EligibilityCheckResult, threshold: Option[Double])
+case class EligibilityCheckResponse(eligibilityCheckResult: EligibilityCheckResult, threshold: Double)
 
 object EligibilityCheckResponse {
 

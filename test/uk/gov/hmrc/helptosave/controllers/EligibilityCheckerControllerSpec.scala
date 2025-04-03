@@ -55,7 +55,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
   "The EligibilityCheckerController" when {
 
     val ggCredentials = GGCredId("123-gg")
-    val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
+    val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), 123.45)
 
     "handling requests to perform eligibility checks" must {
 

@@ -153,15 +153,9 @@ class DESConnectorSpec
         .thenReturn(200, Json.toJson(Json.toJson(result)))
 
       val response = await(connector.getThreshold())
-      response.value.status shouldBe 200
+      response shouldBe 500.50
     }
 
-    "return 500 status when call to DES fails" in {
-      when(GET, url, headers = appConfig.desHeaders.toMap).thenReturn(500)
-
-      val response = await(connector.getThreshold())
-      response.left.value.statusCode shouldBe 500
-    }
   }
 
 }

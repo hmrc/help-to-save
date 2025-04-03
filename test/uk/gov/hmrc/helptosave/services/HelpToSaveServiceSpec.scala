@@ -143,12 +143,12 @@ class HelpToSaveServiceSpec
     "handling eligibility calls" must {
       val nino = randomNINO()
 
-      def getEligibility(thresholdResponse: Option[Double]): Either[NINO, EligibilityCheckResponse] = {
+      def getEligibility(thresholdResponse: Double): Either[NINO, EligibilityCheckResponse] = {
         when(ucThresholdValueByConfigProvider.get()).thenReturn(testUCThresholdOrchestrator)
         when(mdtpthresholdValueByConfigProvider.get()).thenReturn(mdtpMockThresholdOrchestrator)
 
-        when(ucMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
-        when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
+        when(ucMockThresholdOrchestrator.getValue).thenReturn(Future.successful(threshold))
+        when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(threshold))
 
         val result = service.getEligibility(nino, "path").value
 
@@ -168,7 +168,7 @@ class HelpToSaveServiceSpec
               HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
             mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
 
-          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          getEligibility(threshold) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, 1.23))
         }
       }
 
@@ -177,14 +177,7 @@ class HelpToSaveServiceSpec
           mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
           mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
 
-        getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, Some(1.23)))
-      }
-
-      "continue the eligibility check when the threshold cannot be retrieved and the applicant is eligible from a WTC perspective" in {
-        mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
-        mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
-
-        getEligibility(None) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, None))
+        getEligibility(threshold) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, 1.23))
       }
       
       "pass the UC params to DES if they are provided" in {
@@ -195,7 +188,7 @@ class HelpToSaveServiceSpec
               HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
             mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
 
-          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          getEligibility(threshold) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, 1.23))
         }
       }
 
@@ -207,7 +200,7 @@ class HelpToSaveServiceSpec
               HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)) // scalastyle:ignore magic.number
             mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
 
-          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          getEligibility(threshold) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, 1.23))
         }
       }
 
@@ -218,7 +211,7 @@ class HelpToSaveServiceSpec
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Failed to make call to check eligibility")
 
-          getEligibility(Some(threshold)) shouldBe Left("Received unexpected status 500")
+          getEligibility(threshold) shouldBe Left("Received unexpected status 500")
         }
 
         "the call comes back with an unexpected http status" in {
@@ -229,7 +222,7 @@ class HelpToSaveServiceSpec
                 // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
                 mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
 
-              getEligibility(Some(threshold)) shouldBe Left(s"Received unexpected status $status")
+              getEligibility(threshold) shouldBe Left(s"Received unexpected status $status")
             }
           }
         }
@@ -241,7 +234,7 @@ class HelpToSaveServiceSpec
             // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
             mockPagerDutyAlert("Could not parse JSON in eligibility check response")
 
-          getEligibility(Some(threshold)) shouldBe
+          getEligibility(threshold) shouldBe
             Left(
               "Could not parse http response JSON: : [error.expected.jsobject]. Response body was " +
                 "\"{\\\"invalid\\\": \\\"foo\\\"}\"")

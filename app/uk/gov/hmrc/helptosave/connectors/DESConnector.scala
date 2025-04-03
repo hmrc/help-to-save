@@ -41,7 +41,7 @@ trait DESConnector {
 
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
 
-  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
+  def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Double]
 }
 
 @Singleton
@@ -105,13 +105,13 @@ class DESConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesCon
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
-  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
+  override def getThreshold()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Double] = {
     logger.info(s"[DESConnector][getThreshold] GET request: " +
       s"itmpThresholdURL - $itmpThresholdURL" +
       s" header - ${appConfig.desHeaders:+ originatorIdHeader}")
     http.get(itmpThresholdURL)(hc.copy(authorization = None)).transform(_
       .addHttpHeaders(appConfig.desHeaders:_*))
-      .execute[Either[UpstreamErrorResponse, HttpResponse]]
+      .execute[Double]
   }
 
 }

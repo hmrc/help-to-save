@@ -41,7 +41,7 @@ class UCThresholdModule(environment: Environment, configuration: Configuration) 
 }
 
 trait ThresholdOrchestrator {
-  def getValue: Future[Option[Double]]
+  def getValue: Future[Double]
 }
 
 @Singleton
@@ -52,7 +52,7 @@ class UCThresholdOrchestrator @Inject()(
   desConnector: DESConnector)(implicit appConfig: AppConfig, ec: ExecutionContext)
     extends ThresholdOrchestrator with Logging {
   private lazy val connectorProxy: ActorRef =
-    system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
+    system.actorOf(UCThresholdConnectorProxyActor.props(desConnector))
 
   private val timeCalculator = {
     val clock = Clock.system(ZoneId.of(configuration.underlying.getString("uc-threshold.update-timezone")))
@@ -64,14 +64,13 @@ class UCThresholdOrchestrator @Inject()(
     system.actorOf(
       UCThresholdManager.props(
         connectorProxy,
-        pagerDutyAlerting,
         system.scheduler,
         timeCalculator,
         configuration
       ))
   }
 
-  override def getValue: Future[Option[Double]] = {
+  override def getValue: Future[Double] = {
     thresholdManager
       .ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
       .mapTo[GetThresholdValueResponse]
@@ -85,8 +84,8 @@ class UCThresholdOrchestrator @Inject()(
 
 @Singleton
 class MDTPThresholdOrchestrator @Inject()(appConfig: AppConfig) extends ThresholdOrchestrator {
-  override def getValue: Future[Option[Double]] = {
-    Future.successful(Some(appConfig.mdtpThresholdAmount))
+  override def getValue: Future[Double] = {
+    Future.successful(appConfig.mdtpThresholdAmount)
   }
 }
 

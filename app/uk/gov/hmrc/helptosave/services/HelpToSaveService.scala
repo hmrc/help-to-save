@@ -224,19 +224,13 @@ class HelpToSaveServiceImpl @Inject()(
 
   private def timeString(nanos: Long): String = s"(round-trip time: ${nanosToPrettyString(nanos)})"
 
-  private def getUCDetails(nino: NINO, txnId: UUID, threshold: Option[Double])(
+  private def getUCDetails(nino: NINO, txnId: UUID, threshold: Double)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[UCResponse]] =
-    threshold.fold[Future[Option[UCResponse]]]({
-      logger.warn("call to uc claimant check will not be made as there is no threshold value present", nino)
-      None
-    })(
-      thresholdValue =>
         helpToSaveProxyConnector
-          .ucClaimantCheck(nino, txnId, thresholdValue)
+          .ucClaimantCheck(nino, txnId, threshold)
           .fold({ e =>
             logger.warn(s"Error while retrieving UC details: $e", nino)
             None
-          }, Some(_)))
-
+          }, Some(_))
 }
