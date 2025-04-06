@@ -148,7 +148,7 @@ class HelpToSaveServiceSpec
         when(mdtpthresholdValueByConfigProvider.get()).thenReturn(mdtpMockThresholdOrchestrator)
 
         when(ucMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
-        when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
+        when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(thresholdResponse))
 
         val result = service.getEligibility(nino, "path").value
 
