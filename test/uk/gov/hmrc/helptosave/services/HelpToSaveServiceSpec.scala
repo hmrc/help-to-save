@@ -35,9 +35,9 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.models._
-import uk.gov.hmrc.helptosave.modules.{MDTPThresholdOrchestrator, ThresholdOrchestrator, ThresholdValueByConfigProvider, UCThresholdOrchestrator}
+import uk.gov.hmrc.helptosave.modules.{MDTPThresholdOrchestrator, ThresholdValueByConfigProvider, UCThresholdOrchestrator}
 import uk.gov.hmrc.helptosave.util._
-import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
+import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData}
 import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
@@ -148,7 +148,7 @@ class HelpToSaveServiceSpec
         when(mdtpthresholdValueByConfigProvider.get()).thenReturn(mdtpMockThresholdOrchestrator)
 
         when(ucMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
-        when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
+        when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(thresholdResponse))
 
         val result = service.getEligibility(nino, "path").value
 

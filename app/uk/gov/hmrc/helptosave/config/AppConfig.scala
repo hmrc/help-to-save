@@ -49,15 +49,7 @@ class AppConfig @Inject()(
 
   val correlationIdHeaderName: String = servicesConfig.getString("microservice.correlationIdHeaderName")
 
-  val thresholdAskTimeout: FiniteDuration =
-    runModeConfiguration.get[FiniteDuration]("uc-threshold.ask-timeout")
-
-  val useMDTPThresholdConfig: Boolean = {
-    val effectiveDate = LocalDate.parse(runModeConfiguration.get[String]("mdtp-threshold.effective-date"))
-    val isActive = runModeConfiguration.get[Boolean]("mdtp-threshold.active")
-
-    isActive && !LocalDate.now().isBefore(effectiveDate)
-  }
+  val thresholdAskTimeout: FiniteDuration = runModeConfiguration.get[FiniteDuration]("uc-threshold.ask-timeout")
 
   val mdtpThresholdAmount: Double = runModeConfiguration.get[Double]("mdtp-threshold.amount")
 
@@ -73,5 +65,12 @@ class AppConfig @Inject()(
         Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
       })
       .toSeq
+  }
+
+  def useMDTPThresholdConfig: Boolean = {
+    val effectiveDate = LocalDate.parse(runModeConfiguration.get[String]("mdtp-threshold.effective-date"))
+    val isActive = runModeConfiguration.get[Boolean]("mdtp-threshold.active")
+
+    isActive && !LocalDate.now().isBefore(effectiveDate)
   }
 }
