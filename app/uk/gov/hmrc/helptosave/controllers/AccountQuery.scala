@@ -25,6 +25,7 @@ import uk.gov.hmrc.domain.Nino.isValid
 import uk.gov.hmrc.helptosave.util
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
+import uk.gov.hmrc.helptosave.util.toFuture
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext

@@ -43,7 +43,7 @@ class AccountSpec extends TestSupport {
     accountClosingBalance  = None
   )
 
-  val account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(payments = false, withdrawals = false, bonuses = false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
+  val account: Account = Account(YearMonth.of(2018, 1), "AC01", isClosed = false, Blocking(payments = false, withdrawals = false, bonuses = false), 123.45, 0, 0, 0, LocalDate.of(2018, 1, 31),
                         accountHolderForename = "Testforename", accountHolderSurname = "Testsurname", accountHolderEmail = Some("test@example.com"),
                         Seq(
       BonusTerm(startDate              = LocalDate.of(2018, 1, 1), endDate = LocalDate.of(2019, 12, 31), bonusEstimate = 0, bonusPaid = 0, bonusPaidOnOrAfterDate = LocalDate.of(2020, 1, 1)),

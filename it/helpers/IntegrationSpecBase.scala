@@ -87,9 +87,9 @@ trait IntegrationSpecBase
   )
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
-    .in(Environment.simple(mode = Mode.Dev))
-    .configure(config)
-    .build
+      .in(Environment.simple(mode = Mode.Dev))
+      .configure(config)
+      .build()
 
   lazy val ws: WSClient = app.injector.instanceOf[WSClient]
 

@@ -18,7 +18,8 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, _}
@@ -30,14 +31,15 @@ import uk.gov.hmrc.helptosave.models.account.{Account, Blocking}
 
 import java.time.{LocalDate, YearMonth}
 import java.util.UUID
+import play.api.mvc.AnyContentAsEmpty
 
 class AccountControllerSpec extends AuthSupport {
 
-  val mockProxyConnector = mock[HelpToSaveProxyConnector]
+  val mockProxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
   val controller = new AccountController(mockProxyConnector, mockAuthConnector, testCC)
 
-  val account = Account(
+  val account: Account = Account(
     YearMonth.of(1900, 1),
     "AC01",
     isClosed = false,
@@ -55,15 +57,14 @@ class AccountControllerSpec extends AuthSupport {
     None
   )
 
-  val queryString = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
+  val queryString: String = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
 
-  val path = s"/help-to-save/$nino/account?$queryString"
+  val path: String = s"/help-to-save/$nino/account?$queryString"
 
-  val fakeRequest = FakeRequest("GET", path)
+  val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", path)
 
   def mockGetAccount(nino: String, systemId: String, path: String)(response: Either[String, Option[Account]]): Any = {
-      mockProxyConnector.getAccount(nino, systemId, *, path)(*, *)
-     .returns(EitherT.fromEither(response))
+    when(mockProxyConnector.getAccount(eqTo(nino), eqTo(systemId), any(), eqTo(path))(any(), any())).thenReturn(EitherT.fromEither(response))
   }
 
   "The AccountController" when {

@@ -22,12 +22,13 @@ import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
+import org.mongodb.scala.ObservableFuture
 
 class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
 
   def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) =
     new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
-  val repository = newEligibilityStatsMongoStore(mongoComponent)
+  val repository: MongoEligibilityStatsStore = newEligibilityStatsMongoStore(mongoComponent)
 
   override def beforeEach(): Unit =
     //    await(repository.collection.drop().toFuture())

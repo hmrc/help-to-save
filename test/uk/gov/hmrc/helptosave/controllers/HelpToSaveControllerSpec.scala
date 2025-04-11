@@ -19,7 +19,9 @@ package uk.gov.hmrc.helptosave.controllers
 import cats.data.EitherT
 import cats.instances.future._
 import org.apache.pekko.util.Timeout
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.{doNothing, when}
+import org.mockito.stubbing.OngoingStubbing
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
@@ -39,6 +41,7 @@ import uk.gov.hmrc.http.HttpResponse
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 // scalastyle:off magic.number
 class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
@@ -65,36 +68,32 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
 
     val accountNumber: Option[NINO] = Some("AC01")
 
-    def mockSendAuditEvent(event: HTSEvent, nino: String) =
-      mockAuditor
-        .sendEvent(event, nino)(*)
-        .doesNothing()
+    def mockSendAuditEvent(event: HTSEvent, nino: String): Unit = {
+      doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(any())
+    }
 
-    def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse) =
-      proxyConnector
-        .createAccount(expectedPayload)(*, *)
-        .returns(toFuture(Right(response)))
+    def mockCreateAccount(expectedPayload: NSIPayload)(response: HttpResponse): OngoingStubbing[Future[Either[UpstreamErrorResponse,HttpResponse]]] = {
+      when(proxyConnector.createAccount(eqTo(expectedPayload))(any(), any())).thenReturn(toFuture(Right(response)))
+    }
 
-    def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse) =
-      proxyConnector
-        .updateEmail(expectedPayload)(*, *)
-        .returns(toFuture(Right(response)))
+    def mockUpdateEmail(expectedPayload: NSIPayload)(response: HttpResponse): OngoingStubbing[Future[Either[UpstreamErrorResponse,HttpResponse]]] = {
+      when(proxyConnector.updateEmail(eqTo(expectedPayload))(any(), any())).thenReturn(toFuture(Right(response)))
+    }
 
-    def mockUserCapServiceUpdate(result: Either[String, Unit]) =
-      userCapService
-        .update()(*)
-        .returns(result.fold[Future[Unit]](e => Future.failed(new Exception(e)), _ => Future.successful(())))
+    def mockUserCapServiceUpdate(result: Either[String, Unit]): OngoingStubbing[Future[Unit]] = {
+      when(userCapService.update()(any()))
+        .thenReturn(result.fold[Future[Unit]](e => Future.failed(new Exception(e)), _ => Future.successful(())))
+    }
 
-    def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
-      emailStore
-        .delete(nino)(*)
-        .returns(EitherT.fromEither[Future](result))
+    def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit = {
+      when(emailStore.delete(eqTo(nino))(any())).thenReturn(EitherT.fromEither[Future](result))
+    }
 
     def mockBarsService(barsRequest: BankDetailsValidationRequest)(
-      result: Either[String, BankDetailsValidationResult]): Unit =
-      barsService
-        .validate(barsRequest)(*, *, *)
-        .returns(Future.successful(result))
+      result: Either[String, BankDetailsValidationResult]): Unit = {
+      when(barsService.validate(eqTo(barsRequest))(any(), any(), any()))
+        .thenReturn(Future.successful(result))
+    }
   }
 
   "The HelpToSaveController" when {
@@ -178,15 +177,15 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
       }
 
       "delete any existing emails of DE users before creating the account" in new TestApparatus {
-        val payloadDE: NSIPayload =
-          validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
-          mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
-          mockEmailDelete("nino")(Right(()))
-          mockCreateAccount(payloadDE)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
-          mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
-            mockSetFlag("nino")(Right(()))
-            mockUserCapServiceUpdate(Right(()))
-            mockSendAuditEvent(AccountCreated(payloadDE, "Digital", detailsManuallyEntered = false), "nino")
+        val payloadDE: NSIPayload = validNSIUserInfo.copy(contactDetails = validNSIUserInfo.contactDetails.copy(communicationPreference = "00"))
+
+        mockAuth(GGAndPrivilegedProviders, EmptyRetrieval)(Right(()))
+        mockEmailDelete("nino")(Right(()))
+        mockCreateAccount(payloadDE)(HttpResponse(CREATED, Json.toJson(account), returnHeaders))
+        mockEnrolmentStoreInsert("nino", itmpFlag = false, Some(7), "Digital", accountNumber)(Right(()))
+        mockSetFlag("nino")(Right(()))
+        mockUserCapServiceUpdate(Right(()))
+        mockSendAuditEvent(AccountCreated(payloadDE, "Digital", detailsManuallyEntered = false), "nino")
 
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = false, "00")))

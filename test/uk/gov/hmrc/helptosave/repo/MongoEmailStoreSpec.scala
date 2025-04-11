@@ -17,12 +17,14 @@
 package uk.gov.hmrc.helptosave.repo
 
 import cats.syntax.all._
+import org.mockito.Mockito.when
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
+import org.mongodb.scala.ObservableFuture
 
 import scala.util.{Failure, Success, Try}
 
@@ -34,15 +36,13 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
   val crypto: Crypto = mock[Crypto]
 
-  def mockEncrypt(input: String)(output: String): Unit =
-    crypto
-      .encrypt(input)
-      .returns(output)
+  def mockEncrypt(input: String)(output: String): Unit = {
+    when(crypto.encrypt(input)).thenReturn(output)
+  }
 
-  def mockDecrypt(input: String)(output: Option[String]): Unit =
-    crypto
-      .decrypt(input)
-      .returns(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
+  def mockDecrypt(input: String)(output: Option[String]): Unit = {
+    when(crypto.decrypt(input)).thenReturn(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
+  }
 
   def newMongoEmailStore(mongoComponent: MongoComponent) =
     new MongoEmailStore(mongoComponent, crypto, mockMetrics)

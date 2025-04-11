@@ -1,9 +1,11 @@
 import helpers.IntegrationSpecBase
-import helpers.TestData._
+import helpers.TestData.*
 import org.scalatest.time.{Millis, Seconds, Span}
-import play.api.http.Status._
+import play.api.http.Status.*
 import play.api.libs.json.Json
+import play.api.libs.ws.WSResponse
 import play.api.test.Helpers.AUTHORIZATION
+import play.api.libs.ws.writeableOf_JsValue
 
 class HelpToSaveControllerISpec extends IntegrationSpecBase {
 
@@ -25,7 +27,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
-          whenReady(res) {resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CREATED
             getEnrolmentCount(NINO) shouldBe 1
             getUserCap().map(_.totalCount) shouldBe Some(1)
@@ -44,7 +46,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CONFLICT
             getEnrolmentCount(NINO) shouldBe 2
             getUserCap().map(_.totalCount) shouldBe Some(1)
@@ -63,7 +65,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CONFLICT
             getEnrolmentCount(NINO) shouldBe 2
             getUserCap().map(_.totalCount) shouldBe Some(1)
@@ -84,7 +86,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CONFLICT
             getEnrolmentCount(NINO) shouldBe 2
             getUserCap().map(_.totalCount) shouldBe Some(1)
@@ -105,7 +107,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CREATED
             eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
               getEnrolmentCount(NINO) shouldBe 1
@@ -126,7 +128,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CREATED
             eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
               getEnrolmentCount(NINO, itmpFlag = false) shouldBe 1
@@ -149,7 +151,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
@@ -169,7 +171,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
@@ -189,7 +191,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
@@ -209,7 +211,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
-          whenReady(res) { resp =>
+          whenReady(res) { (resp: WSResponse) =>
             resp.status shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }

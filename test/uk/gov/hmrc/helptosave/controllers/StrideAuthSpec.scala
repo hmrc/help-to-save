@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.when
+import org.mockito.stubbing.OngoingStubbing
 import play.api.Configuration
 import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.Results._
@@ -35,8 +37,8 @@ import scala.concurrent.Future
 
 class StrideAuthSpec extends TestSupport {
 
-  lazy val standardRoles = List("a", "b")
-  lazy val secureRoles = List("c", "d")
+  lazy val standardRoles: List[String] = List("a", "b")
+  lazy val secureRoles: List[String] = List("c", "d")
 
   override lazy val additionalConfig: Configuration = {
     def toConfigValue(rolesList: List[String]): List[String] =
@@ -50,10 +52,10 @@ class StrideAuthSpec extends TestSupport {
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
-  def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]) =
-    mockAuthConnector
-      .authorise(expectedPredicate, expectedRetrieval)(*, *)
-      .returns(result.fold(Future.failed, Future.successful))
+  def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]): OngoingStubbing[Future[A]] = {
+    when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(any(), any()))
+      .thenReturn(result.fold(Future.failed, Future.successful))
+  }
 
   "StrideAuth" must {
 

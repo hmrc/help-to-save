@@ -18,7 +18,8 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.when
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.{JsSuccess, JsValue, Json}
@@ -44,19 +45,19 @@ class EnrolmentStoreControllerSpec
         Gen.oneOf(true, false).map(EnrolmentStore.Enrolled)
       ))
 
-  val privilegedCredentials = PAClientId("id")
-  val ggCredentials = GGCredId("123-gg")
+  val privilegedCredentials: PAClientId = PAClientId("id")
+  val ggCredentials: GGCredId = GGCredId("123-gg")
 
   def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(
-    result: Either[String, Option[Account]]): Unit =
-    proxyConnector
-      .getAccount(nino, systemId, correlationId, path)(*, *)
-      .returns(EitherT.fromEither[Future](result))
+    result: Either[String, Option[Account]]): Unit = {
+    when(proxyConnector.getAccount(eqTo(nino), eqTo(systemId), eqTo(correlationId), eqTo(path))(any(), any()))
+      .thenReturn(EitherT.fromEither[Future](result))
+  }
 
-  def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit =
-    enrolmentStore
-      .updateWithAccountNumber(nino, accountNumber)(*)
-      .returns(EitherT.fromEither[Future](result))
+  def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit = {
+    when(enrolmentStore.updateWithAccountNumber(eqTo(nino), eqTo(accountNumber))(any()))
+      .thenReturn(EitherT.fromEither[Future](result))
+  }
 
   "The EnrolmentStoreController" when {
 

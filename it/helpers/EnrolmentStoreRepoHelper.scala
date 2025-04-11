@@ -2,6 +2,9 @@ package helpers
 
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.ObservableFuture
+import org.mongodb.scala.SingleObservableFuture
+
 import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
@@ -10,7 +13,7 @@ trait EnrolmentStoreRepoHelper {
 
   self: IntegrationSpecBase =>
 
-  val enrolmentStoreRepository: MongoEnrolmentStore
+//  override val enrolmentStoreRepository: MongoEnrolmentStore
 
   def getEnrolmentCount(nino: String, itmpFlag: Boolean = true): Long = {
     await(enrolmentStoreRepository.collection.countDocuments(and(Filters.equal("nino", nino), Filters.equal("itmpHtSFlag", itmpFlag))).toFuture())

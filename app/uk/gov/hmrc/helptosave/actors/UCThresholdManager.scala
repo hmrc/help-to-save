@@ -55,7 +55,7 @@ class UCThresholdManager(
       minBackoff,
       maxBackoff,
       numberOfRetriesUntilWaitDoubles,
-      self, { _: Unit =>
+      self, { (_: Unit) =>
         GetDESThresholdValue
       },
       scheduler

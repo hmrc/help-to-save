@@ -18,7 +18,8 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
@@ -37,15 +38,15 @@ class EmailStoreControllerSpec extends AuthSupport {
 
   val emailStore: EmailStore = mock[EmailStore]
 
-  def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
-    emailStore
-      .store(email, nino)(*)
-      .returns(EitherT.fromEither[Future](result))
+  def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit = {
+    when(emailStore.store(eqTo(email), eqTo(nino))(any()))
+      .thenReturn(EitherT.fromEither[Future](result))
+  }
 
-  def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit =
-    emailStore
-      .get(nino)(*)
-      .returns(EitherT.fromEither[Future](result))
+  def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit = {
+    when(emailStore.get(eqTo(nino))(any()))
+      .thenReturn(EitherT.fromEither[Future](result))
+  }
 
   "The EmailStoreController" when {
 

@@ -26,6 +26,7 @@ import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
+import org.mongodb.scala.SingleObservableFuture
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZoneId}
@@ -65,8 +66,7 @@ class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionC
           ),
           options =
             FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
-        )
-        .toFutureOption()
+        ).toFutureOption()
     }
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)

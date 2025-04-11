@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.when
+import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
 import uk.gov.hmrc.auth.core.retrieve._
@@ -29,21 +31,21 @@ trait AuthSupport extends TestSupport {
 
   val nino = "AE123456C"
 
-  val mockedNinoRetrieval = Some(nino)
+  val mockedNinoRetrieval: Some[String] = Some(nino)
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   def mockAuth[A](predicate: Predicate, retrieval: Retrieval[A])(
-    result: Either[Exception, A]) =
-    mockAuthConnector
-      .authorise(predicate, retrieval)(*, *)
-      .returns(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+    result: Either[Exception, A]): OngoingStubbing[Future[A]] = {
+    when(mockAuthConnector.authorise(eqTo(predicate), eqTo(retrieval))(any(), any()))
+      .thenAnswer(_ => result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+  }
 
   def mockAuth[A](retrieval: Retrieval[A])(
-    result: Either[Exception, A]) =
-    mockAuthConnector
-      .authorise(*, retrieval)(*, *)
-      .returns(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+    result: Either[Exception, A]): OngoingStubbing[Future[A]] = {
+    when(mockAuthConnector.authorise(any(), eqTo(retrieval))(any(), any()))
+      .thenAnswer(_ => result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+  }
 
   def testWithGGAndPrivilegedAccess(f: (() => Unit) => Unit): Unit = {
     withClue("For GG access: ") {

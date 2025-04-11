@@ -19,7 +19,8 @@ package uk.gov.hmrc.helptosave.modules
 import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.util.Timeout
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{doNothing, when}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import play.api.Configuration
 import play.api.libs.json.Json
@@ -58,9 +59,8 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   "The UCThresholdOrchestrator" should {
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
-      connector
-        .getThreshold()(*, *)
-        .returns(Future.successful(
+      when(connector.getThreshold()(any(), any()))
+        .thenReturn(Future.successful(
           Right(HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]()))
         ))
 
@@ -75,16 +75,13 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       Thread.sleep(1000L)
     }
     "instance of the UCThresholdManager doesn't start" in {
-      connector
-        .getThreshold()(*, *)
-        .returns(Future.successful(Left(UpstreamErrorResponse("error occurred",500))))
+      when(connector.getThreshold()(any(), any()))
+        .thenReturn(Future.successful(Left(UpstreamErrorResponse("error occurred",500))))
 
       val response = await(connector.getThreshold())
       response shouldBe Left(UpstreamErrorResponse("error occurred",500))
 
-      pagerDutyAlert
-        .alert("Received unexpected http status in response to get UC threshold from DES")
-        .doesNothing()
+      doNothing().when(pagerDutyAlert).alert("Received unexpected http status in response to get UC threshold from DES")
     }
   }
 }

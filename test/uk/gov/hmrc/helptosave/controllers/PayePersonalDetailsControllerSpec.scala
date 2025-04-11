@@ -18,7 +18,8 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.mvc.{Result => PlayResult}
 import play.api.test.Helpers.contentAsJson
@@ -36,18 +37,18 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
 
   class TestApparatus {
     val nino = "AE123456D"
-    val txnId = UUID.randomUUID()
+    val txnId: UUID = UUID.randomUUID()
 
-    val helpToSaveService = mock[HelpToSaveService]
-    val payeDetailsConnector = mock[DESConnector]
+    val helpToSaveService: HelpToSaveService = mock[HelpToSaveService]
+    val payeDetailsConnector: DESConnector = mock[DESConnector]
 
     def doPayeDetailsRequest(controller: PayePersonalDetailsController): Future[PlayResult] =
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
-    def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =
-      helpToSaveService
-        .getPersonalDetails(nino)(*, *)
-        .returns(EitherT.fromEither[Future](result))
+    def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit = {
+      when(helpToSaveService.getPersonalDetails(eqTo(nino))(any(), any()))
+        .thenReturn(EitherT.fromEither[Future](result))
+    }
 
     val controller = new PayePersonalDetailsController(helpToSaveService, mockAuthConnector, testCC)
   }

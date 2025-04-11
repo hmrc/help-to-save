@@ -30,6 +30,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats.Implicits.objectIdFormat
 import uk.gov.hmrc.mongo.test.MongoSupport
+import org.mongodb.scala.ObservableFuture
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -61,7 +62,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
       store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber, deleteFlag).value,
       duration)
 
-  def updateDeleteFlag(ninos: Seq[NINODeletionConfig], revertSoftDelete: Boolean, store: MongoEnrolmentStore) =
+  def updateDeleteFlag(ninos: Seq[NINODeletionConfig], revertSoftDelete: Boolean, store: MongoEnrolmentStore): Either[String,Seq[NINODeletionConfig]] =
     Await.result(store.updateDeleteFlag(ninos, revertSoftDelete).value, duration)
 
   "The MongoEnrolmentStore" when {

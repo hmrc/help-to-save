@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosave.utils
 
 import com.codahale.metrics.{Counter, NoopMetricRegistry}
 import com.typesafe.config.ConfigFactory
-import org.mockito.IdiomaticMockito
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
@@ -34,7 +34,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll with BeforeAndAfterEach {
+trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with BeforeAndAfterEach {
   lazy val additionalConfig: Configuration = Configuration()
   val originatorIdHeaderValue = "test-originator"
 

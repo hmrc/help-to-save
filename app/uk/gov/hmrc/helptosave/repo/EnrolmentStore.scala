@@ -37,6 +37,8 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
+import org.mongodb.scala.ObservableFuture
+import org.mongodb.scala.SingleObservableFuture
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -134,8 +136,7 @@ class MongoEnrolmentStore @Inject()(val mongo: MongoComponent, metrics: Metrics)
           filter = regex("nino", getRegex(nino)),
           update = Updates.set("itmpHtSFlag", itmpFlag),
           options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
-        )
-        .toFutureOption()
+        ).toFutureOption()
     }
 
   private[repo] def doUpdateDeleteFlag(enrolmentsToDelete: Seq[EnrolmentData], revertSoftDelete: Boolean = false)(
@@ -182,8 +183,7 @@ class MongoEnrolmentStore @Inject()(val mongo: MongoComponent, metrics: Metrics)
           filter = regex("nino", getRegex(nino)),
           update = Updates.set("accountNumber", accountNumber),
           options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
-        )
-        .toFutureOption()
+        ).toFutureOption()
     }
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =

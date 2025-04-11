@@ -30,6 +30,7 @@ import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
+import org.mongodb.scala.ObservableFuture
 
 import scala.concurrent.{ExecutionContext, Future}
 

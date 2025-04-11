@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
 import org.scalatest.EitherValues
 import play.api.Configuration
 import play.api.http.Status
@@ -31,6 +31,7 @@ import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestEnrolmentBehaviour}
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.test.WireMockSupport
+import org.mockito.Mockito.doNothing
 
 import java.time.LocalDate
 import java.util.UUID
@@ -84,10 +85,9 @@ class HelpToSaveProxyConnectorSpec
       Some("systemId")
     )
 
-  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit =
-    mockAuditor
-      .sendEvent(event, nino)(*)
-      .doesNothing()
+  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit = {
+    doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(any())
+  }
 
   def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
     val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
@@ -522,8 +522,7 @@ class HelpToSaveProxyConnectorSpec
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString()))
 
         val result = await(proxyConnector.createAccount(userInfo))
-        val jsonResult = result.leftSideValue
-        jsonResult contains Left(UpstreamErrorResponse(s"unexpected error from proxy during /create-de-account ${connectorCallFailureMessage(POST, s"$createAccountURL")}",INTERNAL_SERVER_ERROR))
+        result contains Left(UpstreamErrorResponse(s"unexpected error from proxy during /create-de-account ${connectorCallFailureMessage(POST, s"$createAccountURL")}",INTERNAL_SERVER_ERROR))
 
         wireMockServer.start()
       }

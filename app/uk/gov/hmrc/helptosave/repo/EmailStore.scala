@@ -34,6 +34,8 @@ import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
+import org.mongodb.scala.ObservableFuture
+import org.mongodb.scala.SingleObservableFuture
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -135,9 +137,9 @@ class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: 
           update = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
           options = UpdateOptions().upsert(true)
         )
-        .toFuture()
+        .toFutureOption()
         .map(a => {
-          a.wasAcknowledged()
+          a.exists(_.wasAcknowledged())
         })
     }
 }

@@ -27,6 +27,7 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.libs.ws.writeableOf_JsValue
 
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
@@ -62,7 +63,7 @@ class DESConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesCon
 
   def eligibilityCheckUrl(nino: String): URL = url"$itmpECBaseURL/help-to-save/eligibility-check/$nino"
 
-  def eligibilityCheckQueryParameters(ucResponse: Option[UCResponse]) =
+  def eligibilityCheckQueryParameters(ucResponse: Option[UCResponse]): Seq[(String, String)] =
     ucResponse match {
       case Some(UCResponse(a, Some(b))) => Seq("universalCreditClaimant" -> a.show, "withinThreshold" -> b.show)
       case Some(UCResponse(a, None))    => Seq("universalCreditClaimant" -> a.show)

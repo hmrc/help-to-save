@@ -18,7 +18,8 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.Mockito.when
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
 import play.api.mvc.{Result => PlayResult}
@@ -36,20 +37,20 @@ import scala.concurrent.Future
 class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks {
 
   class TestApparatus {
-    val eligibilityService = mock[HelpToSaveService]
+    val eligibilityService: HelpToSaveService = mock[HelpToSaveService]
 
     def doRequest(controller: EligibilityCheckController, nino: Option[String]): Future[PlayResult] =
       controller.eligibilityCheck(nino)(FakeRequest())
 
     def mockEligibilityCheckerService(nino: NINO, expectedPath: String)(
-      result: Either[String, EligibilityCheckResponse]): Unit =
-      eligibilityService
-        .getEligibility(nino, expectedPath)(*, *)
-        .returns(EitherT.fromEither[Future](result))
+      result: Either[String, EligibilityCheckResponse]): Unit = {
+      when(eligibilityService.getEligibility(eqTo(nino), eqTo(expectedPath))(any(), any()))
+        .thenReturn(EitherT.fromEither[Future](result))
+    }
 
     val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector, testCC)
 
-    val privilegedCredentials = PAClientId("id")
+    val privilegedCredentials: PAClientId = PAClientId("id")
   }
 
   "The EligibilityCheckerController" when {
