@@ -39,8 +39,9 @@ trait UserCapService {
 }
 
 @Singleton
-class UserCapServiceImpl @Inject()(userCapStore: UserCapStore, servicesConfig: ServicesConfig)
-    extends UserCapService with Logging {
+class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: ServicesConfig)
+    extends UserCapService
+    with Logging {
 
   private val isDailyCapEnabled = servicesConfig.getBoolean("microservice.user-cap.daily.enabled")
 
@@ -106,23 +107,21 @@ class UserCapServiceImpl @Inject()(userCapStore: UserCapStore, servicesConfig: S
       userCapStore
         .get()
         .map(_.fold(UserCapResponse())(check))
-        .recover {
-          case NonFatal(e) =>
-            logger.warn("error checking account cap", e)
-            UserCapResponse()
+        .recover { case NonFatal(e) =>
+          logger.warn("error checking account cap", e)
+          UserCapResponse()
         }
     }
 
   private val calculateUserCap: Option[UserCap] => UserCap = {
     (isTotalCapEnabled, isDailyCapEnabled) match {
       case (false, false) =>
-        _ =>
-          UserCap(0, 0)
-      case (_, _) => {
+        _ => UserCap(0, 0)
+      case (_, _)         => {
         case Some(uc) =>
           val c = if (uc.isPreviousRecord) 1 else uc.dailyCount + 1
           UserCap(c, uc.totalCount + 1)
-        case None => UserCap(1, 1)
+        case None     => UserCap(1, 1)
       }
     }
   }
@@ -138,7 +137,7 @@ class UserCapServiceImpl @Inject()(userCapStore: UserCapStore, servicesConfig: S
           logger.info(logMessage)
         }
       }
-      .recover {
-        case e => logger.warn("error updating the account cap", e)
+      .recover { case e =>
+        logger.warn("error updating the account cap", e)
       }
 }

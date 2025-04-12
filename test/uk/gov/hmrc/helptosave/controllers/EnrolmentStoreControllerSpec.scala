@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
@@ -36,34 +36,36 @@ import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 import scala.concurrent.Future
 
 class EnrolmentStoreControllerSpec
-    extends StrideAuthSupport with ScalaCheckDrivenPropertyChecks with TestEnrolmentBehaviour {
+    extends StrideAuthSupport
+    with ScalaCheckDrivenPropertyChecks
+    with TestEnrolmentBehaviour {
 
   implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
     Arbitrary(
       Gen.oneOf[EnrolmentStore.Status](
         Gen.const(EnrolmentStore.NotEnrolled),
         Gen.oneOf(true, false).map(EnrolmentStore.Enrolled)
-      ))
+      )
+    )
 
   val privilegedCredentials: PAClientId = PAClientId("id")
-  val ggCredentials: GGCredId = GGCredId("123-gg")
+  val ggCredentials: GGCredId           = GGCredId("123-gg")
 
   def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(
-    result: Either[String, Option[Account]]): Unit = {
+    result: Either[String, Option[Account]]
+  ): Unit =
     when(proxyConnector.getAccount(eqTo(nino), eqTo(systemId), eqTo(correlationId), eqTo(path))(any(), any()))
       .thenReturn(EitherT.fromEither[Future](result))
-  }
 
-  def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit = {
+  def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit =
     when(enrolmentStore.updateWithAccountNumber(eqTo(nino), eqTo(accountNumber))(any()))
       .thenReturn(EitherT.fromEither[Future](result))
-  }
 
   "The EnrolmentStoreController" when {
 
     val controller =
       new EnrolmentStoreController(enrolmentStore, helpToSaveService, mockAuthConnector, proxyConnector, testCC)
-    val nino = "AE123456C"
+    val nino       = "AE123456C"
 
     "setting the ITMP flag" must {
 
@@ -78,17 +80,17 @@ class EnrolmentStoreControllerSpec
       }
 
       "update the mongo record with the ITMP flag set to true" in {
-          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
-          mockSetFlag(nino)(Right(()))
-          mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
+        mockSetFlag(nino)(Right(()))
+        mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
 
         await(setFlag())
       }
 
       "return a 200 if all the steps were successful" in {
-          mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
-          mockSetFlag(nino)(Right(()))
-          mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
+        mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
+        mockSetFlag(nino)(Right(()))
+        mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Right(()))
 
         status(setFlag()) shouldBe OK
       }
@@ -99,12 +101,12 @@ class EnrolmentStoreControllerSpec
           status(setFlag()) shouldBe INTERNAL_SERVER_ERROR
         }
 
-        test{
+        test {
           mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockSetFlag(nino)(Left(""))
         }
 
-        test{
+        test {
           mockAuth(AuthWithCL200, v2Nino)(Right(mockedNinoRetrieval))
           mockSetFlag(nino)(Right(()))
           mockEnrolmentStoreUpdate(nino, itmpFlag = true)(Left(""))
@@ -120,7 +122,7 @@ class EnrolmentStoreControllerSpec
 
       val accountNumber = AccountNumber(Some("1234567890123"))
       val correlationId = "-"
-      val systemId = "help-to-save"
+      val systemId      = "help-to-save"
 
       "get the account number from the enrolment store" in {
         mockAuth(v2Nino)(Right(mockedNinoRetrieval))
@@ -139,7 +141,7 @@ class EnrolmentStoreControllerSpec
         val jsonResult: JsValue = Json.parse("""{"accountNumber":"AC01"}""")
 
         val result = await(getAccountNumber())
-        status(result) shouldBe OK
+        status(result)                           shouldBe OK
         contentAsJson(Future.successful(result)) shouldBe jsonResult
       }
 
@@ -169,7 +171,7 @@ class EnrolmentStoreControllerSpec
 
       "return the enrolment status if the call was successful" in {
         val m: Map[EnrolmentStore.Status, String] = Map(
-          EnrolmentStore.Enrolled(itmpHtSFlag = true) ->
+          EnrolmentStore.Enrolled(itmpHtSFlag = true)  ->
             """
               |{
               |  "enrolled"    : true,
@@ -183,7 +185,7 @@ class EnrolmentStoreControllerSpec
               |  "itmpHtSFlag" : false
               |}
             """.stripMargin,
-          EnrolmentStore.NotEnrolled ->
+          EnrolmentStore.NotEnrolled                   ->
             """
               |{
               |  "enrolled"    : false,
@@ -192,15 +194,14 @@ class EnrolmentStoreControllerSpec
             """.stripMargin
         )
 
-        m.foreach {
-          case (s, j) =>
-            mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
-            mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-            mockEnrolmentStoreGet(nino)(Right(s))
+        m.foreach { case (s, j) =>
+          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
+          mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+          mockEnrolmentStoreGet(nino)(Right(s))
 
-            val result = getEnrolmentStatus(Some(nino))
-            status(result) shouldBe OK
-            contentAsJson(result) shouldBe Json.parse(j)
+          val result = getEnrolmentStatus(Some(nino))
+          status(result)        shouldBe OK
+          contentAsJson(result) shouldBe Json.parse(j)
         }
       }
 
@@ -221,8 +222,8 @@ class EnrolmentStoreControllerSpec
           EnrolmentStore.Enrolled(itmpHtSFlag = false),
           EnrolmentStore.NotEnrolled
         ).foreach { status =>
-            mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-            mockEnrolmentStoreGet(nino)(Right(status))
+          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+          mockEnrolmentStoreGet(nino)(Right(status))
 
           val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
           contentAsJson(result).validate[EnrolmentStore.Status] shouldBe JsSuccess(status)
@@ -230,8 +231,8 @@ class EnrolmentStoreControllerSpec
       }
 
       "return an error if there is a problem getting the enrolment status" in {
-          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-          mockEnrolmentStoreGet(nino)(Left(""))
+        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+        mockEnrolmentStoreGet(nino)(Left(""))
 
         val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
         status(result) shouldBe 500

@@ -30,8 +30,8 @@ class HtsEventSpec extends TestSupport {
 
   "EligibilityCheckEvent" must { // scalastyle:off magic.number
 
-    val nino = "AE123456C"
-    val eligibleResult =
+    val nino             = "AE123456C"
+    val eligibleResult   =
       EligibilityCheckResult("Eligible to HtS Account", 1, "In receipt of UC and income sufficient", 6)
     val inEligibleResult =
       EligibilityCheckResult("HtS account was previously created", 3, "HtS account already exists", 1)
@@ -53,43 +53,43 @@ class HtsEventSpec extends TestSupport {
 
     "be created with the appropriate auditSource and auditType" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
-      event.value.auditSource shouldBe appName
-      event.value.auditType shouldBe "EligibilityResult"
+      event.value.auditSource    shouldBe appName
+      event.value.auditType      shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is eligible" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
       event.value.detail.toString shouldBe eligibleUCClaimantWithinThreshold
-      event.value.auditType shouldBe "EligibilityResult"
-      event.value.tags.get(Path) shouldBe Some("path")
+      event.value.auditType       shouldBe "EligibilityResult"
+      event.value.tags.get(Path)  shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is eligible" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, None, "path")
       event.value.detail.toString shouldBe eligibleWithoutUCParams
-      event.value.auditType shouldBe "EligibilityResult"
-      event.value.tags.get(Path) shouldBe Some("path")
+      event.value.auditType       shouldBe "EligibilityResult"
+      event.value.tags.get(Path)  shouldBe Some("path")
     }
 
     "contain only the isUCClaimant param in the details but not isWithinUCThreshold" in {
       val event = EligibilityCheckEvent(nino, eligibleResult, Some(UCResponse(ucClaimant = false, None)), "path")
       event.value.detail.toString shouldBe eligibleUCClaimant
-      event.value.auditType shouldBe "EligibilityResult"
-      event.value.tags.get(Path) shouldBe Some("path")
+      event.value.auditType       shouldBe "EligibilityResult"
+      event.value.tags.get(Path)  shouldBe Some("path")
     }
 
     "read UC params if they are present when the user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, Some(UCResponse(ucClaimant = true, Some(true))), "path")
-      event.value.detail shouldBe Json.parse(notEligibleWithUCParams)
-      event.value.auditType shouldBe "EligibilityResult"
+      event.value.detail         shouldBe Json.parse(notEligibleWithUCParams)
+      event.value.auditType      shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
 
     "not contain the UC params in the details when they are not passed and user is NOT eligible" in {
       val event = EligibilityCheckEvent(nino, inEligibleResult, None, "path")
-      event.value.detail shouldBe Json.parse(notEligibleWithoutUCParams)
-      event.value.auditType shouldBe "EligibilityResult"
+      event.value.detail         shouldBe Json.parse(notEligibleWithoutUCParams)
+      event.value.auditType      shouldBe "EligibilityResult"
       event.value.tags.get(Path) shouldBe Some("path")
     }
   }
@@ -111,9 +111,9 @@ class HtsEventSpec extends TestSupport {
     "construct an event correctly when the details have not been manually entered" in {
 
       val event = AccountCreated(nsiPayload, "source", detailsManuallyEntered = false)
-      event.value.auditType shouldBe "AccountCreated"
+      event.value.auditType      shouldBe "AccountCreated"
       event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
-      event.value.detail shouldBe Json.toJson(
+      event.value.detail         shouldBe Json.toJson(
         AllDetails(
           PrePopulatedUserData(
             Some("name"),
@@ -147,9 +147,9 @@ class HtsEventSpec extends TestSupport {
     "construct an event correctly when the details have been manually entered" in {
 
       val event = AccountCreated(nsiPayload, "source", detailsManuallyEntered = true)
-      event.value.auditType shouldBe "AccountCreated"
+      event.value.auditType      shouldBe "AccountCreated"
       event.value.tags.get(Path) shouldBe Some("/help-to-save/create-account")
-      event.value.detail shouldBe Json.toJson(
+      event.value.detail         shouldBe Json.toJson(
         AllDetails(
           PrePopulatedUserData(
             "nino",
@@ -186,7 +186,8 @@ class HtsEventSpec extends TestSupport {
 
     val nino = randomNINO()
 
-    val nsiAccountJson = Json.parse("""
+    val nsiAccountJson = Json
+      .parse("""
                                       |{
                                       |  "accountNumber": "AC01",
                                       |  "accountBalance": "200.34",
@@ -218,18 +219,19 @@ class HtsEventSpec extends TestSupport {
                                       |    }
                                       |  ]
                                       |}
-      """.stripMargin).as[JsObject]
+      """.stripMargin)
+      .as[JsObject]
 
     "construct GetAccountResult event correctly" in {
 
       val getAccountResult = GetAccountResult(nino, nsiAccountJson)
-      val event = GetAccountResultEvent(getAccountResult, "path")
+      val event            = GetAccountResultEvent(getAccountResult, "path")
 
-      event.value.auditSource shouldBe appName
-      event.value.auditType shouldBe "GetAccountResult"
+      event.value.auditSource               shouldBe appName
+      event.value.auditType                 shouldBe "GetAccountResult"
       event.value.tags.get(TransactionName) shouldBe Some("get-account-result")
-      event.value.tags.get(Path) shouldBe Some("path")
-      event.value.detail shouldBe Json.toJson(getAccountResult)
+      event.value.tags.get(Path)            shouldBe Some("path")
+      event.value.detail                    shouldBe Json.toJson(getAccountResult)
     }
   }
 
@@ -237,10 +239,10 @@ class HtsEventSpec extends TestSupport {
 
     "be created correctly" in {
       val response = Json.parse("""{ "a" : "b" }""")
-      val event = BARSCheck(BankDetailsValidationRequest("nino", "code", "number"), response, "path")
-      event.value.auditSource shouldBe appName
-      event.value.auditType shouldBe "BARSCheck"
-      event.value.detail shouldBe Json.parse(
+      val event    = BARSCheck(BankDetailsValidationRequest("nino", "code", "number"), response, "path")
+      event.value.auditSource      shouldBe appName
+      event.value.auditType        shouldBe "BARSCheck"
+      event.value.detail           shouldBe Json.parse(
         s"""{
            | "nino": "nino",
            | "accountNumber" : "number",

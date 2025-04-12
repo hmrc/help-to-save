@@ -36,10 +36,10 @@ import scala.concurrent.{Await, Future}
 class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestratorSpec") with Eventually {
   implicit val timeout: Timeout = Timeout(10.seconds)
 
-  val connector: DESConnector = mock[DESConnector]
-  val service: HelpToSaveService = mock[HelpToSaveService]
+  val connector: DESConnector           = mock[DESConnector]
+  val service: HelpToSaveService        = mock[HelpToSaveService]
   val pagerDutyAlert: PagerDutyAlerting = mock[PagerDutyAlerting]
-  val proxyActor: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
+  val proxyActor: ActorRef              = system.actorOf(UCThresholdConnectorProxyActor.props(connector, pagerDutyAlert))
 
   val testConfiguration: Configuration = Configuration(
     ConfigFactory.parseString(
@@ -54,15 +54,18 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
         |update-time-delay = 1 hour
         |}
     """.stripMargin
-    ))
+    )
+  )
 
   "The UCThresholdOrchestrator" should {
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
       when(connector.getThreshold()(any(), any()))
-        .thenReturn(Future.successful(
-          Right(HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]()))
-        ))
+        .thenReturn(
+          Future.successful(
+            Right(HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]()))
+          )
+        )
 
       val orchestrator = new UCThresholdOrchestrator(system, pagerDutyAlert, testConfiguration, connector)
 
@@ -76,10 +79,10 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
     }
     "instance of the UCThresholdManager doesn't start" in {
       when(connector.getThreshold()(any(), any()))
-        .thenReturn(Future.successful(Left(UpstreamErrorResponse("error occurred",500))))
+        .thenReturn(Future.successful(Left(UpstreamErrorResponse("error occurred", 500))))
 
       val response = await(connector.getThreshold())
-      response shouldBe Left(UpstreamErrorResponse("error occurred",500))
+      response shouldBe Left(UpstreamErrorResponse("error occurred", 500))
 
       doNothing().when(pagerDutyAlert).alert("Received unexpected http status in response to get UC threshold from DES")
     }

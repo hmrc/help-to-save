@@ -39,10 +39,8 @@ trait AccountQuery extends Logging with Results {
     * Behaviour common to actions that query for Help to Save account data based on NINO
     */
   protected def accountQuery[A](nino: String, systemId: String, correlationId: Option[String])(
-    query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]])(
-    implicit transformer: LogMessageTransformer,
-    writes: Writes[A],
-    ec: ExecutionContext): Action[AnyContent] =
+    query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]]
+  )(implicit transformer: LogMessageTransformer, writes: Writes[A], ec: ExecutionContext): Action[AnyContent] =
     if (!isValid(nino)) {
       Action {
         logger.warn("NINO in request was not valid")

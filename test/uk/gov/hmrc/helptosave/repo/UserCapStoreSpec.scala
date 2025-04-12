@@ -26,8 +26,8 @@ import java.time.{LocalDate, ZoneId}
 
 class UserCapStoreSpec extends TestSupport with MongoSupport {
 
-  val repository: MongoUserCapStore = newUserCapStore(mongoComponent)
-  override def beforeEach(): Unit =
+  val repository: MongoUserCapStore                   = newUserCapStore(mongoComponent)
+  override def beforeEach(): Unit                     =
     await(repository.collection.drop().toFuture())
   def newUserCapStore(mongoComponent: MongoComponent) = new MongoUserCapStore(mongoComponent)
 

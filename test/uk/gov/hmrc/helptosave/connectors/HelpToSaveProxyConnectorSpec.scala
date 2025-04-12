@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.connectors
 
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.scalatest.EitherValues
 import play.api.Configuration
 import play.api.http.Status
@@ -40,27 +40,29 @@ import scala.concurrent.duration._
 
 // scalastyle:off magic.number
 class HelpToSaveProxyConnectorSpec
-    extends TestEnrolmentBehaviour with MockPagerDuty with EitherValues with WireMockSupport with WireMockMethods {
+    extends TestEnrolmentBehaviour
+    with MockPagerDuty
+    with EitherValues
+    with WireMockSupport
+    with WireMockMethods {
 
   val mockAuditor: HTSAuditor = mock[HTSAuditor]
 
-  override lazy val additionalConfig: Configuration = {
+  override lazy val additionalConfig: Configuration =
     Configuration(
       "microservice.services.help-to-save-proxy.host" -> wireMockHost,
       "microservice.services.help-to-save-proxy.port" -> wireMockPort
     )
-  }
 
-  val mockHttp: HttpClientV2 = fakeApplication.injector.instanceOf[HttpClientV2]
+  val mockHttp: HttpClientV2  = fakeApplication.injector.instanceOf[HttpClientV2]
   override val proxyConnector =
     new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
 
   val createAccountURL: String = "/help-to-save-proxy/create-account"
-  val updateEmailURL: String = "/help-to-save-proxy/update-email"
+  val updateEmailURL: String   = "/help-to-save-proxy/update-email"
 
-  val connectorCallFailureMessage: (HTTPMethod, String) => String = (httpMethod, urlPath) => {
+  val connectorCallFailureMessage: (HTTPMethod, String) => String = (httpMethod, urlPath) =>
     s"$httpMethod of 'http://$wireMockHost:$wireMockPort$urlPath' failed. Caused by: 'Connection refused"
-  }
 
   val userInfo: NSIPayload =
     NSIPayload(
@@ -78,25 +80,26 @@ class HelpToSaveProxyConnectorSpec
         Some("GB"),
         Some("phoneNumber"),
         Some("email"),
-        "commPref"),
+        "commPref"
+      ),
       "regChannel",
       None,
       Some("version"),
       Some("systemId")
     )
 
-  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit = {
+  def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit =
     doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(any())
-  }
 
   def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
     val timerCountBefore = mockMetrics.getTransactionsTimer.getCount
     val errorCountBefore = mockMetrics.getTransactionsErrorCounter.getCount
-    val result = body
+    val result           = body
     (
       result,
       mockMetrics.getTransactionsTimer.getCount - timerCountBefore,
-      mockMetrics.getTransactionsErrorCounter.getCount - errorCountBefore)
+      mockMetrics.getTransactionsErrorCounter.getCount - errorCountBefore
+    )
   }
 
   "The HelpToSaveProxyConnector" when {
@@ -113,14 +116,14 @@ class HelpToSaveProxyConnectorSpec
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.CONFLICT)
 
         val result = await(proxyConnector.createAccount(userInfo))
-        result.leftSide shouldBe Left(UpstreamErrorResponse("Upstream Error",CONFLICT))
+        result.leftSide shouldBe Left(UpstreamErrorResponse("Upstream Error", CONFLICT))
       }
 
       "handle bad_request response from frontend" in {
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString())).thenReturn(Status.BAD_REQUEST)
 
         val result = await(proxyConnector.createAccount(userInfo))
-        result.leftSide shouldBe Left(UpstreamErrorResponse("Upstream Error",BAD_REQUEST))
+        result.leftSide shouldBe Left(UpstreamErrorResponse("Upstream Error", BAD_REQUEST))
       }
     }
 
@@ -136,11 +139,11 @@ class HelpToSaveProxyConnectorSpec
 
     "querying DWP for UC Claimant checks" must {
 
-      val txnId = UUID.randomUUID()
-      val nino = "AE123456C"
+      val txnId     = UUID.randomUUID()
+      val nino      = "AE123456C"
       val threshold = 650.0
 
-      val url = "/help-to-save-proxy/uc-claimant-check"
+      val url         = "/help-to-save-proxy/uc-claimant-check"
       val queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)
 
       "handle success response from proxy" in {
@@ -183,16 +186,16 @@ class HelpToSaveProxyConnectorSpec
 
     "retrieving NsiAccount" must {
 
-      val nino = randomNINO()
+      val nino          = randomNINO()
       val correlationId = UUID.randomUUID().toString
-      val systemId = "123"
-      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
+      val systemId      = "123"
+      val version       = appConfig.runModeConfiguration.underlying.getString("nsi.get-account.version")
 
       val getAccountUrl: String = "/help-to-save-proxy/nsi-services/account"
-      val queryParameters =
+      val queryParameters       =
         Map("nino" -> nino, "correlationId" -> correlationId, "version" -> version, "systemId" -> systemId)
 
-      val path = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
+      val path                                         = s"/help-to-save/$nino/account?nino=$nino&systemId=$systemId&correlationId=$correlationId"
       def event(accountJson: JsValue = nsiAccountJson) =
         GetAccountResultEvent(GetAccountResult(nino, accountJson), path)
 
@@ -213,7 +216,8 @@ class HelpToSaveProxyConnectorSpec
 
         val result = await(proxyConnector.getAccount(nino, systemId, correlationId, path).value)
         result shouldBe Left(
-          "Could not parse getNsiAccount response, received 200 (OK), error=[Bonus terms list returned by NS&I was empty]")
+          "Could not parse getNsiAccount response, received 200 (OK), error=[Bonus terms list returned by NS&I was empty]"
+        )
       }
 
       "throw error when the getAccount response json missing fields that are required according to get_account_by_nino_RESP_schema_V1.0.json" in {
@@ -263,7 +267,8 @@ class HelpToSaveProxyConnectorSpec
                         |    },
                         |    {
                         |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString(
-                          "nsi.no-account-error-message-id")}",
+                         "nsi.no-account-error-message-id"
+                       )}",
                         |      "errorMessage"   : "Oh no!",
                         |      "errorDetail"    : "Account doesn't exist"
                         |    }
@@ -279,13 +284,13 @@ class HelpToSaveProxyConnectorSpec
     }
 
     "retrieving transactions" must {
-      val nino = randomNINO()
+      val nino          = randomNINO()
       val correlationId = UUID.randomUUID().toString
-      val systemId = "123"
-      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")
+      val systemId      = "123"
+      val version       = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")
 
       val getTransactionsUrl: String = "/help-to-save-proxy/nsi-services/transactions"
-      val queryParameters = Map(
+      val queryParameters            = Map(
         "nino"          -> nino,
         "correlationId" -> correlationId,
         "version"       -> version,
@@ -350,51 +355,59 @@ class HelpToSaveProxyConnectorSpec
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
-        result shouldBe Right(
-          Some(Transactions(Seq(
-            Transaction(
-              Credit,
-              BigDecimal("11.50"),
-              LocalDate.parse("2017-11-20"),
-              LocalDate.parse("2017-11-20"),
-              "Debit card online deposit",
-              "A1A11AA1A00A0034",
-              BigDecimal("11.50")
-            ),
-            Transaction(
-              Debit,
-              BigDecimal("1.01"),
-              LocalDate.parse("2017-11-27"),
-              LocalDate.parse("2017-11-27"),
-              "BACS payment",
-              "A1A11AA1A00A000I",
-              BigDecimal("10.49")),
-            Transaction(
-              Debit,
-              BigDecimal("1.11"),
-              LocalDate.parse("2017-11-27"),
-              LocalDate.parse("2017-11-27"),
-              "BACS payment",
-              "A1A11AA1A00A000G",
-              BigDecimal("9.38")),
-            Transaction(
-              Credit,
-              BigDecimal("1.11"),
-              LocalDate.parse("2017-11-27"),
-              LocalDate.parse("2017-12-04"),
-              "Reinstatement Adjustment",
-              "A1A11AA1A00A000G",
-              BigDecimal("10.49")
-            ),
-            Transaction(
-              Credit,
-              BigDecimal(50),
-              LocalDate.parse("2018-04-10"),
-              LocalDate.parse("2018-04-10"),
-              "Debit card online deposit",
-              "A1A11AA1A00A0059",
-              BigDecimal("60.49"))
-          ))))
+        result            shouldBe Right(
+          Some(
+            Transactions(
+              Seq(
+                Transaction(
+                  Credit,
+                  BigDecimal("11.50"),
+                  LocalDate.parse("2017-11-20"),
+                  LocalDate.parse("2017-11-20"),
+                  "Debit card online deposit",
+                  "A1A11AA1A00A0034",
+                  BigDecimal("11.50")
+                ),
+                Transaction(
+                  Debit,
+                  BigDecimal("1.01"),
+                  LocalDate.parse("2017-11-27"),
+                  LocalDate.parse("2017-11-27"),
+                  "BACS payment",
+                  "A1A11AA1A00A000I",
+                  BigDecimal("10.49")
+                ),
+                Transaction(
+                  Debit,
+                  BigDecimal("1.11"),
+                  LocalDate.parse("2017-11-27"),
+                  LocalDate.parse("2017-11-27"),
+                  "BACS payment",
+                  "A1A11AA1A00A000G",
+                  BigDecimal("9.38")
+                ),
+                Transaction(
+                  Credit,
+                  BigDecimal("1.11"),
+                  LocalDate.parse("2017-11-27"),
+                  LocalDate.parse("2017-12-04"),
+                  "Reinstatement Adjustment",
+                  "A1A11AA1A00A000G",
+                  BigDecimal("10.49")
+                ),
+                Transaction(
+                  Credit,
+                  BigDecimal(50),
+                  LocalDate.parse("2018-04-10"),
+                  LocalDate.parse("2018-04-10"),
+                  "Debit card online deposit",
+                  "A1A11AA1A00A0059",
+                  BigDecimal("60.49")
+                )
+              )
+            )
+          )
+        )
         timerMetricChange shouldBe 0
         errorMetricChange shouldBe 0
       }
@@ -422,8 +435,9 @@ class HelpToSaveProxyConnectorSpec
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
-        result shouldBe Left(
-          "Could not parse transactions response from NS&I, received 200 (OK), error=[Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]]")
+        result            shouldBe Left(
+          "Could not parse transactions response from NS&I, received 200 (OK), error=[Could not parse http response JSON: /transactions(0)/sequence: [error.path.missing]]"
+        )
         timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
@@ -452,8 +466,9 @@ class HelpToSaveProxyConnectorSpec
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
 
-        result shouldBe Left(
-          """Could not parse transactions response from NS&I, received 200 (OK), error=[Unknown value for operation: "bad"]""")
+        result            shouldBe Left(
+          """Could not parse transactions response from NS&I, received 200 (OK), error=[Unknown value for operation: "bad"]"""
+        )
         timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
@@ -464,7 +479,7 @@ class HelpToSaveProxyConnectorSpec
 
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
-        result shouldBe Left("Received unexpected status(400) from get transactions call")
+        result            shouldBe Left("Received unexpected status(400) from get transactions call")
         timerMetricChange shouldBe 0
         errorMetricChange shouldBe 1
       }
@@ -481,7 +496,8 @@ class HelpToSaveProxyConnectorSpec
                         |    },
                         |    {
                         |      "errorMessageId" : "${appConfig.runModeConfiguration.underlying.getString(
-                          "nsi.no-account-error-message-id")}",
+                         "nsi.no-account-error-message-id"
+                       )}",
                         |      "errorMessage"   : "Oh no!",
                         |      "errorDetail"    : "Account doesn't exist"
                         |    }
@@ -491,7 +507,7 @@ class HelpToSaveProxyConnectorSpec
         when(GET, getTransactionsUrl, queryParameters).thenReturn(Status.BAD_REQUEST, errorResponse)
 
         val result = await(proxyConnector.getTransactions(nino, systemId, correlationId).value)
-        result shouldBe  Right(None)
+        result shouldBe Right(None)
       }
 
     }
@@ -500,11 +516,11 @@ class HelpToSaveProxyConnectorSpec
   "Failed calls to HelpToSaveConnector" when {
     "querying DWP for UC Claimant checks" must {
 
-      val txnId = UUID.randomUUID()
-      val nino = "AE123456C"
+      val txnId     = UUID.randomUUID()
+      val nino      = "AE123456C"
       val threshold = 650.0
 
-      val url = "/help-to-save-proxy/uc-claimant-check"
+      val url         = "/help-to-save-proxy/uc-claimant-check"
       val queryParams = Map("nino" -> nino, "transactionId" -> txnId.toString, "threshold" -> threshold.toString)
 
       "handle unexpected errors" in {
@@ -522,23 +538,28 @@ class HelpToSaveProxyConnectorSpec
         when(POST, createAccountURL, body = Some(Json.toJson(userInfo).toString()))
 
         val result = await(proxyConnector.createAccount(userInfo))
-        result contains Left(UpstreamErrorResponse(s"unexpected error from proxy during /create-de-account ${connectorCallFailureMessage(POST, s"$createAccountURL")}",INTERNAL_SERVER_ERROR))
+        result contains Left(
+          UpstreamErrorResponse(
+            s"unexpected error from proxy during /create-de-account ${connectorCallFailureMessage(POST, s"$createAccountURL")}",
+            INTERNAL_SERVER_ERROR
+          )
+        )
 
         wireMockServer.start()
       }
     }
 
     "retrieving transactions" must {
-      val nino = randomNINO()
+      val nino          = randomNINO()
       val correlationId = UUID.randomUUID().toString
-      val systemId = "123"
-      val version = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")
+      val systemId      = "123"
+      val version       = appConfig.runModeConfiguration.underlying.getString("nsi.get-transactions.version")
 
-      val queryParameters = Map(
-        "nino" -> nino,
+      val queryParameters            = Map(
+        "nino"          -> nino,
         "correlationId" -> correlationId,
-        "version" -> version,
-        "systemId" -> systemId
+        "version"       -> version,
+        "systemId"      -> systemId
       )
       val getTransactionsUrl: String = "/help-to-save-proxy/nsi-services/transactions"
 
@@ -549,8 +570,8 @@ class HelpToSaveProxyConnectorSpec
 
         val (result, timerMetricChange, errorMetricChange) =
           transactionMetricChanges(await(proxyConnector.getTransactions(nino, systemId, correlationId).value))
-        result.isLeft shouldBe true
-        result.left.value should include(
+        result.isLeft     shouldBe true
+        result.left.value   should include(
           s"Call to get transactions unsuccessful: ${connectorCallFailureMessage(GET, getTransactionsUrl)}"
         )
         timerMetricChange shouldBe 0

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.helptosave.actors
 
 import org.apache.pekko.actor.ActorRef
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar
@@ -31,15 +31,22 @@ import org.mockito.Mockito.{doNothing, when}
 import scala.concurrent.Future
 
 class UCThresholdConnectorProxyActorSpec
-  extends ActorTestSupport("UCThresholdConnectorProxyActorSpec") with MockitoSugar with MockPagerDuty with EitherValues {
-  val returnHeaders: Map[String,Seq[String]] = Map[String, Seq[String]]()
-  val connector: DESConnector = mock[DESConnector]
+    extends ActorTestSupport("UCThresholdConnectorProxyActorSpec")
+    with MockitoSugar
+    with MockPagerDuty
+    with EitherValues {
+  val returnHeaders: Map[String, Seq[String]] = Map[String, Seq[String]]()
+  val connector: DESConnector                 = mock[DESConnector]
 
   val actor: ActorRef = system.actorOf(UCThresholdConnectorProxyActor.props(connector, mockPagerDuty))
 
-  def mockConnectorGetValue(response: HttpResponse): OngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
-    when(connector
-      .getThreshold()(any(), any()))
+  def mockConnectorGetValue(
+    response: HttpResponse
+  ): OngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
+    when(
+      connector
+        .getThreshold()(any(), any())
+    )
       .thenReturn(toFuture(Right(response)))
 
   "The UCThresholdConnectorProxyActor" when {
@@ -53,9 +60,12 @@ class UCThresholdConnectorProxyActorSpec
       }
 
       "ask for and return an error from the threshold connector if an error occurs" in {
-        when(connector.getThreshold()(any(), any())).thenReturn(toFuture(Left(UpstreamErrorResponse("error occurred", 500))))
+        when(connector.getThreshold()(any(), any()))
+          .thenReturn(toFuture(Left(UpstreamErrorResponse("error occurred", 500))))
 
-        doNothing().when(mockPagerDuty).alert("Received unexpected http status in response to get UC threshold from DES")
+        doNothing()
+          .when(mockPagerDuty)
+          .alert("Received unexpected http status in response to get UC threshold from DES")
 
         actor ! UCThresholdConnectorProxyActor.GetThresholdValue
         expectMsg(UCThresholdConnectorProxyActor.GetThresholdValueResponse(Left("Received unexpected status 500")))

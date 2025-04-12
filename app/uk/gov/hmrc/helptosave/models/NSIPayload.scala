@@ -33,7 +33,8 @@ case class NSIPayload(
   registrationChannel: String,
   nbaDetails: Option[BankDetails],
   version: Option[String],
-  systemId: Option[String])
+  systemId: Option[String]
+)
 
 object NSIPayload {
 
@@ -47,7 +48,8 @@ object NSIPayload {
     countryCode: Option[String],
     phoneNumber: Option[String] = None,
     email: Option[String] = None,
-    communicationPreference: String)
+    communicationPreference: String
+  )
 
   implicit val dateFormat: Format[LocalDate] = {
     val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
@@ -69,17 +71,17 @@ object NSIPayload {
       nbaDetails          <- (jsValue \ "nbaDetails").validateOpt[BankDetails]
       bankDetails         <- (jsValue \ "bankDetails").validateOpt[BankDetails]
       systemId            <- (jsValue \ "systemId").validateOpt[String]
-    } yield
-      NSIPayload(
-        forename,
-        surname,
-        dateOfBirth,
-        nino,
-        contactDetails,
-        registrationChannel,
-        nbaDetails.orElse(bankDetails),
-        version,
-        systemId)
+    } yield NSIPayload(
+      forename,
+      surname,
+      dateOfBirth,
+      nino,
+      contactDetails,
+      registrationChannel,
+      nbaDetails.orElse(bankDetails),
+      version,
+      systemId
+    )
   }
 
 }

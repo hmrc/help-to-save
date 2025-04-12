@@ -38,35 +38,35 @@ trait BarsService {
 
   type BarsResponseType = Future[Either[String, BankDetailsValidationResult]]
 
-  def validate(barsRequest: BankDetailsValidationRequest)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext,
-    request: Request[_]): BarsResponseType
+  def validate(
+    barsRequest: BankDetailsValidationRequest
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType
 
 }
 
 @Singleton
-class BarsServiceImpl @Inject()(
+class BarsServiceImpl @Inject() (
   barsConnector: BarsConnector,
   metrics: Metrics,
   alerting: PagerDutyAlerting,
-  auditor: HTSAuditor)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
-    extends BarsService with Logging {
+  auditor: HTSAuditor
+)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+    extends BarsService
+    with Logging {
 
-  override def validate(barsRequest: BankDetailsValidationRequest)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext,
-    request: Request[_]): BarsResponseType = {
+  override def validate(
+    barsRequest: BankDetailsValidationRequest
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType = {
     val timerContext = metrics.barsTimer.time()
-    val trackingId = UUID.randomUUID()
-    val nino = barsRequest.nino
+    val trackingId   = UUID.randomUUID()
+    val nino         = barsRequest.nino
     barsConnector
       .validate(barsRequest, trackingId)
-      .flatMap[Either[String, BankDetailsValidationResult]]{
-        case Right(response) =>
+      .flatMap[Either[String, BankDetailsValidationResult]] {
+        case Right(response)                                    =>
           val _ = timerContext.stop()
           response.status match {
-            case Status.OK =>
+            case Status.OK  =>
               auditor.sendEvent(BARSCheck(barsRequest, response.json, request.uri), nino)
 
               (response.json \ "accountNumberIsWellFormatted").asOpt[String] ->
@@ -103,23 +103,27 @@ class BarsServiceImpl @Inject()(
                   })
 
                 case _ =>
-                logger.warn(
-                  s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}")
-                alerting.alert("error parsing the response json from bars check")
-                Future(Left(s"error parsing the response json from bars check"))
-                  }
-          case other: Int =>
-            metrics.barsErrorCounter.inc()
-            logger.warn(
-              s"unexpected status from bars check, trackingId = $trackingId, status=$other, body = ${response.body}")
-            alerting.alert("unexpected status from bars check")
-            Future(Left("unexpected status from bars check"))
+                  logger.warn(
+                    s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}"
+                  )
+                  alerting.alert("error parsing the response json from bars check")
+                  Future(Left(s"error parsing the response json from bars check"))
               }
+            case other: Int =>
+              metrics.barsErrorCounter.inc()
+              logger.warn(
+                s"unexpected status from bars check, trackingId = $trackingId, status=$other, body = ${response.body}"
+              )
+              alerting.alert("unexpected status from bars check")
+              Future(Left("unexpected status from bars check"))
+          }
         case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
           metrics.barsErrorCounter.inc()
-          logger.warn(s"unexpected error from bars check, trackingId = $trackingId, error=${upstreamErrorResponse.getMessage}")
+          logger.warn(
+            s"unexpected error from bars check, trackingId = $trackingId, error=${upstreamErrorResponse.getMessage}"
+          )
           alerting.alert("unexpected error from bars check")
           Future(Left("unexpected error from bars check"))
-          }
-   }
+      }
+  }
 }

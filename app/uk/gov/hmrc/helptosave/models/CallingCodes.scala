@@ -20,16 +20,14 @@ import scala.io.Source
 
 object CallingCodes {
 
-  val callingCodes: Map[Int, String] = {
+  val callingCodes: Map[Int, String] =
     Source
       .fromInputStream(getClass.getResourceAsStream("/resources/callingcodes.txt"))
       .getLines()
-      .foldLeft(Map.empty[Int, String]) {
-        case (acc, curr) =>
-          curr.split("-").toList match {
-            case key :: value :: Nil => acc.updated(key.trim.toInt, value.trim)
-            case _                   => acc
-          }
+      .foldLeft(Map.empty[Int, String]) { case (acc, curr) =>
+        curr.split("-").toList match {
+          case key :: value :: Nil => acc.updated(key.trim.toInt, value.trim)
+          case _                   => acc
+        }
       }
-  }
 }

@@ -24,7 +24,7 @@ import com.google.inject.{Inject, Singleton}
 import scala.annotation.tailrec
 
 @Singleton
-class Metrics @Inject()(metrics: MetricRegistry) {
+class Metrics @Inject() (metrics: MetricRegistry) {
 
   protected def timer(name: String): Timer = metrics.timer(name)
 
@@ -58,13 +58,12 @@ class Metrics @Inject()(metrics: MetricRegistry) {
 
   val enrolmentStoreUpdateErrorCounter: Counter = counter("backend.enrolment-store-update-error.count")
 
-  val enrolmentStoreDeleteErrorCounter: Boolean => Counter = (revertSoftDelete: Boolean) => {
+  val enrolmentStoreDeleteErrorCounter: Boolean => Counter = (revertSoftDelete: Boolean) =>
     if (revertSoftDelete) {
       counter("backend.enrolment-store-undo-delete-error.count")
     } else {
       counter("backend.enrolment-store-delete-error.count")
     }
-  }
 
   val payePersonalDetailsTimer: Timer = timer("backend.paye-personal-details.time")
 
@@ -85,9 +84,12 @@ class Metrics @Inject()(metrics: MetricRegistry) {
   val barsErrorCounter: Counter = counter("backend.bars-error.count")
 
   def registerAccountStatsGauge(reason: String, channel: String, value: () => Int): Gauge[Int] =
-    registerIntGauge(s"backend.create-account.$reason.$channel", new Gauge[Int] {
-      override def getValue: Int = value()
-    })
+    registerIntGauge(
+      s"backend.create-account.$reason.$channel",
+      new Gauge[Int] {
+        override def getValue: Int = value()
+      }
+    )
 
 }
 
@@ -107,11 +109,10 @@ object Metrics {
   private def divide(numerator: Long, denominator: Long): (Long, Long) =
     (numerator / denominator) -> (numerator % denominator)
 
-  /**
-    * Convert `nanos` to a human-friendly string - will return the time in terms of
-    * the two highest time resolutions that are appropriate. For example:
+  /** Convert `nanos` to a human-friendly string - will return the time in terms of the two highest time resolutions
+    * that are appropriate. For example:
     *
-    * 2 nanoseconds      -> "2ns"
+    * 2 nanoseconds -> "2ns"
     * 1.23456789 seconds -> "1s 234ms"
     */
   def nanosToPrettyString(nanos: Long): String = {

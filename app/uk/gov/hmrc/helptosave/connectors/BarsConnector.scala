@@ -33,29 +33,32 @@ import java.net.URL
 @ImplementedBy(classOf[BarsConnectorImpl])
 trait BarsConnector {
 
-  def validate(request: BankDetailsValidationRequest, trackingId: UUID)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]]
+  def validate(request: BankDetailsValidationRequest, trackingId: UUID)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[UpstreamErrorResponse, HttpResponse]]
 }
 
 @Singleton
-class BarsConnectorImpl @Inject()(http: HttpClientV2)(implicit appConfig: AppConfig) extends BarsConnector with Logging {
+class BarsConnectorImpl @Inject() (http: HttpClientV2)(implicit appConfig: AppConfig)
+    extends BarsConnector
+    with Logging {
 
   import uk.gov.hmrc.helptosave.connectors.BarsConnectorImpl._
 
   private val barsEndpoint: URL = url"${appConfig.barsUrl}/validate/bank-details"
 
-  private val headers:(String, String) = "Content-Type" -> "application/json"
+  private val headers: (String, String) = "Content-Type" -> "application/json"
 
-  override def validate(request: BankDetailsValidationRequest, trackingId: UUID)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
-    http.post(barsEndpoint)
-      .transform(_
-        .addHttpHeaders(headers, "X-Tracking-Id" -> trackingId.toString))
+  override def validate(request: BankDetailsValidationRequest, trackingId: UUID)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
+    http
+      .post(barsEndpoint)
+      .transform(_.addHttpHeaders(headers, "X-Tracking-Id" -> trackingId.toString))
       .withBody(bodyJson(request))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
-  }
 
   private def bodyJson(request: BankDetailsValidationRequest) =
     Json.toJson(BarsRequest(Account(request.sortCode, request.accountNumber)))
@@ -66,7 +69,7 @@ object BarsConnectorImpl {
   private case class Account(sortCode: String, accountNumber: String)
   private case class BarsRequest(account: Account)
 
-  private implicit val accountFormat: Format[Account] = Json.format[Account]
+  private implicit val accountFormat: Format[Account]         = Json.format[Account]
   private implicit val barsRequestFormat: Format[BarsRequest] = Json.format[BarsRequest]
 
 }

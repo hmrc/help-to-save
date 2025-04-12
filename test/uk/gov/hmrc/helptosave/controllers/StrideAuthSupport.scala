@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core.authorise.Predicate
@@ -35,12 +35,13 @@ trait StrideAuthSupport extends AuthSupport {
       .map(s => new String(Base64.getDecoder.decode(s)))
 
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
-    result: Either[Throwable, A]): OngoingStubbing[Future[A]] = {
+    result: Either[Throwable, A]
+  ): OngoingStubbing[Future[A]] =
     when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(any(), any()))
       .thenAnswer(_ => result.fold(Future.failed, Future.successful))
-  }
 
   def mockSuccessfulAuthorisation(): OngoingStubbing[Future[Enrolments]] =
     mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(
-      Right(Enrolments(roles.map(Enrolment(_)).toSet)))
+      Right(Enrolments(roles.map(Enrolment(_)).toSet))
+    )
 }

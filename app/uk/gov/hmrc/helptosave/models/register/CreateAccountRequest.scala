@@ -23,7 +23,8 @@ case class CreateAccountRequest(
   payload: NSIPayload,
   eligibilityReason: Option[Int],
   source: String,
-  detailsManuallyEntered: Boolean)
+  detailsManuallyEntered: Boolean
+)
 
 object CreateAccountRequest {
   implicit val createAccountRequestWrites: Writes[CreateAccountRequest] = Json.writes[CreateAccountRequest]

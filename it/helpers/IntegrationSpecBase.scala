@@ -55,7 +55,7 @@ trait IntegrationSpecBase
     with EnrolmentStoreRepoHelper
     with UserCapStoreRepoHelper {
 
-  val mockUrl          = s"http://$wireMockHost:$wireMockPort"
+  val mockUrl = s"http://$wireMockHost:$wireMockPort"
 
   val timeout: Timeout   = Timeout(Span(5, Seconds))
   val interval: Interval = Interval(Span(100, Millis))
@@ -63,38 +63,38 @@ trait IntegrationSpecBase
   val AUTHORISATION_TOKEN = "Bearer ab9e219d-0d9d-4a1d-90e5-f2a5c287668c"
 
   def config: Map[String, String] = Map(
-    "application.router"                                      -> "testOnlyDoNotUseInAppConf.Routes",
-    "auditing.consumer.baseUri.host"                          -> s"$wireMockHost",
-    "auditing.consumer.baseUri.port"                          -> s"$wireMockPort",
-    "microservice.services.auth.host"                         -> s"$wireMockHost",
-    "microservice.services.auth.port"                         -> s"$wireMockPort",
-    "microservice.services.help-to-save-proxy.host" -> s"$wireMockHost",
-    "microservice.services.help-to-save-proxy.port" -> s"$wireMockPort",
-    "microservice.services.des.host" -> s"$wireMockHost",
-    "microservice.services.des.port" -> s"$wireMockPort",
-    "microservice.services.itmp-enrolment.host" -> s"$wireMockHost",
-    "microservice.services.itmp-enrolment.port" -> s"$wireMockPort",
+    "application.router"                                -> "testOnlyDoNotUseInAppConf.Routes",
+    "auditing.consumer.baseUri.host"                    -> s"$wireMockHost",
+    "auditing.consumer.baseUri.port"                    -> s"$wireMockPort",
+    "microservice.services.auth.host"                   -> s"$wireMockHost",
+    "microservice.services.auth.port"                   -> s"$wireMockPort",
+    "microservice.services.help-to-save-proxy.host"     -> s"$wireMockHost",
+    "microservice.services.help-to-save-proxy.port"     -> s"$wireMockPort",
+    "microservice.services.des.host"                    -> s"$wireMockHost",
+    "microservice.services.des.port"                    -> s"$wireMockPort",
+    "microservice.services.itmp-enrolment.host"         -> s"$wireMockHost",
+    "microservice.services.itmp-enrolment.port"         -> s"$wireMockPort",
     "microservice.services.itmp-eligibility-check.host" -> s"$wireMockHost",
     "microservice.services.itmp-eligibility-check.port" -> s"$wireMockPort",
-    "microservice.services.itmp-threshold.host" -> s"$wireMockHost",
-    "microservice.services.itmp-threshold.port" -> s"$wireMockPort",
-    "nsi.create-account.version" -> "V2.0"
+    "microservice.services.itmp-threshold.host"         -> s"$wireMockHost",
+    "microservice.services.itmp-threshold.port"         -> s"$wireMockPort",
+    "nsi.create-account.version"                        -> "V2.0"
   )
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(
-    timeout  = scaled(Span(20, Seconds)),
+    timeout = scaled(Span(20, Seconds)),
     interval = scaled(Span(200, Millis))
   )
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
-      .in(Environment.simple(mode = Mode.Dev))
-      .configure(config)
-      .build()
+    .in(Environment.simple(mode = Mode.Dev))
+    .configure(config)
+    .build()
 
   lazy val ws: WSClient = app.injector.instanceOf[WSClient]
 
   implicit lazy val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  implicit lazy val hc: HeaderCarrier = HeaderCarrier(
+  implicit lazy val hc: HeaderCarrier    = HeaderCarrier(
     authorization = Some(Authorization("Bearer some-token"))
   )
 
@@ -102,7 +102,7 @@ trait IntegrationSpecBase
     Await.result(res, timeout).status.intValue()
 
   val enrolmentStoreRepository: MongoEnrolmentStore = app.injector.instanceOf[MongoEnrolmentStore]
-  val userCapStoreRepository: MongoUserCapStore = app.injector.instanceOf[MongoUserCapStore]
+  val userCapStoreRepository: MongoUserCapStore     = app.injector.instanceOf[MongoUserCapStore]
 
   def buildRequest(path: String): WSRequest =
     ws.url(s"http://localhost:$port/help-to-save$path").withFollowRedirects(false)

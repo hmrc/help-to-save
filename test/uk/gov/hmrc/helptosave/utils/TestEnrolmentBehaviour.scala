@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.utils
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
@@ -35,16 +35,15 @@ import play.api.libs.json.JsValue
 
 trait TestEnrolmentBehaviour extends TestSupport {
 
-  val enrolmentStore: EnrolmentStore = mock[EnrolmentStore]
-  val itmpConnector: DESConnector = mock[DESConnector]
-  val enrolmentBehaviour: EnrolmentBehaviour = mock[EnrolmentBehaviour]
-  val helpToSaveService: HelpToSaveService = mock[HelpToSaveService]
+  val enrolmentStore: EnrolmentStore           = mock[EnrolmentStore]
+  val itmpConnector: DESConnector              = mock[DESConnector]
+  val enrolmentBehaviour: EnrolmentBehaviour   = mock[EnrolmentBehaviour]
+  val helpToSaveService: HelpToSaveService     = mock[HelpToSaveService]
   val proxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
-  def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit = {
+  def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
     when(enrolmentStore.updateItmpFlag(eqTo(nino), eqTo(itmpFlag))(any()))
       .thenReturn(EitherT.fromEither[Future](result))
-  }
 
   def mockEnrolmentStoreInsert(
     nino: NINO,
@@ -52,23 +51,29 @@ trait TestEnrolmentBehaviour extends TestSupport {
     eligibilityReason: Option[Int],
     source: String,
     accountNumber: Option[String],
-    deleteFlag: Option[Boolean] = None)(result: Either[String, Unit]): Unit = {
-    when(enrolmentStore.insert(eqTo(nino), eqTo(itmpFlag), eqTo(eligibilityReason), eqTo(source), eqTo(accountNumber), eqTo(deleteFlag))(any()))
+    deleteFlag: Option[Boolean] = None
+  )(result: Either[String, Unit]): Unit =
+    when(
+      enrolmentStore.insert(
+        eqTo(nino),
+        eqTo(itmpFlag),
+        eqTo(eligibilityReason),
+        eqTo(source),
+        eqTo(accountNumber),
+        eqTo(deleteFlag)
+      )(any())
+    )
       .thenReturn(EitherT.fromEither[Future](result))
-  }
 
-  def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit = {
+  def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
     when(enrolmentStore.get(eqTo(nino))(any())).thenReturn(EitherT.fromEither[Future](result))
-  }
 
-  def mockEnrolmentStoreGetAccountNumber(nino: NINO)(result: Either[String, AccountNumber]): Unit = {
+  def mockEnrolmentStoreGetAccountNumber(nino: NINO)(result: Either[String, AccountNumber]): Unit =
     when(enrolmentStore.getAccountNumber(eqTo(nino))(any())).thenReturn(EitherT.fromEither[Future](result))
-  }
 
-  def mockSetFlag(nino: NINO)(result: Either[String, Unit]): Unit = {
+  def mockSetFlag(nino: NINO)(result: Either[String, Unit]): Unit =
     when(helpToSaveService.setFlag(eqTo(nino))(any(), any()))
       .thenReturn(EitherT.fromEither[Future](result))
-  }
 
   def payloadJson(dobValue: String, communicationPreference: String = "02"): String =
     s"""{
@@ -97,7 +102,8 @@ trait TestEnrolmentBehaviour extends TestSupport {
   def createAccountJson(
     dobValue: String,
     detailsManuallyEntered: Boolean,
-    communicationPreference: String = "02"): String =
+    communicationPreference: String = "02"
+  ): String =
     s"""{
            "payload":${payloadJson(dobValue, communicationPreference)},
            "eligibilityReason":7,
@@ -109,12 +115,14 @@ trait TestEnrolmentBehaviour extends TestSupport {
 
   def validCreateAccountRequestPayload(
     detailsManuallyEntered: Boolean = false,
-    communicationPreference: String = "02"): JsValue =
+    communicationPreference: String = "02"
+  ): JsValue =
     Json.parse(createAccountJson("20200101", detailsManuallyEntered, communicationPreference))
 
   val validCreateAccountRequest: CreateAccountRequest = validCreateAccountRequestPayload()
     .validate[CreateAccountRequest](
-      CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion)))
+      CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion))
+    )
     .getOrElse(sys.error("Could not parse CreateAccountRequest"))
 
   val validUpdateAccountRequest: CreateAccountRequest =

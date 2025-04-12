@@ -65,9 +65,10 @@ class NSIPayloadSpec extends AnyWordSpec with Matchers {
                 Some(BankDetails("123456", "12345678", None, "accountName")),
                 version,
                 Some("systemId")
-              ))
+              )
+            )
 
-            NSIPayload.nsiPayloadReads(version).reads(Json.parse(json("nbaDetails"))) shouldBe expectedResult
+            NSIPayload.nsiPayloadReads(version).reads(Json.parse(json("nbaDetails")))  shouldBe expectedResult
             NSIPayload.nsiPayloadReads(version).reads(Json.parse(json("bankDetails"))) shouldBe expectedResult
           }
 

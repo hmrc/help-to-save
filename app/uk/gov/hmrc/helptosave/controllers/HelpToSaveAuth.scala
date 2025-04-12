@@ -40,13 +40,15 @@ object HelpToSaveAuth {
 }
 
 class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)
-    extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
+    extends BackendController(controllerComponents)
+    with AuthorisedFunctions
+    with Logging {
 
   import HelpToSaveAuth._
 
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private type HtsAction = Request[AnyContent] => Future[Result]
+  private type HtsAction         = Request[AnyContent] => Future[Result]
   private type HtsActionWithNINO = Request[AnyContent] => NINO => Future[Result]
 
   val authProviders: AuthProviders = AuthProviders(GovernmentGateway, PrivilegedApplication)
@@ -74,8 +76,9 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
       }
     }
 
-  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNINO)(
-    implicit ec: ExecutionContext): Action[AnyContent] =
+  def ggOrPrivilegedAuthorisedWithNINO(
+    nino: Option[String]
+  )(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       authorised(GGAndPrivilegedProviders)
         .retrieve(v2.Retrievals.authProviderId) {

@@ -45,12 +45,14 @@ trait ThresholdOrchestrator {
 }
 
 @Singleton
-class UCThresholdOrchestrator @Inject()(
+class UCThresholdOrchestrator @Inject() (
   system: ActorSystem,
   pagerDutyAlerting: PagerDutyAlerting,
   configuration: Configuration,
-  desConnector: DESConnector)(implicit appConfig: AppConfig, ec: ExecutionContext)
-    extends ThresholdOrchestrator with Logging {
+  desConnector: DESConnector
+)(implicit appConfig: AppConfig, ec: ExecutionContext)
+    extends ThresholdOrchestrator
+    with Logging {
   private lazy val connectorProxy: ActorRef =
     system.actorOf(UCThresholdConnectorProxyActor.props(desConnector, pagerDutyAlerting))
 
@@ -68,39 +70,36 @@ class UCThresholdOrchestrator @Inject()(
         system.scheduler,
         timeCalculator,
         configuration
-      ))
+      )
+    )
   }
 
-  override def getValue: Future[Option[Double]] = {
+  override def getValue: Future[Option[Double]] =
     thresholdManager
       .ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
       .mapTo[GetThresholdValueResponse]
       .map(r => r.result)
-  }
 
-  def stop(): Unit = {
+  def stop(): Unit =
     thresholdManager ! PoisonPill
-  }
 }
 
 @Singleton
-class MDTPThresholdOrchestrator @Inject()(appConfig: AppConfig) extends ThresholdOrchestrator {
-  override def getValue: Future[Option[Double]] = {
+class MDTPThresholdOrchestrator @Inject() (appConfig: AppConfig) extends ThresholdOrchestrator {
+  override def getValue: Future[Option[Double]] =
     Future.successful(Some(appConfig.mdtpThresholdAmount))
-  }
 }
 
 @Singleton
-class ThresholdValueByConfigProvider @Inject()(
+class ThresholdValueByConfigProvider @Inject() (
   appConfig: AppConfig,
   desThresholdProvider: Provider[UCThresholdOrchestrator],
   mdtpThresholdProvider: Provider[MDTPThresholdOrchestrator]
 ) extends Provider[ThresholdOrchestrator] {
 
-  def get: ThresholdOrchestrator = {
+  def get: ThresholdOrchestrator =
     if (appConfig.useMDTPThresholdConfig) {
       desThresholdProvider.get().stop()
       mdtpThresholdProvider.get()
     } else desThresholdProvider.get()
-  }
 }

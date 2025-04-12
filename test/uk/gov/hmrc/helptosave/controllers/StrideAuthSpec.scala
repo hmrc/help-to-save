@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import play.api.Configuration
@@ -38,7 +38,7 @@ import scala.concurrent.Future
 class StrideAuthSpec extends TestSupport {
 
   lazy val standardRoles: List[String] = List("a", "b")
-  lazy val secureRoles: List[String] = List("c", "d")
+  lazy val secureRoles: List[String]   = List("c", "d")
 
   override lazy val additionalConfig: Configuration = {
     def toConfigValue(rolesList: List[String]): List[String] =
@@ -52,10 +52,11 @@ class StrideAuthSpec extends TestSupport {
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
-  def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(result: Either[Throwable, A]): OngoingStubbing[Future[A]] = {
+  def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
+    result: Either[Throwable, A]
+  ): OngoingStubbing[Future[A]] =
     when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(any(), any()))
       .thenReturn(result.fold(Future.failed, Future.successful))
-  }
 
   "StrideAuth" must {
 
@@ -87,7 +88,8 @@ class StrideAuthSpec extends TestSupport {
           ).foreach { enrolments =>
             withClue(s"For enrolments $enrolments: ") {
               mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(
-                Right(Enrolments(enrolments.map(Enrolment(_)))))
+                Right(Enrolments(enrolments.map(Enrolment(_))))
+              )
               status(action(FakeRequest())) shouldBe UNAUTHORIZED
             }
           }
@@ -102,7 +104,8 @@ class StrideAuthSpec extends TestSupport {
         ).foreach { enrolments =>
           withClue(s"For enrolments $enrolments: ") {
             mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(
-              Right(Enrolments(enrolments.map(Enrolment(_)).toSet)))
+              Right(Enrolments(enrolments.map(Enrolment(_)).toSet))
+            )
             status(action(FakeRequest())) shouldBe OK
           }
         }

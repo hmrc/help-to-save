@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -38,20 +38,18 @@ class EmailStoreControllerSpec extends AuthSupport {
 
   val emailStore: EmailStore = mock[EmailStore]
 
-  def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit = {
+  def mockStore(email: String, nino: NINO)(result: Either[String, Unit]): Unit =
     when(emailStore.store(eqTo(email), eqTo(nino))(any()))
       .thenReturn(EitherT.fromEither[Future](result))
-  }
 
-  def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit = {
+  def mockGet(nino: NINO)(result: Either[String, Option[String]]): Unit =
     when(emailStore.get(eqTo(nino))(any()))
       .thenReturn(EitherT.fromEither[Future](result))
-  }
 
   "The EmailStoreController" when {
 
-    val controller = new EmailStoreController(emailStore, mockAuthConnector, testCC)
-    val email = "email"
+    val controller   = new EmailStoreController(emailStore, mockAuthConnector, testCC)
+    val email        = "email"
     val encodedEmail = new String(Base64.getEncoder.encode(email.getBytes()))
 
     def store(email: String, nino: Option[String]): Future[Result] =
@@ -60,16 +58,16 @@ class EmailStoreControllerSpec extends AuthSupport {
     "handling requests to store emails" must {
 
       "return a HTTP 200 if the email is successfully stored with a GG login" in {
-          mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(GGCredId("")))
-          mockAuth(EmptyPredicate, v2Nino)(Right(Some(nino)))
-          mockStore(email, nino)(Right(()))
+        mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(GGCredId("")))
+        mockAuth(EmptyPredicate, v2Nino)(Right(Some(nino)))
+        mockStore(email, nino)(Right(()))
 
         status(store(encodedEmail, None)) shouldBe 200
       }
 
       "return a HTTP 200 if the email is successfully stored with a privileged login" in {
-          mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
-          mockStore(email, nino)(Right(()))
+        mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
+        mockStore(email, nino)(Right(()))
 
         status(store(encodedEmail, Some(nino))) shouldBe 200
       }
@@ -83,8 +81,8 @@ class EmailStoreControllerSpec extends AuthSupport {
         }
 
         "the email is not successfully stored" in {
-            mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
-            mockStore(email, nino)(Left(""))
+          mockAuth(GGAndPrivilegedProviders, v2AuthProviderId)(Right(PAClientId("")))
+          mockStore(email, nino)(Left(""))
 
           status(store(encodedEmail, Some(nino))) shouldBe 500
         }
@@ -109,7 +107,7 @@ class EmailStoreControllerSpec extends AuthSupport {
         mockGet(nino)(Right(Some(email)))
 
         val result = get()
-        status(result) shouldBe OK
+        status(result)        shouldBe OK
         contentAsJson(result) shouldBe Json.parse(
           s"""
              |{
@@ -124,7 +122,7 @@ class EmailStoreControllerSpec extends AuthSupport {
         mockGet(nino)(Right(None))
 
         val result = get()
-        status(result) shouldBe OK
+        status(result)        shouldBe OK
         contentAsJson(result) shouldBe Json.parse("{}")
       }
 

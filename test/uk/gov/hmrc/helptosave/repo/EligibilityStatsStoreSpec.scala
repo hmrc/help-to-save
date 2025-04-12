@@ -28,7 +28,7 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
 
   def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) =
     new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
-  val repository: MongoEligibilityStatsStore = newEligibilityStatsMongoStore(mongoComponent)
+  val repository: MongoEligibilityStatsStore                        = newEligibilityStatsMongoStore(mongoComponent)
 
   override def beforeEach(): Unit =
     //    await(repository.collection.drop().toFuture())
@@ -47,8 +47,11 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
                 nino = randomNINO(),
                 itmpHtSFlag = false,
                 eligibilityReason = Some(7),
-                source = Some("Digital")))
-            .toFuture())
+                source = Some("Digital")
+              )
+            )
+            .toFuture()
+        )
         await(repository.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
       }
     }
@@ -80,7 +83,8 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
               source = Some("Digital")
             )
           )
-          .toFuture())
+          .toFuture()
+      )
 
       await(repository.getEligibilityStats).sortBy(_.eligibilityReason) shouldBe List(
         EligibilityStats(Some(7), Some("Digital"), 2),

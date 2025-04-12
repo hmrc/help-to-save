@@ -34,8 +34,8 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
 
   case class ThrowingHttpResponse() extends HttpResponse {
     override def json: JsValue = sys.error("")
-    override def body: String = ""
-    override def status: Int = 0
+    override def body: String  = ""
+    override def status: Int   = 0
 
     override def headers: Map[String, Seq[String]] = ???
   }
@@ -44,7 +44,7 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
 
     "provide a method to parse JSON" in {
       val status = 200
-      val data = Test1(0)
+      val data   = Test1(0)
 
       // test when there is an exception
       ThrowingHttpResponse().parseJson[Test1].isLeft shouldBe true
@@ -63,7 +63,8 @@ class HttpResponseOpsSpec extends TestSupport with TestData {
 
       HttpResponse(200, Json.parse(data), returnHeaders).parseJsonWithoutLoggingBody[PayePersonalDetails] shouldBe
         Left(
-          "Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]")
+          "Could not parse http response JSON: : ['postcode' is undefined on object: line1,line2,line3,line4,countryCode,line5,sequenceNumber,startDate]"
+        )
     }
   }
 }

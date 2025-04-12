@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
@@ -43,10 +43,10 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
       controller.eligibilityCheck(nino)(FakeRequest())
 
     def mockEligibilityCheckerService(nino: NINO, expectedPath: String)(
-      result: Either[String, EligibilityCheckResponse]): Unit = {
+      result: Either[String, EligibilityCheckResponse]
+    ): Unit =
       when(eligibilityService.getEligibility(eqTo(nino), eqTo(expectedPath))(any(), any()))
         .thenReturn(EitherT.fromEither[Future](result))
-    }
 
     val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector, testCC)
 
@@ -56,7 +56,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
   "The EligibilityCheckerController" when {
 
     val ggCredentials = GGCredId("123-gg")
-    val eligibility = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
+    val eligibility   = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
 
     "handling requests to perform eligibility checks" must {
 
@@ -64,7 +64,8 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
         mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
         mockAuth(v2Nino)(Right(mockedNinoRetrieval))
         mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
-          Left("The Eligibility Check service is unavailable"))
+          Left("The Eligibility Check service is unavailable")
+        )
 
         val result = doRequest(controller, Some(nino))
         status(result) shouldBe 500
@@ -72,15 +73,16 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
 
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
-        mockAuth(v2Nino)(Right(mockedNinoRetrieval))
-        mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
-          Right(eligibility))
+          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
+          mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
+            Right(eligibility)
+          )
 
-        val result = doRequest(controller, Some(nino))
-        status(result) shouldBe 200
-        contentAsJson(result) shouldBe Json.toJson(eligibility)
-      }
+          val result = doRequest(controller, Some(nino))
+          status(result)        shouldBe 200
+          contentAsJson(result) shouldBe Json.toJson(eligibility)
+        }
 
       "return Forbidden if the ggNino does not match the given nino" in new TestApparatus {
         mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
@@ -95,10 +97,11 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
           mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
           mockAuth(v2Nino)(Right(mockedNinoRetrieval))
           mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(None).url)(
-            Right(eligibility))
+            Right(eligibility)
+          )
 
           val result = doRequest(controller, None)
-          status(result) shouldBe 200
+          status(result)        shouldBe 200
           contentAsJson(result) shouldBe Json.toJson(eligibility)
         }
 
@@ -107,26 +110,28 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
     "handling requests to perform stride or API eligibility checks" must {
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
-          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
-            Right(eligibility))
+        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+        mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
+          Right(eligibility)
+        )
 
         val result = doRequest(controller, Some(nino))
-        status(result) shouldBe 200
+        status(result)        shouldBe 200
         contentAsJson(result) shouldBe Json.toJson(eligibility)
       }
 
       "return with a 500 status if the eligibility check service fails" in new TestApparatus {
-          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
-          mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
-            Left("The Eligibility Check service is unavailable"))
+        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+        mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
+          Left("The Eligibility Check service is unavailable")
+        )
 
         val result = doRequest(controller, Some(nino))
         status(result) shouldBe 500
       }
 
       "return a Bad Request(400) status if there was no nino given" in new TestApparatus {
-          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
 
         val result = doRequest(controller, None)
         status(result) shouldBe 400

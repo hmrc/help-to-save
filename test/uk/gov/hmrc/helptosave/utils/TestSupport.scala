@@ -36,7 +36,7 @@ import scala.concurrent.ExecutionContext
 
 trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with BeforeAndAfterEach {
   lazy val additionalConfig: Configuration = Configuration()
-  val originatorIdHeaderValue = "test-originator"
+  val originatorIdHeaderValue              = "test-originator"
 
   def buildFakeApplication(extraConfig: Configuration): Application =
     new GuiceApplicationBuilder()
@@ -56,7 +56,8 @@ trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with
                                       |   }
                                       | }
             """.stripMargin)
-        ).withFallback(extraConfig))
+        ).withFallback(extraConfig)
+      )
       .build()
 
   lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
@@ -88,7 +89,7 @@ trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with
   private val hmrcGenerator: Generator = new Generator()
 
   val startDate: LocalDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
-  val endDate: LocalDate = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
+  val endDate: LocalDate   = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
 
   def randomNINO(): String = hmrcGenerator.nextNino.value
 
@@ -96,7 +97,8 @@ trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with
 
   implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
 
-  val nsiAccountJson: JsObject = Json.parse("""
+  val nsiAccountJson: JsObject = Json
+    .parse("""
                                     |{
                                     |  "accountNumber": "AC01",
                                     |  "accountBalance": "200.34",
@@ -128,5 +130,6 @@ trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with
                                     |    }
                                     |  ]
                                     |}
-    """.stripMargin).as[JsObject]
+    """.stripMargin)
+    .as[JsObject]
 }

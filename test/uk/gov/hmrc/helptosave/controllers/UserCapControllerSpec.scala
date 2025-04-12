@@ -17,7 +17,7 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import org.apache.pekko.util.Timeout
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import play.api.http.Status._
 import play.api.libs.json.Json
@@ -34,8 +34,8 @@ import java.util.concurrent.TimeUnit
 // scalastyle:off magic.number
 class UserCapControllerSpec extends AuthSupport {
   val userCapService: UserCapService = mock[UserCapService]
-  val controller = new UserCapController(userCapService, mockAuthConnector, testCC)
-  implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
+  val controller                     = new UserCapController(userCapService, mockAuthConnector, testCC)
+  implicit val timeout: Timeout      = Timeout(5, TimeUnit.SECONDS)
 
   "The UserCapController" when {
 
@@ -47,9 +47,10 @@ class UserCapControllerSpec extends AuthSupport {
         mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         val result = controller.isAccountCreateAllowed()(FakeRequest())
 
-        status(result) shouldBe OK
+        status(result)        shouldBe OK
         contentAsJson(result) shouldBe Json.parse(
-          """{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}""")
+          """{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}"""
+        )
       }
     }
   }

@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.mvc.{Result => PlayResult}
@@ -36,19 +36,18 @@ import scala.concurrent.Future
 class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAwaitTimeout with TestData {
 
   class TestApparatus {
-    val nino = "AE123456D"
+    val nino        = "AE123456D"
     val txnId: UUID = UUID.randomUUID()
 
     val helpToSaveService: HelpToSaveService = mock[HelpToSaveService]
-    val payeDetailsConnector: DESConnector = mock[DESConnector]
+    val payeDetailsConnector: DESConnector   = mock[DESConnector]
 
     def doPayeDetailsRequest(controller: PayePersonalDetailsController): Future[PlayResult] =
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
-    def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit = {
+    def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =
       when(helpToSaveService.getPersonalDetails(eqTo(nino))(any(), any()))
         .thenReturn(EitherT.fromEither[Future](result))
-    }
 
     val controller = new PayePersonalDetailsController(helpToSaveService, mockAuthConnector, testCC)
   }
@@ -58,26 +57,27 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
     "handling requests to Get paye-personal-details from DES" must {
 
       "ask the payeDetailsService for the personal details and return successful result for a valid nino" in new TestApparatus {
-          mockSuccessfulAuthorisation()
-          mockPayeDetailsConnector(nino)(Right(ppDetails))
+        mockSuccessfulAuthorisation()
+        mockPayeDetailsConnector(nino)(Right(ppDetails))
 
         val result = doPayeDetailsRequest(controller)
-        status(result) shouldBe 200
+        status(result)        shouldBe 200
         contentAsJson(result) shouldBe Json.toJson(ppDetails)
       }
 
       "return with a status 500 if the paye-personal-details call fails" in new TestApparatus {
-          mockSuccessfulAuthorisation()
-          mockPayeDetailsConnector(nino)(Left(""))
+        mockSuccessfulAuthorisation()
+        mockPayeDetailsConnector(nino)(Left(""))
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500
       }
 
       "return with a status 500 and empty json if the pay details is NOT_FOUND in DES" in new TestApparatus {
-          mockSuccessfulAuthorisation()
-          mockPayeDetailsConnector(nino)(
-            Left("Could not parse JSON response from paye-personal-details, received 200 (OK)"))
+        mockSuccessfulAuthorisation()
+        mockPayeDetailsConnector(nino)(
+          Left("Could not parse JSON response from paye-personal-details, received 200 (OK)")
+        )
 
         val result = doPayeDetailsRequest(controller)
         status(result) shouldBe 500

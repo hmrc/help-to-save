@@ -27,9 +27,11 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)(
-  implicit val appConfig: AppConfig)
-    extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
+class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)(implicit
+  val appConfig: AppConfig
+) extends BackendController(controllerComponents)
+    with AuthorisedFunctions
+    with Logging {
   override def authConnector: AuthConnector = htsAuthConnector
 
   private val (standardRoles, secureRoles): (Seq[String], Seq[String]) = {
@@ -48,8 +50,9 @@ class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: Controll
     standardRoles.exists(enrolmentKeys.contains) || secureRoles.exists(enrolmentKeys.contains)
   }
 
-  def authorisedFromStride(action: Request[AnyContent] => Future[Result])(
-    implicit ec: ExecutionContext): Action[AnyContent] =
+  def authorisedFromStride(
+    action: Request[AnyContent] => Future[Result]
+  )(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       authorised(AuthProviders(PrivilegedApplication))
         .retrieve(allEnrolments) { enrolments =>
@@ -59,10 +62,9 @@ class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: Controll
             Unauthorized("Insufficient roles")
           }
         }
-        .recover {
-          case _: NoActiveSession =>
-            logger.warn("user is not logged in via stride, probably a hack?")
-            Unauthorized
+        .recover { case _: NoActiveSession =>
+          logger.warn("user is not logged in via stride, probably a hack?")
+          Unauthorized
         }
     }
 

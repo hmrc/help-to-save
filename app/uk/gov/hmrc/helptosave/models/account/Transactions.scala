@@ -34,7 +34,7 @@ case object Debit extends Operation
 
 object Operation {
   implicit val eqOperation: Eq[Operation] = Eq.fromUniversalEquals
-  implicit val writes: Writes[Operation] = new Writes[Operation] {
+  implicit val writes: Writes[Operation]  = new Writes[Operation] {
     override def writes(o: Operation): JsValue =
       JsString(o match {
         case Credit => "credit"
@@ -58,7 +58,9 @@ private object ValidNsiTransaction {
 
   def apply(nsiTransaction: NsiTransaction): ValidatedNel[String, ValidNsiTransaction] = {
     def operationValidation(nsiOperation: String): ValidOrErrorString[Operation] =
-      if (nsiOperation === "C") { Valid(Credit) } else if (nsiOperation === "D") { Valid(Debit) } else {
+      if (nsiOperation === "C") { Valid(Credit) }
+      else if (nsiOperation === "D") { Valid(Debit) }
+      else {
         Invalid(NonEmptyList.one(s"""Unknown value for operation: "$nsiOperation""""))
       }
 

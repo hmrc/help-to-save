@@ -49,11 +49,10 @@ object WithExponentialBackoffRetry {
     private val minMillis: Double = minBackoff.toMillis.toDouble
     private val maxMillis: Double = maxBackoff.toMillis.toDouble
 
-    private var numberOfRetries: Int = 0
+    private var numberOfRetries: Int          = 0
     private var retryJob: Option[Cancellable] = None
 
-    /**
-      * Calculate the next retry time based on an exponential backoff strategy. The initial retry time is
+    /** Calculate the next retry time based on an exponential backoff strategy. The initial retry time is
       * [[minBackoff]]. The retry times exponentially increase to the value of [[maxBackoff]]. The rate at which the
       * [[maxBackoff]] value is reached is determined by [[exponentialFactor]].
       *
@@ -63,7 +62,6 @@ object WithExponentialBackoffRetry {
       *   t(n) = (m-M)e^(-cn) + M
       * }}}
       * where `n = 0,1,2,3,...`
-      *
       */
     private def nextSendTime(): FiniteDuration = {
       val millis = (minMillis - maxMillis) * math.exp(-exponentialFactor * numberOfRetries.toDouble) + maxMillis
@@ -97,10 +95,9 @@ object WithExponentialBackoffRetry {
 
   private[util] object ExponentialBackoffRetry {
 
-    /**
-      * Creates an [[ExponentialBackoffRetry]] where the constant term `exponentialFactor` is calculated from
-      * `numberOfRetriesUntilInitialWaitDoubles` in such a way that the retry time after `numberOfRetriesUntilInitialWaitDoubles`
-      * retries is double the inital value
+    /** Creates an [[ExponentialBackoffRetry]] where the constant term `exponentialFactor` is calculated from
+      * `numberOfRetriesUntilInitialWaitDoubles` in such a way that the retry time after
+      * `numberOfRetriesUntilInitialWaitDoubles` retries is double the inital value
       */
     def apply[RetryMessage, T](
       minBackoff: FiniteDuration,
@@ -114,7 +111,9 @@ object WithExponentialBackoffRetry {
       val maxMillis = maxBackoff.toMillis.toDouble
 
       val c =
-        math.log((minMillis - maxMillis) / (2.0 * minMillis - maxMillis)) / numberOfRetriesUntilInitialWaitDoubles.toDouble
+        math.log(
+          (minMillis - maxMillis) / (2.0 * minMillis - maxMillis)
+        ) / numberOfRetriesUntilInitialWaitDoubles.toDouble
 
       ExponentialBackoffRetry(
         minBackoff,

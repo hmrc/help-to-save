@@ -40,13 +40,14 @@ trait UserCapStore {
 }
 
 @Singleton
-class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+class MongoUserCapStore @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[UserCap](
       mongoComponent = mongo,
       collectionName = "usercap",
       domainFormat = UserCap.userCapFormat,
       indexes = Seq(IndexModel(ascending("usercap"), IndexOptions().name("usercapIndex")))
-    ) with UserCapStore {
+    )
+    with UserCapStore {
   private[repo] def doFind(): Future[Option[UserCap]] =
     preservingMdc {
       collection.find().headOption()
@@ -66,7 +67,8 @@ class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionC
           ),
           options =
             FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true).bypassDocumentValidation(false)
-        ).toFutureOption()
+        )
+        .toFutureOption()
     }
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)

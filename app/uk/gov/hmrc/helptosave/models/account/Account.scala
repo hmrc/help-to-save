@@ -31,7 +31,8 @@ case class BonusTerm(
   bonusPaid: BigDecimal,
   startDate: LocalDate,
   endDate: LocalDate,
-  bonusPaidOnOrAfterDate: LocalDate)
+  bonusPaidOnOrAfterDate: LocalDate
+)
 
 object BonusTerm {
   implicit val writes: Format[BonusTerm] = Json.format[BonusTerm]
@@ -62,13 +63,15 @@ case class Account(
   nbaAccountNumber: Option[String] = None,
   nbaPayee: Option[String] = None,
   nbaRollNumber: Option[String] = None,
-  nbaSortCode: Option[String] = None)
+  nbaSortCode: Option[String] = None
+)
 
 object Account extends Logging {
 
   def apply(nsiAccount: NsiAccount): ValidatedNel[String, Account] = {
     val paidInThisMonthValidation: ValidOrErrorString[BigDecimal] = {
-      val paidInThisMonth = nsiAccount.currentInvestmentMonth.investmentLimit - nsiAccount.currentInvestmentMonth.investmentRemaining
+      val paidInThisMonth =
+        nsiAccount.currentInvestmentMonth.investmentLimit - nsiAccount.currentInvestmentMonth.investmentRemaining
       if (paidInThisMonth >= 0) {
         Valid(paidInThisMonth)
       } else {
@@ -76,7 +79,9 @@ object Account extends Logging {
           NonEmptyList.one(
             s"investmentRemaining = ${nsiAccount.currentInvestmentMonth.investmentRemaining} and " +
               s"investmentLimit = ${nsiAccount.currentInvestmentMonth.investmentLimit} " +
-              "values returned by NS&I don't make sense because they imply a negative amount paid in this month"))
+              "values returned by NS&I don't make sense because they imply a negative amount paid in this month"
+          )
+        )
       }
     }
 
@@ -89,7 +94,7 @@ object Account extends Logging {
         Invalid(NonEmptyList.one(s"""Unknown value for accountClosedFlag: "${nsiAccount.accountClosedFlag}""""))
       }
 
-    val sortedNsiTerms = nsiAccount.terms.sortBy(_.termNumber)
+    val sortedNsiTerms                                           = nsiAccount.terms.sortBy(_.termNumber)
     val openedYearMonthValidation: ValidOrErrorString[YearMonth] =
       sortedNsiTerms.headOption.fold[ValidOrErrorString[YearMonth]] {
         Invalid(NonEmptyList.of("Bonus terms list returned by NS&I was empty"))
@@ -132,21 +137,21 @@ object Account extends Logging {
 
   private def nsiAccountToBlockingValidation(nsiAccount: NsiAccount): ValidatedNel[String, Blocking] = {
     def checkIsValidCode(code: String): ValidOrErrorString[String] =
-      if (expectedBlockingCodes.contains(code)) { Valid(code) } else {
+      if (expectedBlockingCodes.contains(code)) { Valid(code) }
+      else {
         Invalid(NonEmptyList.one(s"Received unexpected blocking code: $code"))
       }
 
     (checkIsValidCode(nsiAccount.accountBlockingCode), checkIsValidCode(nsiAccount.clientBlockingCode))
-      .mapN {
-        case (accountBlockingCode, clientBlockingCode) =>
-          def isBlockedFromPredicate(predicate: String => Boolean): Boolean =
-            predicate(accountBlockingCode) || predicate(clientBlockingCode)
+      .mapN { case (accountBlockingCode, clientBlockingCode) =>
+        def isBlockedFromPredicate(predicate: String => Boolean): Boolean =
+          predicate(accountBlockingCode) || predicate(clientBlockingCode)
 
-          Blocking(
-            payments = isBlockedFromPredicate(s => s =!= "00" && s =!= "11"),
-            withdrawals = isBlockedFromPredicate(s => s =!= "00" && s =!= "12" && s =!= "15"),
-            bonuses = isBlockedFromPredicate(s => s =!= "00" && s =!= "12")
-          )
+        Blocking(
+          payments = isBlockedFromPredicate(s => s =!= "00" && s =!= "11"),
+          withdrawals = isBlockedFromPredicate(s => s =!= "00" && s =!= "12" && s =!= "15"),
+          bonuses = isBlockedFromPredicate(s => s =!= "00" && s =!= "12")
+        )
       }
   }
 

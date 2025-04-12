@@ -11,7 +11,7 @@ lazy val microservice = Project(appName, file("."))
   .disablePlugins(JUnitXmlReportPlugin)
   .settings(onLoadMessage := "")
   .settings(majorVersion := 2)
-  .settings(CodeCoverageSettings.settings :_*)
+  .settings(CodeCoverageSettings.settings: _*)
   .settings(scalaVersion := "3.3.1")
   .settings(PlayKeys.playDefaultPort := 7001)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test())
@@ -25,17 +25,20 @@ lazy val microservice = Project(appName, file("."))
       "target/test-reports/html-report"
     )
   )
-  //silence authprovider warnings - we need to use the deprecated authprovider
+  // silence authprovider warnings - we need to use the deprecated authprovider
   .settings(scalacOptions += "-Wconf:cat=deprecation:silent")
   // Suppress successful events in Scalatest in standard output (-o)
   // Options described here: https://www.scalatest.org/user_guide/using_scalatest_with_sbt
   .settings(
-    Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest,
-                                         "-oNCHPQR",
-                                         "-u",
-                                         "target/test-reports",
-                                         "-h",
-                                         "target/test-reports/html-report"))
+    Test / testOptions += Tests.Argument(
+      TestFrameworks.ScalaTest,
+      "-oNCHPQR",
+      "-u",
+      "target/test-reports",
+      "-h",
+      "target/test-reports/html-report"
+    )
+  )
   .configs(ItTest)
   .settings(inConfig(ItTest)(Defaults.testSettings): _*)
   .settings(
@@ -57,6 +60,7 @@ lazy val microservice = Project(appName, file("."))
       "-u",
       "target/int-test-reports",
       "-h",
-      "target/int-test-reports/html-report")
+      "target/int-test-reports/html-report"
+    )
   )
   .settings(scalacOptions += "-Wconf:src=routes/.*:s")

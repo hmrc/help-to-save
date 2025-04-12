@@ -28,8 +28,8 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CREATED
-            getEnrolmentCount(NINO) shouldBe 1
+            resp.status                    shouldBe CREATED
+            getEnrolmentCount(NINO)        shouldBe 1
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }
@@ -47,8 +47,8 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CONFLICT
-            getEnrolmentCount(NINO) shouldBe 2
+            resp.status                    shouldBe CONFLICT
+            getEnrolmentCount(NINO)        shouldBe 2
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }
@@ -66,13 +66,12 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CONFLICT
-            getEnrolmentCount(NINO) shouldBe 2
+            resp.status                    shouldBe CONFLICT
+            getEnrolmentCount(NINO)        shouldBe 2
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }
       }
-
 
       "has been already created and the proxy returns an empty string body" should {
         "add a new record to the enrolments with itmpFlag=true, not update userCap and return CONFLICT" in {
@@ -87,8 +86,8 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true, source = "Stride-Manual"))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CONFLICT
-            getEnrolmentCount(NINO) shouldBe 2
+            resp.status                    shouldBe CONFLICT
+            getEnrolmentCount(NINO)        shouldBe 2
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }
@@ -108,7 +107,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CREATED
+            resp.status                    shouldBe CREATED
             eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
               getEnrolmentCount(NINO) shouldBe 1
             }
@@ -124,12 +123,13 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
           when(PUT, s"/help-to-save/accounts/$NINO").thenReturn(INTERNAL_SERVER_ERROR)
 
           stubAudit()
+
           val res = buildRequest(urlPath)
             .addHttpHeaders("X-Request-Id" -> "one-two-three", AUTHORIZATION -> "Bearer some-token")
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CREATED
+            resp.status                    shouldBe CREATED
             eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
               getEnrolmentCount(NINO, itmpFlag = false) shouldBe 1
             }
@@ -152,7 +152,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CONFLICT
+            resp.status                    shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }
@@ -172,7 +172,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CONFLICT
+            resp.status                    shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }
@@ -192,7 +192,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CONFLICT
+            resp.status                    shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }
@@ -212,7 +212,7 @@ class HelpToSaveControllerISpec extends IntegrationSpecBase {
             .post(validCreateAccountRequestPayload(detailsManuallyEntered = true))
 
           whenReady(res) { (resp: WSResponse) =>
-            resp.status shouldBe CONFLICT
+            resp.status                    shouldBe CONFLICT
             getUserCap().map(_.totalCount) shouldBe Some(1)
           }
         }

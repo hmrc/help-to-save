@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
 import cats.instances.future._
-import org.mockito.ArgumentMatchers.{eq => eqTo, any}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
 import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -63,9 +63,9 @@ class AccountControllerSpec extends AuthSupport {
 
   val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", path)
 
-  def mockGetAccount(nino: String, systemId: String, path: String)(response: Either[String, Option[Account]]): Any = {
-    when(mockProxyConnector.getAccount(eqTo(nino), eqTo(systemId), any(), eqTo(path))(any(), any())).thenReturn(EitherT.fromEither(response))
-  }
+  def mockGetAccount(nino: String, systemId: String, path: String)(response: Either[String, Option[Account]]): Any =
+    when(mockProxyConnector.getAccount(eqTo(nino), eqTo(systemId), any(), eqTo(path))(any(), any()))
+      .thenReturn(EitherT.fromEither(response))
 
   "The AccountController" when {
 
@@ -75,18 +75,18 @@ class AccountControllerSpec extends AuthSupport {
 
       "handle success responses" in {
         testWithGGAndPrivilegedAccess { mockAuth =>
-            mockAuth()
-            mockGetAccount(nino, systemId, path)(Right(Some(account)))
+          mockAuth()
+          mockGetAccount(nino, systemId, path)(Right(Some(account)))
 
           val result = controller.getAccount(nino, systemId, None)(fakeRequest)
-          status(result) shouldBe 200
+          status(result)        shouldBe 200
           contentAsJson(result) shouldBe Json.toJson(Some(account))
         }
       }
 
       "return a 403 (FORBIDDEN) if the NINO in the URL doesn't match the NINO retrieved from auth" in {
-          mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(GGCredId("id")))
-          mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(GGCredId("id")))
+        mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getAccount("BE123456C", systemId, None)(fakeRequest)
         status(result) shouldBe 403
@@ -94,8 +94,8 @@ class AccountControllerSpec extends AuthSupport {
 
       "return a 404 if an account does not exist for the NINO" in {
         testWithGGAndPrivilegedAccess { mockAuth =>
-            mockAuth()
-            mockGetAccount(nino, systemId, path)(Right(None))
+          mockAuth()
+          mockGetAccount(nino, systemId, path)(Right(None))
 
           val result = controller.getAccount(nino, systemId, None)(fakeRequest)
           status(result) shouldBe 404
@@ -109,8 +109,8 @@ class AccountControllerSpec extends AuthSupport {
 
       "handle errors returned by the connector" in {
         testWithGGAndPrivilegedAccess { mockAuth =>
-            mockAuth()
-            mockGetAccount(nino, systemId, path)(Left("some error"))
+          mockAuth()
+          mockGetAccount(nino, systemId, path)(Left("some error"))
 
           val result = controller.getAccount(nino, systemId, None)(fakeRequest)
           status(result) shouldBe 500

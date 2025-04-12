@@ -23,9 +23,8 @@ import uk.gov.hmrc.helptosave.util.PagerDutyAlerting
 trait MockPagerDuty { this: MockitoSugar =>
   val mockPagerDuty: PagerDutyAlerting = mock[PagerDutyAlerting]
 
-  def mockPagerDutyAlert(expectedMessage: String): Unit = {
+  def mockPagerDutyAlert(expectedMessage: String): Unit =
     doNothing()
       .when(mockPagerDuty)
       .alert(expectedMessage)
-  }
 }

@@ -24,16 +24,15 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.{Application, Configuration, Environment}
 
 class ThresholdValueByConfigProviderSpec extends AnyWordSpec with Matchers with GuiceOneAppPerTest {
-  def buildTestApp(isMDTPConfigActive: Boolean, effectiveDate: String): Application = {
+  def buildTestApp(isMDTPConfigActive: Boolean, effectiveDate: String): Application =
     GuiceApplicationBuilder()
       .configure(
-        "mdtp-threshold.active" -> isMDTPConfigActive,
+        "mdtp-threshold.active"         -> isMDTPConfigActive,
         "mdtp-threshold.effective-date" -> effectiveDate,
-        "metrics.jvm" -> false
+        "metrics.jvm"                   -> false
       )
       .bindings(new UCThresholdModule(Environment.simple(), Configuration.empty))
       .build()
-  }
 
   "ThresholdValueByConfigProvider" should {
     "use MDTP threshold config if today is after effective date and MDTP threshold config is active" in {
