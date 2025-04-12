@@ -17,9 +17,9 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import org.apache.pekko.util.Timeout
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
-import play.api.http.Status._
+import play.api.http.Status.*
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson

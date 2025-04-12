@@ -63,7 +63,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
   val payeURL: String          = servicesConfig.baseUrl("paye-personal-details")
   val itmpThresholdURL: URL    = url"${servicesConfig.baseUrl("itmp-threshold")}/universal-credits/threshold-amount"
 
-  implicit val booleanShow: Show[Boolean] = Show.show(if (_) "Y" else "N")
+  implicit val booleanShow: Show[Boolean] = Show.show(if _ then "Y" else "N")
 
   val body: JsValue = JsNull
 
@@ -96,8 +96,8 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
     http
       .get(eligibilityCheckUrl(nino))(hc.copy(authorization = None))
       .transform(
-        _.withQueryStringParameters(eligibilityCheckQueryParameters(ucResponse): _*)
-          .addHttpHeaders(appConfig.desHeaders: _*)
+        _.withQueryStringParameters(eligibilityCheckQueryParameters(ucResponse)*)
+          .addHttpHeaders(appConfig.desHeaders*)
       )
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
@@ -112,7 +112,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
     )
     http
       .put(setFlagUrl(nino))(hc.copy(authorization = None))
-      .transform(_.addHttpHeaders(appConfig.desHeaders: _*))
+      .transform(_.addHttpHeaders(appConfig.desHeaders*))
       .withBody(body)
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
@@ -127,7 +127,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
     )
     http
       .get(payePersonalDetailsUrl(nino))(hc.copy(authorization = None))
-      .transform(_.addHttpHeaders(appConfig.desHeaders :+ originatorIdHeader: _*))
+      .transform(_.addHttpHeaders(appConfig.desHeaders :+ originatorIdHeader*))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
@@ -142,7 +142,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
     )
     http
       .get(itmpThresholdURL)(hc.copy(authorization = None))
-      .transform(_.addHttpHeaders(appConfig.desHeaders: _*))
+      .transform(_.addHttpHeaders(appConfig.desHeaders*))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 

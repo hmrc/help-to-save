@@ -140,8 +140,8 @@ class UCThresholdManager(
     updateWindowMessageReceived: Boolean
   ): Unit = {
     def changeStateFromNotReady(thresholdValue: Double): Unit =
-      if (updateWindowMessageReceived) {
-        if (timeCalculator.isNowInBetween(updateWindowStartTime, updateWindowEndTime)) {
+      if updateWindowMessageReceived then {
+        if timeCalculator.isNowInBetween(updateWindowStartTime, updateWindowEndTime) then {
           updateThresholdValueJob = Some(scheduleEndOfUpdateWindow)
           context become inUpdateWindow(endOfWindowTriggered = false)
         } else {
@@ -212,7 +212,7 @@ class UCThresholdManager(
         }
       )
 
-    if (currentThresholdValue =!= value) {
+    if currentThresholdValue =!= value then {
       context become ready(value)
       logger.info(s"[ready] UC Threshold has changed, the value is now: $value")
     }
@@ -271,7 +271,7 @@ class UCThresholdManager(
           { value =>
             requester ! GetThresholdValueResponse(Some(value))
 
-            if (endOfWindowTriggered) {
+            if endOfWindowTriggered then {
               endUpdateWindow(value)
 
               logger.info(

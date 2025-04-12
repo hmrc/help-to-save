@@ -72,7 +72,7 @@ trait LogMessageTransformer {
 class LogMessageTransformerImpl @Inject() (configuration: Configuration) extends LogMessageTransformer {
 
   private val ninoPrefix: NINO => String =
-    if (configuration.underlying.getBoolean("nino-logging.enabled")) { nino =>
+    if configuration.underlying.getBoolean("nino-logging.enabled") then { nino =>
       s"For NINO [$nino], "
     } else { _ =>
       ""

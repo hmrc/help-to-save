@@ -56,7 +56,7 @@ class StrideAuth(htsAuthConnector: AuthConnector, controllerComponents: Controll
     Action.async { implicit request =>
       authorised(AuthProviders(PrivilegedApplication))
         .retrieve(allEnrolments) { enrolments =>
-          if (roleMatch(enrolments)) {
+          if roleMatch(enrolments) then {
             action(request)
           } else {
             Unauthorized("Insufficient roles")

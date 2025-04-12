@@ -58,7 +58,7 @@ class IFConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCon
 
     http
       .get(payePersonalDetailsUrl(nino))
-      .transform(_.addHttpHeaders(appConfig.ifHeaders :+ originatorIdHeader: _*))
+      .transform(_.addHttpHeaders(appConfig.ifHeaders :+ originatorIdHeader*))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 

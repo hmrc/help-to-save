@@ -71,7 +71,7 @@ class MongoEmailStore @Inject() (mongo: MongoComponent, crypto: Crypto, metrics:
         .map[Either[String, Unit]] { result =>
           timerContext.stop()
 
-          if (!result) {
+          if !result then {
             metrics.emailStoreUpdateErrorCounter.inc()
             Left("Could not update email mongo store")
           } else {

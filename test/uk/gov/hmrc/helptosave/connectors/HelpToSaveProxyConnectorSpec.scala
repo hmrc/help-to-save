@@ -176,7 +176,7 @@ class HelpToSaveProxyConnectorSpec
             when(GET, url, queryParams).thenReturn(Status.OK, Json.toJson(json).toString())
 
             val result = Await.result(proxyConnector.ucClaimantCheck(nino, txnId, threshold).value, 5.seconds)
-            result.left.value contains "unable to parse UCResponse from proxy"
+            result.left.value.contains("unable to parse UCResponse from proxy")
           }
 
         test("""{"foo": "bar"}""")

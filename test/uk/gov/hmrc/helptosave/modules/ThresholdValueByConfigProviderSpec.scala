@@ -21,7 +21,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.test.Helpers.running
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.{Application, Configuration, Environment}
+import play.api.Application
 
 class ThresholdValueByConfigProviderSpec extends AnyWordSpec with Matchers with GuiceOneAppPerTest {
   def buildTestApp(isMDTPConfigActive: Boolean, effectiveDate: String): Application =
@@ -31,7 +31,7 @@ class ThresholdValueByConfigProviderSpec extends AnyWordSpec with Matchers with 
         "mdtp-threshold.effective-date" -> effectiveDate,
         "metrics.jvm"                   -> false
       )
-      .bindings(new UCThresholdModule(Environment.simple(), Configuration.empty))
+      .bindings(new UCThresholdModule())
       .build()
 
   "ThresholdValueByConfigProvider" should {

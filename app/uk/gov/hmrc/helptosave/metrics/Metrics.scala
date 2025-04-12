@@ -59,7 +59,7 @@ class Metrics @Inject() (metrics: MetricRegistry) {
   val enrolmentStoreUpdateErrorCounter: Counter = counter("backend.enrolment-store-update-error.count")
 
   val enrolmentStoreDeleteErrorCounter: Boolean => Counter = (revertSoftDelete: Boolean) =>
-    if (revertSoftDelete) {
+    if revertSoftDelete then {
       counter("backend.enrolment-store-undo-delete-error.count")
     } else {
       counter("backend.enrolment-store-delete-error.count")
@@ -123,12 +123,12 @@ object Metrics {
         acc
 
       case (word, number) :: tail =>
-        if (t < number) {
+        if t < number then {
           (t -> word) :: acc
         } else {
           val (remaining, currentUnits) = divide(t, number)
 
-          if (currentUnits === 0L) {
+          if currentUnits === 0L then {
             loop(tail, remaining, acc)
           } else {
             loop(tail, remaining, (currentUnits -> word) :: acc)

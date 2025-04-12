@@ -153,7 +153,7 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
 
     val updateModels: Seq[UpdateOneModel[Nothing]] = enrolmentsToDelete.map { enrolment =>
       val filter =
-        if (!revertSoftDelete) regex("nino", getRegex(enrolment.nino))
+        if !revertSoftDelete then regex("nino", getRegex(enrolment.nino))
         else {
           and(
             regex("nino", getRegex(enrolment.nino)),
@@ -263,7 +263,7 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
           regex("nino", getRegex(config.nino)),
           config.docID.fold(empty())(id => Filters.eq("_id", id))
         )
-      }: _*
+      }*
     )
 
     preservingMdc {

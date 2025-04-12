@@ -40,7 +40,7 @@ trait BarsService {
 
   def validate(
     barsRequest: BankDetailsValidationRequest
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[?]): BarsResponseType
 
 }
 
@@ -56,7 +56,7 @@ class BarsServiceImpl @Inject() (
 
   override def validate(
     barsRequest: BankDetailsValidationRequest
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[_]): BarsResponseType = {
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[?]): BarsResponseType = {
     val timerContext = metrics.barsTimer.time()
     val trackingId   = UUID.randomUUID()
     val nino         = barsRequest.nino
@@ -73,12 +73,12 @@ class BarsServiceImpl @Inject() (
                 (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {
                 case (Some(accountNumberWithSortCodeIsValid), Some(sortCodeIsPresentOnEISCD)) =>
                   val sortCodeExists: Either[String, Boolean] =
-                    if (sortCodeIsPresentOnEISCD === "yes") {
+                    if sortCodeIsPresentOnEISCD === "yes" then {
                       Right(true)
-                    } else if (sortCodeIsPresentOnEISCD === "no") {
+                    } else if sortCodeIsPresentOnEISCD === "no" then {
                       logger.info("BARS response: bank details were valid but sort code was not present on EISCD", nino)
                       Right(false)
-                    } else if ((sortCodeIsPresentOnEISCD === "error")) {
+                    } else if (sortCodeIsPresentOnEISCD === "error") then {
                       logger.info("BARS response: Sort code check on EISCD returned Error", nino)
                       Right(false)
                     } else {
@@ -86,12 +86,12 @@ class BarsServiceImpl @Inject() (
                     }
 
                   val accountNumbersValid: Boolean =
-                    if (accountNumberWithSortCodeIsValid === "yes") {
+                    if accountNumberWithSortCodeIsValid === "yes" then {
                       true
-                    } else if (accountNumberWithSortCodeIsValid === "no") {
+                    } else if accountNumberWithSortCodeIsValid === "no" then {
                       logger.info("BARS response: bank details were NOT valid", nino)
                       false
-                    } else if (accountNumberWithSortCodeIsValid === "indeterminate") {
+                    } else if accountNumberWithSortCodeIsValid === "indeterminate" then {
                       logger.info("BARS response: bank details were marked as indeterminate", nino)
                       true
                     } else {

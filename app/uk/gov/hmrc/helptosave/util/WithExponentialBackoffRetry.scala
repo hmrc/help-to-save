@@ -69,7 +69,7 @@ object WithExponentialBackoffRetry {
     }
 
     def retry(b: T)(implicit ec: ExecutionContext): Option[FiniteDuration] =
-      if (!isActive) {
+      if !isActive then {
         val nextTime = nextSendTime()
         retryJob = Some(scheduler.scheduleOnce(nextTime) {
           recipient ! message(b)

@@ -69,11 +69,11 @@ class HelpToSaveServiceImpl @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Result[EligibilityCheckResponse] =
-    for {
+    for
       threshold  <- EitherT.liftF(ucThresholdProvider.get().getValue)
       ucResponse <- EitherT.liftF(getUCDetails(nino, UUID.randomUUID(), threshold))
       result     <- getEligibility(nino, ucResponse)
-    } yield {
+    yield {
       auditor.sendEvent(EligibilityCheckEvent(nino, result, ucResponse, path), nino)
       EligibilityCheckResponse(result, threshold)
     }
@@ -96,7 +96,7 @@ class HelpToSaveServiceImpl @Inject() (
                 logger.info(
                   s"DES/ITMP HtS flag setting returned status 200 (OK) (round-trip time: ${nanosToPrettyString(time)})",
                   nino,
-                  additionalParams: _*
+                  additionalParams*
                 )
                 Right(())
 
@@ -106,7 +106,7 @@ class HelpToSaveServiceImpl @Inject() (
                   s"Tried to set ITMP HtS flag even though it was already set, received status 403 (Forbidden) " +
                     s"- proceeding as normal  (round-trip time: ${nanosToPrettyString(time)})",
                   nino,
-                  additionalParams: _*
+                  additionalParams*
                 )
                 Right(())
 
@@ -131,7 +131,7 @@ class HelpToSaveServiceImpl @Inject() (
   def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier, ec: ExecutionContext): Result[PayePersonalDetails] = {
     val ifSwitch: Boolean = appConfig.ifEnabled
     val (response, tag)   =
-      if (ifSwitch) {
+      if ifSwitch then {
         (iFConnector.getPersonalDetails(nino), "[IF]")
       } else {
         (dESConnector.getPersonalDetails(nino), "[DES]")

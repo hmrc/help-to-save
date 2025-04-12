@@ -2,10 +2,8 @@ package helpers
 
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.SingleObservableFuture
 
-import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 

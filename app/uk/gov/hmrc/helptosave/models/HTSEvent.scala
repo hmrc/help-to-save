@@ -72,7 +72,7 @@ object EligibilityResult {
   def apply(nino: String, eligibilityResult: EligibilityCheckResult, ucResponse: Option[UCResponse]): JsValue = {
 
     val details =
-      if (eligibilityResult.resultCode === 1) {
+      if eligibilityResult.resultCode === 1 then {
         EligibilityResult(
           nino,
           eligible = true,
@@ -101,7 +101,7 @@ case class AccountCreated(userInfo: NSIPayload, source: String, detailsManuallyE
   private val createAccountURL = routes.HelpToSaveController.createAccount().url
 
   private val (prePopulatedData, manuallyEnteredData): (PrePopulatedUserData, ManuallyEnteredDetails) =
-    if (!detailsManuallyEntered) {
+    if !detailsManuallyEntered then {
       PrePopulatedUserData(
         Some(userInfo.forename),
         Some(userInfo.surname),

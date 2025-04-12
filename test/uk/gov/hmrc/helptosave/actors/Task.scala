@@ -22,9 +22,9 @@ case class Task(delay: FiniteDuration, id: Long, runnable: Runnable, interval: O
     extends Ordered[Task] {
 
   def compare(t: Task): Int =
-    if (delay > t.delay) -1
-    else if (delay < t.delay) 1
-    else if (id > t.id) -1
-    else if (id < t.id) 1
+    if delay > t.delay then -1
+    else if delay < t.delay then 1
+    else if id > t.id then -1
+    else if id < t.id then 1
     else 0
 }

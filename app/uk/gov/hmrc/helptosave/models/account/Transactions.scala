@@ -58,8 +58,8 @@ private object ValidNsiTransaction {
 
   def apply(nsiTransaction: NsiTransaction): ValidatedNel[String, ValidNsiTransaction] = {
     def operationValidation(nsiOperation: String): ValidOrErrorString[Operation] =
-      if (nsiOperation === "C") { Valid(Credit) }
-      else if (nsiOperation === "D") { Valid(Debit) }
+      if nsiOperation === "C" then { Valid(Credit) }
+      else if nsiOperation === "D" then { Valid(Debit) }
       else {
         Invalid(NonEmptyList.one(s"""Unknown value for operation: "$nsiOperation""""))
       }
@@ -120,7 +120,7 @@ object Transactions {
   def apply(nsiTransactions: NsiTransactions): ValidatedNel[String, Transactions] =
     nsiTransactions.transactions.toList
       .traverse[ValidOrErrorString, ValidNsiTransaction](ValidNsiTransaction.apply)
-      .map(sortLikeNsiWeb _ andThen runningBalance andThen Transactions.apply)
+      .map(sortLikeNsiWeb andThen runningBalance andThen Transactions.apply)
 
   private def sortLikeNsiWeb(transactions: Seq[ValidNsiTransaction]): Seq[ValidNsiTransaction] =
     transactions.sortWith { (t1, t2) =>
@@ -132,7 +132,7 @@ object Transactions {
       .foldLeft((Vector.empty[Transaction], 0: BigDecimal)) { (acc, vnt: ValidNsiTransaction) =>
         val (accTransactions, accBalance) = acc
 
-        val newBalance = if (vnt.operation === Credit) {
+        val newBalance = if vnt.operation === Credit then {
           accBalance + vnt.amount
         } else {
           accBalance - vnt.amount

@@ -33,7 +33,7 @@ trait EligibilityBase extends Logging {
   val helpToSaveService: HelpToSaveService
 
   def checkEligibility(nino: String, path: String)(implicit
-    request: Request[_],
+    request: Request[?],
     hc: HeaderCarrier,
     ec: ExecutionContext,
     transformer: LogMessageTransformer,

@@ -20,7 +20,7 @@ import org.apache.pekko.actor.Cancellable
 
 private case class MockCancellable(scheduler: MockScheduler, task: Task) extends Cancellable {
 
-  private[this] var canceled: Boolean = false
+  private var canceled: Boolean = false
 
   /** Possibly cancels this Cancellable. If the Cancellable has not already been canceled, or terminated after a single
     * execution, then the cancellable will be canceled. If cancel has already been called or the task has already
@@ -31,7 +31,7 @@ private case class MockCancellable(scheduler: MockScheduler, task: Task) extends
     */
   override def cancel(): Boolean =
     this synchronized {
-      if (canceled) {
+      if canceled then {
         false
       } else {
         canceled = true

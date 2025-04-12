@@ -37,10 +37,10 @@ trait EnrolmentBehaviour {
   def setITMPFlagAndUpdateMongo(
     nino: NINO
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): EitherT[Future, String, Unit] =
-    for {
+    for
       _ <- helpToSaveService.setFlag(nino)
       _ <- enrolmentStore.updateItmpFlag(nino, itmpFlag = true)
-    } yield ()
+    yield ()
 
   def setAccountNumber(nino: NINO, accountNumber: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Unit] =
     enrolmentStore.updateWithAccountNumber(nino, accountNumber)
@@ -49,7 +49,7 @@ trait EnrolmentBehaviour {
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): EitherT[Future, String, Unit] =
-    if (createAccountRequest.source === "Stride-Manual") { //HTS-1403: set the itmpFlag to true in mongo straightaway without actually calling ITMP
+    if createAccountRequest.source === "Stride-Manual" then { //HTS-1403: set the itmpFlag to true in mongo straightaway without actually calling ITMP
       enrolmentStore.insert(
         createAccountRequest.payload.nino,
         itmpFlag = true,
@@ -59,7 +59,7 @@ trait EnrolmentBehaviour {
         None
       )
     } else {
-      for {
+      for
         _ <- enrolmentStore.insert(
                createAccountRequest.payload.nino,
                itmpFlag = false,
@@ -69,6 +69,6 @@ trait EnrolmentBehaviour {
                None
              )
         _ <- setITMPFlagAndUpdateMongo(createAccountRequest.payload.nino)
-      } yield ()
+      yield ()
     }
 }

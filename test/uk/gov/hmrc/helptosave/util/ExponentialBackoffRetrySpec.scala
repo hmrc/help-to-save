@@ -61,7 +61,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
           5.seconds,
           0.4,
           probe.ref,
-          TestMessage.apply _,
+          TestMessage.apply,
           time.scheduler
         )
 
@@ -101,7 +101,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
           5.seconds,
           n,
           probe.ref,
-          TestMessage.apply _,
+          TestMessage.apply,
           time.scheduler
         )
 
@@ -129,7 +129,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
         3.second,
         5,
         probe.ref,
-        TestMessage.apply _,
+        TestMessage.apply,
         time.scheduler
       )
 
@@ -152,7 +152,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
         5.seconds,
         1.0,
         probe.ref,
-        TestMessage.apply _,
+        TestMessage.apply,
         time.scheduler
       )
 

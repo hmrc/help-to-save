@@ -17,18 +17,18 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.when
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.Json
-import play.api.mvc.{Result => PlayResult}
+import play.api.mvc.Result as PlayResult
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{authProviderId, nino => v2Nino}
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId}
-import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth._
-import uk.gov.hmrc.helptosave.models._
+import play.api.test.Helpers.*
+import uk.gov.hmrc.auth.core.retrieve.Credentials
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino as v2Nino}
+import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.*
+import uk.gov.hmrc.helptosave.models.*
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
 import uk.gov.hmrc.helptosave.util.NINO
 
@@ -50,57 +50,57 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
 
     val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector, testCC)
 
-    val privilegedCredentials: PAClientId = PAClientId("id")
+    val privilegedCredentials: Option[Credentials] = Some(Credentials("id", "PrivilegedApplication"))
   }
 
   "The EligibilityCheckerController" when {
 
-    val ggCredentials = GGCredId("123-gg")
+    val ggCredentials = Some(Credentials("123-gg", "GovernmentGateway"))
     val eligibility   = EligibilityCheckResponse(EligibilityCheckResult("x", 0, "y", 0), Some(123.45))
 
     "handling requests to perform eligibility checks" must {
 
       "return with a status 500 if the eligibility check service fails" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
         mockAuth(v2Nino)(Right(mockedNinoRetrieval))
         mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
           Left("The Eligibility Check service is unavailable")
         )
 
-        val result = doRequest(controller, Some(nino))
+        val result: Future[PlayResult] = doRequest(controller, Some(nino))
         status(result) shouldBe 500
       }
 
       "return the eligibility status returned from the eligibility check service if " +
         "successful" in new TestApparatus {
-          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
+          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
           mockAuth(v2Nino)(Right(mockedNinoRetrieval))
           mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
             Right(eligibility)
           )
 
-          val result = doRequest(controller, Some(nino))
+          val result: Future[PlayResult] = doRequest(controller, Some(nino))
           status(result)        shouldBe 200
           contentAsJson(result) shouldBe Json.toJson(eligibility)
         }
 
       "return Forbidden if the ggNino does not match the given nino" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
         mockAuth(v2Nino)(Right(mockedNinoRetrieval))
 
-        val result = doRequest(controller, Some("AE121212A"))
+        val result: Future[PlayResult] = doRequest(controller, Some("AE121212A"))
         status(result) shouldBe 403
       }
 
       "return the eligibility status returned from the eligibility check service successfully when no nino is given" in
         new TestApparatus {
-          mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(ggCredentials))
+          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
           mockAuth(v2Nino)(Right(mockedNinoRetrieval))
           mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(None).url)(
             Right(eligibility)
           )
 
-          val result = doRequest(controller, None)
+          val result: Future[PlayResult] = doRequest(controller, None)
           status(result)        shouldBe 200
           contentAsJson(result) shouldBe Json.toJson(eligibility)
         }
@@ -110,30 +110,30 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
     "handling requests to perform stride or API eligibility checks" must {
 
       "ask the EligibilityCheckerService if the user is eligible and return the result" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials)(Right(privilegedCredentials))
         mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
           Right(eligibility)
         )
 
-        val result = doRequest(controller, Some(nino))
+        val result: Future[PlayResult] = doRequest(controller, Some(nino))
         status(result)        shouldBe 200
         contentAsJson(result) shouldBe Json.toJson(eligibility)
       }
 
       "return with a 500 status if the eligibility check service fails" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials)(Right(privilegedCredentials))
         mockEligibilityCheckerService(nino, routes.EligibilityCheckController.eligibilityCheck(Some(nino)).url)(
           Left("The Eligibility Check service is unavailable")
         )
 
-        val result = doRequest(controller, Some(nino))
+        val result: Future[PlayResult] = doRequest(controller, Some(nino))
         status(result) shouldBe 500
       }
 
       "return a Bad Request(400) status if there was no nino given" in new TestApparatus {
-        mockAuth(GGAndPrivilegedProviders, authProviderId)(Right(privilegedCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials)(Right(privilegedCredentials))
 
-        val result = doRequest(controller, None)
+        val result: Future[PlayResult] = doRequest(controller, None)
         status(result) shouldBe 400
       }
 

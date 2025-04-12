@@ -61,7 +61,7 @@ object NSIPayload {
   implicit val nsiPayloadWrites: Writes[NSIPayload] = Json.writes[NSIPayload]
 
   def nsiPayloadReads(version: Option[String]): Reads[NSIPayload] = Reads[NSIPayload] { jsValue =>
-    for {
+    for
       forename            <- (jsValue \ "forename").validate[String]
       surname             <- (jsValue \ "surname").validate[String]
       dateOfBirth         <- (jsValue \ "dateOfBirth").validate[LocalDate]
@@ -71,7 +71,7 @@ object NSIPayload {
       nbaDetails          <- (jsValue \ "nbaDetails").validateOpt[BankDetails]
       bankDetails         <- (jsValue \ "bankDetails").validateOpt[BankDetails]
       systemId            <- (jsValue \ "systemId").validateOpt[String]
-    } yield NSIPayload(
+    yield NSIPayload(
       forename,
       surname,
       dateOfBirth,

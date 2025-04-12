@@ -72,7 +72,7 @@ object Account extends Logging {
     val paidInThisMonthValidation: ValidOrErrorString[BigDecimal] = {
       val paidInThisMonth =
         nsiAccount.currentInvestmentMonth.investmentLimit - nsiAccount.currentInvestmentMonth.investmentRemaining
-      if (paidInThisMonth >= 0) {
+      if paidInThisMonth >= 0 then {
         Valid(paidInThisMonth)
       } else {
         Invalid(
@@ -86,9 +86,9 @@ object Account extends Logging {
     }
 
     val accountClosedValidation: ValidOrErrorString[Boolean] =
-      if (nsiAccount.accountClosedFlag === "C") {
+      if nsiAccount.accountClosedFlag === "C" then {
         Valid(true)
-      } else if (nsiAccount.accountClosedFlag.trim.isEmpty) {
+      } else if nsiAccount.accountClosedFlag.trim.isEmpty then {
         Valid(false)
       } else {
         Invalid(NonEmptyList.one(s"""Unknown value for accountClosedFlag: "${nsiAccount.accountClosedFlag}""""))
@@ -137,7 +137,7 @@ object Account extends Logging {
 
   private def nsiAccountToBlockingValidation(nsiAccount: NsiAccount): ValidatedNel[String, Blocking] = {
     def checkIsValidCode(code: String): ValidOrErrorString[String] =
-      if (expectedBlockingCodes.contains(code)) { Valid(code) }
+      if expectedBlockingCodes.contains(code) then { Valid(code) }
       else {
         Invalid(NonEmptyList.one(s"Received unexpected blocking code: $code"))
       }

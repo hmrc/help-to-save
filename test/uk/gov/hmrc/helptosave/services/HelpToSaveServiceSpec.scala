@@ -116,12 +116,12 @@ class HelpToSaveServiceSpec
   private def mockIFPayeGet(nino: String)(response: HttpResponse) =
     when(mockIFConnector.getPersonalDetails(eqTo(nino))(any())).thenReturn(toFuture(Right(response)))
 
-  implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for {
+  implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for
     result     <- Gen.alphaStr
     resultCode <- Gen.choose(1, 10)
     reason     <- Gen.alphaStr
     reasonCode <- Gen.choose(1, 10)
-  } yield EligibilityCheckResult(result, resultCode, reason, reasonCode))
+  yield EligibilityCheckResult(result, resultCode, reason, reasonCode))
 
   "HelpToSaveService" when {
 
@@ -151,7 +151,7 @@ class HelpToSaveServiceSpec
 
         val result = service.getEligibility(nino, "path").value
 
-        if (!appConfig.useMDTPThresholdConfig) {
+        if !appConfig.useMDTPThresholdConfig then {
           testUCThresholdOrchestrator.probe.expectMsg(GetThresholdValue)
           testUCThresholdOrchestrator.probe.reply(GetThresholdValueResponse(thresholdResponse))
         }

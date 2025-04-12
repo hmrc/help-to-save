@@ -62,16 +62,16 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
 
       case (true, true) =>
         userCap =>
-          if (userCap.isTodaysRecord) {
-            if (userCap.totalCount >= totalCap) {
+          if userCap.isTodaysRecord then {
+            if userCap.totalCount >= totalCap then {
               UserCapResponse(isTotalCapReached = true)
-            } else if (userCap.dailyCount >= dailyCap) {
+            } else if userCap.dailyCount >= dailyCap then {
               UserCapResponse(isDailyCapReached = true)
             } else {
               UserCapResponse()
             }
           } else {
-            if (userCap.totalCount >= totalCap) {
+            if userCap.totalCount >= totalCap then {
               UserCapResponse(isTotalCapReached = true)
             } else {
               UserCapResponse()
@@ -80,7 +80,7 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
 
       case (true, false) =>
         userCap =>
-          if (userCap.totalCount >= totalCap) {
+          if userCap.totalCount >= totalCap then {
             UserCapResponse(isTotalCapReached = true)
           } else {
             UserCapResponse()
@@ -88,7 +88,7 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
 
       case (false, true) =>
         userCap =>
-          if (userCap.isTodaysRecord && userCap.dailyCount >= dailyCap) {
+          if userCap.isTodaysRecord && userCap.dailyCount >= dailyCap then {
             UserCapResponse(isDailyCapReached = true)
           } else {
             UserCapResponse()
@@ -97,11 +97,11 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
   }
 
   override def isAccountCreateAllowed()(implicit ec: ExecutionContext): Future[UserCapResponse] =
-    if (totalCap === 0 && dailyCap === 0) {
+    if totalCap === 0 && dailyCap === 0 then {
       toFuture(UserCapResponse(isDailyCapDisabled = true, isTotalCapDisabled = true))
-    } else if (totalCap === 0) {
+    } else if totalCap === 0 then {
       toFuture(UserCapResponse(isTotalCapDisabled = true))
-    } else if (dailyCap === 0) {
+    } else if dailyCap === 0 then {
       toFuture(UserCapResponse(isDailyCapDisabled = true))
     } else {
       userCapStore
@@ -119,7 +119,7 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
         _ => UserCap(0, 0)
       case (_, _)         => {
         case Some(uc) =>
-          val c = if (uc.isPreviousRecord) 1 else uc.dailyCount + 1
+          val c = if uc.isPreviousRecord then 1 else uc.dailyCount + 1
           UserCap(c, uc.totalCount + 1)
         case None     => UserCap(1, 1)
       }

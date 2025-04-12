@@ -64,8 +64,8 @@ class HelpToSaveController @Inject() (
         val payload = createAccountRequest.payload
         val nino    = payload.nino
 
-        //delete any existing emails of DE users from mongo
-        if (payload.contactDetails.communicationPreference === "00") {
+        // delete any existing emails of DE users from mongo
+        if payload.contactDetails.communicationPreference === "00" then {
           emailStore
             .delete(nino)
             .fold(
@@ -162,7 +162,7 @@ class HelpToSaveController @Inject() (
       .map(response =>
         response
           .map { httpResponse =>
-            if (httpResponse.status === CREATED) {
+            if httpResponse.status === CREATED then {
               Try {
                 (httpResponse.json \ "accountNumber").as[String]
               } match {
@@ -174,7 +174,7 @@ class HelpToSaveController @Inject() (
               }
             }
 
-            if (httpResponse.status === CREATED) {
+            if httpResponse.status === CREATED then {
               auditor.sendEvent(
                 AccountCreated(payload, createAccountRequest.source, createAccountRequest.detailsManuallyEntered),
                 nino
@@ -198,7 +198,7 @@ class HelpToSaveController @Inject() (
           }
           .left
           .map { upstreamErrorResponse =>
-            if (upstreamErrorResponse.statusCode === CONFLICT) {
+            if upstreamErrorResponse.statusCode === CONFLICT then {
               logger.warn("No account number was found in create account NSI response")
               enrolUserAndHandleResult(createAccountRequest, additionalParams, nino, None)
             }

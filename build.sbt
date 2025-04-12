@@ -2,6 +2,8 @@ import sbt.*
 import uk.gov.hmrc.DefaultBuildSettings.addTestReportOption
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
+import scala.collection.immutable.Seq
+
 val appName = "help-to-save"
 
 lazy val ItTest = config("it") extend Test
@@ -12,7 +14,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(onLoadMessage := "")
   .settings(majorVersion := 2)
   .settings(CodeCoverageSettings.settings: _*)
-  .settings(scalaVersion := "3.3.1")
+  .settings(scalaVersion := "3.6.4")
   .settings(PlayKeys.playDefaultPort := 7001)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test())
   // Disable default sbt Test options (might change with new versions of bootstrap)
@@ -63,4 +65,9 @@ lazy val microservice = Project(appName, file("."))
       "target/int-test-reports/html-report"
     )
   )
-  .settings(scalacOptions += "-Wconf:src=routes/.*:s")
+  .settings(
+    scalacOptions ++= Seq(
+      "-feature",
+      "-Wconf:cat=deprecation:w,cat=feature:w,src=target/.*:s,msg=Flag.*repeatedly:s"
+    )
+  )

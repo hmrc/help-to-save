@@ -218,10 +218,10 @@ class HelpToSaveProxyConnectorImpl @Inject() (
             case Status.OK =>
               auditor.sendEvent(GetAccountResultEvent(GetAccountResult(nino, response.json), path), nino)
 
-              val result = for {
+              val result = for
                 nsiAccount <- response.parseJsonWithoutLoggingBody[NsiAccount].leftMap(NonEmptyList.one)
                 account    <- Account(nsiAccount).toEither
-              } yield account
+              yield account
 
               result.bimap(
                 { errors =>
@@ -237,7 +237,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (
               )
 
             case other =>
-              if (isAccountDoesntExistResponse(response)) {
+              if isAccountDoesntExistResponse(response) then {
                 logger.info("Account didn't exist for getNsiAccount request", nino, "correlationId" -> correlationId)
                 Right(None)
               } else {
@@ -286,10 +286,10 @@ class HelpToSaveProxyConnectorImpl @Inject() (
           val _ = timerContext.stop()
           response.status match {
             case Status.OK =>
-              val result = for {
+              val result = for
                 nsiTransactions <- response.parseJsonWithoutLoggingBody[NsiTransactions].leftMap(NonEmptyList.one)
                 transactions    <- Transactions(nsiTransactions).toEither
-              } yield transactions
+              yield transactions
 
               result.bimap(
                 { errors =>
@@ -306,7 +306,7 @@ class HelpToSaveProxyConnectorImpl @Inject() (
               )
 
             case other =>
-              if (isAccountDoesntExistResponse(response)) {
+              if isAccountDoesntExistResponse(response) then {
                 logger.info("Account didn't exist for get transactions request", nino, "correlationId" -> correlationId)
                 Right(None)
               } else {

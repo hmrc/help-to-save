@@ -39,7 +39,7 @@ class ApplicationStart @Inject() (
   implicit val ec: ExecutionContext = executionContext
 
   val ninosToDelete: Seq[NINODeletionConfig] = appConfig.ninoDeletionConfig("delete-ninos")
-  if (ninosToDelete.nonEmpty) {
+  if ninosToDelete.nonEmpty then {
     enrolmentStore.updateDeleteFlag(ninosToDelete).value.onComplete {
       case Success(Right(deletedAccounts)) =>
         publishAuditEventForNINOs("AccountsDeleted", deletedAccounts)
@@ -50,7 +50,7 @@ class ApplicationStart @Inject() (
   }
 
   val ninosToUndoDeletion: Seq[NINODeletionConfig] = appConfig.ninoDeletionConfig("undo-delete-ninos")
-  if (ninosToUndoDeletion.nonEmpty) {
+  if ninosToUndoDeletion.nonEmpty then {
     enrolmentStore.updateDeleteFlag(ninosToUndoDeletion, revertSoftDelete = true).value.onComplete {
       case Success(Right(undeletedAccounts)) =>
         publishAuditEventForNINOs("AccountsUndeleted", undeletedAccounts)

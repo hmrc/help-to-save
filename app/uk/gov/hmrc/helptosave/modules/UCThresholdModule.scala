@@ -18,7 +18,7 @@ package uk.gov.hmrc.helptosave.modules
 
 import com.google.inject.{AbstractModule, Inject, Singleton}
 import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
-import play.api.{Configuration, Environment}
+import play.api.Configuration
 import uk.gov.hmrc.helptosave.actors.{TimeCalculatorImpl, UCThresholdConnectorProxyActor, UCThresholdManager}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
 import uk.gov.hmrc.helptosave.util.{Logging, PagerDutyAlerting}
@@ -31,7 +31,7 @@ import uk.gov.hmrc.helptosave.config.AppConfig
 import javax.inject.Provider
 import scala.concurrent.{ExecutionContext, Future}
 
-class UCThresholdModule(environment: Environment, configuration: Configuration) extends AbstractModule {
+class UCThresholdModule extends AbstractModule {
   override def configure(): Unit = {
     bind(classOf[UCThresholdOrchestrator]).asEagerSingleton()
     bind(classOf[MDTPThresholdOrchestrator]).asEagerSingleton()
@@ -98,7 +98,7 @@ class ThresholdValueByConfigProvider @Inject() (
 ) extends Provider[ThresholdOrchestrator] {
 
   def get: ThresholdOrchestrator =
-    if (appConfig.useMDTPThresholdConfig) {
+    if appConfig.useMDTPThresholdConfig then {
       desThresholdProvider.get().stop()
       mdtpThresholdProvider.get()
     } else desThresholdProvider.get()

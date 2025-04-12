@@ -31,12 +31,12 @@ object CreateAccountRequest {
 
   def createAccountRequestReads(version: Option[String]): Reads[CreateAccountRequest] = Reads[CreateAccountRequest] {
     jsValue =>
-      for {
+      for
         nsiPayload             <- (jsValue \ "payload").validate[NSIPayload](NSIPayload.nsiPayloadReads(version))
         reason                 <- (jsValue \ "eligibilityReason").validateOpt[Int]
         source                 <- (jsValue \ "source").validate[String]
         detailsManuallyEntered <- (jsValue \ "detailsManuallyEntered").validateOpt[Boolean]
-      } yield CreateAccountRequest(nsiPayload, reason, source, detailsManuallyEntered.getOrElse(false))
+      yield CreateAccountRequest(nsiPayload, reason, source, detailsManuallyEntered.getOrElse(false))
 
   }
 

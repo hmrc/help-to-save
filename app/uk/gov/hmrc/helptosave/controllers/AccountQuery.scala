@@ -41,14 +41,14 @@ trait AccountQuery extends Logging with Results {
   protected def accountQuery[A](nino: String, systemId: String, correlationId: Option[String])(
     query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]]
   )(implicit transformer: LogMessageTransformer, writes: Writes[A], ec: ExecutionContext): Action[AnyContent] =
-    if (!isValid(nino)) {
+    if !isValid(nino) then {
       Action {
         logger.warn("NINO in request was not valid")
         BadRequest
       }
     } else {
       ggOrPrivilegedAuthorisedWithNINO(Some(nino)) { implicit request => implicit authNino =>
-        if (nino =!= authNino) {
+        if nino =!= authNino then {
           logger.warn("NINO in request did not match NINO found in auth")
           Forbidden
         } else {

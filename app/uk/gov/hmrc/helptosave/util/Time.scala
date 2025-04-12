@@ -51,12 +51,12 @@ object Time {
         acc
 
       case (word, number) :: tail =>
-        if (t < number) {
+        if t < number then {
           (t -> word) :: acc
         } else {
           val (remaining, currentUnits) = divide(t, number)
 
-          if (currentUnits === 0L) {
+          if currentUnits === 0L then {
             loop(tail, remaining, acc)
           } else {
             loop(tail, remaining, (currentUnits -> word) :: acc)
