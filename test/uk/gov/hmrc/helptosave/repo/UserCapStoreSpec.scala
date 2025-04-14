@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
+import uk.gov.hmrc.helptosave.models.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
+import org.mongodb.scala.ObservableFuture
 
 import java.time.{LocalDate, ZoneId}
 
 class UserCapStoreSpec extends TestSupport with MongoSupport {
 
-  val repository: MongoUserCapStore = newUserCapStore(mongoComponent)
-  override def beforeEach(): Unit =
+  val repository: MongoUserCapStore                   = newUserCapStore(mongoComponent)
+  override def beforeEach(): Unit                     =
     await(repository.collection.drop().toFuture())
   def newUserCapStore(mongoComponent: MongoComponent) = new MongoUserCapStore(mongoComponent)
 

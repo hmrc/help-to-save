@@ -24,7 +24,7 @@ import java.time.LocalDate
 
 class TransactionsSpec extends TestSupport {
 
-  private val nsiCreditTransaction = NsiTransaction(
+  private val nsiCreditTransaction      = NsiTransaction(
     sequence = "1",
     amount = BigDecimal("1.23"),
     operation = "C",
@@ -42,7 +42,7 @@ class TransactionsSpec extends TestSupport {
     "description",
     "reference"
   )
-  private val creditTransaction = Transaction(
+  private val creditTransaction         = Transaction(
     Credit,
     BigDecimal("1.23"),
     LocalDate.parse("1900-01-01"),
@@ -52,9 +52,9 @@ class TransactionsSpec extends TestSupport {
     BigDecimal(0)
   )
 
-  private val nsiDebitTransaction: NsiTransaction = nsiCreditTransaction.copy(operation = "D")
+  private val nsiDebitTransaction: NsiTransaction           = nsiCreditTransaction.copy(operation = "D")
   private val validNsiDebitTransaction: ValidNsiTransaction = validNsiCreditTransaction.copy(operation = Debit)
-  private val debitTransaction: Transaction = creditTransaction.copy(operation = Debit)
+  private val debitTransaction: Transaction                 = creditTransaction.copy(operation = Debit)
 
   private val nsiInvalidOperationTransaction: NsiTransaction = nsiCreditTransaction.copy(operation = "X")
 
@@ -74,18 +74,21 @@ class TransactionsSpec extends TestSupport {
         ValidNsiTransaction(nsiInvalidOperationTransaction) shouldBe Invalid(
           NonEmptyList.one(
             """Unknown value for operation: "X""""
-          ))
+          )
+        )
       }
 
       "return an Invalid for a sequence that cannot be parsed as an integer" in {
         ValidNsiTransaction(nsiCreditTransaction.copy(sequence = "one")) shouldBe Invalid(
           NonEmptyList.one(
             """Can't parse sequence value as an integer: "one""""
-          ))
+          )
+        )
         ValidNsiTransaction(nsiCreditTransaction.copy(sequence = "1.1")) shouldBe Invalid(
           NonEmptyList.one(
             """Can't parse sequence value as an integer: "1.1""""
-          ))
+          )
+        )
       }
     }
   }
@@ -93,28 +96,27 @@ class TransactionsSpec extends TestSupport {
   "Transactions object" when { // scalastyle:off magic.number
     "creating a new Transactions from a NsiTransactions" must {
       "return transactions details when input transactions are all valid" in {
-        val nsiTransactions = NsiTransactions(
-          Seq(
-            nsiCreditTransaction,
-            nsiCreditTransaction.copy(sequence = "2"),
-            nsiDebitTransaction.copy(sequence = "3")))
+        val nsiTransactions      = NsiTransactions(
+          Seq(nsiCreditTransaction, nsiCreditTransaction.copy(sequence = "2"), nsiDebitTransaction.copy(sequence = "3"))
+        )
         val expectedTransactions = Transactions(
           Seq(
             creditTransaction.copy(balanceAfter = BigDecimal("1.23")),
             creditTransaction.copy(balanceAfter = BigDecimal("2.46")),
             debitTransaction.copy(balanceAfter = BigDecimal("1.23"))
-          ))
+          )
+        )
         Transactions(nsiTransactions) shouldBe Valid(expectedTransactions)
       }
 
       "handle an empty transaction list" in {
-        val nsiTransactions = NsiTransactions(Seq())
+        val nsiTransactions      = NsiTransactions(Seq())
         val expectedTransactions = Transactions(Seq())
         Transactions(nsiTransactions) shouldBe Valid(expectedTransactions)
       }
 
       "handle a 1-element transaction list" in {
-        val nsiTransactions = NsiTransactions(Seq(nsiDebitTransaction))
+        val nsiTransactions      = NsiTransactions(Seq(nsiDebitTransaction))
         val expectedTransactions =
           Transactions(Seq(debitTransaction.copy(balanceAfter = 0 - validNsiDebitTransaction.amount)))
         Transactions(nsiTransactions) shouldBe Valid(expectedTransactions)
@@ -133,10 +135,12 @@ class TransactionsSpec extends TestSupport {
               .copy(sequence = "2", accountingDate = LocalDate.parse("2017-11-27"), amount = BigDecimal(2)),
             nsiCreditTransaction
               .copy(sequence = "1", accountingDate = LocalDate.parse("2017-11-20"), amount = BigDecimal(1))
-          ))
+          )
+        )
 
         Transactions(nsiTransactions).bimap(
-          errors => fail(errors.toList.mkString(", ")), { transactions =>
+          errors => fail(errors.toList.mkString(", ")),
+          transactions =>
             transactions.transactions.map(_.amount) shouldBe List(
               BigDecimal(1),
               BigDecimal(2),
@@ -144,7 +148,6 @@ class TransactionsSpec extends TestSupport {
               BigDecimal(4),
               BigDecimal(5)
             )
-          }
         )
       }
 
@@ -155,7 +158,8 @@ class TransactionsSpec extends TestSupport {
           NonEmptyList.of(
             """Unknown value for operation: "X"""",
             """Unknown value for operation: """""
-          ))
+          )
+        )
       }
     }
   }

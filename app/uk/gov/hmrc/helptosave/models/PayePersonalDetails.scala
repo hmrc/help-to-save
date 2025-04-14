@@ -57,12 +57,12 @@ object PayePersonalDetails {
     override def writes(o: PayePersonalDetails): JsValue = writesInstance.writes(o)
 
     override def reads(json: JsValue): JsResult[PayePersonalDetails] =
-      for {
+      for
         name        <- readName(json)
         dob         <- readDob(json)
         address     <- readAddress(json)
         phoneNumber <- readPhoneNumber(json)
-      } yield {
+      yield {
         PayePersonalDetails(name, dob, address, phoneNumber)
       }
   }
@@ -103,7 +103,7 @@ object PayePersonalDetails {
       .fold[JsResult[Address]](
         JsError("No Address found in the DES response")
       )(v =>
-        for {
+        for
           line1       <- lookup("line1", v).validate[String]
           line2       <- lookup("line2", v).validate[String]
           line3       <- lookup("line3", v).validateOpt[String]
@@ -111,7 +111,7 @@ object PayePersonalDetails {
           line5       <- lookup("line5", v).validateOpt[String]
           postcode    <- lookup("postcode", v).validate[String]
           countryCode <- lookup("countryCode", v).validateOpt[Int]
-        } yield
+        yield
           Address(line1, line2, line3, line4, line5, postcode, countryCode.flatMap(countryCodes.get).map(_.take(2))))
 
   def readPhoneNumber(json: JsValue): JsResult[Option[String]] =
@@ -120,11 +120,11 @@ object PayePersonalDetails {
       .fold[JsResult[Option[String]]](
         JsSuccess(None)
       )(v =>
-        for {
+        for
           callingCode               <- lookup("callingCode", v).validateOpt[Int]
           convertedAreaDiallingCode <- lookup("convertedAreaDiallingCode", v).validateOpt[String]
           telephoneNumber           <- lookup("telephoneNumber", v).validateOpt[String]
-        } yield {
+        yield {
           (callingCode.flatMap(callingCodes.get), convertedAreaDiallingCode, telephoneNumber) match {
             case (Some(cc), Some(cadc), Some(t)) =>
               Some(s"+$cc${cadc.stripPrefix("0")}$t")

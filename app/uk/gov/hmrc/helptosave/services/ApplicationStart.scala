@@ -29,51 +29,52 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 @Singleton
-class ApplicationStart @Inject()(
+class ApplicationStart @Inject() (
   appConfig: AppConfig,
   enrolmentStore: EnrolmentStore,
   executionContext: ExecutionContext,
-  audit: HTSAuditor)
-    extends Logging {
+  audit: HTSAuditor
+) extends Logging {
 
   implicit val ec: ExecutionContext = executionContext
 
   val ninosToDelete: Seq[NINODeletionConfig] = appConfig.ninoDeletionConfig("delete-ninos")
-  if (ninosToDelete.nonEmpty) {
+  if ninosToDelete.nonEmpty then {
     enrolmentStore.updateDeleteFlag(ninosToDelete).value.onComplete {
       case Success(Right(deletedAccounts)) =>
         publishAuditEventForNINOs("AccountsDeleted", deletedAccounts)
         logger.info(s"Successfully deleted list of NINOs: $ninosToDelete")
-      case Success(Left(errorMsg)) => logger.error(errorMsg)
-      case Failure(ex)             => logger.error(s"Failed to delete configured list of NINOs: $ninosToDelete", ex)
+      case Success(Left(errorMsg))         => logger.error(errorMsg)
+      case Failure(ex)                     => logger.error(s"Failed to delete configured list of NINOs: $ninosToDelete", ex)
     }
   }
 
   val ninosToUndoDeletion: Seq[NINODeletionConfig] = appConfig.ninoDeletionConfig("undo-delete-ninos")
-  if (ninosToUndoDeletion.nonEmpty) {
+  if ninosToUndoDeletion.nonEmpty then {
     enrolmentStore.updateDeleteFlag(ninosToUndoDeletion, revertSoftDelete = true).value.onComplete {
       case Success(Right(undeletedAccounts)) =>
         publishAuditEventForNINOs("AccountsUndeleted", undeletedAccounts)
         logger.info(s"Successfully undid deletion of NINOs: $ninosToUndoDeletion")
-      case Success(Left(errorMsg)) => logger.error(errorMsg)
-      case Failure(ex)             => logger.error(s"Failed to undo deletion of of NINOs: $ninosToUndoDeletion", ex)
+      case Success(Left(errorMsg))           => logger.error(errorMsg)
+      case Failure(ex)                       => logger.error(s"Failed to undo deletion of of NINOs: $ninosToUndoDeletion", ex)
     }
   }
 
   private def publishAuditEventForNINOs(auditType: String, managedConfigs: Seq[NINODeletionConfig]) = {
     val ninos = managedConfigs
-      .map(
-        enrolment =>
-          Json.obj(
-            "nino"  -> enrolment.nino,
-            "docId" -> enrolment.docID.map(_.toHexString)
-        ))
+      .map(enrolment =>
+        Json.obj(
+          "nino"  -> enrolment.nino,
+          "docId" -> enrolment.docID.map(_.toHexString)
+        )
+      )
       .toList
     audit.auditConnector.sendExtendedEvent(
       ExtendedDataEvent(
         appConfig.appName,
         auditType,
         detail = Json.toJson(ninos)
-      ))
+      )
+    )
   }
 }

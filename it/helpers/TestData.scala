@@ -50,7 +50,12 @@ object TestData {
             "systemId" : "MDTP REGISTRATION"
       }""".stripMargin
 
-  def createAccountJson(dobValue: String, detailsManuallyEntered: Boolean, communicationPreference: String = "02", source: String = "Digital"): String =
+  def createAccountJson(
+    dobValue: String,
+    detailsManuallyEntered: Boolean,
+    communicationPreference: String = "02",
+    source: String = "Digital"
+  ): String =
     s"""{
            "payload":${payloadJson(dobValue, communicationPreference)},
            "eligibilityReason":7,
@@ -58,9 +63,11 @@ object TestData {
            "detailsManuallyEntered" : $detailsManuallyEntered
           }""".stripMargin
 
-  def validCreateAccountRequestPayload(detailsManuallyEntered: Boolean = false,
-                                       communicationPreference: String = "02",
-                                       source: String = "Digital") =
+  def validCreateAccountRequestPayload(
+    detailsManuallyEntered: Boolean = false,
+    communicationPreference: String = "02",
+    source: String = "Digital"
+  ) =
     Json.parse(createAccountJson("20200101", detailsManuallyEntered, communicationPreference, source))
 
   val validCreateAccountRequest = validCreateAccountRequestPayload()
@@ -73,7 +80,8 @@ object TestData {
 
   val account = Account(
     YearMonth.of(2018, 1),
-    "AC01", isClosed = false,
+    "AC01",
+    isClosed = false,
     Blocking(payments = false, withdrawals = false, bonuses = false),
     200.34,
     34.50,
@@ -84,9 +92,22 @@ object TestData {
     "Testsurname",
     Some("test@example.com"),
     List(
-      BonusTerm(bonusEstimate = 123.45, bonusPaid = 123.45, startDate = LocalDate.parse("2018-01-01"), endDate = LocalDate.parse("2019-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")),
-      BonusTerm(bonusEstimate = 67.00, bonusPaid = 0.00, startDate = LocalDate.parse("2020-01-01"), endDate = LocalDate.parse("2021-12-31"), bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01"))
+      BonusTerm(
+        bonusEstimate = 123.45,
+        bonusPaid = 123.45,
+        startDate = LocalDate.parse("2018-01-01"),
+        endDate = LocalDate.parse("2019-12-31"),
+        bonusPaidOnOrAfterDate = LocalDate.parse("2020-01-01")
+      ),
+      BonusTerm(
+        bonusEstimate = 67.00,
+        bonusPaid = 0.00,
+        startDate = LocalDate.parse("2020-01-01"),
+        endDate = LocalDate.parse("2021-12-31"),
+        bonusPaidOnOrAfterDate = LocalDate.parse("2022-01-01")
+      )
     ),
     None,
-    None)
+    None
+  )
 }

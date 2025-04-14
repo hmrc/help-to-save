@@ -29,14 +29,15 @@ import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters._
 
 @Singleton
-class AppConfig @Inject()(
+class AppConfig @Inject() (
   val runModeConfiguration: Configuration,
   environment: Environment,
-  servicesConfig: ServicesConfig) {
+  servicesConfig: ServicesConfig
+) {
   protected def mode: Mode = environment.mode
 
-  val appName: String = servicesConfig.getString("appName")
-  val ifEnabled: Boolean = servicesConfig.getBoolean("feature.if.enabled")
+  val appName: String                   = servicesConfig.getString("appName")
+  val ifEnabled: Boolean                = servicesConfig.getBoolean("feature.if.enabled")
   val desHeaders: Seq[(String, String)] = Seq(
     "Environment"   -> servicesConfig.getString("microservice.services.des.environment"),
     "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.des.token")}"
@@ -57,19 +58,18 @@ class AppConfig @Inject()(
 
   val barsUrl: String = servicesConfig.baseUrl("bank-account-reputation")
 
-  val ninoDeletionConfig: String => Seq[NINODeletionConfig] = (configSuffix: String) => {
+  val ninoDeletionConfig: String => Seq[NINODeletionConfig] = (configSuffix: String) =>
     runModeConfiguration.underlying
       .getObjectList(s"enrolment.$configSuffix")
       .asScala
-      .flatMap(config => {
+      .flatMap { config =>
         Json.parse(config.render(ConfigRenderOptions.concise())).validate[NINODeletionConfig].asOpt
-      })
+      }
       .toSeq
-  }
 
   def useMDTPThresholdConfig: Boolean = {
     val effectiveDate = LocalDate.parse(runModeConfiguration.get[String]("mdtp-threshold.effective-date"))
-    val isActive = runModeConfiguration.get[Boolean]("mdtp-threshold.active")
+    val isActive      = runModeConfiguration.get[Boolean]("mdtp-threshold.active")
 
     isActive && !LocalDate.now().isBefore(effectiveDate)
   }

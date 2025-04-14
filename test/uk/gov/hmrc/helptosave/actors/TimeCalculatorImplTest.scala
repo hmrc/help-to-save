@@ -46,11 +46,11 @@ class TimeCalculatorImplTest extends AnyWordSpec with Matchers {
 
     "calculate time between two times correctly" in {
 
-      val t1 = LocalTime.of(13, 24, 56)
+      val t1          = LocalTime.of(13, 24, 56)
       val timeUntilT1 = 12.hours + 24.minutes + 56.seconds
       calculator.timeUntil(t1) shouldBe timeUntilT1
 
-      val t2 = LocalTime.of(0, 11, 22)
+      val t2          = LocalTime.of(0, 11, 22)
       val timeUntilT2 = 23.hours + 11.minutes + 22.seconds
       calculator.timeUntil(t2) shouldBe timeUntilT2
     }

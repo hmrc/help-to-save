@@ -99,7 +99,7 @@ trait TestData {
        |  }
        |}""".stripMargin
 
-  val ppDetails = PayePersonalDetails(
+  val ppDetails: PayePersonalDetails = PayePersonalDetails(
     Name("A", "Smith"),
     LocalDate.parse("1980-01-01"),
     Address("1 Station Road", "Town Centre", Some("Sometown"), Some("Anyshire"), Some("UK"), "AB12 3CD", Some("GB")),

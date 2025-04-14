@@ -17,8 +17,9 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import org.apache.pekko.util.Timeout
-import org.mockito.ArgumentMatchersSugar.*
-import play.api.http.Status._
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.when
+import play.api.http.Status.*
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
@@ -33,23 +34,23 @@ import java.util.concurrent.TimeUnit
 // scalastyle:off magic.number
 class UserCapControllerSpec extends AuthSupport {
   val userCapService: UserCapService = mock[UserCapService]
-  val controller = new UserCapController(userCapService, mockAuthConnector, testCC)
-  implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
+  val controller                     = new UserCapController(userCapService, mockAuthConnector, testCC)
+  implicit val timeout: Timeout      = Timeout(5, TimeUnit.SECONDS)
 
   "The UserCapController" when {
 
     "checking if account creation is allowed " should {
       "return successful result" in {
-        userCapService
-          .isAccountCreateAllowed()(*)
-          .returns(toFuture(UserCapResponse()))
+        when(userCapService.isAccountCreateAllowed()(any()))
+          .thenReturn(toFuture(UserCapResponse()))
 
         mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))
         val result = controller.isAccountCreateAllowed()(FakeRequest())
 
-        status(result) shouldBe OK
+        status(result)        shouldBe OK
         contentAsJson(result) shouldBe Json.parse(
-          """{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}""")
+          """{"isDailyCapReached":false, "isTotalCapReached":false, "isDailyCapDisabled":false, "isTotalCapDisabled":false}"""
+        )
       }
     }
   }

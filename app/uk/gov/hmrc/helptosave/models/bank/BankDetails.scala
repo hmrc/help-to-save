@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.helptosave.models
+package uk.gov.hmrc.helptosave.models.bank
 
 import play.api.libs.json.{Format, Json}
 
@@ -33,7 +33,15 @@ object BankDetailsValidationRequest {
 case class BankDetailsValidationResult(isValid: Boolean, sortCodeExists: Boolean)
 
 object BankDetailsValidationResult {
-
   implicit val format: Format[BankDetailsValidationResult] = Json.format[BankDetailsValidationResult]
+}
 
+case class Account(sortCode: String, accountNumber: String)
+object Account {
+  implicit val accountFormat: Format[Account] = Json.format[Account]
+}
+
+case class BarsRequest(account: Account)
+object BarsRequest {
+  implicit val barsRequestFormat: Format[BarsRequest] = Json.format[BarsRequest]
 }

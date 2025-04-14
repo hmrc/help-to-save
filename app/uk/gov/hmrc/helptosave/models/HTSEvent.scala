@@ -22,6 +22,7 @@ import play.api.libs.json._
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.controllers.routes
 import uk.gov.hmrc.helptosave.models.AccountCreated.{AllDetails, ManuallyEnteredDetails, PrePopulatedUserData}
+import uk.gov.hmrc.helptosave.models.bank.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
@@ -32,8 +33,9 @@ trait HTSEvent {
 }
 
 object HTSEvent {
-  def apply(appName: String, auditType: String, detail: JsValue, transactionName: String, path: String)(
-    implicit hc: HeaderCarrier): ExtendedDataEvent =
+  def apply(appName: String, auditType: String, detail: JsValue, transactionName: String, path: String)(implicit
+    hc: HeaderCarrier
+  ): ExtendedDataEvent =
     ExtendedDataEvent(appName, auditType = auditType, detail = detail, tags = hc.toAuditTags(transactionName, path))
 }
 
@@ -41,18 +43,18 @@ case class EligibilityCheckEvent(
   nino: NINO,
   eligibilityResult: EligibilityCheckResult,
   ucResponse: Option[UCResponse],
-  path: String)(implicit hc: HeaderCarrier, appConfig: AppConfig)
+  path: String
+)(implicit hc: HeaderCarrier, appConfig: AppConfig)
     extends HTSEvent {
 
-  val value: ExtendedDataEvent = {
-
+  val value: ExtendedDataEvent =
     HTSEvent(
       appConfig.appName,
       "EligibilityResult",
       EligibilityResult(nino, eligibilityResult, ucResponse),
       "eligibility-result",
-      path)
-  }
+      path
+    )
 
 }
 
@@ -61,7 +63,8 @@ case class EligibilityResult(
   eligible: Boolean,
   ineligibleReason: Option[EligibilityCheckResult] = None,
   isUCClaimant: Option[Boolean] = None,
-  isWithinUCThreshold: Option[Boolean] = None)
+  isWithinUCThreshold: Option[Boolean] = None
+)
 
 object EligibilityResult {
 
@@ -70,34 +73,36 @@ object EligibilityResult {
   def apply(nino: String, eligibilityResult: EligibilityCheckResult, ucResponse: Option[UCResponse]): JsValue = {
 
     val details =
-      if (eligibilityResult.resultCode === 1) {
+      if eligibilityResult.resultCode === 1 then {
         EligibilityResult(
           nino,
           eligible = true,
           isUCClaimant = ucResponse.map(_.ucClaimant),
-          isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold))
+          isWithinUCThreshold = ucResponse.flatMap(_.withinThreshold)
+        )
       } else {
         EligibilityResult(
           nino,
           eligible = false,
           Some(eligibilityResult),
           ucResponse.map(_.ucClaimant),
-          ucResponse.flatMap(_.withinThreshold))
+          ucResponse.flatMap(_.withinThreshold)
+        )
       }
 
     Json.toJson(details)
   }
 }
 
-case class AccountCreated(userInfo: NSIPayload, source: String, detailsManuallyEntered: Boolean)(
-  implicit hc: HeaderCarrier,
-  appConfig: AppConfig)
-    extends HTSEvent {
+case class AccountCreated(userInfo: NSIPayload, source: String, detailsManuallyEntered: Boolean)(implicit
+  hc: HeaderCarrier,
+  appConfig: AppConfig
+) extends HTSEvent {
 
   private val createAccountURL = routes.HelpToSaveController.createAccount().url
 
   private val (prePopulatedData, manuallyEnteredData): (PrePopulatedUserData, ManuallyEnteredDetails) =
-    if (!detailsManuallyEntered) {
+    if !detailsManuallyEntered then {
       PrePopulatedUserData(
         Some(userInfo.forename),
         Some(userInfo.surname),
@@ -124,7 +129,8 @@ case class AccountCreated(userInfo: NSIPayload, source: String, detailsManuallyE
         userInfo.nino,
         userInfo.contactDetails.communicationPreference,
         userInfo.registrationChannel,
-        source) ->
+        source
+      ) ->
         ManuallyEnteredDetails(
           userInfo.nbaDetails.map(_.accountName),
           userInfo.nbaDetails.map(_.accountNumber),
@@ -178,7 +184,8 @@ object AccountCreated {
     nino: String,
     communicationPreference: String,
     registrationChannel: String,
-    source: String)
+    source: String
+  )
 
   object PrePopulatedUserData {
 
@@ -186,7 +193,8 @@ object AccountCreated {
       nino: String,
       communicationPreference: String,
       registrationChannel: String,
-      source: String): PrePopulatedUserData =
+      source: String
+    ): PrePopulatedUserData =
       PrePopulatedUserData(
         None,
         None,
@@ -203,7 +211,8 @@ object AccountCreated {
         nino,
         communicationPreference,
         registrationChannel,
-        source)
+        source
+      )
 
     implicit val format: Format[PrePopulatedUserData] = Json.format[PrePopulatedUserData]
   }
@@ -224,7 +233,8 @@ object AccountCreated {
     postcode: Option[String],
     countryCode: Option[String],
     email: Option[String],
-    phoneNumber: Option[String])
+    phoneNumber: Option[String]
+  )
 
   object ManuallyEnteredDetails {
 
@@ -245,13 +255,15 @@ object AccountCreated {
         None,
         None,
         None,
-        None)
+        None
+      )
 
     def apply(
       accountName: String,
       accountNumber: String,
       sortCode: String,
-      rollNumber: Option[String]): ManuallyEnteredDetails =
+      rollNumber: Option[String]
+    ): ManuallyEnteredDetails =
       ManuallyEnteredDetails(
         Some(accountName),
         Some(accountNumber),
@@ -268,7 +280,8 @@ object AccountCreated {
         None,
         None,
         None,
-        None)
+        None
+      )
 
     implicit val format: Format[ManuallyEnteredDetails] = Json.format[ManuallyEnteredDetails]
   }
@@ -280,19 +293,18 @@ object GetAccountResult {
   implicit val format: Format[GetAccountResult] = Json.format[GetAccountResult]
 }
 
-case class GetAccountResultEvent(getAccountResult: GetAccountResult, path: String)(
-  implicit hc: HeaderCarrier,
-  appConfig: AppConfig)
-    extends HTSEvent {
-  val value: ExtendedDataEvent = {
+case class GetAccountResultEvent(getAccountResult: GetAccountResult, path: String)(implicit
+  hc: HeaderCarrier,
+  appConfig: AppConfig
+) extends HTSEvent {
+  val value: ExtendedDataEvent =
     HTSEvent(appConfig.appName, "GetAccountResult", Json.toJson(getAccountResult), "get-account-result", path)
-  }
 }
 
-case class BARSCheck(barsRequest: BankDetailsValidationRequest, response: JsValue, path: String)(
-  implicit hc: HeaderCarrier,
-  appConfig: AppConfig)
-    extends HTSEvent {
+case class BARSCheck(barsRequest: BankDetailsValidationRequest, response: JsValue, path: String)(implicit
+  hc: HeaderCarrier,
+  appConfig: AppConfig
+) extends HTSEvent {
   val value: ExtendedDataEvent =
     HTSEvent(
       appConfig.appName,

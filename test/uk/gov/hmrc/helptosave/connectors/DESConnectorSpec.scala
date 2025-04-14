@@ -29,26 +29,31 @@ import uk.gov.hmrc.play.http.test.ResponseMatchers
 import java.time.LocalDate
 
 class DESConnectorSpec
-    extends TestSupport with MockPagerDuty with TestData with WireMockSupport with WireMockMethods with ScalaCheckDrivenPropertyChecks
-      with ResponseMatchers with EitherValues {
+    extends TestSupport
+    with MockPagerDuty
+    with TestData
+    with WireMockSupport
+    with WireMockMethods
+    with ScalaCheckDrivenPropertyChecks
+    with ResponseMatchers
+    with EitherValues {
 
-  val nino = "NINO"
+  val nino            = "NINO"
   val date: LocalDate = LocalDate.of(2017, 6, 12) // scalastyle:ignore magic.number
 
-  override lazy val additionalConfig: Configuration = {
+  override lazy val additionalConfig: Configuration =
     Configuration(
       "microservice.services.itmp-eligibility-check.host" -> wireMockHost,
       "microservice.services.itmp-eligibility-check.port" -> wireMockPort,
-      "microservice.services.itmp-threshold.host" -> wireMockHost,
-      "microservice.services.itmp-threshold.port" -> wireMockPort,
-      "microservice.services.itmp-enrolment.host" -> wireMockHost,
-      "microservice.services.itmp-enrolment.port" -> wireMockPort,
-      "microservice.services.paye-personal-details.host" -> wireMockHost,
-      "microservice.services.paye-personal-details.port" -> wireMockPort
+      "microservice.services.itmp-threshold.host"         -> wireMockHost,
+      "microservice.services.itmp-threshold.port"         -> wireMockPort,
+      "microservice.services.itmp-enrolment.host"         -> wireMockHost,
+      "microservice.services.itmp-enrolment.port"         -> wireMockPort,
+      "microservice.services.paye-personal-details.host"  -> wireMockHost,
+      "microservice.services.paye-personal-details.port"  -> wireMockPort
     )
-  }
 
-  lazy val connector: DESConnector = fakeApplication.injector.instanceOf[DESConnector]
+  lazy val connector: DESConnector            = fakeApplication.injector.instanceOf[DESConnector]
   val originatorIdHeader: Map[String, String] = Map("Originator-Id" -> originatorIdHeaderValue)
 
   "the isEligible method" when {
@@ -57,23 +62,22 @@ class DESConnectorSpec
 
     "return 200 status when call to DES successfully returns eligibility check response" in {
       List[(Option[UCResponse], Map[String, String])](
-        Some(UCResponse(ucClaimant = true, withinThreshold = Some(true))) ->
+        Some(UCResponse(ucClaimant = true, withinThreshold = Some(true)))  ->
           Map("universalCreditClaimant" -> "Y", "withinThreshold" -> "Y"),
         Some(UCResponse(ucClaimant = true, withinThreshold = Some(false))) ->
           Map("universalCreditClaimant" -> "Y", "withinThreshold" -> "N"),
-        Some(UCResponse(ucClaimant = false, withinThreshold = None)) ->
+        Some(UCResponse(ucClaimant = false, withinThreshold = None))       ->
           Map("universalCreditClaimant" -> "N"),
-        None ->
+        None                                                               ->
           Map()
-      ).foreach {
-        case (ucResponse, expectedQueryParameters) =>
-          withClue(s"For ucResponse: $ucResponse:") {
-            when(GET, url(nino), expectedQueryParameters, appConfig.desHeaders.toMap)
-              .thenReturn(200, Json.toJson(eligibilityCheckResultJson))
+      ).foreach { case (ucResponse, expectedQueryParameters) =>
+        withClue(s"For ucResponse: $ucResponse:") {
+          when(GET, url(nino), expectedQueryParameters, appConfig.desHeaders.toMap)
+            .thenReturn(200, Json.toJson(eligibilityCheckResultJson))
 
-            val result = await(connector.isEligible(nino, ucResponse))
-            result.value.status shouldBe 200
-          }
+          val result = await(connector.isEligible(nino, ucResponse))
+          result.value.status shouldBe 200
+        }
       }
 
     }
@@ -121,7 +125,7 @@ class DESConnectorSpec
   "the getPersonalDetails method" must {
 
     val nino = randomNINO()
-    val url = s"/pay-as-you-earn/02.00.00/individuals/$nino"
+    val url  = s"/pay-as-you-earn/02.00.00/individuals/$nino"
 
     val header = appConfig.desHeaders ++ originatorIdHeader
     "return pay personal details for a successful nino" in {
@@ -145,7 +149,7 @@ class DESConnectorSpec
 
   "the getThreshold method" must {
 
-    val url = "/universal-credits/threshold-amount"
+    val url    = "/universal-credits/threshold-amount"
     val result = UCThreshold(500.50)
 
     "return 200 status when call to get threshold from DES has been successful" in {

@@ -36,7 +36,7 @@ class UtilSpec extends UnitSpec {
     }
 
     "return the same string if no nino match found" in {
-      maskNino("AE11111") shouldBe "AE11111"
+      maskNino("AE11111")      shouldBe "AE11111"
       maskNino("ABCDEF123456") shouldBe "ABCDEF123456"
     }
   }

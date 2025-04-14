@@ -66,7 +66,7 @@ class CryptoImplSpec extends TestSupport with ScalaCheckDrivenPropertyChecks {
     }
 
     "return an error when there are errors decrypting" in {
-      forAll { s: String =>
+      forAll { (s: String) =>
         whenever(s.nonEmpty) {
           encrypter.decrypt(s).isFailure shouldBe true
         }

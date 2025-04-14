@@ -25,7 +25,7 @@ class OperationJsonSpec extends AnyWordSpec with Matchers {
     """be a "credit" or "debit" String """ in {
       val writes = implicitly[Writes[Operation]]
       writes.writes(Credit) shouldBe JsString("credit")
-      writes.writes(Debit) shouldBe JsString("debit")
+      writes.writes(Debit)  shouldBe JsString("debit")
     }
   }
 }

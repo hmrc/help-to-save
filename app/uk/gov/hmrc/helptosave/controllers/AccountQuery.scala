@@ -25,6 +25,7 @@ import uk.gov.hmrc.domain.Nino.isValid
 import uk.gov.hmrc.helptosave.util
 import uk.gov.hmrc.helptosave.util.Logging._
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging}
+import uk.gov.hmrc.helptosave.util.toFuture
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext
@@ -38,18 +39,16 @@ trait AccountQuery extends Logging with Results {
     * Behaviour common to actions that query for Help to Save account data based on NINO
     */
   protected def accountQuery[A](nino: String, systemId: String, correlationId: Option[String])(
-    query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]])(
-    implicit transformer: LogMessageTransformer,
-    writes: Writes[A],
-    ec: ExecutionContext): Action[AnyContent] =
-    if (!isValid(nino)) {
+    query: Request[AnyContent] => NsiAccountQueryParams => util.Result[Option[A]]
+  )(implicit transformer: LogMessageTransformer, writes: Writes[A], ec: ExecutionContext): Action[AnyContent] =
+    if !isValid(nino) then {
       Action {
         logger.warn("NINO in request was not valid")
         BadRequest
       }
     } else {
       ggOrPrivilegedAuthorisedWithNINO(Some(nino)) { implicit request => implicit authNino =>
-        if (nino =!= authNino) {
+        if nino =!= authNino then {
           logger.warn("NINO in request did not match NINO found in auth")
           Forbidden
         } else {

@@ -40,8 +40,8 @@ object UCResponse {
                     case ("Y", Some("N")) => JsSuccess(UCResponse(ucClaimant = true, withinThreshold = Some(false)))
                     case ("N", None)      => JsSuccess(UCResponse(ucClaimant = false, withinThreshold = None))
                     case _                => JsError(s"unable to parse UCResponse from proxy, json=$json")
-                }
-            )
+                  }
+              )
         )
 
     override def writes(response: UCResponse): JsValue = {
@@ -53,7 +53,7 @@ object UCResponse {
       }
 
       val fields = {
-        val f = List("ucClaimant"             -> JsString(a))
+        val f = List("ucClaimant" -> JsString(a))
         b.fold(f)(value => ("withinThreshold" -> JsString(value)) :: f)
       }
 

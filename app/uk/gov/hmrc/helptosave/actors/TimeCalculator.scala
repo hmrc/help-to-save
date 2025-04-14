@@ -34,7 +34,7 @@ class TimeCalculatorImpl(clock: Clock) extends TimeCalculator {
 
     val seconds = {
       val delta = now.until(t, java.time.temporal.ChronoUnit.SECONDS)
-      if (delta < 0) {
+      if delta < 0 then {
         twentyFourHoursInSeconds + delta
       } else {
         delta

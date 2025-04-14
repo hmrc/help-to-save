@@ -17,16 +17,18 @@
 package uk.gov.hmrc.helptosave.controllers
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchersSugar.*
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.Mockito.when
 import play.api.libs.json.Json
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsJson, _}
+import play.api.test.Helpers.{contentAsJson, *}
 import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, v2}
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, v2}
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
-import uk.gov.hmrc.helptosave.models.account._
+import uk.gov.hmrc.helptosave.models.account.*
 
 import java.time.LocalDate
 import java.util.UUID
@@ -37,7 +39,7 @@ class TransactionsControllerSpec extends AuthSupport {
 
   val controller = new TransactionsController(mockProxyConnector, mockAuthConnector, testCC)
 
-  val transactions = Transactions(
+  val transactions: Transactions = Transactions(
     Seq(
       Transaction(
         operation = Credit,
@@ -48,15 +50,16 @@ class TransactionsControllerSpec extends AuthSupport {
         transactionReference = "A1A11AA1A00A0034",
         balanceAfter = BigDecimal("1.23")
       )
-    ))
+    )
+  )
 
-  val queryString = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
+  val queryString: String = s"nino=$nino&correlationId=${UUID.randomUUID()}&systemId=123"
 
-  val fakeRequest = FakeRequest("GET", s"/nsi-account?$queryString")
+  val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", s"/nsi-account?$queryString")
 
-  def mockGetTransactions(nino: String, systemId: String)(response: Either[String, Option[Transactions]]): Unit = {
-      mockProxyConnector.getTransactions(nino, systemId, *)(*, *).returns(EitherT.fromEither(response))
-  }
+  def mockGetTransactions(nino: String, systemId: String)(response: Either[String, Option[Transactions]]): Unit =
+    when(mockProxyConnector.getTransactions(eqTo(nino), eqTo(systemId), any())(any(), any()))
+      .thenReturn(EitherT.fromEither(response))
 
   "The TransactionsController" when {
 
@@ -66,18 +69,20 @@ class TransactionsControllerSpec extends AuthSupport {
 
       "handle success responses" in {
         testWithGGAndPrivilegedAccess { mockAuth =>
-            mockAuth()
-            mockGetTransactions(nino, systemId)(Right(Some(transactions)))
+          mockAuth()
+          mockGetTransactions(nino, systemId)(Right(Some(transactions)))
 
           val result = controller.getTransactions(nino, systemId, None)(fakeRequest)
-          status(result) shouldBe 200
+          status(result)        shouldBe 200
           contentAsJson(result) shouldBe Json.toJson(Some(transactions))
         }
       }
 
       "return a 403 (FORBIDDEN) if the NINO in the URL doesn't match the NINO retrieved from auth" in {
-          mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(GGCredId("id")))
-          mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(mockedNinoRetrieval))
+        val ggCredentials = Some(Credentials("id", "GovernmentGateway"))
+
+        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.credentials)(Right(ggCredentials))
+        mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(mockedNinoRetrieval))
 
         val result = controller.getTransactions("BE123456C", systemId, None)(fakeRequest)
         status(result) shouldBe 403
@@ -85,8 +90,8 @@ class TransactionsControllerSpec extends AuthSupport {
 
       "return a 404 if an transactions does not exist for the NINO" in {
         testWithGGAndPrivilegedAccess { mockAuth =>
-            mockAuth()
-            mockGetTransactions(nino, systemId)(Right(None))
+          mockAuth()
+          mockGetTransactions(nino, systemId)(Right(None))
 
           val result = controller.getTransactions(nino, systemId, None)(fakeRequest)
           status(result) shouldBe 404
@@ -100,8 +105,8 @@ class TransactionsControllerSpec extends AuthSupport {
 
       "handle errors returned by the connector" in {
         testWithGGAndPrivilegedAccess { mockAuth =>
-            mockAuth()
-            mockGetTransactions(nino, systemId)(Left("some error"))
+          mockAuth()
+          mockGetTransactions(nino, systemId)(Left("some error"))
 
           val result = controller.getTransactions(nino, systemId, None)(fakeRequest)
           status(result) shouldBe 500

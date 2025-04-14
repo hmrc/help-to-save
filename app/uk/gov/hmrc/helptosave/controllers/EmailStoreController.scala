@@ -29,13 +29,11 @@ import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class EmailStoreController @Inject()(
+class EmailStoreController @Inject() (
   emailStore: EmailStore,
   htsAuthConnector: AuthConnector,
-  controllerComponents: ControllerComponents)(
-  implicit
-  transformer: LogMessageTransformer,
-  ec: ExecutionContext)
+  controllerComponents: ControllerComponents
+)(implicit transformer: LogMessageTransformer, ec: ExecutionContext)
     extends HelpToSaveAuth(htsAuthConnector, controllerComponents) {
 
   import uk.gov.hmrc.helptosave.controllers.EmailStoreController._
@@ -48,18 +46,17 @@ class EmailStoreController @Inject()(
         { error =>
           logger.warn(s"Could not store email. Could not decode email: $error", nino)
           Future.successful(InternalServerError)
-        }, { decodedEmail =>
+        },
+        decodedEmail =>
           emailStore
             .store(decodedEmail, nino)
             .fold(
               { e =>
                 logger.error(s"Could not store email: $e", nino)
                 InternalServerError
-              }, { _ =>
-                Ok
-              }
+              },
+              _ => Ok
             )
-        }
       )
     }
 

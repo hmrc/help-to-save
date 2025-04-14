@@ -51,8 +51,8 @@ class HttpResponseOps(val response: HttpResponse) extends AnyVal {
     couldntReadJson: (HttpResponse, Throwable) => String,
     couldntParseJson: (HttpResponse, JsError) => String
   )(implicit reads: Reads[A]): Either[String, A] =
-    for {
+    for
       jsValue <- Try(response.json).toEither.left.map(ex => couldntReadJson(response, ex))
       result  <- jsValue.validate[A].asEither.left.map(a => couldntParseJson(response, JsError(a)))
-    } yield result
+    yield result
 }

@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.when
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
@@ -25,6 +26,7 @@ import uk.gov.hmrc.auth.core.{AuthProviders, Enrolment, Enrolments}
 
 import java.util.Base64
 import scala.concurrent.Future
+import org.mockito.stubbing.OngoingStubbing
 
 trait StrideAuthSupport extends AuthSupport {
   lazy val roles: Seq[String] =
@@ -33,12 +35,13 @@ trait StrideAuthSupport extends AuthSupport {
       .map(s => new String(Base64.getDecoder.decode(s)))
 
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
-    result: Either[Throwable, A]) =
-    mockAuthConnector
-      .authorise(expectedPredicate, expectedRetrieval)(*, *)
-      .returns(result.fold(Future.failed, Future.successful))
+    result: Either[Throwable, A]
+  ): OngoingStubbing[Future[A]] =
+    when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(any(), any()))
+      .thenAnswer(_ => result.fold(Future.failed, Future.successful))
 
-  def mockSuccessfulAuthorisation() =
+  def mockSuccessfulAuthorisation(): OngoingStubbing[Future[Enrolments]] =
     mockAuthorised(AuthProviders(PrivilegedApplication), allEnrolments)(
-      Right(Enrolments(roles.map(Enrolment(_)).toSet)))
+      Right(Enrolments(roles.map(Enrolment(_)).toSet))
+    )
 }

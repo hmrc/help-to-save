@@ -33,24 +33,35 @@ trait IFConnector {
 }
 
 @Singleton
-class IFConnectorImpl @Inject()(http: HttpClientV2, servicesConfig: ServicesConfig)(implicit appConfig: AppConfig, ec: ExecutionContext)
-    extends IFConnector with Logging {
+class IFConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesConfig)(implicit
+  appConfig: AppConfig,
+  ec: ExecutionContext
+) extends IFConnector
+    with Logging {
 
   val payeURL: String = servicesConfig.baseUrl("if")
-  val root: String = servicesConfig.getString("microservice.services.if.root")
+  val root: String    = servicesConfig.getString("microservice.services.if.root")
 
-  val originatorIdHeader: (String, String) = "Originator-Id" -> servicesConfig.getString(
-    "microservice.services.paye-personal-details.originatorId")
+  val originatorIdHeader: (String, String) =
+    "Originator-Id" -> servicesConfig.getString("microservice.services.paye-personal-details.originatorId")
 
-  def payePersonalDetailsUrl(nino: String): URL = url"${payeURL+root}/pay-as-you-earn/02.00.00/individuals/$nino"
+  def payePersonalDetailsUrl(nino: String): URL = url"${payeURL + root}/pay-as-you-earn/02.00.00/individuals/$nino"
 
-  override def getPersonalDetails(nino: NINO)(implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
-    logger.info(s"[IFConnector][getPersonalDetails] GET request: " +
-      s" header - ${appConfig.ifHeaders:+ originatorIdHeader}" +
-      s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}")
+  override def getPersonalDetails(
+    nino: NINO
+  )(implicit hc: HeaderCarrier): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
+    logger.info(
+      s"[IFConnector][getPersonalDetails] GET request: " +
+        s" header - ${appConfig.ifHeaders :+ originatorIdHeader}" +
+        s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}"
+    )
 
-    http.get(payePersonalDetailsUrl(nino)).transform(_.addHttpHeaders(appConfig.ifHeaders:+ originatorIdHeader:_*))
+    val url = payePersonalDetailsUrl(nino)
+    val eventualResponseOrResponse = http
+      .get(url)
+      .transform(_.addHttpHeaders(appConfig.ifHeaders :+ originatorIdHeader *))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
+    eventualResponseOrResponse
   }
 
 }

@@ -19,26 +19,26 @@ package uk.gov.hmrc.helptosave.repo
 import org.bson.types.ObjectId
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{BeforeAndAfterEach, OneInstancePerTest}
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{Format, Json, __}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
-import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
+import uk.gov.hmrc.helptosave.models.enrolment.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats.Implicits.objectIdFormat
 import uk.gov.hmrc.mongo.test.MongoSupport
+import org.mongodb.scala.ObservableFuture
 
 import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
+class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach with OneInstancePerTest {
 
   val repository: MongoEnrolmentStore = fakeApplication.injector.instanceOf[MongoEnrolmentStore]
-  override def beforeEach(): Unit =
-    await(repository.collection.drop().toFuture())
+  override def beforeEach(): Unit     = await(repository.collection.drop().toFuture())
 
   val ninoDifferentSuffix = "AE123456B"
 
@@ -56,18 +56,25 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
     channel: String,
     store: MongoEnrolmentStore,
     accountNumber: Option[String],
-    deleteFlag: Option[Boolean]): Either[String, Unit] =
+    deleteFlag: Option[Boolean]
+  ): Either[String, Unit] =
     Await.result(
       store.insert(nino, itmpNeedsUpdate, eligibilityReason, channel, accountNumber, deleteFlag).value,
-      duration)
+      duration
+    )
 
-  def updateDeleteFlag(ninos: Seq[NINODeletionConfig], revertSoftDelete: Boolean, store: MongoEnrolmentStore) =
+  def updateDeleteFlag(
+    ninos: Seq[NINODeletionConfig],
+    revertSoftDelete: Boolean,
+    store: MongoEnrolmentStore
+  ): Either[String, Seq[NINODeletionConfig]] =
     Await.result(store.updateDeleteFlag(ninos, revertSoftDelete).value, duration)
 
   "The MongoEnrolmentStore" when {
     "creating" must {
       "create a new record in the db when inserted" in {
-        val create1 = create(randomNINO(), itmpNeedsUpdate = true, Some(7), "online", repository, Some(accountNumber), None)
+        val create1 =
+          create(randomNINO(), itmpNeedsUpdate = true, Some(7), "online", repository, Some(accountNumber), None)
         create1 shouldBe Right(())
       }
     }
@@ -82,12 +89,13 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
       "update the mongodb collection" in {
         val nino = randomNINO()
-        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, Some(accountNumber), None) shouldBe Right(())
-        update(nino, itmpNeedsUpdate = true, repository) shouldBe Right(())
+        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, Some(accountNumber), None) shouldBe Right(
+          ()
+        )
+        update(nino, itmpNeedsUpdate = true, repository)                                                shouldBe Right(())
       }
 
       "return an error" when {
-
         "the future returned by mongo fails" in {
           update(randomNINO(), itmpNeedsUpdate = false, repository).isLeft shouldBe true
         }
@@ -95,8 +103,45 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
       "update the enrolment when a different nino suffix is used of an existing user" in {
         val nino = "AE123456A"
-        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, Some(accountNumber), None) shouldBe Right(())
-        update(ninoDifferentSuffix, itmpNeedsUpdate = true, repository) shouldBe Right(())
+        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, Some(accountNumber), None) shouldBe Right(
+          ()
+        )
+        update(ninoDifferentSuffix, itmpNeedsUpdate = true, repository)                                 shouldBe Right(())
+      }
+
+      "update the account number accordingly" in {
+        val nino = randomNINO()
+        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, None, None) shouldBe Right(())
+        await(repository.getAccountNumber(nino).value).map(_.accountNumber)              shouldBe Right(None)
+        await(repository.updateWithAccountNumber(nino, accountNumber).value)             shouldBe Right(())
+        await(repository.getAccountNumber(nino).value).map(_.accountNumber)              shouldBe Right(Some(accountNumber))
+      }
+    }
+
+    "invoked with mongo client connection not being available" must {
+      "fail on any requests to enrolment store" in {
+        val nino = randomNINO()
+        repository.mongo.client.close()
+
+        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, Some(accountNumber), None) shouldBe Left(
+          "state should be: open"
+        )
+
+        get(nino, repository) shouldBe Left(
+          s"For NINO [$nino]: Could not read from enrolment store: state should be: open"
+        )
+
+        updateDeleteFlag(Seq(NINODeletionConfig(nino)), revertSoftDelete = false, repository) shouldBe Left(
+          s"Search for NINOs failed: state should be: open"
+        )
+
+        await(repository.getAccountNumber(nino).value) shouldBe Left(
+          s"For NINO [$nino]: Could not read account number from enrolment store: state should be: open"
+        )
+
+        await(repository.updateWithAccountNumber(nino, accountNumber).value) shouldBe Left(
+          "Failed to write to enrolments store: state should be: open"
+        )
       }
     }
 
@@ -111,10 +156,10 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
       }
 
       "return an enrolled status if an entry is found" in {
-        val nino = randomNINO()
+        val nino  = randomNINO()
         val store = repository
         create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(nino, store)                                                                          shouldBe Right(Enrolled(itmpHtSFlag = true))
       }
 
       "return a not enrolled status if the entry is not found" in {
@@ -123,33 +168,41 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
       }
 
       "return an enrolled status when a different nino suffix is used of an existing user" in {
-        val nino = "AE123456A"
+        val nino  = "AE123456A"
         val store = repository
         create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
-        get(ninoDifferentSuffix, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(nino, store)                                                                          shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(ninoDifferentSuffix, store)                                                           shouldBe Right(Enrolled(itmpHtSFlag = true))
       }
 
       "return as not enrolled if the entry is marked as delete" in {
-        val nino = "AE123456A"
+        val nino  = "AE123456A"
         val store = repository
-        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(())
-        get(nino, store) shouldBe Right(NotEnrolled)
+        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(
+          ()
+        )
+        get(nino, store)                                                                                shouldBe Right(NotEnrolled)
       }
 
+      "return account number of the associated with the requested nino" in {
+        val nino  = "AE123456A"
+        val store = repository
+        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
+        await(store.getAccountNumber(nino).value).map(_.accountNumber)                            shouldBe Right(Some(accountNumber))
+      }
     }
 
     "soft-delete request " must {
       "update enrolment documents with delete_flag set to true and delete_date populated when valid NINOs given" in {
-        val nino = "AE123456A"
+        val nino  = "AE123456A"
         val store = repository
         create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(nino, store)                                                                          shouldBe Right(Enrolled(itmpHtSFlag = true))
 
         val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
 
         updateDeleteFlag(ninosToDelete, revertSoftDelete = false, store) shouldBe Right(ninosToDelete)
-        get(nino, store) shouldBe Right(NotEnrolled)
+        get(nino, store)                                                 shouldBe Right(NotEnrolled)
       }
 
       "not update enrolment documents when given NINOs are missing in system" in {
@@ -159,47 +212,55 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
       }
 
       "to undo the action, must set delete_flag to false if already marked as delete" in {
-        val nino = "BE123456A"
+        val nino  = "BE123456A"
         val store = repository
-        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(())
-        get(nino, store) shouldBe Right(NotEnrolled)
+        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(
+          ()
+        )
+        get(nino, store)                                                                                shouldBe Right(NotEnrolled)
 
         val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
 
         updateDeleteFlag(ninosToDelete, revertSoftDelete = true, store) shouldBe Right(ninosToDelete)
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(nino, store)                                                shouldBe Right(Enrolled(itmpHtSFlag = true))
       }
 
       "to undo the action, must be a no-op when enrolment is not marked for delete" in {
-        val nino = "CE123456A"
+        val nino  = "CE123456A"
         val store = repository
-        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(false)) shouldBe Right(())
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(false)) shouldBe Right(
+          ()
+        )
+        get(nino, store)                                                                                 shouldBe Right(Enrolled(itmpHtSFlag = true))
 
         val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
 
         updateDeleteFlag(ninosToDelete, revertSoftDelete = true, store) shouldBe Right(ninosToDelete)
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(nino, store)                                                shouldBe Right(Enrolled(itmpHtSFlag = true))
       }
 
       "to undo the action, must be a no-op when enrolment has delete_flag missing" in {
-        val nino = "DE123456A"
+        val nino  = "DE123456A"
         val store = repository
         create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(nino, store)                                                                          shouldBe Right(Enrolled(itmpHtSFlag = true))
 
         val ninosToDelete = Seq(NINODeletionConfig(nino, findDocumentId(nino, store)._2.headOption))
 
         updateDeleteFlag(ninosToDelete, revertSoftDelete = true, store) shouldBe Right(ninosToDelete)
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        get(nino, store)                                                shouldBe Right(Enrolled(itmpHtSFlag = true))
       }
 
       "to undo the action, must set delete_flag to false for the given object id, if already marked as delete" in {
-        val nino = "EE123456A"
+        val nino  = "EE123456A"
         val store = repository
-        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(())
-        create(nino, itmpNeedsUpdate = true, Some(3), "online", store, Some(accountNumber), Some(true)) shouldBe Right(())
-        get(nino, store) shouldBe Right(NotEnrolled)
+        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), Some(true)) shouldBe Right(
+          ()
+        )
+        create(nino, itmpNeedsUpdate = true, Some(3), "online", store, Some(accountNumber), Some(true)) shouldBe Right(
+          ()
+        )
+        get(nino, store)                                                                                shouldBe Right(NotEnrolled)
 
         val (collection: MongoCollection[EnrolmentDocId], docIdToRevertDeletion) = findDocumentId(nino, store)
 
@@ -209,31 +270,30 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         updateDeleteFlag(ninosToDelete, revertSoftDelete = true, store) shouldBe Right(ninosToDelete)
 
         // only above executed doc id should be marked as eligible and other one still with soft-delete
-        val updatedDocs = await(collection.find(Filters.eq("nino", nino)).toFuture())(duration)
+        val updatedDocs         = await(collection.find(Filters.eq("nino", nino)).toFuture())(duration)
         val (reverted, deleted) = updatedDocs.partition(_._id == toRevert)
 
         reverted.head.deleteFlag shouldBe Some(false)
-        deleted.head.deleteFlag shouldBe Some(true)
-        get(nino, store) shouldBe Right(Enrolled(itmpHtSFlag = true))
+        deleted.head.deleteFlag  shouldBe Some(true)
+        get(nino, store)         shouldBe Right(Enrolled(itmpHtSFlag = true))
       }
     }
   }
 
   private def findDocumentId(nino: NINO, store: MongoEnrolmentStore) = {
     val collection = CollectionFactory.collection(store.mongo.database, "enrolments", Json.format[EnrolmentDocId])
-    val docIds = await(collection.find(Filters.eq("nino", nino)).map(_._id).toFuture())(duration)
+    val docIds     = await(collection.find(Filters.eq("nino", nino)).map(_._id).toFuture())(duration)
     (collection, docIds)
   }
 
   case class EnrolmentDocId(_id: ObjectId, nino: NINO, deleteFlag: Option[Boolean])
 
   object EnrolmentDocId {
-    implicit val format: Format[EnrolmentDocId] = {
+    implicit val format: Format[EnrolmentDocId] =
       ((__ \ "_id").format[ObjectId] and (__ \ "nino").format[String] and (__ \ "deleteFlag").formatNullable[Boolean])(
         EnrolmentDocId.apply,
         doc => (doc._id, doc.nino, doc.deleteFlag)
       )
-    }
   }
 
 }

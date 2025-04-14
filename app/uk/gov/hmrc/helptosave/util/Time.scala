@@ -37,11 +37,10 @@ object Time {
   private def divide(numerator: Long, denominator: Long): (Long, Long) =
     (numerator / denominator) -> (numerator % denominator)
 
-  /**
-    * Convert `nanos` to a human-friendly string - will return the time in terms of
-    * the two highest time resolutions that are appropriate. For example:
+  /** Convert `nanos` to a human-friendly string - will return the time in terms of the two highest time resolutions
+    * that are appropriate. For example:
     *
-    * 2 nanoseconds      -> "2ns"
+    * 2 nanoseconds -> "2ns"
     * 1.23456789 seconds -> "1s 234ms"
     */
   def nanosToPrettyString(nanos: Long): String = {
@@ -52,12 +51,12 @@ object Time {
         acc
 
       case (word, number) :: tail =>
-        if (t < number) {
+        if t < number then {
           (t -> word) :: acc
         } else {
           val (remaining, currentUnits) = divide(t, number)
 
-          if (currentUnits === 0L) {
+          if currentUnits === 0L then {
             loop(tail, remaining, acc)
           } else {
             loop(tail, remaining, (currentUnits -> word) :: acc)

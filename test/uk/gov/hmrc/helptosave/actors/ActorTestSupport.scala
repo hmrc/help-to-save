@@ -33,20 +33,21 @@ class ActorTestSupport(name: String)
           .defaultApplication()
           .resolve()
           .withValue("org.apache.pekko.test.single-expect-default", ConfigValueFactory.fromAnyRef("5 seconds"))
-      )) with ImplicitSender with TestSupport {
+      )
+    )
+    with ImplicitSender
+    with TestSupport {
 
   override protected def afterAll(): Unit = {
     super.afterAll()
     TestKit.shutdownActorSystem(system)
   }
 
-  /**
-    * In the tests we often need to use a mock VirtualTime to move forward time
-    * in order to trigger some behaviour. If we create the actor and immediately after
-    * move the time forward, the behaviour will not always be triggered because the actor
-    * hasn't had a chance to schedule the messages it needs to send to itself to trigger
-    * the behaviour yet. By waiting until the actor has replied an `Identify` message, we can
-    * be sure that the actor has scheduled the messages.
+  /** In the tests we often need to use a mock VirtualTime to move forward time in order to trigger some behaviour. If
+    * we create the actor and immediately after move the time forward, the behaviour will not always be triggered
+    * because the actor hasn't had a chance to schedule the messages it needs to send to itself to trigger the behaviour
+    * yet. By waiting until the actor has replied an `Identify` message, we can be sure that the actor has scheduled the
+    * messages.
     */
   def awaitActorReady(ref: ActorRef): ActorRef = {
     val msg = ref.ask(Identify(""))(4.seconds).mapTo[ActorIdentity]

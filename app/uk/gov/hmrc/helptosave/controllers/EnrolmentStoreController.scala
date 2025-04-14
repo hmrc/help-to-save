@@ -35,17 +35,16 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class EnrolmentStoreController @Inject()(
+class EnrolmentStoreController @Inject() (
   val enrolmentStore: EnrolmentStore,
   val helpToSaveService: HelpToSaveService,
   authConnector: AuthConnector,
   proxyConnector: HelpToSaveProxyConnector,
-  controllerComponents: ControllerComponents)(
-  implicit
-  transformer: LogMessageTransformer,
-  appConfig: AppConfig,
-  ec: ExecutionContext)
-    extends HelpToSaveAuth(authConnector, controllerComponents) with EnrolmentBehaviour with AccountQuery {
+  controllerComponents: ControllerComponents
+)(implicit transformer: LogMessageTransformer, appConfig: AppConfig, ec: ExecutionContext)
+    extends HelpToSaveAuth(authConnector, controllerComponents)
+    with EnrolmentBehaviour
+    with AccountQuery {
 
   import EnrolmentStoreController._
 
@@ -64,65 +63,61 @@ class EnrolmentStoreController @Inject()(
       handle(enrolmentStore.get(nino), "get enrolment status", nino)
   }
 
-  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(
-    implicit hc: HeaderCarrier,
-    writes: Writes[A]): Future[Result] = {
+  private def handle[A](f: EitherT[Future, String, A], description: String, nino: NINO)(implicit
+    hc: HeaderCarrier,
+    writes: Writes[A]
+  ): Future[Result] = {
     val additionalParams = "apiCorrelationId" -> getApiCorrelationId()
     f.fold(
       { e =>
         logger.warn(s"Could not $description: $e", nino, additionalParams)
         InternalServerError
-      }, { a =>
+      },
+      { a =>
         logger.info(s"$description successful", nino, additionalParams)
         Ok(Json.toJson(a))
       }
     )
   }
 
-  private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], nino: NINO, uri: String)(
-    implicit hc: HeaderCarrier): Future[Result] =
-    f.leftFlatMap {
-        case e =>
-          logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
-          EitherT.pure[Future, String](AccountNumber(None))
+  private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], nino: NINO, uri: String)(implicit
+    hc: HeaderCarrier
+  ): Future[Result] =
+    f.leftFlatMap { case e =>
+      logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
+      EitherT.pure[Future, String](AccountNumber(None))
+    }.semiflatMap { accountNumber =>
+      accountNumber.accountNumber match {
+        case Some(accountNumStr) => Future.successful(Ok(Json.toJson(accountNumber)))
+        case None                => processGetAccountNumberFromNSI(nino, uri)
       }
-      .semiflatMap { accountNumber =>
-        accountNumber.accountNumber match {
-          case Some(accountNumStr) => Future.successful(Ok(Json.toJson(accountNumber)))
-          case None                => processGetAccountNumberFromNSI(nino, uri)
-        }
-      }
-      .fold(
-        { e =>
-          InternalServerError
-        }, {
-          identity
-        }
-      )
+    }.fold(
+      e => InternalServerError,
+      identity
+    )
 
   private def processGetAccountNumberFromNSI(nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] =
     getAccountNumberFromNSI(nino, uri).fold(
       { e =>
         logger.info("Call to getAccountNumberFromNSI returned error response")
         InternalServerError
-      }, { accountNumber =>
-        Ok(Json.toJson(accountNumber))
-      }
+      },
+      accountNumber => Ok(Json.toJson(accountNumber))
     )
 
-  private def getAccountNumberFromNSI(nino: NINO, uri: String)(
-    implicit hc: HeaderCarrier): EitherT[Future, String, AccountNumber] =
+  private def getAccountNumberFromNSI(nino: NINO, uri: String)(implicit
+    hc: HeaderCarrier
+  ): EitherT[Future, String, AccountNumber] =
     proxyConnector.getAccount(nino, "help-to-save", getApiCorrelationId(), uri).map { response =>
       response match {
-        case Some(account) => {
+        case Some(account) =>
           logger.info(s"get account from NSI successful", nino)
           setAccountNumber(nino, account.accountNumber).value.onComplete {
             case Success(Right(_)) => logger.info("Account number was successfully persisted in mongo enrolment store")
             case Success(Left(e))  => logger.warn(s"Persisting account number in mongo failed, error: $e")
             case Failure(e)        => logger.warn(s"Could not get user's account number, tried mongo and NSI, error: $e", nino)
           }
-        }
-        case None => logger.warn(s"Getting user's account number from NSI failed", nino)
+        case None          => logger.warn(s"Getting user's account number from NSI failed", nino)
       }
       response.fold[AccountNumber](AccountNumber(None))(ac => AccountNumber(Some(ac.accountNumber)))
     }

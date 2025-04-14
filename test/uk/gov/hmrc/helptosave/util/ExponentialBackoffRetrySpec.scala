@@ -34,16 +34,16 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
       previousTime: FiniteDuration,
       list: List[FiniteDuration]
     ): List[FiniteDuration] = list match {
-      case Nil => list
+      case Nil          => list
       case head :: tail =>
-        (previousTime > previousPreviousTime) shouldBe true
-        (head > previousTime) shouldBe true
+        (previousTime > previousPreviousTime)                           shouldBe true
+        (head > previousTime)                                           shouldBe true
         ((previousTime - previousPreviousTime) > (head - previousTime)) shouldBe true
         tail
     }
 
     retryTimes match {
-      case Nil | _ :: Nil =>
+      case Nil | _ :: Nil   =>
         fail(s"unexpected number of elements in list: ${retryTimes.length}. Expected 2 or greater.")
       case t1 :: t2 :: tail => loop(t1, t2, tail)
     }
@@ -53,21 +53,20 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
 
     "schedule retry message at an rate which starts at the configured minimum and " +
       "tends towards the configured maximum at an exponential rate" in {
-      val probe = TestProbe()
-      val time = new VirtualTime()
+        val probe = TestProbe()
+        val time  = new VirtualTime()
 
-      val exponentialBackoffRetry = ExponentialBackoffRetry(
-        1.second,
-        5.seconds,
-        0.4,
-        probe.ref,
-        { TestMessage.apply _ },
-        time.scheduler
-      )
+        val exponentialBackoffRetry = ExponentialBackoffRetry(
+          1.second,
+          5.seconds,
+          0.4,
+          probe.ref,
+          TestMessage.apply,
+          time.scheduler
+        )
 
-      val result: List[FiniteDuration] = (1 to 10)
-        .foldLeft(List.empty[FiniteDuration]) {
-          case (acc, curr) =>
+        val result: List[FiniteDuration] = (1 to 10)
+          .foldLeft(List.empty[FiniteDuration]) { case (acc, curr) =>
             exponentialBackoffRetry
               .retry(curr.toString)
               .fold[List[FiniteDuration]](
@@ -77,60 +76,60 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
                 probe.expectMsg(TestMessage(curr.toString))
                 t :: acc
               }
-        }
-        .reverse
+          }
+          .reverse
 
-      testRetryTimes(result)
+        testRetryTimes(result)
 
-      // create a retry job but cancel it before i triggers
-      exponentialBackoffRetry.retry("x")
-      exponentialBackoffRetry.cancelAndReset()
+        // create a retry job but cancel it before i triggers
+        exponentialBackoffRetry.retry("x")
+        exponentialBackoffRetry.cancelAndReset()
 
-      exponentialBackoffRetry.retry("1")
-      time.advance(1.second)
-      probe.expectMsg(TestMessage("1"))
-    }
+        exponentialBackoffRetry.retry("1")
+        time.advance(1.second)
+        probe.expectMsg(TestMessage("1"))
+      }
 
     "have an apply method which takes in an integer constant which makes the retry time double " +
       "after the given integer constant" in {
-      val probe = TestProbe()
-      val time = new VirtualTime()
-      val n = 10
+        val probe = TestProbe()
+        val time  = new VirtualTime()
+        val n     = 10
 
-      val exponentialBackoffRetry = ExponentialBackoffRetry(
-        1.second,
-        5.seconds,
-        n,
-        probe.ref,
-        { TestMessage.apply _ },
-        time.scheduler
-      )
+        val exponentialBackoffRetry = ExponentialBackoffRetry(
+          1.second,
+          5.seconds,
+          n,
+          probe.ref,
+          TestMessage.apply,
+          time.scheduler
+        )
 
-      (1 to n).foreach { i =>
-        exponentialBackoffRetry.retry("")
-        // advance 1 day to ensure scheduled send actually completes
-        time.advance(1.day)
-        probe.expectMsg(TestMessage(""))
+        (1 to n).foreach { i =>
+          exponentialBackoffRetry.retry("")
+          // advance 1 day to ensure scheduled send actually completes
+          time.advance(1.day)
+          probe.expectMsg(TestMessage(""))
+        }
+
+        // retry time should now be double the initial retry time
+        exponentialBackoffRetry.retry("a")
+        time.advance(2.seconds - 1.milli)
+        probe.expectNoMessage()
+        time.advance(1.milli)
+        probe.expectMsg(TestMessage("a"))
       }
-
-      // retry time should now be double the initial retry time
-      exponentialBackoffRetry.retry("a")
-      time.advance(2.seconds - 1.milli)
-      probe.expectNoMessage()
-      time.advance(1.milli)
-      probe.expectMsg(TestMessage("a"))
-    }
 
     "not schedule a retry if there already is a retry scheduled" in {
       val probe = TestProbe()
-      val time = new VirtualTime()
+      val time  = new VirtualTime()
 
       val exponentialBackoffRetry = ExponentialBackoffRetry(
         1.second,
         3.second,
         5,
         probe.ref,
-        { TestMessage.apply _ },
+        TestMessage.apply,
         time.scheduler
       )
 
@@ -145,7 +144,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
     }
 
     "return the correct isActive status" in {
-      val time = new VirtualTime()
+      val time  = new VirtualTime()
       val probe = TestProbe()
 
       val exponentialBackoffRetry = ExponentialBackoffRetry(
@@ -153,7 +152,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
         5.seconds,
         1.0,
         probe.ref,
-        { TestMessage.apply _ },
+        TestMessage.apply,
         time.scheduler
       )
 
