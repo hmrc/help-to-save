@@ -24,7 +24,8 @@ import play.api.mvc.Request
 import play.api.test.FakeRequest
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
-import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationRequest, BankDetailsValidationResult}
+import uk.gov.hmrc.helptosave.models.BARSCheck
+import uk.gov.hmrc.helptosave.models.bank.{BankDetailsValidationRequest, BankDetailsValidationResult}
 import uk.gov.hmrc.helptosave.util.{NINO, UnitSpec, toFuture}
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestSupport}
 import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}

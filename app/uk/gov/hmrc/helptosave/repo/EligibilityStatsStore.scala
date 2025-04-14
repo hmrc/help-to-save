@@ -17,20 +17,19 @@
 package uk.gov.hmrc.helptosave.repo
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import com.mongodb.client.model.Indexes._
+import com.mongodb.client.model.Indexes.*
 import com.mongodb.client.model.{Accumulators, Aggregates, Projections}
+import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.bson.{BsonDocument, BsonValue}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
-import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
-import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore._
-import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
+import uk.gov.hmrc.helptosave.models.EligibilityStats
+import uk.gov.hmrc.helptosave.models.enrolment.EnrolmentData
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
-import org.mongodb.scala.ObservableFuture
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,7 +39,7 @@ trait EligibilityStatsStore {
 }
 
 @Singleton
-class MongoEligibilityStatsStore @Inject() (mongo: MongoComponent, metrics: Metrics)(implicit ec: ExecutionContext)
+class MongoEligibilityStatsStore @Inject() (val mongo: MongoComponent, metrics: Metrics)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[EnrolmentData](
       mongoComponent = mongo,
       collectionName = "enrolments",
@@ -51,7 +50,7 @@ class MongoEligibilityStatsStore @Inject() (mongo: MongoComponent, metrics: Metr
     with Logging {
 
   private[repo] def doAggregate(): Future[List[EligibilityStats]] = {
-    import MongoEligibilityStatsStore.format
+    import uk.gov.hmrc.helptosave.models.EligibilityStats.format
 
     preservingMdc {
       collection
@@ -90,10 +89,4 @@ class MongoEligibilityStatsStore @Inject() (mongo: MongoComponent, metrics: Metr
         List.empty[EligibilityStats]
       }
   }
-}
-
-object MongoEligibilityStatsStore {
-  case class EligibilityStats(eligibilityReason: Option[Int], source: Option[String], total: Int)
-
-  implicit val format: Format[EligibilityStats] = Json.format[EligibilityStats]
 }

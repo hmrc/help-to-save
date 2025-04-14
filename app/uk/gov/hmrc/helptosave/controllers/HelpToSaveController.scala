@@ -28,6 +28,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.bank.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.{EmailStore, EnrolmentStore}
 import uk.gov.hmrc.helptosave.services.{BarsService, HelpToSaveService, UserCapService}

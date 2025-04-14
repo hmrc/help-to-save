@@ -19,11 +19,11 @@ package uk.gov.hmrc.helptosave.repo
 import org.bson.types.ObjectId
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{BeforeAndAfterEach, OneInstancePerTest}
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{Format, Json, __}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
-import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
+import uk.gov.hmrc.helptosave.models.enrolment.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
@@ -33,13 +33,12 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 import org.mongodb.scala.ObservableFuture
 
 import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
+class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach with OneInstancePerTest {
 
   val repository: MongoEnrolmentStore = fakeApplication.injector.instanceOf[MongoEnrolmentStore]
-  override def beforeEach(): Unit     =
-    await(repository.collection.drop().toFuture())
+  override def beforeEach(): Unit     = await(repository.collection.drop().toFuture())
 
   val ninoDifferentSuffix = "AE123456B"
 
@@ -97,7 +96,6 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
       }
 
       "return an error" when {
-
         "the future returned by mongo fails" in {
           update(randomNINO(), itmpNeedsUpdate = false, repository).isLeft shouldBe true
         }
@@ -109,6 +107,41 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
           ()
         )
         update(ninoDifferentSuffix, itmpNeedsUpdate = true, repository)                                 shouldBe Right(())
+      }
+
+      "update the account number accordingly" in {
+        val nino = randomNINO()
+        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, None, None) shouldBe Right(())
+        await(repository.getAccountNumber(nino).value).map(_.accountNumber)              shouldBe Right(None)
+        await(repository.updateWithAccountNumber(nino, accountNumber).value)             shouldBe Right(())
+        await(repository.getAccountNumber(nino).value).map(_.accountNumber)              shouldBe Right(Some(accountNumber))
+      }
+    }
+
+    "invoked with mongo client connection not being available" must {
+      "fail on any requests to enrolment store" in {
+        val nino = randomNINO()
+        repository.mongo.client.close()
+
+        create(nino, itmpNeedsUpdate = false, Some(7), "online", repository, Some(accountNumber), None) shouldBe Left(
+          "state should be: open"
+        )
+
+        get(nino, repository) shouldBe Left(
+          s"For NINO [$nino]: Could not read from enrolment store: state should be: open"
+        )
+
+        updateDeleteFlag(Seq(NINODeletionConfig(nino)), revertSoftDelete = false, repository) shouldBe Left(
+          s"Search for NINOs failed: state should be: open"
+        )
+
+        await(repository.getAccountNumber(nino).value) shouldBe Left(
+          s"For NINO [$nino]: Could not read account number from enrolment store: state should be: open"
+        )
+
+        await(repository.updateWithAccountNumber(nino, accountNumber).value) shouldBe Left(
+          "Failed to write to enrolments store: state should be: open"
+        )
       }
     }
 
@@ -151,6 +184,12 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         get(nino, store)                                                                                shouldBe Right(NotEnrolled)
       }
 
+      "return account number of the associated with the requested nino" in {
+        val nino  = "AE123456A"
+        val store = repository
+        create(nino, itmpNeedsUpdate = true, Some(7), "online", store, Some(accountNumber), None) shouldBe Right(())
+        await(store.getAccountNumber(nino).value).map(_.accountNumber)                            shouldBe Right(Some(accountNumber))
+      }
     }
 
     "soft-delete request " must {

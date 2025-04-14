@@ -30,7 +30,7 @@ import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino as v2Nino}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.*
 import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
-import uk.gov.hmrc.helptosave.repo.EnrolmentStore
+import uk.gov.hmrc.helptosave.models.enrolment.{Enrolled, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.utils.TestEnrolmentBehaviour
 
 import scala.concurrent.Future
@@ -40,11 +40,11 @@ class EnrolmentStoreControllerSpec
     with ScalaCheckDrivenPropertyChecks
     with TestEnrolmentBehaviour {
 
-  implicit val arbEnrolmentStatus: Arbitrary[EnrolmentStore.Status] =
+  implicit val arbEnrolmentStatus: Arbitrary[Status] =
     Arbitrary(
-      Gen.oneOf[EnrolmentStore.Status](
-        Gen.const(EnrolmentStore.NotEnrolled),
-        Gen.oneOf(true, false).map(EnrolmentStore.Enrolled.apply)
+      Gen.oneOf[Status](
+        Gen.const(NotEnrolled),
+        Gen.oneOf(true, false).map(Enrolled.apply)
       )
     )
 
@@ -170,22 +170,22 @@ class EnrolmentStoreControllerSpec
       }
 
       "return the enrolment status if the call was successful" in {
-        val m: Map[EnrolmentStore.Status, String] = Map(
-          EnrolmentStore.Enrolled(itmpHtSFlag = true)  ->
+        val m: Map[Status, String] = Map(
+          Enrolled(itmpHtSFlag = true)  ->
             """
               |{
               |  "enrolled"    : true,
               |  "itmpHtSFlag" : true
               |}
             """.stripMargin,
-          EnrolmentStore.Enrolled(itmpHtSFlag = false) ->
+          Enrolled(itmpHtSFlag = false) ->
             """
               |{
               |  "enrolled"    : true,
               |  "itmpHtSFlag" : false
               |}
             """.stripMargin,
-          EnrolmentStore.NotEnrolled                   ->
+          NotEnrolled                   ->
             """
               |{
               |  "enrolled"    : false,
@@ -217,16 +217,16 @@ class EnrolmentStoreControllerSpec
     "handling requests to get enrolment status with privileged access" must {
 
       "ask the enrolment store for the enrolment status and return the result" in {
-        List[EnrolmentStore.Status](
-          EnrolmentStore.Enrolled(itmpHtSFlag = true),
-          EnrolmentStore.Enrolled(itmpHtSFlag = false),
-          EnrolmentStore.NotEnrolled
+        List[Status](
+          Enrolled(itmpHtSFlag = true),
+          Enrolled(itmpHtSFlag = false),
+          NotEnrolled
         ).foreach { status =>
           mockAuth(GGAndPrivilegedProviders, credentials)(Right(privilegedCredentials))
           mockEnrolmentStoreGet(nino)(Right(status))
 
           val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
-          contentAsJson(result).validate[EnrolmentStore.Status] shouldBe JsSuccess(status)
+          contentAsJson(result).validate[Status] shouldBe JsSuccess(status)
         }
       }
 

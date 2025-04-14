@@ -56,10 +56,12 @@ class IFConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCon
         s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}"
     )
 
-    http
-      .get(payePersonalDetailsUrl(nino))
-      .transform(_.addHttpHeaders(appConfig.ifHeaders :+ originatorIdHeader*))
+    val url = payePersonalDetailsUrl(nino)
+    val eventualResponseOrResponse = http
+      .get(url)
+      .transform(_.addHttpHeaders(appConfig.ifHeaders :+ originatorIdHeader *))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
+    eventualResponseOrResponse
   }
 
 }

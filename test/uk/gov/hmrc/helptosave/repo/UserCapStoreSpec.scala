@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
+import uk.gov.hmrc.helptosave.models.UserCap
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport

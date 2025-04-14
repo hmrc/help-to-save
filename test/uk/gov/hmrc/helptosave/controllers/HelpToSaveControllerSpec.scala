@@ -32,6 +32,7 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.bank._
 import uk.gov.hmrc.helptosave.repo.EmailStore
 import uk.gov.hmrc.helptosave.services.{BarsService, UserCapService}
 import uk.gov.hmrc.helptosave.util.{NINO, toFuture}

@@ -20,6 +20,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsSuccess, Json}
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
+import uk.gov.hmrc.helptosave.models.bank.BankDetails
 
 import java.time.LocalDate
 

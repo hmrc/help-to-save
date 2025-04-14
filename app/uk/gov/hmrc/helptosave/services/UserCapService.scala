@@ -21,7 +21,7 @@ import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject}
 import uk.gov.hmrc.helptosave.models.UserCapResponse
 import uk.gov.hmrc.helptosave.repo.UserCapStore
-import uk.gov.hmrc.helptosave.repo.UserCapStore.UserCap
+import uk.gov.hmrc.helptosave.models.UserCap
 import uk.gov.hmrc.helptosave.util._
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
@@ -53,11 +53,11 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
 
   require(dailyCap >= 0 && totalCap >= 0)
 
-  private val check: UserCap => UserCapResponse = {
+  private val check: UserCap => UserCapResponse =
     (isTotalCapEnabled, isDailyCapEnabled) match {
       case (false, false) =>
         _ =>
-          //This is the normal code path post private-beta, eg: uncapped
+          // This is the normal code path post private-beta, eg: uncapped
           UserCapResponse()
 
       case (true, true) =>
@@ -94,7 +94,6 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
             UserCapResponse()
           }
     }
-  }
 
   override def isAccountCreateAllowed()(implicit ec: ExecutionContext): Future[UserCapResponse] =
     if totalCap === 0 && dailyCap === 0 then {
@@ -113,7 +112,7 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
         }
     }
 
-  private val calculateUserCap: Option[UserCap] => UserCap = {
+  private val calculateUserCap: Option[UserCap] => UserCap =
     (isTotalCapEnabled, isDailyCapEnabled) match {
       case (false, false) =>
         _ => UserCap(0, 0)
@@ -124,7 +123,6 @@ class UserCapServiceImpl @Inject() (userCapStore: UserCapStore, servicesConfig: 
         case None     => UserCap(1, 1)
       }
     }
-  }
 
   override def update()(implicit ec: ExecutionContext): Future[Unit] =
     userCapStore

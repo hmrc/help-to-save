@@ -50,9 +50,7 @@ class UCThresholdConnectorProxyActor(dESConnector: DESConnector, pagerDutyAlerti
                 pagerDutyAlerting.alert("Could not parse JSON in UC threshold response")
               },
               _ =>
-                logger.debug(
-                  s"Call to threshold successful, received 200 (OK), with additionalParams: $additionalParams"
-                )
+                logger.debug(s"Call to threshold successful, received 200 (OK), with additionalParams: $additionalParams")
             )
             result.map(_.thresholdAmount)
           }

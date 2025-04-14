@@ -19,23 +19,20 @@ package uk.gov.hmrc.helptosave.repo
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.ReturnDocument
-import org.bson.types.ObjectId
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
 import play.api.Logging
-import play.api.libs.json._
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.helptosave.models.account.AccountNumber
-import uk.gov.hmrc.helptosave.repo.EnrolmentStore.{Enrolled, NotEnrolled, Status}
-import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
+import uk.gov.hmrc.helptosave.models.enrolment.{Enrolled, NotEnrolled, Status}
+import uk.gov.hmrc.helptosave.models.enrolment.EnrolmentData
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.SingleObservableFuture
@@ -46,7 +43,6 @@ import scala.util.chaining.scalaUtilChainingOps
 
 @ImplementedBy(classOf[MongoEnrolmentStore])
 trait EnrolmentStore {
-  import EnrolmentStore._
 
   def get(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, Status]
 
@@ -71,33 +67,6 @@ trait EnrolmentStore {
   )(implicit hc: HeaderCarrier): EitherT[Future, String, Unit]
 
   def getAccountNumber(nino: NINO)(implicit hc: HeaderCarrier): EitherT[Future, String, AccountNumber]
-}
-
-object EnrolmentStore {
-  sealed trait Status
-
-  case class Enrolled(itmpHtSFlag: Boolean) extends Status
-
-  case object NotEnrolled extends Status
-
-  object Status {
-    private case class EnrolmentStatusJSON(enrolled: Boolean, itmpHtSFlag: Boolean)
-
-    private implicit val enrolmentStatusJSONFormat: Format[EnrolmentStatusJSON] = Json.format[EnrolmentStatusJSON]
-
-    implicit val enrolmentStatusFormat: Format[Status] = new Format[Status] {
-      override def writes(o: Status): JsValue = o match {
-        case EnrolmentStore.Enrolled(itmpHtSFlag) =>
-          Json.toJson(EnrolmentStatusJSON(enrolled = true, itmpHtSFlag = itmpHtSFlag))
-        case EnrolmentStore.NotEnrolled           => Json.toJson(EnrolmentStatusJSON(enrolled = false, itmpHtSFlag = false))
-      }
-
-      override def reads(json: JsValue): JsResult[Status] = json.validate[EnrolmentStatusJSON].map {
-        case EnrolmentStatusJSON(true, flag) => Enrolled(flag)
-        case EnrolmentStatusJSON(false, _)   => NotEnrolled
-      }
-    }
-  }
 }
 
 @Singleton
@@ -196,8 +165,8 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
         .toFutureOption()
     }
 
-  override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, EnrolmentStore.Status] =
-    EitherT[Future, String, EnrolmentStore.Status] {
+  override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Status] =
+    EitherT[Future, String, Status] {
       preservingMdc {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
 
@@ -354,21 +323,4 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
         Left(s"For NINO [$nino]: Could not read account number from enrolment store: ${e.getMessage}")
       }
     }
-}
-
-object MongoEnrolmentStore {
-  private[repo] case class EnrolmentData(
-    nino: String,
-    itmpHtSFlag: Boolean,
-    eligibilityReason: Option[Int] = None,
-    source: Option[String] = None,
-    accountNumber: Option[String] = None,
-    deleteFlag: Option[Boolean] = None,
-    _id: Option[ObjectId] = None
-  )
-
-  private[repo] object EnrolmentData {
-    implicit val objectIdFormat: Format[ObjectId]  = MongoFormats.Implicits.objectIdFormat
-    implicit val ninoFormat: Format[EnrolmentData] = Json.format[EnrolmentData]
-  }
 }

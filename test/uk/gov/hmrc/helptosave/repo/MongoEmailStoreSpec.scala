@@ -186,6 +186,19 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
     }
 
-  }
+    "invoked with mongo client connection not being available" must {
+      "fail on any requests to email store" in {
+        emailStore.mongo.client.close()
 
+        val nino = randomNINO()
+
+        mockEncrypt(email)(encryptedEmail)
+        mockDecrypt(encryptedEmail)(Some(email))
+
+        await(emailStore.store(encryptedEmail, nino).value) shouldBe Left("state should be: open")
+        await(emailStore.get(nino).value)                   shouldBe Left("Could not read from email store: state should be: open")
+        await(emailStore.delete(nino).value)                shouldBe Left("Could not delete email: state should be: open")
+      }
+    }
+  }
 }

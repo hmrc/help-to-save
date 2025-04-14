@@ -25,7 +25,8 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationRequest, BankDetailsValidationResult}
+import uk.gov.hmrc.helptosave.models.BARSCheck
+import uk.gov.hmrc.helptosave.models.bank.{BankDetailsValidationRequest, BankDetailsValidationResult}
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -78,7 +79,7 @@ class BarsServiceImpl @Inject() (
                     } else if sortCodeIsPresentOnEISCD === "no" then {
                       logger.info("BARS response: bank details were valid but sort code was not present on EISCD", nino)
                       Right(false)
-                    } else if (sortCodeIsPresentOnEISCD === "error") then {
+                    } else if sortCodeIsPresentOnEISCD === "error" then {
                       logger.info("BARS response: Sort code check on EISCD returned Error", nino)
                       Right(false)
                     } else {

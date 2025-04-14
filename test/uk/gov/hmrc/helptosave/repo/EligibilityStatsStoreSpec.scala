@@ -16,23 +16,21 @@
 
 package uk.gov.hmrc.helptosave.repo
 
-import org.scalatest.BeforeAndAfterEach
-import uk.gov.hmrc.helptosave.repo.MongoEligibilityStatsStore.EligibilityStats
-import uk.gov.hmrc.helptosave.repo.MongoEnrolmentStore.EnrolmentData
+import org.scalatest.{BeforeAndAfterEach, OneInstancePerTest}
+import uk.gov.hmrc.helptosave.models.EligibilityStats
+import uk.gov.hmrc.helptosave.models.enrolment.EnrolmentData
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 import org.mongodb.scala.ObservableFuture
 
-class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach {
+class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach with OneInstancePerTest {
 
   def newEligibilityStatsMongoStore(mongoComponent: MongoComponent) =
     new MongoEligibilityStatsStore(mongoComponent, mockMetrics)
   val repository: MongoEligibilityStatsStore                        = newEligibilityStatsMongoStore(mongoComponent)
 
-  override def beforeEach(): Unit =
-    //    await(repository.collection.drop().toFuture())
-    dropDatabase()
+  override def beforeEach(): Unit = dropDatabase()
 
   "The EligibilityStatsStore" when {
 
@@ -53,6 +51,11 @@ class EligibilityStatsStoreSpec extends TestSupport with MongoSupport with Befor
             .toFuture()
         )
         await(repository.getEligibilityStats) shouldBe List(EligibilityStats(Some(7), Some("Digital"), 1))
+      }
+
+      "return empty results as expected if mongo connection unavailable" in {
+        repository.mongo.client.close()
+        await(repository.getEligibilityStats) shouldBe List()
       }
     }
 

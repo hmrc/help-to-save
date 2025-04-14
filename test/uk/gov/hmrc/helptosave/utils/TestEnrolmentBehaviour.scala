@@ -24,6 +24,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
 import uk.gov.hmrc.helptosave.controllers.EnrolmentBehaviour
 import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber, Blocking, BonusTerm}
+import uk.gov.hmrc.helptosave.models.enrolment.Status
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
@@ -65,7 +66,7 @@ trait TestEnrolmentBehaviour extends TestSupport {
     )
       .thenReturn(EitherT.fromEither[Future](result))
 
-  def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, EnrolmentStore.Status]): Unit =
+  def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, Status]): Unit =
     when(enrolmentStore.get(eqTo(nino))(any())).thenReturn(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGetAccountNumber(nino: NINO)(result: Either[String, AccountNumber]): Unit =

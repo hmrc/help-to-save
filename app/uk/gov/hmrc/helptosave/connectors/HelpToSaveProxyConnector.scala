@@ -23,13 +23,14 @@ import cats.syntax.either._
 import cats.syntax.eq._
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.http.Status
+import play.api.libs.json.Json
 import play.api.http.Status.{BAD_REQUEST, CONFLICT}
-import play.api.libs.json.{Format, Json}
 import play.mvc.Http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models._
+import uk.gov.hmrc.helptosave.models.account.GetAccountErrorResponse
 import uk.gov.hmrc.helptosave.models.account.{Account, NsiAccount, NsiTransactions, Transactions}
 import uk.gov.hmrc.helptosave.util.HeaderCarrierOps._
 import uk.gov.hmrc.helptosave.util.HttpResponseOps._
@@ -84,8 +85,6 @@ class HelpToSaveProxyConnectorImpl @Inject() (
 )(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
     extends HelpToSaveProxyConnector
     with Logging {
-
-  import HelpToSaveProxyConnectorImpl._
 
   val proxyURL: String = servicesConfig.baseUrl("help-to-save-proxy")
 
@@ -338,14 +337,4 @@ class HelpToSaveProxyConnectorImpl @Inject() (
         .parseJson[GetAccountErrorResponse]
         .toOption
         .exists(_.errors.exists(_.errorMessageId === noAccountErrorCode))
-}
-
-object HelpToSaveProxyConnectorImpl {
-
-  private case class GetAccountErrorResponse(errors: List[ErrorResponse])
-
-  private object GetAccountErrorResponse {
-    implicit val format: Format[GetAccountErrorResponse] = Json.format[GetAccountErrorResponse]
-  }
-
 }

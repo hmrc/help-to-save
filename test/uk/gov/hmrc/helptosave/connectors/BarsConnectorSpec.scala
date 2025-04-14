@@ -21,7 +21,7 @@ import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json.Json
-import uk.gov.hmrc.helptosave.models.BankDetailsValidationRequest
+import uk.gov.hmrc.helptosave.models.bank.BankDetailsValidationRequest
 import uk.gov.hmrc.helptosave.util.WireMockMethods
 import uk.gov.hmrc.helptosave.utils.{MockPagerDuty, TestData, TestSupport}
 import uk.gov.hmrc.http.test.WireMockSupport

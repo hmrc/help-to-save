@@ -21,9 +21,9 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.libs.json.Json
+import play.api.libs.json.{JsString, Json}
 import uk.gov.hmrc.helptosave.connectors.DESConnector
-import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.helptosave.util.*
 import uk.gov.hmrc.helptosave.utils.MockPagerDuty
 import uk.gov.hmrc.http.{HttpResponse, UpstreamErrorResponse}
 import org.mockito.Mockito.{doNothing, when}
@@ -43,11 +43,7 @@ class UCThresholdConnectorProxyActorSpec
   def mockConnectorGetValue(
     response: HttpResponse
   ): OngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
-    when(
-      connector
-        .getThreshold()(any(), any())
-    )
-      .thenReturn(toFuture(Right(response)))
+    when(connector.getThreshold()(any(), any())).thenReturn(toFuture(Right(response)))
 
   "The UCThresholdConnectorProxyActor" when {
 
@@ -56,6 +52,23 @@ class UCThresholdConnectorProxyActorSpec
       "ask for and return the value from the threshold connector" in {
         when(connector.getThreshold()(any(), any())).thenReturn(
           toFuture(Right(HttpResponse(200, Json.parse("""{"thresholdAmount" : 100.0}"""), returnHeaders)))
+        )
+      }
+
+      "ask for and return is successful but invalid threshold amount" in {
+        when(connector.getThreshold()(any(), any())).thenReturn(
+          toFuture(Right(HttpResponse(200, JsString(""), returnHeaders)))
+        )
+
+        doNothing()
+          .when(mockPagerDuty)
+          .alert("Could not parse JSON in UC threshold response")
+
+        actor ! UCThresholdConnectorProxyActor.GetThresholdValue
+        expectMsg(
+          UCThresholdConnectorProxyActor.GetThresholdValueResponse(
+            Left("Could not parse http response JSON: : [error.expected.jsobject]. Response body was \"\"")
+          )
         )
       }
 

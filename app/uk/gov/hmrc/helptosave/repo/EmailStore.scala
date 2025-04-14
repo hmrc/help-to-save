@@ -17,25 +17,23 @@
 package uk.gov.hmrc.helptosave.repo
 
 import cats.data.EitherT
-import cats.instances.option._
-import cats.instances.try_._
-import cats.syntax.either._
-import cats.syntax.traverse._
+import cats.instances.option.*
+import cats.instances.try_.*
+import cats.syntax.either.*
+import cats.syntax.traverse.*
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.model.Filters.regex
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Updates}
 import play.api.Logging
-import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.TryOps._
+import uk.gov.hmrc.helptosave.models.EmailData
+import uk.gov.hmrc.helptosave.util.TryOps.*
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
-import org.mongodb.scala.ObservableFuture
-import org.mongodb.scala.SingleObservableFuture
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -51,8 +49,9 @@ trait EmailStore {
 }
 
 @Singleton
-class MongoEmailStore @Inject() (mongo: MongoComponent, crypto: Crypto, metrics: Metrics)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[EmailData](
+class MongoEmailStore @Inject() (val mongo: MongoComponent, crypto: Crypto, metrics: Metrics)(implicit
+  ec: ExecutionContext
+) extends PlayMongoRepository[EmailData](
       mongoComponent = mongo,
       collectionName = "emails",
       domainFormat = EmailData.emailDataFormat,
@@ -141,12 +140,4 @@ class MongoEmailStore @Inject() (mongo: MongoComponent, crypto: Crypto, metrics:
           a.exists(_.wasAcknowledged())
         }
     }
-}
-
-object MongoEmailStore {
-  private[repo] case class EmailData(nino: String, email: String)
-
-  private[repo] object EmailData {
-    implicit val emailDataFormat: Format[EmailData] = Json.format[EmailData]
-  }
 }
