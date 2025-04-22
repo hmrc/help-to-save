@@ -18,17 +18,16 @@ package uk.gov.hmrc.helptosave.repo
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.ReturnDocument
+import org.mongodb.scala.SingleObservableFuture
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.helptosave.repo.UserCapStore.{UserCap, dateFormat}
+import uk.gov.hmrc.helptosave.models.UserCap
+import uk.gov.hmrc.helptosave.models.UserCap.dateFormat
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, ZoneId}
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoUserCapStore])
@@ -39,13 +38,14 @@ trait UserCapStore {
 }
 
 @Singleton
-class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+class MongoUserCapStore @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[UserCap](
       mongoComponent = mongo,
       collectionName = "usercap",
       domainFormat = UserCap.userCapFormat,
       indexes = Seq(IndexModel(ascending("usercap"), IndexOptions().name("usercapIndex")))
-    ) with UserCapStore {
+    )
+    with UserCapStore {
   private[repo] def doFind(): Future[Option[UserCap]] =
     preservingMdc {
       collection.find().headOption()
@@ -70,24 +70,4 @@ class MongoUserCapStore @Inject()(mongo: MongoComponent)(implicit ec: ExecutionC
     }
 
   override def upsert(userCap: UserCap): Future[Option[UserCap]] = doUpdate(userCap)
-}
-
-object UserCapStore {
-  val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-
-  private val utcZone: ZoneId = ZoneId.of("Z")
-
-  case class UserCap(date: LocalDate = LocalDate.now(utcZone), dailyCount: Int, totalCount: Int) {
-
-    def isTodaysRecord: Boolean = LocalDate.now(utcZone).isEqual(date)
-
-    def isPreviousRecord: Boolean = !isTodaysRecord
-  }
-
-  object UserCap {
-    def apply(dailyCount: Int, totalCount: Int): UserCap =
-      new UserCap(LocalDate.now(utcZone), dailyCount, totalCount)
-
-    implicit val userCapFormat: Format[UserCap] = Json.format[UserCap]
-  }
 }

@@ -30,7 +30,7 @@ object CountryCode {
         fields
           .map(x => (x._1.toInt, (x._2 \ "alpha_two_code").asOpt[String]))
           .collect { case (id, Some(value)) => id -> value }
-      case _ => sys.error("no country codes were found, terminating the service")
+      case _                => sys.error("no country codes were found, terminating the service")
     }
   }
 }

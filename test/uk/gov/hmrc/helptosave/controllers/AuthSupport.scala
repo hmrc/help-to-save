@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchersSugar.*
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.when
+import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
 import uk.gov.hmrc.auth.core.retrieve._
@@ -29,33 +31,34 @@ trait AuthSupport extends TestSupport {
 
   val nino = "AE123456C"
 
-  val mockedNinoRetrieval = Some(nino)
+  val mockedNinoRetrieval: Some[String] = Some(nino)
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   def mockAuth[A](predicate: Predicate, retrieval: Retrieval[A])(
-    result: Either[Exception, A]) =
-    mockAuthConnector
-      .authorise(predicate, retrieval)(*, *)
-      .returns(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+    result: Either[Exception, A]
+  ): OngoingStubbing[Future[A]] =
+    when(mockAuthConnector.authorise(eqTo(predicate), eqTo(retrieval))(any(), any()))
+      .thenAnswer(_ => result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
-  def mockAuth[A](retrieval: Retrieval[A])(
-    result: Either[Exception, A]) =
-    mockAuthConnector
-      .authorise(*, retrieval)(*, *)
-      .returns(result.fold(e => Future.failed[A](e), r => Future.successful(r)))
+  def mockAuth[A](retrieval: Retrieval[A])(result: Either[Exception, A]): OngoingStubbing[Future[A]] =
+    when(mockAuthConnector.authorise(any(), eqTo(retrieval))(any(), any()))
+      .thenAnswer(_ => result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
   def testWithGGAndPrivilegedAccess(f: (() => Unit) => Unit): Unit = {
+    val ggCredentials: Option[Credentials]         = Some(Credentials("id", "GovernmentGateway"))
+    val privilegedCredentials: Option[Credentials] = Some(Credentials("id", "PrivilegedApplication"))
+
     withClue("For GG access: ") {
       f { () =>
-          mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(GGCredId("id")))
-          mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(Some(nino)))
+        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.credentials)(Right(ggCredentials))
+        mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(Some(nino)))
       }
     }
 
     withClue("For privileged access: ") {
       f { () =>
-        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(PAClientId("id")))
+        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.credentials)(Right(privilegedCredentials))
       }
     }
   }

@@ -18,8 +18,8 @@ package uk.gov.hmrc.helptosave.utils
 
 import com.codahale.metrics.{Counter, NoopMetricRegistry}
 import com.typesafe.config.ConfigFactory
-import org.mockito.IdiomaticMockito
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
@@ -34,9 +34,9 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll with BeforeAndAfterEach {
+trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with BeforeAndAfterEach {
   lazy val additionalConfig: Configuration = Configuration()
-  val originatorIdHeaderValue = "test-originator"
+  val originatorIdHeaderValue              = "test-originator"
 
   def buildFakeApplication(extraConfig: Configuration): Application =
     new GuiceApplicationBuilder()
@@ -56,7 +56,8 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
                                       |   }
                                       | }
             """.stripMargin)
-        ).withFallback(extraConfig))
+        ).withFallback(extraConfig)
+      )
       .build()
 
   lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
@@ -88,7 +89,7 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
   private val hmrcGenerator: Generator = new Generator()
 
   val startDate: LocalDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
-  val endDate: LocalDate = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
+  val endDate: LocalDate   = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
 
   def randomNINO(): String = hmrcGenerator.nextNino.value
 
@@ -96,7 +97,8 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
 
   implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
 
-  val nsiAccountJson: JsObject = Json.parse("""
+  val nsiAccountJson: JsObject = Json
+    .parse("""
                                     |{
                                     |  "accountNumber": "AC01",
                                     |  "accountBalance": "200.34",
@@ -128,5 +130,6 @@ trait TestSupport extends UnitSpec with IdiomaticMockito with BeforeAndAfterAll 
                                     |    }
                                     |  ]
                                     |}
-    """.stripMargin).as[JsObject]
+    """.stripMargin)
+    .as[JsObject]
 }

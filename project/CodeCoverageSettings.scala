@@ -14,6 +14,9 @@ object CodeCoverageSettings {
     "prod.*",
     "com.*",
     ".*config.*",
+    "uk.gov.hmrc.helptosave.audit.*",
+    "uk.gov.hmrc.helptosave.metrics.*",
+    "uk.gov.hmrc.helptosave.models.*",
     ".*EligibilityStatsProviderImpl",
     ".*HttpClient",
     ".*JsErrorOps"

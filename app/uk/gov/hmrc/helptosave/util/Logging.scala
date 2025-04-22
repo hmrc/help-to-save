@@ -29,28 +29,34 @@ object Logging {
 
   implicit class LoggerOps(val logger: Logger) {
 
-    def debug(message: String, nino: NINO, additionalParams: (String, String)*)(
-      implicit transformer: LogMessageTransformer): Unit =
+    def debug(message: String, nino: NINO, additionalParams: (String, String)*)(implicit
+      transformer: LogMessageTransformer
+    ): Unit =
       logger.debug(transformer.transform(message, nino, additionalParams))
 
-    def info(message: String, nino: NINO, additionalParams: (String, String)*)(
-      implicit transformer: LogMessageTransformer): Unit =
+    def info(message: String, nino: NINO, additionalParams: (String, String)*)(implicit
+      transformer: LogMessageTransformer
+    ): Unit =
       logger.info(transformer.transform(message, nino, additionalParams))
 
-    def warn(message: String, nino: NINO, additionalParams: (String, String)*)(
-      implicit transformer: LogMessageTransformer): Unit =
+    def warn(message: String, nino: NINO, additionalParams: (String, String)*)(implicit
+      transformer: LogMessageTransformer
+    ): Unit =
       logger.warn(transformer.transform(message, nino, additionalParams))
 
-    def warn(message: String, e: => Throwable, nino: NINO, additionalParams: (String, String)*)(
-      implicit transformer: LogMessageTransformer): Unit =
+    def warn(message: String, e: => Throwable, nino: NINO, additionalParams: (String, String)*)(implicit
+      transformer: LogMessageTransformer
+    ): Unit =
       logger.warn(transformer.transform(message, nino, additionalParams), e)
 
-    def error(message: String, nino: NINO, additionalParams: (String, String)*)(
-      implicit transformer: LogMessageTransformer): Unit =
+    def error(message: String, nino: NINO, additionalParams: (String, String)*)(implicit
+      transformer: LogMessageTransformer
+    ): Unit =
       logger.error(transformer.transform(message, nino, additionalParams))
 
-    def error(message: String, e: => Throwable, nino: NINO, additionalParams: (String, String)*)(
-      implicit transformer: LogMessageTransformer): Unit =
+    def error(message: String, e: => Throwable, nino: NINO, additionalParams: (String, String)*)(implicit
+      transformer: LogMessageTransformer
+    ): Unit =
       logger.error(transformer.transform(message, nino, additionalParams), e)
 
   }
@@ -63,10 +69,10 @@ trait LogMessageTransformer {
 }
 
 @Singleton
-class LogMessageTransformerImpl @Inject()(configuration: Configuration) extends LogMessageTransformer {
+class LogMessageTransformerImpl @Inject() (configuration: Configuration) extends LogMessageTransformer {
 
   private val ninoPrefix: NINO => String =
-    if (configuration.underlying.getBoolean("nino-logging.enabled")) { nino =>
+    if configuration.underlying.getBoolean("nino-logging.enabled") then { nino =>
       s"For NINO [$nino], "
     } else { _ =>
       ""

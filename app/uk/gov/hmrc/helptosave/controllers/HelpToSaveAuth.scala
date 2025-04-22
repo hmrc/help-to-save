@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import cats.instances.string._
-import cats.syntax.eq._
-import play.api.mvc._
+import cats.instances.string.*
+import cats.syntax.eq.*
+import play.api.mvc.*
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{nino => v2Nino}
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, v2}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.nino as v2Nino
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, v2}
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object HelpToSaveAuth {
 
-  val GGProvider: AuthProviders = AuthProviders(GovernmentGateway)
+  private val GGProvider: AuthProviders = AuthProviders(GovernmentGateway)
 
   val GGAndPrivilegedProviders: Predicate = AuthProviders(GovernmentGateway, PrivilegedApplication)
 
@@ -40,13 +40,15 @@ object HelpToSaveAuth {
 }
 
 class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: ControllerComponents)
-    extends BackendController(controllerComponents) with AuthorisedFunctions with Logging {
+    extends BackendController(controllerComponents)
+    with AuthorisedFunctions
+    with Logging {
 
-  import HelpToSaveAuth._
+  import HelpToSaveAuth.*
 
   override def authConnector: AuthConnector = htsAuthConnector
 
-  private type HtsAction = Request[AnyContent] => Future[Result]
+  private type HtsAction         = Request[AnyContent] => Future[Result]
   private type HtsActionWithNINO = Request[AnyContent] => NINO => Future[Result]
 
   val authProviders: AuthProviders = AuthProviders(GovernmentGateway, PrivilegedApplication)
@@ -74,17 +76,18 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
       }
     }
 
-  def ggOrPrivilegedAuthorisedWithNINO(nino: Option[String])(action: HtsActionWithNINO)(
-    implicit ec: ExecutionContext): Action[AnyContent] =
+  def ggOrPrivilegedAuthorisedWithNINO(
+    nino: Option[String]
+  )(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       authorised(GGAndPrivilegedProviders)
-        .retrieve(v2.Retrievals.authProviderId) {
-          case GGCredId(_) =>
+        .retrieve(v2.Retrievals.credentials) {
+          case Some(Credentials(_, "GovernmentGateway")) =>
             authorised().retrieve(v2Nino) { retrievedNINO =>
               (nino, retrievedNINO) match {
-                case (Some(given), Some(retrieved)) =>
-                  if (given === retrieved) {
-                    action(request)(given)
+                case (Some(givenNino), Some(retrievedNino)) =>
+                  if givenNino === retrievedNino then {
+                    action(request)(givenNino)
                   } else {
                     logger.warn("Given NINO did not match retrieved NINO")
                     toFuture(Forbidden)
@@ -99,14 +102,14 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
               }
             }
 
-          case PAClientId(_) =>
+          case Some(Credentials(_, "PrivilegedApplication")) =>
             nino.fold[Future[Result]] {
               logger.warn("NINO not given for privileged request")
               BadRequest
             }(n => action(request)(n))
 
           case other =>
-            logger.warn(s"Recevied request from unsupported authProvider: ${other.getClass.getSimpleName}")
+            logger.warn(s"Recevied request from unsupported authProvider: ${other.map(_.providerType)}")
             toFuture(Forbidden)
 
         }
@@ -115,7 +118,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
         }
     }
 
-  def handleFailure(): PartialFunction[Throwable, Result] = {
+  private def handleFailure(): PartialFunction[Throwable, Result] = {
     case _: NoActiveSession =>
       logger.warn("user is not logged in, probably a hack?")
       Unauthorized

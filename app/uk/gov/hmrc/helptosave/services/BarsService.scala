@@ -25,7 +25,8 @@ import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.connectors.BarsConnector
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.models.{BARSCheck, BankDetailsValidationRequest, BankDetailsValidationResult}
+import uk.gov.hmrc.helptosave.models.BARSCheck
+import uk.gov.hmrc.helptosave.models.bank.{BankDetailsValidationRequest, BankDetailsValidationResult}
 import uk.gov.hmrc.helptosave.util.Logging.LoggerOps
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, Logging, PagerDutyAlerting}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -38,47 +39,47 @@ trait BarsService {
 
   type BarsResponseType = Future[Either[String, BankDetailsValidationResult]]
 
-  def validate(barsRequest: BankDetailsValidationRequest)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext,
-    request: Request[_]): BarsResponseType
+  def validate(
+    barsRequest: BankDetailsValidationRequest
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[?]): BarsResponseType
 
 }
 
 @Singleton
-class BarsServiceImpl @Inject()(
+class BarsServiceImpl @Inject() (
   barsConnector: BarsConnector,
   metrics: Metrics,
   alerting: PagerDutyAlerting,
-  auditor: HTSAuditor)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
-    extends BarsService with Logging {
+  auditor: HTSAuditor
+)(implicit transformer: LogMessageTransformer, appConfig: AppConfig)
+    extends BarsService
+    with Logging {
 
-  override def validate(barsRequest: BankDetailsValidationRequest)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext,
-    request: Request[_]): BarsResponseType = {
+  override def validate(
+    barsRequest: BankDetailsValidationRequest
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[?]): BarsResponseType = {
     val timerContext = metrics.barsTimer.time()
-    val trackingId = UUID.randomUUID()
-    val nino = barsRequest.nino
+    val trackingId   = UUID.randomUUID()
+    val nino         = barsRequest.nino
     barsConnector
       .validate(barsRequest, trackingId)
-      .flatMap[Either[String, BankDetailsValidationResult]]{
-        case Right(response) =>
+      .flatMap[Either[String, BankDetailsValidationResult]] {
+        case Right(response)                                    =>
           val _ = timerContext.stop()
           response.status match {
-            case Status.OK =>
+            case Status.OK  =>
               auditor.sendEvent(BARSCheck(barsRequest, response.json, request.uri), nino)
 
               (response.json \ "accountNumberIsWellFormatted").asOpt[String] ->
                 (response.json \ "sortCodeIsPresentOnEISCD").asOpt[String].map(_.toLowerCase.trim) match {
                 case (Some(accountNumberWithSortCodeIsValid), Some(sortCodeIsPresentOnEISCD)) =>
                   val sortCodeExists: Either[String, Boolean] =
-                    if (sortCodeIsPresentOnEISCD === "yes") {
+                    if sortCodeIsPresentOnEISCD === "yes" then {
                       Right(true)
-                    } else if (sortCodeIsPresentOnEISCD === "no") {
+                    } else if sortCodeIsPresentOnEISCD === "no" then {
                       logger.info("BARS response: bank details were valid but sort code was not present on EISCD", nino)
                       Right(false)
-                    } else if ((sortCodeIsPresentOnEISCD === "error")) {
+                    } else if sortCodeIsPresentOnEISCD === "error" then {
                       logger.info("BARS response: Sort code check on EISCD returned Error", nino)
                       Right(false)
                     } else {
@@ -86,38 +87,44 @@ class BarsServiceImpl @Inject()(
                     }
 
                   val accountNumbersValid: Boolean =
-                    if (accountNumberWithSortCodeIsValid === "yes") {
+                    if accountNumberWithSortCodeIsValid === "yes" then {
                       true
-                    } else if (accountNumberWithSortCodeIsValid === "no") {
+                    } else if accountNumberWithSortCodeIsValid === "no" then {
                       logger.info("BARS response: bank details were NOT valid", nino)
                       false
-                    } else if (accountNumberWithSortCodeIsValid === "indeterminate") {
+                    } else if accountNumberWithSortCodeIsValid === "indeterminate" then {
                       logger.info("BARS response: bank details were marked as indeterminate", nino)
                       true
                     } else {
                       logger.warn("BARS response: Unexpected Return for valid vank details", nino)
                       false
                     }
+                  Future(sortCodeExists.map {
+                    BankDetailsValidationResult(accountNumbersValid, _)
+                  })
 
-                Future(sortCodeExists.map { BankDetailsValidationResult(accountNumbersValid, _) })
-              case _ =>
-                logger.warn(
-                  s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}")
-                alerting.alert("error parsing the response json from bars check")
-                Future(Left(s"error parsing the response json from bars check"))
-                  }
-          case other: Int =>
-            metrics.barsErrorCounter.inc()
-            logger.warn(
-              s"unexpected status from bars check, trackingId = $trackingId, status=$other, body = ${response.body}")
-            alerting.alert("unexpected status from bars check")
-            Future(Left("unexpected status from bars check"))
+                case _ =>
+                  logger.warn(
+                    s"error parsing the response from bars check, trackingId = $trackingId,  body = ${response.body}"
+                  )
+                  alerting.alert("error parsing the response json from bars check")
+                  Future(Left(s"error parsing the response json from bars check"))
               }
+            case other: Int =>
+              metrics.barsErrorCounter.inc()
+              logger.warn(
+                s"unexpected status from bars check, trackingId = $trackingId, status=$other, body = ${response.body}"
+              )
+              alerting.alert("unexpected status from bars check")
+              Future(Left("unexpected status from bars check"))
+          }
         case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
           metrics.barsErrorCounter.inc()
-          logger.warn(s"unexpected error from bars check, trackingId = $trackingId, error=${upstreamErrorResponse.getMessage}")
+          logger.warn(
+            s"unexpected error from bars check, trackingId = $trackingId, error=${upstreamErrorResponse.getMessage}"
+          )
           alerting.alert("unexpected error from bars check")
           Future(Left("unexpected error from bars check"))
-          }
-   }
+      }
+  }
 }

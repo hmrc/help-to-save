@@ -17,32 +17,30 @@
 package uk.gov.hmrc.helptosave.repo
 
 import cats.syntax.all._
+import org.mockito.Mockito.when
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.helptosave.utils.TestSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
+import org.mongodb.scala.ObservableFuture
 
 import scala.util.{Failure, Success, Try}
 
 class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport with BeforeAndAfterEach {
 
   lazy val repository: MongoEmailStore = newMongoEmailStore(mongoComponent)
-  override def beforeEach(): Unit =
+  override def beforeEach(): Unit      =
     await(repository.collection.drop().toFuture())
 
   val crypto: Crypto = mock[Crypto]
 
   def mockEncrypt(input: String)(output: String): Unit =
-    crypto
-      .encrypt(input)
-      .returns(output)
+    when(crypto.encrypt(input)).thenReturn(output)
 
   def mockDecrypt(input: String)(output: Option[String]): Unit =
-    crypto
-      .decrypt(input)
-      .returns(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
+    when(crypto.decrypt(input)).thenReturn(output.fold[Try[String]](Failure(new Exception("uh oh")))(Success(_)))
 
   def newMongoEmailStore(mongoComponent: MongoComponent) =
     new MongoEmailStore(mongoComponent, crypto, mockMetrics)
@@ -50,7 +48,7 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
   "The MongoEmailStore" when {
     val emailStore = repository
 
-    val email = "EMAIL"
+    val email          = "EMAIL"
     val encryptedEmail = "ENCRYPTED"
 
     def storeConfirmedEmail(nino: NINO, email: String, emailStore: MongoEmailStore) =
@@ -65,31 +63,31 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       "store the email in the mongo database" in {
         val nino = randomNINO()
 
-          mockEncrypt(email)(encryptedEmail)
-          mockDecrypt(encryptedEmail)(Some(email))
+        mockEncrypt(email)(encryptedEmail)
+        mockDecrypt(encryptedEmail)(Some(email))
 
-        val result = for {
+        val result = for
           _           <- storeConfirmedEmail(nino, email, emailStore)
           storedEmail <- getConfirmedEmail(nino, emailStore)
           _           <- deleteEmail(nino, emailStore)
-        } yield storedEmail
+        yield storedEmail
 
         await(result.value) shouldBe Right(email.some)
       }
 
       "update the email when a different nino suffix is used of an existing user" in {
-        val nino = "AE123456A"
+        val nino                = "AE123456A"
         val ninoDifferentSuffix = "AE123456B"
-        val updatedEmail = "test@gmail.com"
+        val updatedEmail        = "test@gmail.com"
 
-          mockEncrypt(email)(encryptedEmail)
-          mockDecrypt(encryptedEmail)(Some(email))
-          mockEncrypt(updatedEmail)(encryptedEmail)
+        mockEncrypt(email)(encryptedEmail)
+        mockDecrypt(encryptedEmail)(Some(email))
+        mockEncrypt(updatedEmail)(encryptedEmail)
 
-        //there should no emails to start with
+        // there should no emails to start with
         await(getConfirmedEmail(nino, emailStore).value) shouldBe Right(None)
 
-        //putting the email in mongo
+        // putting the email in mongo
         await(storeConfirmedEmail(nino, email, emailStore).value)
 
         // try when there is an email
@@ -110,13 +108,13 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
       "return a right if the get is successful" in {
         val nino = randomNINO()
 
-          mockEncrypt(email)(encryptedEmail)
-          mockDecrypt(encryptedEmail)(Some(email))
+        mockEncrypt(email)(encryptedEmail)
+        mockDecrypt(encryptedEmail)(Some(email))
 
-        //there should no emails to start with
+        // there should no emails to start with
         get(nino, emailStore) shouldBe Right(None)
 
-        //putting the email in mongo
+        // putting the email in mongo
         await(storeConfirmedEmail(nino, email, emailStore).value)
 
         // try when there is an email
@@ -124,24 +122,24 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
         await(deleteEmail(nino, emailStore).value)
 
-        //check the email has been removed
+        // check the email has been removed
         eventually {
           get(nino, emailStore) shouldBe Right(None)
         }
       }
 
       "return the email when a different nino suffix is used of an existing user" in {
-        val nino = "AE123456A"
+        val nino                = "AE123456A"
         val ninoDifferentSuffix = "AE123456B"
 
-          mockEncrypt(email)(encryptedEmail)
-          mockDecrypt(encryptedEmail)(Some(email))
-          mockDecrypt(encryptedEmail)(Some(email))
+        mockEncrypt(email)(encryptedEmail)
+        mockDecrypt(encryptedEmail)(Some(email))
+        mockDecrypt(encryptedEmail)(Some(email))
 
-        //there should no emails to start with
+        // there should no emails to start with
         get(nino, emailStore) shouldBe Right(None)
 
-        //putting the email in mongo
+        // putting the email in mongo
         await(storeConfirmedEmail(nino, email, emailStore).value)
 
         // try when there is an email
@@ -160,13 +158,13 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
         mockEncrypt(email)(encryptedEmail)
 
-        //store email first
+        // store email first
         await(storeConfirmedEmail(nino, email, emailStore).value) shouldBe Right(())
 
-        //then delete
+        // then delete
         await(deleteEmail(nino, emailStore).value) shouldBe Right(())
 
-        //now verify
+        // now verify
         await(getConfirmedEmail(nino, emailStore).value) shouldBe Right(None)
       }
 
@@ -175,19 +173,32 @@ class MongoEmailStoreSpec extends TestSupport with Eventually with MongoSupport 
 
         mockEncrypt(email)(encryptedEmail)
 
-        //store email first
+        // store email first
         await(storeConfirmedEmail(nino, email, emailStore).value) shouldBe Right(())
 
-        //then delete using a different suffix
+        // then delete using a different suffix
         val ninoDifferentSuffix = "AE123456B"
         await(deleteEmail(ninoDifferentSuffix, emailStore).value) shouldBe Right(())
 
-        //now verify using the original nino
+        // now verify using the original nino
         await(getConfirmedEmail(nino, emailStore).value) shouldBe Right(None)
       }
 
     }
 
-  }
+    "invoked with mongo client connection not being available" must {
+      "fail on any requests to email store" in {
+        emailStore.mongo.client.close()
 
+        val nino = randomNINO()
+
+        mockEncrypt(email)(encryptedEmail)
+        mockDecrypt(encryptedEmail)(Some(email))
+
+        await(emailStore.store(encryptedEmail, nino).value) shouldBe Left("state should be: open")
+        await(emailStore.get(nino).value)                   shouldBe Left("Could not read from email store: state should be: open")
+        await(emailStore.delete(nino).value)                shouldBe Left("Could not delete email: state should be: open")
+      }
+    }
+  }
 }

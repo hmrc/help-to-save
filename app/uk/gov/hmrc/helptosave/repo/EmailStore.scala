@@ -17,19 +17,19 @@
 package uk.gov.hmrc.helptosave.repo
 
 import cats.data.EitherT
-import cats.instances.option._
-import cats.instances.try_._
-import cats.syntax.either._
-import cats.syntax.traverse._
+import cats.instances.option.*
+import cats.instances.try_.*
+import cats.syntax.either.*
+import cats.syntax.traverse.*
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.model.Filters.regex
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Updates}
 import play.api.Logging
-import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.helptosave.metrics.Metrics
-import uk.gov.hmrc.helptosave.repo.MongoEmailStore.EmailData
-import uk.gov.hmrc.helptosave.util.TryOps._
+import uk.gov.hmrc.helptosave.models.EmailData
+import uk.gov.hmrc.helptosave.util.TryOps.*
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -49,41 +49,43 @@ trait EmailStore {
 }
 
 @Singleton
-class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: Metrics)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[EmailData](
+class MongoEmailStore @Inject() (val mongo: MongoComponent, crypto: Crypto, metrics: Metrics)(implicit
+  ec: ExecutionContext
+) extends PlayMongoRepository[EmailData](
       mongoComponent = mongo,
       collectionName = "emails",
       domainFormat = EmailData.emailDataFormat,
       indexes = Seq(IndexModel(ascending("nino"), IndexOptions().name("ninoIndex")))
-    ) with EmailStore with Logging {
+    )
+    with EmailStore
+    with Logging {
 
   def getRegex(nino: String): String = "^" + nino.take(8) + ".$"
 
   def store(email: String, nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
-    EitherT[Future, String, Unit]({
+    EitherT[Future, String, Unit] {
       val timerContext = metrics.emailStoreUpdateTimer.time()
 
       doUpdate(crypto.encrypt(email), nino)
         .map[Either[String, Unit]] { result =>
           timerContext.stop()
 
-          if (!result) {
+          if !result then {
             metrics.emailStoreUpdateErrorCounter.inc()
             Left("Could not update email mongo store")
           } else {
             Right(())
           }
         }
-        .recover {
-          case NonFatal(e) =>
-            timerContext.stop()
-            metrics.emailStoreUpdateErrorCounter.inc()
-            Left(s"${e.getMessage}")
+        .recover { case NonFatal(e) =>
+          timerContext.stop()
+          metrics.emailStoreUpdateErrorCounter.inc()
+          Left(s"${e.getMessage}")
         }
-    })
+    }
 
   override def get(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Option[String]] =
-    EitherT[Future, String, Option[String]]({
+    EitherT[Future, String, Option[String]] {
       preservingMdc {
         val timerContext = metrics.emailStoreGetTimer.time()
 
@@ -102,14 +104,13 @@ class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: 
               s"Could not decrypt email: ${t.getMessage}"
             }
           }
-          .recover {
-            case e =>
-              timerContext.stop()
-              metrics.emailStoreGetErrorCounter.inc()
-              Left(s"Could not read from email store: ${e.getMessage}")
+          .recover { case e =>
+            timerContext.stop()
+            metrics.emailStoreGetErrorCounter.inc()
+            Left(s"Could not read from email store: ${e.getMessage}")
           }
       }
-    })
+    }
 
   override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit] {
@@ -120,9 +121,8 @@ class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: 
           .map[Either[String, Unit]] { _ =>
             Right(())
           }
-          .recover {
-            case e =>
-              Left(s"Could not delete email: ${e.getMessage}")
+          .recover { case e =>
+            Left(s"Could not delete email: ${e.getMessage}")
           }
       }
     }
@@ -135,17 +135,9 @@ class MongoEmailStore @Inject()(mongo: MongoComponent, crypto: Crypto, metrics: 
           update = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
           options = UpdateOptions().upsert(true)
         )
-        .toFuture()
-        .map(a => {
-          a.wasAcknowledged()
-        })
+        .toFutureOption()
+        .map { a =>
+          a.exists(_.wasAcknowledged())
+        }
     }
-}
-
-object MongoEmailStore {
-  private[repo] case class EmailData(nino: String, email: String)
-
-  private[repo] object EmailData {
-    implicit val emailDataFormat: Format[EmailData] = Json.format[EmailData]
-  }
 }

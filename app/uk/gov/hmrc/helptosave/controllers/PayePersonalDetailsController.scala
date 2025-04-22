@@ -29,14 +29,13 @@ import uk.gov.hmrc.helptosave.util.Logging._
 import java.util.Base64
 import scala.concurrent.ExecutionContext
 
-class PayePersonalDetailsController @Inject()(
+class PayePersonalDetailsController @Inject() (
   val helpToSaveService: HelpToSaveService,
   authConnector: AuthConnector,
-  controllerComponents: ControllerComponents)(
-  implicit transformer: LogMessageTransformer,
-  override val appConfig: AppConfig,
-  ec: ExecutionContext)
-    extends StrideAuth(authConnector, controllerComponents) with EligibilityBase {
+  controllerComponents: ControllerComponents
+)(implicit transformer: LogMessageTransformer, override val appConfig: AppConfig, ec: ExecutionContext)
+    extends StrideAuth(authConnector, controllerComponents)
+    with EligibilityBase {
 
   val base64Decoder: Base64.Decoder = Base64.getDecoder()
 
@@ -47,9 +46,8 @@ class PayePersonalDetailsController @Inject()(
         { error =>
           logger.warn(s"Could not retrieve paye-personal-details: $error", nino)
           InternalServerError
-        }, { r =>
-          Ok(Json.toJson(r))
-        }
+        },
+        r => Ok(Json.toJson(r))
       )
   }
 

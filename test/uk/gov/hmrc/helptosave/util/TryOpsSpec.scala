@@ -27,7 +27,7 @@ class TryOpsSpec extends TestSupport {
     "provide a fold method" in {
       def test(f: Try[Int]): Boolean = f.fold(_ => false, _ => true)
 
-      test(Success(1)) shouldBe true
+      test(Success(1))               shouldBe true
       test(Failure(new Exception())) shouldBe false
     }
 

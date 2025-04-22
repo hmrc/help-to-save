@@ -20,6 +20,7 @@ import play.api.libs.json.Reads.localDateReads
 import play.api.libs.json.Writes.temporalWrites
 import play.api.libs.json._
 import uk.gov.hmrc.helptosave.models.NSIPayload.ContactDetails
+import uk.gov.hmrc.helptosave.models.bank.BankDetails
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -33,7 +34,8 @@ case class NSIPayload(
   registrationChannel: String,
   nbaDetails: Option[BankDetails],
   version: Option[String],
-  systemId: Option[String])
+  systemId: Option[String]
+)
 
 object NSIPayload {
 
@@ -47,7 +49,8 @@ object NSIPayload {
     countryCode: Option[String],
     phoneNumber: Option[String] = None,
     email: Option[String] = None,
-    communicationPreference: String)
+    communicationPreference: String
+  )
 
   implicit val dateFormat: Format[LocalDate] = {
     val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
@@ -59,7 +62,7 @@ object NSIPayload {
   implicit val nsiPayloadWrites: Writes[NSIPayload] = Json.writes[NSIPayload]
 
   def nsiPayloadReads(version: Option[String]): Reads[NSIPayload] = Reads[NSIPayload] { jsValue =>
-    for {
+    for
       forename            <- (jsValue \ "forename").validate[String]
       surname             <- (jsValue \ "surname").validate[String]
       dateOfBirth         <- (jsValue \ "dateOfBirth").validate[LocalDate]
@@ -69,17 +72,17 @@ object NSIPayload {
       nbaDetails          <- (jsValue \ "nbaDetails").validateOpt[BankDetails]
       bankDetails         <- (jsValue \ "bankDetails").validateOpt[BankDetails]
       systemId            <- (jsValue \ "systemId").validateOpt[String]
-    } yield
-      NSIPayload(
-        forename,
-        surname,
-        dateOfBirth,
-        nino,
-        contactDetails,
-        registrationChannel,
-        nbaDetails.orElse(bankDetails),
-        version,
-        systemId)
+    yield NSIPayload(
+      forename,
+      surname,
+      dateOfBirth,
+      nino,
+      contactDetails,
+      registrationChannel,
+      nbaDetails.orElse(bankDetails),
+      version,
+      systemId
+    )
   }
 
 }

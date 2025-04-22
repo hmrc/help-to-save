@@ -100,7 +100,8 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
             Some("Correspondence line5"),
             "Correspondence Postcode",
             Some("GB")
-          ))
+          )
+        )
       }
 
       "read the Residential Address if Correspondence address is not found" in {
@@ -113,7 +114,8 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
             Some("Residential line5"),
             "Residential Postcode",
             Some("GB")
-          ))
+          )
+        )
       }
 
       "return error if no Correspondence and Residential names not found" in {
@@ -146,7 +148,9 @@ class PayePersonalDetailsSpec extends TestSupport with TestData { // scalastyle:
             Some("Residential line4"),
             Some("Residential line5"),
             "Residential Postcode",
-            None))
+            None
+          )
+        )
       }
 
     }
