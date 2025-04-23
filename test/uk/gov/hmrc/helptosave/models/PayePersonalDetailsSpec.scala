@@ -17,7 +17,7 @@
 package uk.gov.hmrc.helptosave.models
 
 import play.api.libs.json.{JsError, JsSuccess, Json}
-import uk.gov.hmrc.helptosave.models.PayePersonalDetails._
+import uk.gov.hmrc.helptosave.models.PayePersonalDetails.*
 import uk.gov.hmrc.helptosave.utils.{TestData, TestSupport}
 
 import java.time.LocalDate
