@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.helptosave.controllers
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
-import uk.gov.hmrc.auth.core.retrieve._
+import uk.gov.hmrc.auth.core.retrieve.*
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentials
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
 import uk.gov.hmrc.helptosave.utils.TestSupport
 
@@ -34,6 +35,8 @@ trait AuthSupport extends TestSupport {
   val mockedNinoRetrieval: Some[String] = Some(nino)
 
   val mockAuthConnector: AuthConnector = mock[AuthConnector]
+  val ggCredentials: Option[Credentials] = Some(Credentials("id", "GovernmentGateway"))
+  val paCredentials: Option[Credentials] = Some(Credentials("id", "PrivilegedApplication"))
 
   def mockAuth[A](predicate: Predicate, retrieval: Retrieval[A])(
     result: Either[Exception, A]
@@ -48,14 +51,14 @@ trait AuthSupport extends TestSupport {
   def testWithGGAndPrivilegedAccess(f: (() => Unit) => Unit): Unit = {
     withClue("For GG access: ") {
       f { () =>
-        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(GGCredId("id")))
+        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
         mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(Some(nino)))
       }
     }
 
     withClue("For privileged access: ") {
       f { () =>
-        mockAuth(GGAndPrivilegedProviders, v2.Retrievals.authProviderId)(Right(PAClientId("id")))
+        mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
       }
     }
   }
