@@ -22,8 +22,8 @@ import play.api.mvc.*
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.nino as v2Nino
-import uk.gov.hmrc.auth.core.retrieve.{GGCredId, PAClientId, v2}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino as v2Nino}
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, v2}
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -81,8 +81,8 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
   )(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       authorised(GGAndPrivilegedProviders)
-        .retrieve(v2.Retrievals.authProviderId) {
-          case GGCredId(_) =>
+        .retrieve(credentials) {
+          case Some(Credentials(_, "GovernmentGateway")) =>
             authorised().retrieve(v2Nino) { retrievedNINO =>
               (nino, retrievedNINO) match {
                 case (Some(givenNino), Some(retrievedNino)) =>
@@ -102,7 +102,7 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
               }
             }
 
-          case PAClientId(_) =>
+          case Some(Credentials(_, "PrivilegedApplication")) =>
             nino.fold[Future[Result]] {
               logger.warn("NINO not given for privileged request")
               BadRequest
