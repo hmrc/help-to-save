@@ -105,7 +105,7 @@ class ExponentialBackoffRetrySpec extends ActorTestSupport("ExponentialBackoffRe
           time.scheduler
         )
 
-        (1 to n).foreach { i =>
+        (1 to n).foreach { _ =>
           exponentialBackoffRetry.retry("")
           // advance 1 day to ensure scheduled send actually completes
           time.advance(1.day)

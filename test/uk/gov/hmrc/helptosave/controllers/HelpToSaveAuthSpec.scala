@@ -140,8 +140,6 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
       "handling PrivilegedApplication requests" must {
 
-        val privilegedCredentials = PAClientId("")
-
         "return a BadRequest if no NINO is given" in {
           mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
           status(callAuth(None)(FakeRequest())) shouldBe Status.BAD_REQUEST

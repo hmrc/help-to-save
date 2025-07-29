@@ -16,7 +16,7 @@
 
 package helpers
 
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.helptosave.models.account.{Account, Blocking, BonusTerm}
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 
@@ -67,18 +67,18 @@ object TestData {
     detailsManuallyEntered: Boolean = false,
     communicationPreference: String = "02",
     source: String = "Digital"
-  ) =
+  ): JsValue =
     Json.parse(createAccountJson("20200101", detailsManuallyEntered, communicationPreference, source))
 
-  val validCreateAccountRequest = validCreateAccountRequestPayload()
-    .validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some("V2.0")))
+  val validCreateAccountRequest: CreateAccountRequest = validCreateAccountRequestPayload()
+    .validate[CreateAccountRequest](using CreateAccountRequest.createAccountRequestReads(Some("V2.0")))
     .getOrElse(sys.error("Could not parse CreateAccountRequest"))
 
-  val validCreateAccountStrideRequest = validCreateAccountRequestPayload(source = "Stride-Manual")
-    .validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some("V2.0")))
+  val validCreateAccountStrideRequest: CreateAccountRequest = validCreateAccountRequestPayload(source = "Stride-Manual")
+    .validate[CreateAccountRequest](using CreateAccountRequest.createAccountRequestReads(Some("V2.0")))
     .getOrElse(sys.error("Could not parse CreateAccountRequest"))
 
-  val account = Account(
+  val account: Account = Account(
     YearMonth.of(2018, 1),
     "AC01",
     isClosed = false,

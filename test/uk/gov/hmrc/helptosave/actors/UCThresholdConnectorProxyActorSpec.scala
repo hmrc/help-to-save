@@ -43,20 +43,20 @@ class UCThresholdConnectorProxyActorSpec
   def mockConnectorGetValue(
     response: HttpResponse
   ): OngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
-    when(connector.getThreshold()(any(), any())).thenReturn(toFuture(Right(response)))
+    when(connector.getThreshold()(using any(), any())).thenReturn(toFuture(Right(response)))
 
   "The UCThresholdConnectorProxyActor" when {
 
     "asked for the threshold value" must {
 
       "ask for and return the value from the threshold connector" in {
-        when(connector.getThreshold()(any(), any())).thenReturn(
+        when(connector.getThreshold()(using any(), any())).thenReturn(
           toFuture(Right(HttpResponse(200, Json.parse("""{"thresholdAmount" : 100.0}"""), returnHeaders)))
         )
       }
 
       "ask for and return is successful but invalid threshold amount" in {
-        when(connector.getThreshold()(any(), any())).thenReturn(
+        when(connector.getThreshold()(using any(), any())).thenReturn(
           toFuture(Right(HttpResponse(200, JsString(""), returnHeaders)))
         )
 
@@ -73,7 +73,7 @@ class UCThresholdConnectorProxyActorSpec
       }
 
       "ask for and return an error from the threshold connector if an error occurs" in {
-        when(connector.getThreshold()(any(), any()))
+        when(connector.getThreshold()(using any(), any()))
           .thenReturn(toFuture(Left(UpstreamErrorResponse("error occurred", 500))))
 
         doNothing()

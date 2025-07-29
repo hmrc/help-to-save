@@ -89,7 +89,7 @@ class HelpToSaveProxyConnectorSpec
     )
 
   def mockSendAuditEvent(event: GetAccountResultEvent, nino: String): Unit =
-    doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(any())
+    doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(using any())
 
   def transactionMetricChanges[T](body: => T): (T, Long, Long) = {
     val timerCountBefore = mockMetrics.getTransactionsTimer.getCount

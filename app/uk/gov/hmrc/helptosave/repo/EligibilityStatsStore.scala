@@ -19,7 +19,6 @@ package uk.gov.hmrc.helptosave.repo
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.Indexes.*
 import com.mongodb.client.model.{Accumulators, Aggregates, Projections}
-import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.bson.{BsonDocument, BsonValue}
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
@@ -27,9 +26,9 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.metrics.Metrics.nanosToPrettyString
 import uk.gov.hmrc.helptosave.models.EligibilityStats
 import uk.gov.hmrc.helptosave.models.enrolment.EnrolmentData
+import uk.gov.hmrc.mdc.Mdc.preservingMdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
-import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -22,8 +22,8 @@ import play.api.mvc.*
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core.authorise.Predicate
+import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino as v2Nino}
-import uk.gov.hmrc.auth.core.retrieve.{Credentials, v2}
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 

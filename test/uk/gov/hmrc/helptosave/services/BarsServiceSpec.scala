@@ -43,12 +43,12 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
   )(response: HttpResponse): OngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
     when(
       mockBarsConnector
-        .validate(eqTo(barsRequest), any())(any(), any())
+        .validate(eqTo(barsRequest), any())(using any(), any())
     )
       .thenReturn(toFuture(Right(response)))
 
   def mockAuditBarsEvent(expectedEvent: BARSCheck, nino: NINO): Unit =
-    doNothing().when(mockAuditor).sendEvent(eqTo(expectedEvent), eqTo(nino))(any())
+    doNothing().when(mockAuditor).sendEvent(eqTo(expectedEvent), eqTo(nino))(using any())
 
   val service = new BarsServiceImpl(mockBarsConnector, mockMetrics, mockPagerDuty, mockAuditor)
 
@@ -144,7 +144,7 @@ class BarsServiceSpec extends UnitSpec with TestSupport with MockPagerDuty {
       }
 
       "recover from unexpected errors" in {
-        when(mockBarsConnector.validate(eqTo(barsRequest), any())(any(), any()))
+        when(mockBarsConnector.validate(eqTo(barsRequest), any())(using any(), any()))
           .thenReturn(toFuture(Left(UpstreamErrorResponse("", 500))))
 
         mockPagerDutyAlert("unexpected error from bars check")

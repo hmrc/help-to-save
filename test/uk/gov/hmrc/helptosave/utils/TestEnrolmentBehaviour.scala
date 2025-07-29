@@ -17,8 +17,8 @@
 package uk.gov.hmrc.helptosave.utils
 
 import cats.data.EitherT
-import cats.instances.future._
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import cats.instances.future.*
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.when
 import play.api.libs.json.Json
 import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector}
@@ -28,11 +28,12 @@ import uk.gov.hmrc.helptosave.models.enrolment.Status
 import uk.gov.hmrc.helptosave.models.register.CreateAccountRequest
 import uk.gov.hmrc.helptosave.repo.EnrolmentStore
 import uk.gov.hmrc.helptosave.services.HelpToSaveService
-import uk.gov.hmrc.helptosave.util._
+import uk.gov.hmrc.helptosave.util.*
 
 import java.time.{LocalDate, YearMonth}
 import scala.concurrent.Future
 import play.api.libs.json.JsValue
+import uk.gov.hmrc.helptosave.models.NSIPayload
 
 trait TestEnrolmentBehaviour extends TestSupport {
 
@@ -43,7 +44,7 @@ trait TestEnrolmentBehaviour extends TestSupport {
   val proxyConnector: HelpToSaveProxyConnector = mock[HelpToSaveProxyConnector]
 
   def mockEnrolmentStoreUpdate(nino: NINO, itmpFlag: Boolean)(result: Either[String, Unit]): Unit =
-    when(enrolmentStore.updateItmpFlag(eqTo(nino), eqTo(itmpFlag))(any()))
+    when(enrolmentStore.updateItmpFlag(eqTo(nino), eqTo(itmpFlag))(using any()))
       .thenReturn(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreInsert(
@@ -62,18 +63,18 @@ trait TestEnrolmentBehaviour extends TestSupport {
         eqTo(source),
         eqTo(accountNumber),
         eqTo(deleteFlag)
-      )(any())
+      )(using any())
     )
       .thenReturn(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGet(nino: NINO)(result: Either[String, Status]): Unit =
-    when(enrolmentStore.get(eqTo(nino))(any())).thenReturn(EitherT.fromEither[Future](result))
+    when(enrolmentStore.get(eqTo(nino))(using any())).thenReturn(EitherT.fromEither[Future](result))
 
   def mockEnrolmentStoreGetAccountNumber(nino: NINO)(result: Either[String, AccountNumber]): Unit =
-    when(enrolmentStore.getAccountNumber(eqTo(nino))(any())).thenReturn(EitherT.fromEither[Future](result))
+    when(enrolmentStore.getAccountNumber(eqTo(nino))(using any())).thenReturn(EitherT.fromEither[Future](result))
 
   def mockSetFlag(nino: NINO)(result: Either[String, Unit]): Unit =
-    when(helpToSaveService.setFlag(eqTo(nino))(any(), any()))
+    when(helpToSaveService.setFlag(eqTo(nino))(using any(), any()))
       .thenReturn(EitherT.fromEither[Future](result))
 
   def payloadJson(dobValue: String, communicationPreference: String = "02"): String =
@@ -122,14 +123,14 @@ trait TestEnrolmentBehaviour extends TestSupport {
 
   val validCreateAccountRequest: CreateAccountRequest = validCreateAccountRequestPayload()
     .validate[CreateAccountRequest](
-      CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion))
+      using CreateAccountRequest.createAccountRequestReads(Some(appConfig.createAccountVersion))
     )
     .getOrElse(sys.error("Could not parse CreateAccountRequest"))
 
   val validUpdateAccountRequest: CreateAccountRequest =
     validCreateAccountRequest.copy(payload = validCreateAccountRequest.payload.copy(systemId = None, version = None))
 
-  val validNSIUserInfo = validCreateAccountRequest.payload
+  val validNSIUserInfo: NSIPayload = validCreateAccountRequest.payload
 
   val account: Account = Account(
     YearMonth.of(2018, 1),

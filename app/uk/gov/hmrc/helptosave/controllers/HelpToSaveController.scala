@@ -59,7 +59,7 @@ class HelpToSaveController @Inject() (
     val additionalParams = "apiCorrelationId" -> request.headers.get(appConfig.correlationIdHeaderName).getOrElse("-")
 
     request.body.asJson.map(
-      _.validate[CreateAccountRequest](CreateAccountRequest.createAccountRequestReads(Some(createAccountVersion)))
+      _.validate[CreateAccountRequest](using CreateAccountRequest.createAccountRequestReads(Some(createAccountVersion)))
     ) match {
       case Some(JsSuccess(createAccountRequest, _)) =>
         val payload = createAccountRequest.payload
@@ -77,6 +77,9 @@ class HelpToSaveController @Inject() (
               _ =>
                 createAccount(createAccountRequest, additionalParams).flatMap { case Right(result) =>
                   result
+                case Left(_) =>
+                  logger.warn("Error creating account")
+                  InternalServerError
                 }
             )
             .flatMap(identity)
@@ -105,7 +108,7 @@ class HelpToSaveController @Inject() (
   }
 
   def updateEmail(): Action[AnyContent] = ggOrPrivilegedAuthorised { implicit request =>
-    request.body.asJson.map(_.validate[NSIPayload](NSIPayload.nsiPayloadReads(None))) match {
+    request.body.asJson.map(_.validate[NSIPayload](using NSIPayload.nsiPayloadReads(None))) match {
       case Some(JsSuccess(userInfo, _)) =>
         proxyConnector.updateEmail(userInfo).flatMap {
           case Right(response: HttpResponse)                      =>
@@ -137,7 +140,7 @@ class HelpToSaveController @Inject() (
           case Right(result) =>
             Ok(Json.toJson(result))
 
-          case Left(e) =>
+          case Left(_) =>
             logger.warn("Could not perform bank details validation")
             InternalServerError
         }

@@ -22,7 +22,6 @@ import cats.instances.try_.*
 import cats.syntax.either.*
 import cats.syntax.traverse.*
 import com.google.inject.{ImplementedBy, Inject, Singleton}
-import org.mongodb.scala.{ObservableFuture, SingleObservableFuture}
 import org.mongodb.scala.model.Filters.regex
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions, Updates}
@@ -31,9 +30,9 @@ import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.EmailData
 import uk.gov.hmrc.helptosave.util.TryOps.*
 import uk.gov.hmrc.helptosave.util.{Crypto, NINO}
+import uk.gov.hmrc.mdc.Mdc.preservingMdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try

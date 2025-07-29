@@ -46,7 +46,7 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
       controller.getPayePersonalDetails(nino)(FakeRequest())
 
     def mockPayeDetailsConnector(nino: NINO)(result: Either[String, PayePersonalDetails]): Unit =
-      when(helpToSaveService.getPersonalDetails(eqTo(nino))(any(), any()))
+      when(helpToSaveService.getPersonalDetails(eqTo(nino))(using any(), any()))
         .thenReturn(EitherT.fromEither[Future](result))
 
     val controller = new PayePersonalDetailsController(helpToSaveService, mockAuthConnector, testCC)
@@ -60,7 +60,7 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
         mockSuccessfulAuthorisation()
         mockPayeDetailsConnector(nino)(Right(ppDetails))
 
-        val result = doPayeDetailsRequest(controller)
+        val result: Future[PlayResult] = doPayeDetailsRequest(controller)
         status(result)        shouldBe 200
         contentAsJson(result) shouldBe Json.toJson(ppDetails)
       }
@@ -69,7 +69,7 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
         mockSuccessfulAuthorisation()
         mockPayeDetailsConnector(nino)(Left(""))
 
-        val result = doPayeDetailsRequest(controller)
+        val result: Future[PlayResult] = doPayeDetailsRequest(controller)
         status(result) shouldBe 500
       }
 
@@ -79,7 +79,7 @@ class PayePersonalDetailsControllerSpec extends StrideAuthSupport with DefaultAw
           Left("Could not parse JSON response from paye-personal-details, received 200 (OK)")
         )
 
-        val result = doPayeDetailsRequest(controller)
+        val result: Future[PlayResult] = doPayeDetailsRequest(controller)
         status(result) shouldBe 500
       }
     }

@@ -94,7 +94,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
     )
 
     http
-      .get(eligibilityCheckUrl(nino))(hc.copy(authorization = None))
+      .get(eligibilityCheckUrl(nino))(using hc.copy(authorization = None))
       .transform(
         _.withQueryStringParameters(eligibilityCheckQueryParameters(ucResponse)*)
           .addHttpHeaders(appConfig.desHeaders*)
@@ -111,7 +111,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
         s" setFlagUrl - ${setFlagUrl(nino)}"
     )
     http
-      .put(setFlagUrl(nino))(hc.copy(authorization = None))
+      .put(setFlagUrl(nino))(using hc.copy(authorization = None))
       .transform(_.addHttpHeaders(appConfig.desHeaders*))
       .withBody(body)
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
@@ -126,7 +126,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
         s" payePersonalDetailsUrl - ${payePersonalDetailsUrl(nino)}"
     )
     http
-      .get(payePersonalDetailsUrl(nino))(hc.copy(authorization = None))
+      .get(payePersonalDetailsUrl(nino))(using hc.copy(authorization = None))
       .transform(_.addHttpHeaders(appConfig.desHeaders :+ originatorIdHeader*))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
@@ -141,7 +141,7 @@ class DESConnectorImpl @Inject() (http: HttpClientV2, servicesConfig: ServicesCo
         s" header - ${appConfig.desHeaders :+ originatorIdHeader}"
     )
     http
-      .get(itmpThresholdURL)(hc.copy(authorization = None))
+      .get(itmpThresholdURL)(using hc.copy(authorization = None))
       .transform(_.addHttpHeaders(appConfig.desHeaders*))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }

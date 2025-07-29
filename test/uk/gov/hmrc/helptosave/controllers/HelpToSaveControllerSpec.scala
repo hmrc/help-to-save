@@ -71,29 +71,29 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
     val accountNumber: Option[NINO] = Some("AC01")
 
     def mockSendAuditEvent(event: HTSEvent, nino: String): Unit =
-      doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(any())
+      doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(using any())
 
     def mockCreateAccount(expectedPayload: NSIPayload)(
       response: HttpResponse
     ): OngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
-      when(proxyConnector.createAccount(eqTo(expectedPayload))(any(), any())).thenReturn(toFuture(Right(response)))
+      when(proxyConnector.createAccount(eqTo(expectedPayload))(using any(), any())).thenReturn(toFuture(Right(response)))
 
     def mockUpdateEmail(expectedPayload: NSIPayload)(
       response: HttpResponse
     ): OngoingStubbing[Future[Either[UpstreamErrorResponse, HttpResponse]]] =
-      when(proxyConnector.updateEmail(eqTo(expectedPayload))(any(), any())).thenReturn(toFuture(Right(response)))
+      when(proxyConnector.updateEmail(eqTo(expectedPayload))(using any(), any())).thenReturn(toFuture(Right(response)))
 
     def mockUserCapServiceUpdate(result: Either[String, Unit]): OngoingStubbing[Future[Unit]] =
-      when(userCapService.update()(any()))
+      when(userCapService.update()(using any()))
         .thenReturn(result.fold[Future[Unit]](e => Future.failed(new Exception(e)), _ => Future.successful(())))
 
     def mockEmailDelete(nino: NINO)(result: Either[String, Unit]): Unit =
-      when(emailStore.delete(eqTo(nino))(any())).thenReturn(EitherT.fromEither[Future](result))
+      when(emailStore.delete(eqTo(nino))(using any())).thenReturn(EitherT.fromEither[Future](result))
 
     def mockBarsService(
       barsRequest: BankDetailsValidationRequest
     )(result: Either[String, BankDetailsValidationResult]): Unit =
-      when(barsService.validate(eqTo(barsRequest))(any(), any(), any()))
+      when(barsService.validate(eqTo(barsRequest))(using any(), any(), any()))
         .thenReturn(Future.successful(result))
   }
 
@@ -113,7 +113,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
-        status(result)(10.seconds) shouldBe CREATED
+        status(result)(using 10.seconds) shouldBe CREATED
 
         // allow time for asynchronous calls to be made
         Thread.sleep(1000L)
@@ -132,7 +132,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = true))
         )
 
-        status(result)(10.seconds) shouldBe CREATED
+        status(result)(using 10.seconds) shouldBe CREATED
 
         // allow time for asynchronous calls to be made
         Thread.sleep(1000L)
@@ -148,7 +148,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
-        status(result)(10.seconds) shouldBe CREATED
+        status(result)(using 10.seconds) shouldBe CREATED
       }
 
       "create account but dont call ITMP to set the flag if the source is Stride-Manual" in new TestApparatus {
@@ -161,7 +161,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val body: JsObject         = validCreateAccountRequestPayload().as[JsObject] ++ Json.obj("source" -> "Stride-Manual")
         val result: Future[Result] = controller.createAccount()(FakeRequest().withJsonBody(body))
 
-        status(result)(10.seconds) shouldBe CREATED
+        status(result)(using 10.seconds) shouldBe CREATED
       }
 
       "create account if the request is valid NSIUserInfo json even if updating the user counts fails" in new TestApparatus {
@@ -176,7 +176,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
-        status(result)(10.seconds) shouldBe CREATED
+        status(result)(using 10.seconds) shouldBe CREATED
 
         // allow time for asynchronous calls to be made
         Thread.sleep(1000L)
@@ -199,7 +199,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
             FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = false, "00"))
           )
 
-        status(result)(10.seconds) shouldBe CREATED
+        status(result)(using 10.seconds) shouldBe CREATED
 
       }
 
@@ -212,7 +212,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
             FakeRequest().withJsonBody(validCreateAccountRequestPayload(detailsManuallyEntered = false, "00"))
           )
 
-        status(result)(10.seconds) shouldBe INTERNAL_SERVER_ERROR
+        status(result)(using 10.seconds) shouldBe INTERNAL_SERVER_ERROR
 
       }
 
@@ -242,7 +242,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
-        status(result)(10.seconds) shouldBe CONFLICT
+        status(result)(using 10.seconds) shouldBe CONFLICT
         // allow time for asynchronous calls to mocks to be made
         Thread.sleep(1000L)
       }
@@ -257,7 +257,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
         val result: Future[Result] =
           controller.createAccount()(FakeRequest().withJsonBody(validCreateAccountRequestPayload()))
 
-        status(result)(10.seconds) shouldBe CONFLICT
+        status(result)(using 10.seconds) shouldBe CONFLICT
         // allow time for asynchronous calls to mocks to be made
         Thread.sleep(1000L)
       }
@@ -273,7 +273,7 @@ class HelpToSaveControllerSpec extends AuthSupport with TestEnrolmentBehaviour {
           FakeRequest().withJsonBody(validUserInfoPayload.as[JsObject] - "version" - "systemId")
         )
 
-        status(result)(10.seconds) shouldBe OK
+        status(result)(using 10.seconds) shouldBe OK
       }
 
       "return bad request response if the request body is not a valid NSIUserInfo json" in new TestApparatus {

@@ -89,7 +89,7 @@ class HelpToSaveServiceSpec
       mockPagerDuty,
       thresholdValueByConfigProvider
     )(
-      transformer,
+      using transformer,
       new AppConfig(
         fakeApplication.injector.instanceOf[Configuration],
         fakeApplication.injector.instanceOf[Environment],
@@ -98,23 +98,23 @@ class HelpToSaveServiceSpec
     )
 
   private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: HttpResponse) =
-    when(mockDESConnector.isEligible(eqTo(nino), eqTo(uCResponse))(any(), any())).thenReturn(toFuture(Right(response)))
+    when(mockDESConnector.isEligible(eqTo(nino), eqTo(uCResponse))(using any(), any())).thenReturn(toFuture(Right(response)))
 
   private def mockUCClaimantCheck(nino: String, threshold: Double)(result: Either[String, UCResponse]) =
-    when(mockProxyConnector.ucClaimantCheck(eqTo(nino), any(), eqTo(threshold))(any(), any()))
+    when(mockProxyConnector.ucClaimantCheck(eqTo(nino), any(), eqTo(threshold))(using any(), any()))
       .thenReturn(EitherT.fromEither[Future](result))
 
   private def mockSendAuditEvent(event: HTSEvent, nino: String): Unit =
-    doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(any())
+    doNothing().when(mockAuditor).sendEvent(eqTo(event), eqTo(nino))(using any())
 
   private def mockSetFlag(nino: String)(response: HttpResponse) =
-    when(mockDESConnector.setFlag(eqTo(nino))(any(), any())).thenReturn(toFuture(Right(response)))
+    when(mockDESConnector.setFlag(eqTo(nino))(using any(), any())).thenReturn(toFuture(Right(response)))
 
   private def mockPayeGet(nino: String)(response: HttpResponse) =
-    when(mockDESConnector.getPersonalDetails(eqTo(nino))(any(), any())).thenReturn(toFuture(Right(response)))
+    when(mockDESConnector.getPersonalDetails(eqTo(nino))(using any(), any())).thenReturn(toFuture(Right(response)))
 
   private def mockIFPayeGet(nino: String)(response: HttpResponse) =
-    when(mockIFConnector.getPersonalDetails(eqTo(nino))(any())).thenReturn(toFuture(Right(response)))
+    when(mockIFConnector.getPersonalDetails(eqTo(nino))(using any())).thenReturn(toFuture(Right(response)))
 
   implicit val resultArb: Arbitrary[EligibilityCheckResult] = Arbitrary(for
     result     <- Gen.alphaStr
@@ -299,7 +299,7 @@ class HelpToSaveServiceSpec
           mockPagerDuty,
           thresholdValueByConfigProvider
         )(
-          transformer,
+          using transformer,
           new AppConfig(
             fakeApplication.injector.instanceOf[Configuration],
             fakeApplication.injector.instanceOf[Environment],
@@ -315,14 +315,14 @@ class HelpToSaveServiceSpec
       val nino           = "AA123456A"
 
       "return a Right when nino is successfully found in DES" in {
-        when(mockDESConnector.getPersonalDetails(eqTo(nino))(any(), any()))
+        when(mockDESConnector.getPersonalDetails(eqTo(nino))(using any(), any()))
           .thenReturn(toFuture(Right(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders))))
 
         await(serviceWithDES.getPersonalDetails(nino).value) shouldBe Right(ppDetails)
       }
 
       "handle 404 response when a nino is not found in DES" in {
-        when(mockDESConnector.getPersonalDetails(eqTo(nino))(any(), any()))
+        when(mockDESConnector.getPersonalDetails(eqTo(nino))(using any(), any()))
           .thenReturn(toFuture(Left(UpstreamErrorResponse("", 404))))
 
         mockPagerDutyAlert("[DES] Received unexpected http status in response to paye-personal-details")
@@ -332,7 +332,7 @@ class HelpToSaveServiceSpec
       }
 
       "handle errors when parsing invalid json" in {
-        when(mockDESConnector.getPersonalDetails(eqTo(nino))(any(), any()))
+        when(mockDESConnector.getPersonalDetails(eqTo(nino))(using any(), any()))
           .thenReturn(toFuture(Right(HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders))))
 
         // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
@@ -343,7 +343,7 @@ class HelpToSaveServiceSpec
       }
 
       "handle errors when parsing json with personal details containing no Postcode " in {
-        when(mockDESConnector.getPersonalDetails(eqTo(nino))(any(), any()))
+        when(mockDESConnector.getPersonalDetails(eqTo(nino))(using any(), any()))
           .thenReturn(toFuture(Right(HttpResponse(200, Json.parse(payeDetailsNoPostCode(nino)), returnHeaders))))
 
         mockPagerDutyAlert("[DES] Could not parse JSON in the paye-personal-details response")
@@ -354,7 +354,7 @@ class HelpToSaveServiceSpec
 
       "return with an error" when {
         "the call fails" in {
-          when(mockDESConnector.getPersonalDetails(eqTo(nino))(any(), any()))
+          when(mockDESConnector.getPersonalDetails(eqTo(nino))(using any(), any()))
             .thenReturn(toFuture(Left(UpstreamErrorResponse("", 500))))
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("[DES] Failed to make call to paye-personal-details")
@@ -389,7 +389,7 @@ class HelpToSaveServiceSpec
           mockPagerDuty,
           thresholdValueByConfigProvider
         )(
-          transformer,
+          using transformer,
           new AppConfig(
             fakeApplication.injector.instanceOf[Configuration],
             fakeApplication.injector.instanceOf[Environment],
@@ -405,7 +405,7 @@ class HelpToSaveServiceSpec
 
       val nino = "AA123456A"
       "return a Right when nino is successfully found in IF" in {
-        when(mockIFConnector.getPersonalDetails(eqTo(nino))(any()))
+        when(mockIFConnector.getPersonalDetails(eqTo(nino))(using any()))
           .thenReturn(toFuture(Right(HttpResponse(200, Json.parse(payeDetails(nino)), returnHeaders))))
 
         await(serviceWithIf.getPersonalDetails(nino).value) shouldBe Right(ppDetails)
@@ -438,7 +438,7 @@ class HelpToSaveServiceSpec
 
       "return with an error" when {
         "the call fails" in {
-          when(mockIFConnector.getPersonalDetails(eqTo(nino))(any()))
+          when(mockIFConnector.getPersonalDetails(eqTo(nino))(using any()))
             .thenReturn(toFuture(Left(UpstreamErrorResponse("", 500))))
 
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config

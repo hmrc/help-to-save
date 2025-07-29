@@ -50,11 +50,11 @@ class EnrolmentStoreControllerSpec
   def mockGetAccountFromNSI(nino: String, systemId: String, correlationId: String, path: String)(
     result: Either[String, Option[Account]]
   ): Unit =
-    when(proxyConnector.getAccount(eqTo(nino), eqTo(systemId), eqTo(correlationId), eqTo(path))(any(), any()))
+    when(proxyConnector.getAccount(eqTo(nino), eqTo(systemId), eqTo(correlationId), eqTo(path))(using any(), any()))
       .thenReturn(EitherT.fromEither[Future](result))
 
   def mockSetAccountNumber(nino: String, accountNumber: String)(result: Either[String, Unit]): Unit =
-    when(enrolmentStore.updateWithAccountNumber(eqTo(nino), eqTo(accountNumber))(any()))
+    when(enrolmentStore.updateWithAccountNumber(eqTo(nino), eqTo(accountNumber))(using any()))
       .thenReturn(EitherT.fromEither[Future](result))
 
   "The EnrolmentStoreController" when {

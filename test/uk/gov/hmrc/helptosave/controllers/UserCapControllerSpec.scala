@@ -41,7 +41,7 @@ class UserCapControllerSpec extends AuthSupport {
 
     "checking if account creation is allowed " should {
       "return successful result" in {
-        when(userCapService.isAccountCreateAllowed()(any()))
+        when(userCapService.isAccountCreateAllowed()(using any()))
           .thenReturn(toFuture(UserCapResponse()))
 
         mockAuth(AuthWithCL200, Retrievals.nino)(Right(mockedNinoRetrieval))

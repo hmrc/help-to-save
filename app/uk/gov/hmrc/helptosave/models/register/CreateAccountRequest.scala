@@ -32,7 +32,7 @@ object CreateAccountRequest {
   def createAccountRequestReads(version: Option[String]): Reads[CreateAccountRequest] = Reads[CreateAccountRequest] {
     jsValue =>
       for
-        nsiPayload             <- (jsValue \ "payload").validate[NSIPayload](NSIPayload.nsiPayloadReads(version))
+        nsiPayload             <- (jsValue \ "payload").validate[NSIPayload](using NSIPayload.nsiPayloadReads(version))
         reason                 <- (jsValue \ "eligibilityReason").validateOpt[Int]
         source                 <- (jsValue \ "source").validate[String]
         detailsManuallyEntered <- (jsValue \ "detailsManuallyEntered").validateOpt[Boolean]

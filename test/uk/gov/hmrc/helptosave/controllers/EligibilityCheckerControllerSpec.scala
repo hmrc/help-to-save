@@ -44,7 +44,7 @@ class EligibilityCheckerControllerSpec extends StrideAuthSupport with ScalaCheck
     def mockEligibilityCheckerService(nino: NINO, expectedPath: String)(
       result: Either[String, EligibilityCheckResponse]
     ): Unit =
-      when(eligibilityService.getEligibility(eqTo(nino), eqTo(expectedPath))(any(), any()))
+      when(eligibilityService.getEligibility(eqTo(nino), eqTo(expectedPath))(using any(), any()))
         .thenReturn(EitherT.fromEither[Future](result))
 
     val controller = new EligibilityCheckController(eligibilityService, mockAuthConnector, testCC)

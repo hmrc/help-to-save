@@ -270,7 +270,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         updateDeleteFlag(ninosToDelete, revertSoftDelete = true, store) shouldBe Right(ninosToDelete)
 
         // only above executed doc id should be marked as eligible and other one still with soft-delete
-        val updatedDocs         = await(collection.find(Filters.eq("nino", nino)).toFuture())(duration)
+        val updatedDocs         = await(collection.find(Filters.eq("nino", nino)).toFuture())(using duration)
         val (reverted, deleted) = updatedDocs.partition(_._id == toRevert)
 
         reverted.head.deleteFlag shouldBe Some(false)
@@ -282,7 +282,7 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
 
   private def findDocumentId(nino: NINO, store: MongoEnrolmentStore) = {
     val collection = CollectionFactory.collection(store.mongo.database, "enrolments", Json.format[EnrolmentDocId])
-    val docIds     = await(collection.find(Filters.eq("nino", nino)).map(_._id).toFuture())(duration)
+    val docIds     = await(collection.find(Filters.eq("nino", nino)).map(_._id).toFuture())(using duration)
     (collection, docIds)
   }
 

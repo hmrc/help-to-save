@@ -18,15 +18,14 @@ package uk.gov.hmrc.helptosave.repo
 
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.ReturnDocument
-import org.mongodb.scala.SingleObservableFuture
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexModel, IndexOptions, Updates}
 import uk.gov.hmrc.helptosave.models.UserCap
 import uk.gov.hmrc.helptosave.models.UserCap.dateFormat
+import uk.gov.hmrc.mdc.Mdc.preservingMdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
 
 import scala.concurrent.{ExecutionContext, Future}
 
