@@ -76,7 +76,7 @@ class UCThresholdOrchestrator @Inject() (
 
   override def getValue: Future[Option[Double]] =
     thresholdManager
-      .ask(GetThresholdValue)(appConfig.thresholdAskTimeout)
+      .ask(GetThresholdValue)(using appConfig.thresholdAskTimeout)
       .mapTo[GetThresholdValueResponse]
       .map(r => r.result)
 

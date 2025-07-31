@@ -54,7 +54,7 @@ class EnrolmentStoreController @Inject() (
     handle(setITMPFlagAndUpdateMongo(nino), "set ITMP flag", nino)
   }
 
-  def getAccountNumber(): Action[AnyContent] = ggAuthorisedWithNino { implicit request => implicit nino =>
+  def getAccountNumber: Action[AnyContent] = ggAuthorisedWithNino { implicit request =>implicit nino =>
     handleAccountNumber(enrolmentStore.getAccountNumber(nino), nino, request.uri)
   }
 
@@ -83,23 +83,23 @@ class EnrolmentStoreController @Inject() (
   private def handleAccountNumber(f: EitherT[Future, String, AccountNumber], nino: NINO, uri: String)(implicit
     hc: HeaderCarrier
   ): Future[Result] =
-    f.leftFlatMap { case e =>
+    f.leftFlatMap { e =>
       logger.info(s"Error returned from mongo when trying to obtain account number, error: $e")
       EitherT.pure[Future, String](AccountNumber(None))
     }.semiflatMap { accountNumber =>
       accountNumber.accountNumber match {
-        case Some(accountNumStr) => Future.successful(Ok(Json.toJson(accountNumber)))
+        case Some(_) => Future.successful(Ok(Json.toJson(accountNumber)))
         case None                => processGetAccountNumberFromNSI(nino, uri)
       }
     }.fold(
-      e => InternalServerError,
+      _ => InternalServerError,
       identity
     )
 
   private def processGetAccountNumberFromNSI(nino: NINO, uri: String)(implicit hc: HeaderCarrier): Future[Result] =
     getAccountNumberFromNSI(nino, uri).fold(
-      { e =>
-        logger.info("Call to getAccountNumberFromNSI returned error response")
+      {_ =>
+        logger.info(s"Call to getAccountNumberFromNSI returned error response")
         InternalServerError
       },
       accountNumber => Ok(Json.toJson(accountNumber))
@@ -127,7 +127,7 @@ class EnrolmentStoreController @Inject() (
 object EnrolmentStoreController {
 
   implicit val unitWrites: Writes[Unit] = new Writes[Unit] {
-    override def writes(o: Unit) = JsNull
+    override def writes(o: Unit): JsValue = JsNull
   }
 
 }

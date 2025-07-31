@@ -41,11 +41,11 @@ trait AuthSupport extends TestSupport {
   def mockAuth[A](predicate: Predicate, retrieval: Retrieval[A])(
     result: Either[Exception, A]
   ): OngoingStubbing[Future[A]] =
-    when(mockAuthConnector.authorise(eqTo(predicate), eqTo(retrieval))(any(), any()))
+    when(mockAuthConnector.authorise(eqTo(predicate), eqTo(retrieval))(using any(), any()))
       .thenAnswer(_ => result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
   def mockAuth[A](retrieval: Retrieval[A])(result: Either[Exception, A]): OngoingStubbing[Future[A]] =
-    when(mockAuthConnector.authorise(any(), eqTo(retrieval))(any(), any()))
+    when(mockAuthConnector.authorise(any(), eqTo(retrieval))(using any(), any()))
       .thenAnswer(_ => result.fold(e => Future.failed[A](e), r => Future.successful(r)))
 
   def testWithGGAndPrivilegedAccess(f: (() => Unit) => Unit): Unit = {

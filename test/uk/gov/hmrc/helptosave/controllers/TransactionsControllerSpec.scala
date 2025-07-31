@@ -59,7 +59,7 @@ class TransactionsControllerSpec extends AuthSupport {
   val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", s"/nsi-account?$queryString")
 
   def mockGetTransactions(nino: String, systemId: String)(response: Either[String, Option[Transactions]]): Unit =
-    when(mockProxyConnector.getTransactions(eqTo(nino), eqTo(systemId), any())(any(), any()))
+    when(mockProxyConnector.getTransactions(eqTo(nino), eqTo(systemId), any())(using any(), any()))
       .thenReturn(EitherT.fromEither(response))
 
   "The TransactionsController" when {

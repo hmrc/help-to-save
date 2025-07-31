@@ -55,7 +55,7 @@ class StrideAuthSpec extends TestSupport {
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
     result: Either[Throwable, A]
   ): OngoingStubbing[Future[A]] =
-    when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(any(), any()))
+    when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(using any(), any()))
       .thenReturn(result.fold(Future.failed, Future.successful))
 
   "StrideAuth" must {

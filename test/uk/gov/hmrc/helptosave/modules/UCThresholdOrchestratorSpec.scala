@@ -60,7 +60,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
   "The UCThresholdOrchestrator" should {
     "start up an instance of the UCThresholdManager correctly" in {
       val threshold = 10.2
-      when(connector.getThreshold()(any(), any()))
+      when(connector.getThreshold()(using any(), any()))
         .thenReturn(
           Future.successful(
             Right(HttpResponse(200, Json.parse(s"""{ "thresholdAmount" : $threshold }"""), Map[String, Seq[String]]()))
@@ -78,7 +78,7 @@ class UCThresholdOrchestratorSpec extends ActorTestSupport("UCThresholdOrchestra
       Thread.sleep(1000L)
     }
     "instance of the UCThresholdManager doesn't start" in {
-      when(connector.getThreshold()(any(), any()))
+      when(connector.getThreshold()(using any(), any()))
         .thenReturn(Future.successful(Left(UpstreamErrorResponse("error occurred", 500))))
 
       val response = await(connector.getThreshold())

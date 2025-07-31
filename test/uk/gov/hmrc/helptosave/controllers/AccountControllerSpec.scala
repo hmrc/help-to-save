@@ -65,7 +65,7 @@ class AccountControllerSpec extends AuthSupport {
   val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", path)
 
   def mockGetAccount(nino: String, systemId: String, path: String)(response: Either[String, Option[Account]]): Any =
-    when(mockProxyConnector.getAccount(eqTo(nino), eqTo(systemId), any(), eqTo(path))(any(), any()))
+    when(mockProxyConnector.getAccount(eqTo(nino), eqTo(systemId), any(), eqTo(path))(using any(), any()))
       .thenReturn(EitherT.fromEither(response))
 
   "The AccountController" when {

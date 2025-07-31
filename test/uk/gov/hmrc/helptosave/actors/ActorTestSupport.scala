@@ -50,7 +50,7 @@ class ActorTestSupport(name: String)
     * messages.
     */
   def awaitActorReady(ref: ActorRef): ActorRef = {
-    val msg = ref.ask(Identify(""))(4.seconds).mapTo[ActorIdentity]
+    val msg = ref.ask(Identify(""))(using 4.seconds).mapTo[ActorIdentity]
     Await.result(msg, 3.seconds).ref.contains(ref) shouldBe true
     Thread.sleep(1000L)
     ref

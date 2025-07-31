@@ -37,7 +37,7 @@ trait StrideAuthSupport extends AuthSupport {
   def mockAuthorised[A](expectedPredicate: Predicate, expectedRetrieval: Retrieval[A])(
     result: Either[Throwable, A]
   ): OngoingStubbing[Future[A]] =
-    when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(any(), any()))
+    when(mockAuthConnector.authorise(eqTo(expectedPredicate), eqTo(expectedRetrieval))(using any(), any()))
       .thenAnswer(_ => result.fold(Future.failed, Future.successful))
 
   def mockSuccessfulAuthorisation(): OngoingStubbing[Future[Enrolments]] =

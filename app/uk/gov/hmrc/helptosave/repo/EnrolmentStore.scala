@@ -19,23 +19,20 @@ package uk.gov.hmrc.helptosave.repo
 import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.ReturnDocument
-import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.model.*
+import org.mongodb.scala.model.Filters.*
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.helptosave.models.account.AccountNumber
-import uk.gov.hmrc.helptosave.models.enrolment.{Enrolled, NotEnrolled, Status}
-import uk.gov.hmrc.helptosave.models.enrolment.EnrolmentData
+import uk.gov.hmrc.helptosave.models.enrolment.{Enrolled, EnrolmentData, NotEnrolled, Status}
 import uk.gov.hmrc.helptosave.util.NINO
 import uk.gov.hmrc.helptosave.util.Time.nanosToPrettyString
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mdc.Mdc.preservingMdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.play.http.logging.Mdc.preservingMdc
-import org.mongodb.scala.ObservableFuture
-import org.mongodb.scala.SingleObservableFuture
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
