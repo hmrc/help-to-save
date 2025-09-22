@@ -24,7 +24,6 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
 import play.api.{Application, Configuration, Play}
-import uk.gov.hmrc.domain.Generator
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl, UnitSpec}
@@ -58,6 +57,7 @@ trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with
             """.stripMargin)
         ).withFallback(extraConfig)
       )
+      .disable[uk.gov.hmrc.play.bootstrap.BuiltinModule]
       .build()
 
   lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
