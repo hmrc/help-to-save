@@ -35,7 +35,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[MongoEmailStore])
@@ -87,56 +87,72 @@ class MongoEmailStore @Inject() (val mongo: MongoComponent, crypto: Crypto, metr
     EitherT[Future, String, Option[String]] {
       preservingMdc {
         val timerContext = metrics.emailStoreGetTimer.time()
-
-        collection
-          .find(regex("nino", getRegex(nino)))
-          .toFuture()
-          .map { res =>
+        Try{
+          collection
+            .find(regex("nino", getRegex(nino)))
+            .toFuture()
+        } match {
+          case Success(value) => value.map { res =>
             timerContext.stop()
+              val decryptedEmail = res.headOption
+                .map(data => crypto.decrypt(data.email))
+                .traverse[Try, String](identity)
 
-            val decryptedEmail = res.headOption
-              .map(data => crypto.decrypt(data.email))
-              .traverse[Try, String](identity)
-
-            decryptedEmail.toEither().leftMap { t =>
-              logger.warn(s"Could not decrypt email: $t, $nino")
-              s"Could not decrypt email: ${t.getMessage}"
+              decryptedEmail.toEither().leftMap { t =>
+                logger.warn(s"Could not decrypt email: $t, $nino")
+                s"Could not decrypt email: ${t.getMessage}"
+              }
             }
-          }
-          .recover { case e =>
-            timerContext.stop()
-            metrics.emailStoreGetErrorCounter.inc()
-            Left(s"Could not read from email store: ${e.getMessage}")
-          }
+            .recover { case e =>
+              timerContext.stop()
+              metrics.emailStoreGetErrorCounter.inc()
+              Left(s"Could not read from email store: ${e.getMessage}")
+            }
+          case Failure(e) =>
+            Future.successful(Left(s"Could not read from email store: ${e.getMessage}"))
+        }
       }
     }
 
   override def delete(nino: NINO)(implicit ec: ExecutionContext): EitherT[Future, String, Unit] =
     EitherT[Future, String, Unit] {
       preservingMdc {
-        collection
-          .findOneAndDelete(regex("nino", getRegex(nino)))
-          .toFuture()
-          .map[Either[String, Unit]] { _ =>
-            Right(())
-          }
-          .recover { case e =>
-            Left(s"Could not delete email: ${e.getMessage}")
-          }
+        Try{
+          collection
+            .findOneAndDelete(regex("nino", getRegex(nino)))
+            .toFuture()
+
+        }match {
+          case Success(value) => value.map[Either[String, Unit]] { _ =>
+              Right(())
+            }
+            .recover { case e =>
+              Left(s"Could not delete email: ${e.getMessage}")
+            }
+          case Failure(e) =>
+            Future.successful(Left(s"Could not delete email: ${e.getMessage}"))
+        }
+
       }
     }
 
   private[repo] def doUpdate(encryptedEmail: String, nino: NINO)(implicit ec: ExecutionContext): Future[Boolean] =
     preservingMdc {
-      collection
-        .updateOne(
-          filter = regex("nino", getRegex(nino)),
-          update = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
-          options = UpdateOptions().upsert(true)
-        )
-        .toFutureOption()
-        .map { a =>
+      Try{
+        collection
+          .updateOne(
+            filter = regex("nino", getRegex(nino)),
+            update = Updates.combine(Updates.set("nino", nino), Updates.set("email", encryptedEmail)),
+            options = UpdateOptions().upsert(true)
+          )
+          .toFutureOption()
+      } match {
+        case Success(value) => value.map { a =>
           a.exists(_.wasAcknowledged())
         }
+        case Failure(exception) =>
+          Future.failed(exception)
+      }
+
     }
 }

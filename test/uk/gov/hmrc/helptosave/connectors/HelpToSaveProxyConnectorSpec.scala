@@ -54,7 +54,7 @@ class HelpToSaveProxyConnectorSpec
       "microservice.services.help-to-save-proxy.port" -> wireMockPort
     )
 
-  val mockHttp: HttpClientV2  = fakeApplication.injector.instanceOf[HttpClientV2]
+  val mockHttp: HttpClientV2  = injector.instanceOf[HttpClientV2]
   override val proxyConnector =
     new HelpToSaveProxyConnectorImpl(mockHttp, mockMetrics, mockPagerDuty, mockAuditor, servicesConfig)
 

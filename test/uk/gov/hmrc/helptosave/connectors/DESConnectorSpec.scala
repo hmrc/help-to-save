@@ -53,7 +53,7 @@ class DESConnectorSpec
       "microservice.services.paye-personal-details.port"  -> wireMockPort
     )
 
-  lazy val connector: DESConnector            = fakeApplication.injector.instanceOf[DESConnector]
+  lazy val connector: DESConnector            = injector.instanceOf[DESConnector]
   val originatorIdHeader: Map[String, String] = Map("Originator-Id" -> originatorIdHeaderValue)
 
   "the isEligible method" when {

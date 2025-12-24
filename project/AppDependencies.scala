@@ -4,19 +4,20 @@ import sbt.*
 object AppDependencies {
   val hmrc                    = "uk.gov.hmrc"
   val playVersion             = "play-30"
-  val mongoVersion            = "2.7.0"
-  val bootstrapBackendVersion = "9.18.0"
+  val mongoVersion            = "2.11.0"
+  val bootstrapBackendVersion = "10.5.0"
 
   val compile: Seq[ModuleID] = Seq(
     ws,
     hmrc            %% s"bootstrap-backend-$playVersion" % bootstrapBackendVersion,
-    hmrc            %% s"domain-$playVersion"            % "12.1.0",
+    hmrc            %% s"domain-$playVersion"            % "13.0.0",
     s"$hmrc.mongo"  %% s"hmrc-mongo-$playVersion"        % mongoVersion,
     "org.typelevel" %% "cats-core"                       % "2.13.0"
   )
 
   def test(scope: String = "test, it"): Seq[ModuleID] = Seq(
     hmrc                    %% s"bootstrap-test-$playVersion"  % bootstrapBackendVersion % scope,
+    hmrc                    %% s"domain-test-$playVersion"     % "13.0.0"                % scope,
     s"$hmrc.mongo"          %% s"hmrc-mongo-test-$playVersion" % mongoVersion            % scope,
     "org.scalatestplus"     %% "scalacheck-1-17"               % "3.2.18.0"              % scope,
     "org.apache.pekko"      %% "pekko-testkit"                 % "1.0.3"                 % scope,

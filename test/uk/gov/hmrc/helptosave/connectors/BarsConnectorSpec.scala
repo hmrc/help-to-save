@@ -45,7 +45,7 @@ class BarsConnectorSpec
       "microservice.services.bank-account-reputation.port" -> wireMockPort
     )
 
-  val connector: BarsConnector = fakeApplication.injector.instanceOf[BarsConnector]
+  val connector: BarsConnector = injector.instanceOf[BarsConnector]
 
   "The BarsConnector" when {
 
