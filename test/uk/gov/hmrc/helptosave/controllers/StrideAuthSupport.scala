@@ -30,7 +30,7 @@ import org.mockito.stubbing.OngoingStubbing
 
 trait StrideAuthSupport extends AuthSupport {
   lazy val roles: Seq[String] =
-    fakeApplication.configuration
+    fakeApplication().configuration
       .get[Seq[String]]("stride.base64-encoded-roles")
       .map(s => new String(Base64.getDecoder.decode(s)))
 

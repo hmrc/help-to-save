@@ -37,7 +37,7 @@ import scala.concurrent.duration.*
 
 class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeAndAfterEach with OneInstancePerTest {
 
-  val repository: MongoEnrolmentStore = fakeApplication.injector.instanceOf[MongoEnrolmentStore]
+  val repository: MongoEnrolmentStore = injector.instanceOf[MongoEnrolmentStore]
   override def beforeEach(): Unit     = await(repository.collection.drop().toFuture())
 
   val ninoDifferentSuffix = "AE123456B"
@@ -142,6 +142,17 @@ class MongoEnrolmentStoreSpec extends TestSupport with MongoSupport with BeforeA
         await(repository.updateWithAccountNumber(nino, accountNumber).value) shouldBe Left(
           "Failed to write to enrolments store: state should be: open"
         )
+
+        await(repository.updateItmpFlag(nino, true).value) shouldBe Left(
+          "Failed to write to enrolments store: state should be: open"
+        )
+
+        intercept[IllegalStateException](await(repository.doUpdateItmpFlag(nino,false)))
+
+        await(repository.get(nino).value) shouldBe Left(
+          s"For NINO [$nino]: Could not read from enrolment store: state should be: open"
+        )
+
       }
     }
 

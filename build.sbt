@@ -34,7 +34,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(
     Test / testOptions += Tests.Argument(
       TestFrameworks.ScalaTest,
-      "-oNCHPQR",
+      "-o",
       "-u",
       "target/test-reports",
       "-h",

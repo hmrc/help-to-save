@@ -20,11 +20,13 @@ import com.codahale.metrics.{Counter, NoopMetricRegistry}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.inject.Injector
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
 import play.api.{Application, Configuration, Play}
-import uk.gov.hmrc.domain.Generator
+import uk.gov.hmrc.domain.NinoGenerator
 import uk.gov.hmrc.helptosave.config.AppConfig
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.util.{LogMessageTransformer, LogMessageTransformerImpl, UnitSpec}
@@ -34,7 +36,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with BeforeAndAfterEach {
+trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with BeforeAndAfterEach  with GuiceOneAppPerSuite {
   lazy val additionalConfig: Configuration = Configuration()
   val originatorIdHeaderValue              = "test-originator"
 
@@ -58,35 +60,37 @@ trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with
             """.stripMargin)
         ).withFallback(extraConfig)
       )
+      .disable[uk.gov.hmrc.play.bootstrap.BuiltinModule]
       .build()
 
-  lazy val fakeApplication: Application = buildFakeApplication(additionalConfig)
+  override implicit def fakeApplication(): Application = buildFakeApplication(additionalConfig)
+  lazy val injector: Injector = fakeApplication().injector
 
   override protected def beforeAll(): Unit = {
-    Play.start(fakeApplication)
+    Play.start(fakeApplication())
     super.beforeAll()
   }
 
   override protected def afterAll(): Unit = {
-    Play.stop(fakeApplication)
+    Play.stop(fakeApplication())
     super.afterAll()
   }
 
-  implicit lazy val ec: ExecutionContext = fakeApplication.injector.instanceOf[ExecutionContext]
+  implicit lazy val ec: ExecutionContext = injector.instanceOf[ExecutionContext]
 
-  implicit lazy val configuration: Configuration = fakeApplication.injector.instanceOf[Configuration]
+  implicit lazy val configuration: Configuration = injector.instanceOf[Configuration]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val testCC: ControllerComponents = fakeApplication.injector.instanceOf[ControllerComponents]
+  val testCC: ControllerComponents = injector.instanceOf[ControllerComponents]
 
-  val servicesConfig: ServicesConfig = fakeApplication.injector.instanceOf[ServicesConfig]
+  val servicesConfig: ServicesConfig = injector.instanceOf[ServicesConfig]
 
   val mockMetrics: Metrics = new Metrics(new NoopMetricRegistry()) {
     override def counter(name: String): Counter = new Counter()
   }
 
-  private val hmrcGenerator: Generator = new Generator()
+  private val hmrcGenerator: NinoGenerator = new NinoGenerator()
 
   val startDate: LocalDate = LocalDate.of(1800, 1, 1) // scalastyle:ignore magic.number
   val endDate: LocalDate   = LocalDate.of(2000, 1, 1) // scalastyle:ignore magic.number
@@ -95,7 +99,7 @@ trait TestSupport extends UnitSpec with MockitoSugar with BeforeAndAfterAll with
 
   implicit lazy val transformer: LogMessageTransformer = new LogMessageTransformerImpl(configuration)
 
-  implicit lazy val appConfig: AppConfig = fakeApplication.injector.instanceOf[AppConfig]
+  implicit lazy val appConfig: AppConfig = injector.instanceOf[AppConfig]
 
   val nsiAccountJson: JsObject = Json
     .parse("""

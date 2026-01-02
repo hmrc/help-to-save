@@ -14,12 +14,17 @@ object CodeCoverageSettings {
     "prod.*",
     "com.*",
     ".*config.*",
+    ".*modules.*",
     "uk.gov.hmrc.helptosave.audit.*",
     "uk.gov.hmrc.helptosave.metrics.*",
     "uk.gov.hmrc.helptosave.models.*",
+    "uk.gov.hmrc.helptosave.services.ApplicationStart.*",
     ".*EligibilityStatsProviderImpl",
     ".*HttpClient",
-    ".*JsErrorOps"
+    ".*JsErrorOps",
+    ".*Logging",
+    ".*JsLookupHelper",
+    ".*TryOps"
   )
 
   val settings: Seq[Setting[?]] = Seq(

@@ -20,7 +20,7 @@ import cats.data.EitherT
 import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.mongodb.client.model.ReturnDocument
 import org.mongodb.scala.model.*
-import org.mongodb.scala.model.Filters.*
+import org.mongodb.scala.model.Filters.{exists, *}
 import org.mongodb.scala.model.Indexes.ascending
 import play.api.Logging
 import uk.gov.hmrc.helptosave.metrics.Metrics
@@ -36,6 +36,7 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Try, Success}
 import scala.util.chaining.scalaUtilChainingOps
 
 @ImplementedBy(classOf[MongoEnrolmentStore])
@@ -87,8 +88,8 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
     deleteFlag: Option[Boolean]
   )(implicit ec: ExecutionContext): Future[Unit] =
     preservingMdc {
-      collection
-        .insertOne(
+      Try{
+        collection.insertOne(
           EnrolmentData(
             nino = nino,
             itmpHtSFlag = itmpFlag,
@@ -98,19 +99,28 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
             deleteFlag = deleteFlag
           )
         )
-        .toFuture()
-        .map(_ => ())
+          .toFuture()
+      } match {
+        case Success(value) => value.map(_ => ())
+        case Failure(e)     => Future.failed(e)
+      }
     }
 
   private[repo] def doUpdateItmpFlag(nino: NINO, itmpFlag: Boolean): Future[Option[EnrolmentData]] =
     preservingMdc {
-      collection
-        .findOneAndUpdate(
-          filter = regex("nino", getRegex(nino)),
-          update = Updates.set("itmpHtSFlag", itmpFlag),
-          options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
-        )
-        .toFutureOption()
+      Try{
+        collection
+          .findOneAndUpdate(
+            filter = regex("nino", getRegex(nino)),
+            update = Updates.set("itmpHtSFlag", itmpFlag),
+            options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
+          )
+          .toFutureOption()
+      } match {
+        case Success(value) => value
+        case Failure(e)     => Future.failed(e)
+      }
+
     }
 
   private[repo] def doUpdateDeleteFlag(enrolmentsToDelete: Seq[EnrolmentData], revertSoftDelete: Boolean = false)(
@@ -138,57 +148,71 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
 
     EitherT[Future, String, Unit] {
       preservingMdc {
-        collection
-          .bulkWrite(updateModels, BulkWriteOptions().ordered(false))
-          .toFuture()
-          .map { _ =>
-            Right(())
-          }
-          .recover { case e =>
-            Left(s"Failed to mark NINOs, ${enrolmentsToDelete.map(_.nino)}, as soft-delete : ${e.getMessage}")
-          }
+        Try{
+          collection
+            .bulkWrite(updateModels, BulkWriteOptions().ordered(false))
+            .toFuture()
+        } match {
+          case Success(value) => value .map { _ =>
+              Right(())
+            }
+            .recover { case e =>
+              Left(s"Failed to mark NINOs, ${enrolmentsToDelete.map(_.nino)}, as soft-delete : ${e.getMessage}")
+            }
+          case Failure(e)     => Future.successful(Left(s"Failed to mark NINOs, ${enrolmentsToDelete.map(_.nino)}, as soft-delete : ${e.getMessage}"))
+        }
       }
     }.map(_ => enrolmentsToDelete)
   }
 
   private[repo] def persistAccountNumber(nino: NINO, accountNumber: String): Future[Option[EnrolmentData]] =
     preservingMdc {
-      collection
-        .findOneAndUpdate(
-          filter = regex("nino", getRegex(nino)),
-          update = Updates.set("accountNumber", accountNumber),
-          options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
-        )
-        .toFutureOption()
+      Try{
+        collection
+          .findOneAndUpdate(
+            filter = regex("nino", getRegex(nino)),
+            update = Updates.set("accountNumber", accountNumber),
+            options = FindOneAndUpdateOptions().bypassDocumentValidation(false).returnDocument(ReturnDocument.AFTER)
+          )
+          .toFutureOption()
+      } match {
+        case Success(value) => value
+        case Failure(e)     => Future.failed(e)
+      }
+
     }
 
   override def get(nino: String)(implicit hc: HeaderCarrier): EitherT[Future, String, Status] =
     EitherT[Future, String, Status] {
       preservingMdc {
         val timerContext = metrics.enrolmentStoreGetTimer.time()
-
-        collection
-          .find(
-            and(
-              regex("nino", getRegex(nino)),
-              or(
-                exists("deleteFlag", exists = false),
-                Filters.eq("deleteFlag", false)
+        Try{
+          collection
+            .find(
+              and(
+                regex("nino", getRegex(nino)),
+                or(
+                  exists("deleteFlag", exists = false),
+                  Filters.eq("deleteFlag", false)
+                )
               )
             )
-          )
-          .toFuture()
-          .map { res =>
-            timerContext.stop()
+            .toFuture()
+        } match {
+          case Success(value) => value.map { res =>
+              timerContext.stop()
 
-            Right(res.headOption.fold[Status](NotEnrolled)(data => Enrolled(data.itmpHtSFlag)))
-          }
-          .recover { case e =>
-            timerContext.stop()
-            metrics.enrolmentStoreGetErrorCounter.inc()
+              Right(res.headOption.fold[Status](NotEnrolled)(data => Enrolled(data.itmpHtSFlag)))
+            }
+            .recover { case e =>
+              timerContext.stop()
+              metrics.enrolmentStoreGetErrorCounter.inc()
 
-            Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
-          }
+              Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}")
+            }
+          case Failure(e) =>
+            Future.successful(Left(s"For NINO [$nino]: Could not read from enrolment store: ${e.getMessage}"))
+        }
       }
     }
 
@@ -233,10 +257,12 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
     )
 
     preservingMdc {
-      collection
-        .find(filter)
-        .toFuture()
-        .map { availableNINOs =>
+      Try {
+        collection
+          .find(filter)
+          .toFuture()
+      } match {
+        case Success(value) => value.map { availableNINOs =>
           val missingNINOs = ninosDeletionConfig.map(_.nino).diff(availableNINOs.map(_.nino).distinct)
 
           missingNINOs match {
@@ -246,6 +272,8 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
               Left(s"Following requested NINOs not found in system : $missingNINOs")
           }
         }
+        case Failure(e)     => Future.successful(Left(s"Search for NINOs failed: ${e.getMessage}"))
+      }
     }.recover { case e =>
       timerContext.stop()
       metrics.enrolmentStoreDeleteErrorCounter(revertSoftDelete).inc()
@@ -305,14 +333,22 @@ class MongoEnrolmentStore @Inject() (val mongo: MongoComponent, metrics: Metrics
       val timerContext = metrics.enrolmentStoreGetTimer.time()
 
       preservingMdc {
-        collection
-          .find(regex("nino", getRegex(nino)))
-          .toFuture()
-          .map[Either[String, AccountNumber]] { res =>
+        Try{
+          collection
+            .find(regex("nino", getRegex(nino)))
+            .toFuture()
+        } match {
+          case Success(value) => value .map[Either[String, AccountNumber]] { res =>
             timerContext.stop()
 
             Right(AccountNumber(res.headOption.flatMap(_.accountNumber)))
           }
+          case Failure(e)     => 
+            timerContext.stop()
+            metrics.enrolmentStoreGetErrorCounter.inc()
+            Future.failed(e)
+          
+        }
       }.recover { case e =>
         timerContext.stop()
         metrics.enrolmentStoreGetErrorCounter.inc()

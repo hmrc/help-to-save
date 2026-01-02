@@ -54,7 +54,7 @@ class HelpToSaveServiceSpec
       extends UCThresholdOrchestrator(
         system,
         mockPagerDuty,
-        fakeApplication.injector.instanceOf[Configuration],
+        injector.instanceOf[Configuration],
         mockDESConnector
       ) {
     val probe: TestProbe                    = TestProbe()
@@ -91,8 +91,8 @@ class HelpToSaveServiceSpec
     )(
       using transformer,
       new AppConfig(
-        fakeApplication.injector.instanceOf[Configuration],
-        fakeApplication.injector.instanceOf[Environment],
+        injector.instanceOf[Configuration],
+        injector.instanceOf[Environment],
         servicesConfig
       )
     )
@@ -301,8 +301,8 @@ class HelpToSaveServiceSpec
         )(
           using transformer,
           new AppConfig(
-            fakeApplication.injector.instanceOf[Configuration],
-            fakeApplication.injector.instanceOf[Environment],
+            injector.instanceOf[Configuration],
+            injector.instanceOf[Environment],
             new ServicesConfig(
               Configuration(
                 ConfigFactory.parseString("""
@@ -391,8 +391,8 @@ class HelpToSaveServiceSpec
         )(
           using transformer,
           new AppConfig(
-            fakeApplication.injector.instanceOf[Configuration],
-            fakeApplication.injector.instanceOf[Environment],
+            injector.instanceOf[Configuration],
+            injector.instanceOf[Environment],
             new ServicesConfig(
               Configuration(
                 ConfigFactory.parseString("""

@@ -43,7 +43,7 @@ class IFConnectorSpec
       "microservice.services.paye-personal-details.port" -> wireMockPort
     )
 
-  lazy val connector: IFConnector             = fakeApplication.injector.instanceOf[IFConnector]
+  lazy val connector: IFConnector             = injector.instanceOf[IFConnector]
   val originatorIdHeader: Map[String, String] = Map("Originator-Id" -> originatorIdHeaderValue)
 
   "the getPersonalDetails method" must {
