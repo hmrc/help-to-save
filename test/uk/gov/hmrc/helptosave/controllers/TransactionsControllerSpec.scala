@@ -24,7 +24,7 @@ import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, *}
-import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
+import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentials
 import uk.gov.hmrc.auth.core.retrieve.v2
 import uk.gov.hmrc.helptosave.connectors.HelpToSaveProxyConnector
@@ -80,8 +80,9 @@ class TransactionsControllerSpec extends AuthSupport {
       }
 
       "return a 403 (FORBIDDEN) if the NINO in the URL doesn't match the NINO retrieved from auth" in {
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-        mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(mockedNinoRetrieval))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2.Retrievals.nino)(
+          Right(new ~(ggCredentials, mockedNinoRetrieval))
+        )
 
         val result = controller.getTransactions("BE123456C", systemId, None)(fakeRequest)
         status(result) shouldBe 403

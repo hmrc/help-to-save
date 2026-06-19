@@ -22,7 +22,7 @@ import play.api.mvc.*
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.Credentials
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino as v2Nino}
 import uk.gov.hmrc.helptosave.util.{Logging, NINO, toFuture}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -81,34 +81,32 @@ class HelpToSaveAuth(htsAuthConnector: AuthConnector, controllerComponents: Cont
   )(action: HtsActionWithNINO)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       authorised(GGAndPrivilegedProviders)
-        .retrieve(credentials) {
-          case Some(Credentials(_, "GovernmentGateway")) =>
-            authorised().retrieve(v2Nino) { retrievedNINO =>
-              (nino, retrievedNINO) match {
-                case (Some(givenNino), Some(retrievedNino)) =>
-                  if givenNino === retrievedNino then {
-                    action(request)(givenNino)
-                  } else {
-                    logger.warn("Given NINO did not match retrieved NINO")
-                    toFuture(Forbidden)
-                  }
+        .retrieve(credentials and v2Nino) {
+          case Some(Credentials(_, "GovernmentGateway")) ~ retrievedNINO =>
+            (nino, retrievedNINO) match {
+              case (Some(givenNino), Some(retrievedNino)) =>
+                if givenNino === retrievedNino then {
+                  action(request)(givenNino)
+                } else {
+                  logger.warn("Given NINO did not match retrieved NINO")
+                  toFuture(Forbidden)
+                }
 
-                case (None, Some(retrieved)) =>
-                  action(request)(retrieved)
+              case (None, Some(retrieved)) =>
+                action(request)(retrieved)
 
-                case (_, None) =>
-                  logger.warn("Could not retrieve NINO for GG session")
-                  Forbidden
-              }
+              case (_, None) =>
+                logger.warn("Could not retrieve NINO for GG session")
+                Forbidden
             }
 
-          case Some(Credentials(_, "PrivilegedApplication")) =>
+          case Some(Credentials(_, "PrivilegedApplication")) ~ _ =>
             nino.fold[Future[Result]] {
               logger.warn("NINO not given for privileged request")
               BadRequest
             }(n => action(request)(n))
 
-          case other =>
+          case other ~ _ =>
             logger.warn(s"Recevied request from unsupported authProvider: ${other.getClass.getSimpleName}")
             toFuture(Forbidden)
 
