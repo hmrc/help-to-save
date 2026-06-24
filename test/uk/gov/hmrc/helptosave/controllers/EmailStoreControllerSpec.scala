@@ -24,7 +24,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
-import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
+import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino => v2Nino}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.*
 import uk.gov.hmrc.helptosave.repo.EmailStore
@@ -56,15 +56,14 @@ class EmailStoreControllerSpec extends AuthSupport {
 
     "handling requests to store emails" must {
       "return a HTTP 200 if the email is successfully stored with a GG login" in {
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-        mockAuth(EmptyPredicate, v2Nino)(Right(Some(nino)))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, Some(nino))))
         mockStore(email, nino)(Right(()))
 
         status(store(encodedEmail, None)) shouldBe 200
       }
 
       "return a HTTP 200 if the email is successfully stored with a privileged login" in {
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(paCredentials, None)))
         mockStore(email, nino)(Right(()))
 
         status(store(encodedEmail, Some(nino))) shouldBe 200
@@ -73,13 +72,13 @@ class EmailStoreControllerSpec extends AuthSupport {
       "return a HTTP 500" when {
 
         "the email cannot be decoded" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(paCredentials, None)))
 
           status(store("not base 64 encoded", Some(nino))) shouldBe 500
         }
 
         "the email is not successfully stored" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(paCredentials, None)))
           mockStore(email, nino)(Left(""))
 
           status(store(encodedEmail, Some(nino))) shouldBe 500

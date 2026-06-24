@@ -20,7 +20,6 @@ import play.api.http.Status
 import play.api.mvc.Results.Ok
 import play.api.test.FakeRequest
 import uk.gov.hmrc.auth.core.AuthorisationException.fromString
-import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
 import uk.gov.hmrc.auth.core.retrieve.*
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino as v2Nino}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.*
@@ -103,36 +102,33 @@ class HelpToSaveAuthSpec extends AuthSupport {
       "handling GG requests" when {
 
         "retrieve a NINO and return successfully if the given NINO and retrieved NINO match" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-          mockAuth(EmptyPredicate, v2Nino)(Right(Some("nino")))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, Some("nino"))))
 
           status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.OK
         }
 
         "retrieve a NINO and return successfully if a NINO is not given and a NINO is successfully retrieved" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-          mockAuth(EmptyPredicate, v2Nino)(Right(Some("nino")))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, Some("nino"))))
 
           status(callAuth(None)(FakeRequest())) shouldBe Status.OK
         }
 
         "retrieve a NINO and return a Forbidden if the given NINO and the retrieved NINO do not match" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-          mockAuth(EmptyPredicate, v2Nino)(Right(Some("other-nino")))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(
+            Right(new ~(ggCredentials, Some("other-nino")))
+          )
 
           status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
         }
 
         "return a Forbidden if a NINO could not be found and a NINO was given" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-          mockAuth(EmptyPredicate, v2Nino)(Right(None))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, None)))
 
           status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
         }
 
         "return a Forbidden if a NINO could not be found and a NINO was not given" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-          mockAuth(EmptyPredicate, v2Nino)(Right(None))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, None)))
 
           status(callAuth(None)(FakeRequest())) shouldBe Status.FORBIDDEN
         }
@@ -141,12 +137,12 @@ class HelpToSaveAuthSpec extends AuthSupport {
       "handling PrivilegedApplication requests" must {
 
         "return a BadRequest if no NINO is given" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(paCredentials, None)))
           status(callAuth(None)(FakeRequest())) shouldBe Status.BAD_REQUEST
         }
 
         "return successfully if a NINO is given" in {
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(paCredentials, None)))
           status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.OK
         }
 
@@ -156,7 +152,7 @@ class HelpToSaveAuthSpec extends AuthSupport {
 
         "return a Forbidden" in {
           List[Credentials](Credentials("", "StandardApplication"), Credentials("", "OneTimeLogin")).foreach { cred =>
-            mockAuth(GGAndPrivilegedProviders, credentials)(Right(Some(cred)))
+            mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(Some(cred), None)))
             status(callAuth(Some("nino"))(FakeRequest())) shouldBe Status.FORBIDDEN
           }
 

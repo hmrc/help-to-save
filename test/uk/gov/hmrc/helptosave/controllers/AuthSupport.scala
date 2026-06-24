@@ -20,7 +20,7 @@ import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
+import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.*
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentials
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.GGAndPrivilegedProviders
@@ -51,14 +51,17 @@ trait AuthSupport extends TestSupport {
   def testWithGGAndPrivilegedAccess(f: (() => Unit) => Unit): Unit = {
     withClue("For GG access: ") {
       f { () =>
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-        mockAuth(EmptyPredicate, v2.Retrievals.nino)(Right(Some(nino)))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2.Retrievals.nino)(
+          Right(new ~(ggCredentials, Some(nino)))
+        )
       }
     }
 
     withClue("For privileged access: ") {
       f { () =>
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2.Retrievals.nino)(
+          Right(new ~(paCredentials, None))
+        )
       }
     }
   }

@@ -26,6 +26,7 @@ import play.api.libs.json.{JsSuccess, JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
+import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{credentials, nino as v2Nino}
 import uk.gov.hmrc.helptosave.controllers.HelpToSaveAuth.*
 import uk.gov.hmrc.helptosave.models.account.{Account, AccountNumber}
@@ -158,8 +159,7 @@ class EnrolmentStoreControllerSpec
         controller.getEnrolmentStatus(nino)(FakeRequest())
 
       "get the enrolment status from the enrolment store" in {
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-        mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, mockedNinoRetrieval)))
         mockEnrolmentStoreGet(nino)(Left(""))
 
         await(getEnrolmentStatus(Some(nino)))
@@ -191,8 +191,7 @@ class EnrolmentStoreControllerSpec
         )
 
         m.foreach { case (s, j) =>
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-          mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, mockedNinoRetrieval)))
           mockEnrolmentStoreGet(nino)(Right(s))
 
           val result = getEnrolmentStatus(Some(nino))
@@ -202,8 +201,7 @@ class EnrolmentStoreControllerSpec
       }
 
       "return an error if the call was not successful" in {
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(ggCredentials))
-        mockAuth(v2Nino)(Right(mockedNinoRetrieval))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(ggCredentials, mockedNinoRetrieval)))
         mockEnrolmentStoreGet(nino)(Left(""))
 
         status(getEnrolmentStatus(Some(nino))) shouldBe INTERNAL_SERVER_ERROR
@@ -218,7 +216,7 @@ class EnrolmentStoreControllerSpec
           Enrolled(itmpHtSFlag = false),
           NotEnrolled
         ).foreach { status =>
-          mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+          mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(paCredentials, None)))
           mockEnrolmentStoreGet(nino)(Right(status))
 
           val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
@@ -227,7 +225,7 @@ class EnrolmentStoreControllerSpec
       }
 
       "return an error if there is a problem getting the enrolment status" in {
-        mockAuth(GGAndPrivilegedProviders, credentials)(Right(paCredentials))
+        mockAuth(GGAndPrivilegedProviders, credentials and v2Nino)(Right(new ~(paCredentials, None)))
         mockEnrolmentStoreGet(nino)(Left(""))
 
         val result = controller.getEnrolmentStatus(Some(nino))(FakeRequest())
