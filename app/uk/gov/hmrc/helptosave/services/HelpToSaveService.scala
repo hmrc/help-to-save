@@ -23,7 +23,7 @@ import play.api.http.Status
 import play.mvc.Http.Status.{FORBIDDEN, OK}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HIPEligibilityConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.metrics.Metrics
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.ThresholdValueByConfigProvider
@@ -56,6 +56,7 @@ trait HelpToSaveService {
 class HelpToSaveServiceImpl @Inject() (
   helpToSaveProxyConnector: HelpToSaveProxyConnector,
   dESConnector: DESConnector,
+  hipEligibilityConnector: HIPEligibilityConnector,
   iFConnector: IFConnector,
   auditor: HTSAuditor,
   metrics: Metrics,
@@ -185,6 +186,16 @@ class HelpToSaveServiceImpl @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Result[EligibilityCheckResult] =
+    if appConfig.hipEligibilityEnabled then {
+      getHIPEligibility(nino, ucResponse)
+    } else {
+      getDESEligibility(nino, ucResponse)
+    }
+
+  private def getDESEligibility(nino: NINO, ucResponse: Option[UCResponse])(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Result[EligibilityCheckResult] =
     EitherT {
       val timerContext = metrics.itmpEligibilityCheckTimer.time()
 
@@ -233,6 +244,74 @@ class HelpToSaveServiceImpl @Inject() (
             pagerDutyAlerting.alert("Failed to make call to set ITMP flag")
             Left(
               s"Encountered unexpected error while trying to set the ITMP flag: ${upstreamErrorResponse.getMessage} (round-trip time: ${nanosToPrettyString(time)})"
+            )
+
+        }
+    }
+
+  private def getHIPEligibility(nino: NINO, ucResponse: Option[UCResponse])(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Result[EligibilityCheckResult] =
+    EitherT {
+      val timerContext = metrics.itmpEligibilityCheckTimer.time()
+
+      hipEligibilityConnector
+        .checkEligibility(nino, ucResponse)
+        .flatMap {
+          case Right(response)                                    =>
+            val time = timerContext.stop()
+
+            val additionalParams = "HipCorrelationId" -> response.correlationId
+
+            response.status match {
+              case Status.OK =>
+                response
+                  .parseJsonWithoutLoggingBody[HIPEligibilityCheckResponse]
+                  .fold(
+                    { e =>
+                      metrics.itmpEligibilityCheckErrorCounter.inc()
+                      pagerDutyAlerting.alert("Could not parse JSON in eligibility check response")
+                      Left(e)
+                    },
+                    _.toEligibilityCheckResult.fold(
+                      { e =>
+                        logger.warn(
+                          s"Could not translate HIP eligibility response: $e ${timeString(time)}",
+                          nino,
+                          additionalParams
+                        )
+                        metrics.itmpEligibilityCheckErrorCounter.inc()
+                        pagerDutyAlerting.alert("Could not translate HIP eligibility response")
+                        Left(e)
+                      },
+                      { res =>
+                        logger.debug(
+                          s"Call to HIP eligibility successful, received 200 (OK) ${timeString(time)}",
+                          nino,
+                          additionalParams
+                        )
+                        Right(res)
+                      }
+                    )
+                  )
+
+              case other =>
+                logger.warn(
+                  s"Call to HIP eligibility unsuccessful. Received unexpected status $other ${timeString(time)}",
+                  nino,
+                  additionalParams
+                )
+                metrics.itmpEligibilityCheckErrorCounter.inc()
+                pagerDutyAlerting.alert("Received unexpected http status in response to eligibility check")
+                Left(s"Received unexpected status $other")
+            }
+          case Left(upstreamErrorResponse: UpstreamErrorResponse) =>
+            val time = timerContext.stop()
+            metrics.itmpEligibilityCheckErrorCounter.inc()
+            pagerDutyAlerting.alert("Failed to make call to check eligibility")
+            Left(
+              s"Call to check eligibility unsuccessful: ${upstreamErrorResponse.getMessage} (round-trip time: ${nanosToPrettyString(time)})"
             )
 
         }

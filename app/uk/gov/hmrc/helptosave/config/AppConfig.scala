@@ -23,7 +23,9 @@ import play.api.{Configuration, Environment, Mode}
 import uk.gov.hmrc.helptosave.models.NINODeletionConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
+import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters._
@@ -46,6 +48,23 @@ class AppConfig @Inject() (
   val ifHeaders: Seq[(String, String)] = Seq(
     "Environment"   -> servicesConfig.getString("microservice.services.if.environment"),
     "Authorization" -> s"Bearer ${servicesConfig.getString("microservice.services.if.token")}"
+  )
+
+  val hipEligibilityEnabled: Boolean = servicesConfig.getBoolean("feature.hip-eligibility.enabled")
+
+  val hipEnvironment: String = servicesConfig.getString("microservice.services.hip.environment")
+
+  private val hipClientId: String     = servicesConfig.getString("microservice.services.hip.clientId")
+  private val hipClientSecret: String = servicesConfig.getString("microservice.services.hip.clientSecret")
+  private val hipAuthorisationToken: String =
+    Base64.getEncoder.encodeToString(s"$hipClientId:$hipClientSecret".getBytes(StandardCharsets.UTF_8))
+
+  val hipOriginatorId: String = servicesConfig.getString("microservice.services.hip.originatorId")
+
+  val hipHeaders: Seq[(String, String)] = Seq(
+    "Environment"          -> hipEnvironment,
+    "Authorization"        -> s"Basic $hipAuthorisationToken",
+    "gov-uk-originator-id" -> hipOriginatorId
   )
 
   val correlationIdHeaderName: String = servicesConfig.getString("microservice.correlationIdHeaderName")

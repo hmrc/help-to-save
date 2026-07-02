@@ -76,6 +76,13 @@ trait IntegrationSpecBase
     "microservice.services.itmp-enrolment.port"         -> s"$wireMockPort",
     "microservice.services.itmp-eligibility-check.host" -> s"$wireMockHost",
     "microservice.services.itmp-eligibility-check.port" -> s"$wireMockPort",
+    "microservice.services.hip.host"                    -> s"$wireMockHost",
+    "microservice.services.hip.port"                    -> s"$wireMockPort",
+    "microservice.services.hip.root"                    -> "",
+    "microservice.services.hip.environment"             -> "local",
+    "microservice.services.hip.clientId"                -> "hip-client-id",
+    "microservice.services.hip.clientSecret"            -> "hip-secret",
+    "microservice.services.hip.originatorId"            -> "TEST-GOV-UK-ORIGINATOR-ID",
     "microservice.services.itmp-threshold.host"         -> s"$wireMockHost",
     "microservice.services.itmp-threshold.port"         -> s"$wireMockPort",
     "nsi.create-account.version"                        -> "V2.0"
