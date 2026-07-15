@@ -33,7 +33,7 @@ import uk.gov.hmrc.helptosave.actors.ActorTestSupport
 import uk.gov.hmrc.helptosave.actors.UCThresholdManager.{GetThresholdValue, GetThresholdValueResponse}
 import uk.gov.hmrc.helptosave.audit.HTSAuditor
 import uk.gov.hmrc.helptosave.config.AppConfig
-import uk.gov.hmrc.helptosave.connectors.{DESConnector, HelpToSaveProxyConnector, IFConnector}
+import uk.gov.hmrc.helptosave.connectors.{DESConnector, HIPEligibilityConnector, HelpToSaveProxyConnector, IFConnector}
 import uk.gov.hmrc.helptosave.models._
 import uk.gov.hmrc.helptosave.modules.{MDTPThresholdOrchestrator, ThresholdValueByConfigProvider, UCThresholdOrchestrator}
 import uk.gov.hmrc.helptosave.util._
@@ -62,6 +62,7 @@ class HelpToSaveServiceSpec
   }
 
   private val mockDESConnector   = mock[DESConnector]
+  private val mockHIPConnector   = mock[HIPEligibilityConnector]
   private val mockIFConnector    = mock[IFConnector]
   private val mockProxyConnector = mock[HelpToSaveProxyConnector]
   private val mockAuditor        = mock[HTSAuditor]
@@ -79,10 +80,18 @@ class HelpToSaveServiceSpec
   private val thresholdValueByConfigProvider =
     new ThresholdValueByConfigProvider(appConfig, ucThresholdValueByConfigProvider, mdtpthresholdValueByConfigProvider)
 
+  private def appConfigWith(config: String): AppConfig =
+    new AppConfig(
+      injector.instanceOf[Configuration],
+      injector.instanceOf[Environment],
+      new ServicesConfig(Configuration(ConfigFactory.parseString(config)).withFallback(configuration))
+    )
+
   private val service =
     new HelpToSaveServiceImpl(
       mockProxyConnector,
       mockDESConnector,
+      mockHIPConnector,
       mockIFConnector,
       mockAuditor,
       mockMetrics,
@@ -90,12 +99,14 @@ class HelpToSaveServiceSpec
       thresholdValueByConfigProvider
     )(
       using transformer,
-      new AppConfig(
-        injector.instanceOf[Configuration],
-        injector.instanceOf[Environment],
-        servicesConfig
-      )
+      appConfigWith("feature.hip-eligibility.enabled = true")
     )
+
+  private def mockHIPEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: HttpResponse) =
+    when(mockHIPConnector.checkEligibility(eqTo(nino), eqTo(uCResponse))(using any(), any())).thenReturn(toFuture(Right(response)))
+
+  private def mockHIPEligibilityCheckFailure(nino: String, uCResponse: Option[UCResponse])(response: UpstreamErrorResponse) =
+    when(mockHIPConnector.checkEligibility(eqTo(nino), eqTo(uCResponse))(using any(), any())).thenReturn(toFuture(Left(response)))
 
   private def mockDESEligibilityCheck(nino: String, uCResponse: Option[UCResponse])(response: HttpResponse) =
     when(mockDESConnector.isEligible(eqTo(nino), eqTo(uCResponse))(using any(), any())).thenReturn(toFuture(Right(response)))
@@ -128,28 +139,62 @@ class HelpToSaveServiceSpec
     val nino       = "AE123456C"
     val uCResponse = UCResponse(ucClaimant = true, Some(true))
 
-    val wtcEligibleResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
-
-    val jsonCheckResponse =
-      """{
-        |"result" : "eligible",
-        |"resultCode" : 1,
-        |"reason" : "tax credits",
-        |"reasonCode" : 1
-        |}
-      """.stripMargin
-
     "handling eligibility calls" must {
       val nino = randomNINO()
 
-      def getEligibility(thresholdResponse: Option[Double]): Either[NINO, EligibilityCheckResponse] = {
+      val serviceWithDES =
+        new HelpToSaveServiceImpl(
+          mockProxyConnector,
+          mockDESConnector,
+          mockHIPConnector,
+          mockIFConnector,
+          mockAuditor,
+          mockMetrics,
+          mockPagerDuty,
+          thresholdValueByConfigProvider
+        )(
+          using transformer,
+          appConfigWith("feature.hip-eligibility.enabled = false")
+        )
+
+      val hipEligibleResult = EligibilityCheckResult(
+        "Eligible to HtS Account",
+        1,
+        "Entitled to WTC and in receipt of positive WTC/CTC Tax Credit",
+        7
+      )
+
+      val hipEligibleResponse = HttpResponse(
+        200,
+        Json.obj(
+          "eligibilityResult" -> "CUSTOMER ELIGIBLE FOR HTS ACCOUNT",
+          "eligibilityReason" -> "ENTITLED TO WTC AND RECEIVE POSITIVE TAX CREDIT"
+        ),
+        returnHeaders
+      )
+
+      val wtcEligibleResponse = EligibilityCheckResult("eligible", 1, "tax credits", 1)
+
+      val jsonCheckResponse =
+        """{
+          |"result" : "eligible",
+          |"resultCode" : 1,
+          |"reason" : "tax credits",
+          |"reasonCode" : 1
+          |}
+        """.stripMargin
+
+      def getEligibility(
+        thresholdResponse: Option[Double],
+        serviceUnderTest: HelpToSaveService = service
+      ): Either[NINO, EligibilityCheckResponse] = {
         when(ucThresholdValueByConfigProvider.get()).thenReturn(testUCThresholdOrchestrator)
         when(mdtpthresholdValueByConfigProvider.get()).thenReturn(mdtpMockThresholdOrchestrator)
 
         when(ucMockThresholdOrchestrator.getValue).thenReturn(Future.successful(Some(threshold)))
         when(mdtpMockThresholdOrchestrator.getValue).thenReturn(Future.successful(thresholdResponse))
 
-        val result = service.getEligibility(nino, "path").value
+        val result = serviceUnderTest.getEligibility(nino, "path").value
 
         if !appConfig.useMDTPThresholdConfig then {
           testUCThresholdOrchestrator.probe.expectMsg(GetThresholdValue)
@@ -159,7 +204,69 @@ class HelpToSaveServiceSpec
         await(result)
       }
 
-      "return with the eligibility check result unchanged from ITMP" in {
+      "call HIP eligibility and translate the response to the existing contract" in {
+        val uCResponse = UCResponse(ucClaimant = true, Some(true))
+        mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+        mockHIPEligibilityCheck(nino, Some(uCResponse))(hipEligibleResponse)
+        mockSendAuditEvent(EligibilityCheckEvent(nino, hipEligibleResult, Some(uCResponse), "path"), nino)
+
+        getEligibility(Some(threshold)) shouldBe Right(
+          EligibilityCheckResponse(hipEligibleResult, Some(1.23))
+        )
+      }
+
+      "treat a HIP MANUAL eligibility reason as an error" in {
+        val uCResponse = UCResponse(ucClaimant = true, Some(true))
+        mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+        mockHIPEligibilityCheck(nino, Some(uCResponse))(
+          HttpResponse(
+            200,
+            Json.obj(
+              "eligibilityResult" -> "CUSTOMER INELIGIBLE FOR HTS ACCOUNT",
+              "eligibilityReason" -> "MANUAL"
+            ),
+            returnHeaders
+          )
+        )
+        mockPagerDutyAlert("Could not translate HIP eligibility response")
+
+        getEligibility(Some(threshold)) shouldBe Left("HIP eligibility returned MANUAL")
+      }
+
+      "call HIP without UC details when there is an error during UC claimant check" in {
+        mockUCClaimantCheck(nino, threshold)(Left("unexpected error during UCClaimant check"))
+        mockHIPEligibilityCheck(nino, None)(hipEligibleResponse)
+        mockSendAuditEvent(EligibilityCheckEvent(nino, hipEligibleResult, None, "path"), nino)
+
+        getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(hipEligibleResult, Some(1.23)))
+      }
+
+      "continue the eligibility check when the threshold cannot be retrieved" in {
+        mockHIPEligibilityCheck(nino, None)(hipEligibleResponse)
+        mockSendAuditEvent(EligibilityCheckEvent(nino, hipEligibleResult, None, "path"), nino)
+
+        getEligibility(None) shouldBe Right(EligibilityCheckResponse(hipEligibleResult, None))
+      }
+
+      "pass the UC response to HIP if it is provided" in {
+        val uCResponse = UCResponse(ucClaimant = true, Some(true))
+        mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+        mockHIPEligibilityCheck(nino, Some(uCResponse))(hipEligibleResponse)
+        mockSendAuditEvent(EligibilityCheckEvent(nino, hipEligibleResult, Some(uCResponse), "path"), nino)
+
+        getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(hipEligibleResult, Some(1.23)))
+      }
+
+      "pass the UC response to HIP if withinThreshold is not set" in {
+        val uCResponse = UCResponse(ucClaimant = true, None)
+        mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+        mockHIPEligibilityCheck(nino, Some(uCResponse))(hipEligibleResponse)
+        mockSendAuditEvent(EligibilityCheckEvent(nino, hipEligibleResult, Some(uCResponse), "path"), nino)
+
+        getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(hipEligibleResult, Some(1.23)))
+      }
+
+      "return with the eligibility check result unchanged from DES when the HIP feature is disabled" in {
         val uCResponse = UCResponse(ucClaimant = false, Some(false))
         forAll { (eligibilityCheckResponse: EligibilityCheckResult) =>
           mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -168,26 +275,30 @@ class HelpToSaveServiceSpec
           ) // scalastyle:ignore magic.number
           mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
 
-          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          getEligibility(Some(threshold), serviceWithDES) shouldBe Right(
+            EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23))
+          )
         }
       }
 
-      "call DES even if there is an errors during UC claimant check" in {
+      "call DES without UC details when the HIP feature is disabled and there is an error during UC claimant check" in {
         mockUCClaimantCheck(nino, threshold)(Left("unexpected error during UCClaimant check"))
         mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
         mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
 
-        getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, Some(1.23)))
+        getEligibility(Some(threshold), serviceWithDES) shouldBe Right(
+          EligibilityCheckResponse(wtcEligibleResponse, Some(1.23))
+        )
       }
 
-      "continue the eligibility check when the threshold cannot be retrieved and the applicant is eligible from a WTC perspective" in {
+      "continue the DES eligibility check when the HIP feature is disabled and the threshold cannot be retrieved" in {
         mockDESEligibilityCheck(nino, None)(HttpResponse(200, Json.parse(jsonCheckResponse), returnHeaders))
         mockSendAuditEvent(EligibilityCheckEvent(nino, wtcEligibleResponse, None, "path"), nino)
 
-        getEligibility(None) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, None))
+        getEligibility(None, serviceWithDES) shouldBe Right(EligibilityCheckResponse(wtcEligibleResponse, None))
       }
 
-      "pass the UC params to DES if they are provided" in {
+      "pass the UC response to DES when the HIP feature is disabled" in {
         val uCResponse = UCResponse(ucClaimant = true, Some(true))
         forAll { (eligibilityCheckResponse: EligibilityCheckResult) =>
           mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
@@ -196,38 +307,30 @@ class HelpToSaveServiceSpec
           ) // scalastyle:ignore magic.number
           mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
 
-          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
-        }
-      }
-
-      "do not pass the UC withinThreshold param to DES if its not set" in {
-        val uCResponse = UCResponse(ucClaimant = true, None)
-        forAll { (eligibilityCheckResponse: EligibilityCheckResult) =>
-          mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-          mockDESEligibilityCheck(nino, Some(uCResponse))(
-            HttpResponse(200, Json.toJson(eligibilityCheckResponse), returnHeaders)
-          ) // scalastyle:ignore magic.number
-          mockSendAuditEvent(EligibilityCheckEvent(nino, eligibilityCheckResponse, Some(uCResponse), "path"), nino)
-
-          getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23)))
+          getEligibility(Some(threshold), serviceWithDES) shouldBe Right(
+            EligibilityCheckResponse(eligibilityCheckResponse, Some(1.23))
+          )
         }
       }
 
       "return with an error" when {
-        "the call to DES fails" in {
+        "the call to HIP fails" in {
           mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-          mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, ""))
+          val upstreamErrorResponse = UpstreamErrorResponse("boom", 500)
+          mockHIPEligibilityCheckFailure(nino, Some(uCResponse))(upstreamErrorResponse)
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
           mockPagerDutyAlert("Failed to make call to check eligibility")
 
-          getEligibility(Some(threshold)) shouldBe Left("Received unexpected status 500")
+          getEligibility(Some(threshold)) shouldBe Left(
+            s"Call to check eligibility unsuccessful: ${upstreamErrorResponse.getMessage} (round-trip time: 0ns)"
+          )
         }
 
         "the call comes back with an unexpected http status" in {
           forAll { (status: Int) =>
             whenever(status > 0 && status =!= 200 && status =!= 404) {
               mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-              mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(status, ""))
+              mockHIPEligibilityCheck(nino, Some(uCResponse))(HttpResponse(status, ""))
               // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
               mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
 
@@ -238,7 +341,7 @@ class HelpToSaveServiceSpec
 
         "parsing invalid json" in {
           mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
-          mockDESEligibilityCheck(nino, Some(uCResponse))(
+          mockHIPEligibilityCheck(nino, Some(uCResponse))(
             HttpResponse(200, Json.toJson("""{"invalid": "foo"}"""), returnHeaders)
           ) // scalastyle:ignore magic.number
           // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
@@ -246,9 +349,19 @@ class HelpToSaveServiceSpec
 
           getEligibility(Some(threshold)) shouldBe
             Left(
-              "Could not parse http response JSON: : [error.expected.jsobject]. Response body was " +
-                "\"{\\\"invalid\\\": \\\"foo\\\"}\""
+              "Could not parse http response JSON: /result: [error.path.missing]; " +
+                "/eligibilityResult: [error.path.missing]; /reason: [error.path.missing]; " +
+                "/eligibilityReason: [error.path.missing]"
             )
+        }
+
+        "the DES call comes back with an unexpected http status when the HIP feature is disabled" in {
+          mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
+          mockDESEligibilityCheck(nino, Some(uCResponse))(HttpResponse(500, ""))
+          // WARNING: do not change the message in the following check - this needs to stay in line with the configuration in alert-config
+          mockPagerDutyAlert("Received unexpected http status in response to eligibility check")
+
+          getEligibility(Some(threshold), serviceWithDES) shouldBe Left("Received unexpected status 500")
         }
       }
     }
@@ -293,6 +406,7 @@ class HelpToSaveServiceSpec
         new HelpToSaveServiceImpl(
           mockProxyConnector,
           mockDESConnector,
+          mockHIPConnector,
           mockIFConnector,
           mockAuditor,
           mockMetrics,
@@ -383,6 +497,7 @@ class HelpToSaveServiceSpec
         new HelpToSaveServiceImpl(
           mockProxyConnector,
           mockDESConnector,
+          mockHIPConnector,
           mockIFConnector,
           mockAuditor,
           mockMetrics,
