@@ -257,8 +257,8 @@ class HelpToSaveServiceSpec
         getEligibility(Some(threshold)) shouldBe Right(EligibilityCheckResponse(hipEligibleResult, Some(1.23)))
       }
 
-      "pass the UC response to HIP if withinThreshold is not set" in {
-        val uCResponse = UCResponse(ucClaimant = true, None)
+      "pass the UC response to HIP if UC claimant status is false" in {
+        val uCResponse = UCResponse(ucClaimant = false, None)
         mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
         mockHIPEligibilityCheck(nino, Some(uCResponse))(hipEligibleResponse)
         mockSendAuditEvent(EligibilityCheckEvent(nino, hipEligibleResult, Some(uCResponse), "path"), nino)
@@ -267,7 +267,7 @@ class HelpToSaveServiceSpec
       }
 
       "return with the eligibility check result unchanged from DES when the HIP feature is disabled" in {
-        val uCResponse = UCResponse(ucClaimant = false, Some(false))
+        val uCResponse = UCResponse(ucClaimant = false, None)
         forAll { (eligibilityCheckResponse: EligibilityCheckResult) =>
           mockUCClaimantCheck(nino, threshold)(Right(uCResponse))
           mockDESEligibilityCheck(nino, Some(uCResponse))(
