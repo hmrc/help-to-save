@@ -21,6 +21,66 @@ import uk.gov.hmrc.helptosave.util.UnitSpec
 
 class HIPEligibilitySpec extends UnitSpec {
 
+  "HIPEligibilityCheckRequest" must {
+    "omit UC fields when UC details are unavailable" in {
+      Json.toJson(HIPEligibilityCheckRequest(None)) shouldBe Json.obj(
+        "newTaxCreditStatus" -> "NINO not found",
+        "workingTaxCreditEntitlement" -> "Current Award does not include a WTC entitlement",
+        "workingTaxCreditTaperedHouseholdAward" -> 0,
+        "childTaxCreditTaperedHouseholdAward" -> 0
+      )
+    }
+
+    "include both UC fields when UC claimant status is true" in {
+      val request = HIPEligibilityCheckRequest(Some(UCResponse(ucClaimant = true, withinThreshold = Some(false))))
+
+      Json.toJson(request) shouldBe
+        Json.obj(
+          "newTaxCreditStatus" -> "NINO not found",
+          "workingTaxCreditEntitlement" -> "Current Award does not include a WTC entitlement",
+          "workingTaxCreditTaperedHouseholdAward" -> 0,
+          "childTaxCreditTaperedHouseholdAward" -> 0,
+          "universalCreditAwardStatus" -> true,
+          "withinThreshold" -> false
+        )
+    }
+
+    "include only UC award status when UC claimant status is false" in {
+      val request = HIPEligibilityCheckRequest(Some(UCResponse(ucClaimant = false, withinThreshold = None)))
+
+      Json.toJson(request) shouldBe
+        Json.obj(
+          "newTaxCreditStatus" -> "NINO not found",
+          "workingTaxCreditEntitlement" -> "Current Award does not include a WTC entitlement",
+          "workingTaxCreditTaperedHouseholdAward" -> 0,
+          "childTaxCreditTaperedHouseholdAward" -> 0,
+          "universalCreditAwardStatus" -> false
+        )
+    }
+
+    "avoid UC field combinations HIP rejects" in {
+      val ucClaimantWithoutThreshold = HIPEligibilityCheckRequest(Some(UCResponse(ucClaimant = true, withinThreshold = None)))
+      val nonUcClaimantWithThreshold = HIPEligibilityCheckRequest(Some(UCResponse(ucClaimant = false, withinThreshold = Some(true))))
+
+      Json.toJson(ucClaimantWithoutThreshold) shouldBe
+        Json.obj(
+          "newTaxCreditStatus" -> "NINO not found",
+          "workingTaxCreditEntitlement" -> "Current Award does not include a WTC entitlement",
+          "workingTaxCreditTaperedHouseholdAward" -> 0,
+          "childTaxCreditTaperedHouseholdAward" -> 0
+        )
+
+      Json.toJson(nonUcClaimantWithThreshold) shouldBe
+        Json.obj(
+          "newTaxCreditStatus" -> "NINO not found",
+          "workingTaxCreditEntitlement" -> "Current Award does not include a WTC entitlement",
+          "workingTaxCreditTaperedHouseholdAward" -> 0,
+          "childTaxCreditTaperedHouseholdAward" -> 0,
+          "universalCreditAwardStatus" -> false
+        )
+    }
+  }
+
   "HIPEligibilityCheckResponse" must {
     "read the OpenAPI response field names" in {
       Json

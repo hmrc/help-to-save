@@ -30,19 +30,21 @@ case class HIPEligibilityCheckRequest(
 
 object HIPEligibilityCheckRequest {
   private val ninoNotFound               = "NINO not found"
-  private val awardIncludesWTC           = "Current Award includes a WTC entitlement"
+  private val awardDoesNotIncludeWTC     = "Current Award does not include a WTC entitlement"
   private val taperedHouseholdAwardZero  = BigDecimal(0)
   private val childHouseholdAwardZero    = BigDecimal(0)
 
   def apply(ucResponse: Option[UCResponse]): HIPEligibilityCheckRequest = {
     val (universalCreditAwardStatus, withinThreshold) =
-      ucResponse.fold[(Option[Boolean], Option[Boolean])]((None, None)) {
-        case UCResponse(ucClaimant, threshold) => (Some(ucClaimant), threshold)
+      ucResponse match {
+        case Some(UCResponse(true, Some(withinThreshold))) => (Some(true), Some(withinThreshold))
+        case Some(UCResponse(false, _))                    => (Some(false), None)
+        case _                                             => (None, None)
       }
 
     HIPEligibilityCheckRequest(
       newTaxCreditStatus = ninoNotFound,
-      workingTaxCreditEntitlement = awardIncludesWTC,
+      workingTaxCreditEntitlement = awardDoesNotIncludeWTC,
       workingTaxCreditTaperedHouseholdAward = taperedHouseholdAwardZero,
       childTaxCreditTaperedHouseholdAward = childHouseholdAwardZero,
       universalCreditAwardStatus = universalCreditAwardStatus,

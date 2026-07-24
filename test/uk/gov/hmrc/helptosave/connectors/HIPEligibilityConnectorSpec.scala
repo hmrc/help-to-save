@@ -96,7 +96,7 @@ class HIPEligibilityConnectorSpec
               Json
                 .obj(
                   "newTaxCreditStatus" -> "NINO not found",
-                  "workingTaxCreditEntitlement" -> "Current Award includes a WTC entitlement",
+                  "workingTaxCreditEntitlement" -> "Current Award does not include a WTC entitlement",
                   "workingTaxCreditTaperedHouseholdAward" -> 0,
                   "childTaxCreditTaperedHouseholdAward" -> 0
                 )
